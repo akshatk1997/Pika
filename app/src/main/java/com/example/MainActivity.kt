@@ -69,8 +69,13 @@ class MainActivity : ComponentActivity() {
     enableEdgeToEdge()
 
     viewModel.onLaunchFileChooser = { acceptTypes ->
-      val mimeTypes = acceptTypes?.filter { it.isNotBlank() }?.toTypedArray()
-      webFileChooserLauncher.launch(if (mimeTypes.isNullOrEmpty()) arrayOf("*/*") else mimeTypes)
+      try {
+        val mimeTypes = acceptTypes?.filter { it.isNotBlank() }?.toTypedArray()
+        webFileChooserLauncher.launch(if (mimeTypes.isNullOrEmpty()) arrayOf("*/*") else mimeTypes)
+      } catch (_: Throwable) {
+        viewModel.deliverChosenFiles(null)
+        viewModel.showToast("No file picker available")
+      }
     }
 
     handleIncomingIntent(intent)
@@ -84,28 +89,39 @@ class MainActivity : ComponentActivity() {
         ThemeMode.LIGHT -> false
       }
       DisposableEffect(darkTheme) {
-        enableEdgeToEdge(
-          statusBarStyle = if (darkTheme) {
-            SystemBarStyle.dark(Color.TRANSPARENT)
-          } else {
-            SystemBarStyle.light(Color.TRANSPARENT, Color.argb(0x66, 0x11, 0x18, 0x27))
-          },
-          navigationBarStyle = if (darkTheme) {
-            SystemBarStyle.dark(Color.TRANSPARENT)
-          } else {
-            SystemBarStyle.light(Color.TRANSPARENT, Color.argb(0x66, 0x11, 0x18, 0x27))
-          }
-        )
+        try {
+          enableEdgeToEdge(
+            statusBarStyle = if (darkTheme) {
+              SystemBarStyle.dark(Color.TRANSPARENT)
+            } else {
+              SystemBarStyle.light(Color.TRANSPARENT, Color.argb(0x66, 0x11, 0x18, 0x27))
+            },
+            navigationBarStyle = if (darkTheme) {
+              SystemBarStyle.dark(Color.TRANSPARENT)
+            } else {
+              SystemBarStyle.light(Color.TRANSPARENT, Color.argb(0x66, 0x11, 0x18, 0x27))
+            }
+          )
+        } catch (_: Throwable) {
+        }
         onDispose {}
       }
       FeatherTheme(themeMode = settings.themeMode, dynamicColor = settings.dynamicColor) {
         BrowserScreen(
           viewModel = viewModel,
           onExportBookmarks = {
-            exportBookmarksLauncher.launch("bat-bookmarks.html")
+            try {
+              exportBookmarksLauncher.launch("bat-bookmarks.html")
+            } catch (_: Throwable) {
+              viewModel.showToast("Export failed")
+            }
           },
           onImportBookmarks = {
-            importBookmarksLauncher.launch(arrayOf("text/html", "application/json", "text/plain"))
+            try {
+              importBookmarksLauncher.launch(arrayOf("text/html", "application/json", "text/plain"))
+            } catch (_: Throwable) {
+              viewModel.showToast("Import failed")
+            }
           },
           onSavePdf = {
             val tab = viewModel.activeTab()
@@ -123,25 +139,29 @@ class MainActivity : ComponentActivity() {
 
   override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
+    setIntent(intent)
     handleIncomingIntent(intent)
   }
 
   private fun handleIncomingIntent(intent: Intent?) {
-    when (intent?.action) {
-      Intent.ACTION_VIEW -> {
-        val target = intent.dataString ?: return
-        if (UrlValidator.isSafeWebUrl(target)) {
-          viewModel.openNewTab(isPrivate = false, initialUrl = target)
+    try {
+      when (intent?.action) {
+        Intent.ACTION_VIEW -> {
+          val target = intent.dataString ?: return
+          if (UrlValidator.isSafeWebUrl(target)) {
+            viewModel.openNewTab(isPrivate = false, initialUrl = target)
+          }
+        }
+        Intent.ACTION_WEB_SEARCH -> {
+          val query = intent.getStringExtra(SearchManager.QUERY) ?: return
+          val cleaned = UrlValidator.sanitizeControlChars(query)
+          if (cleaned.isNotEmpty()) {
+            viewModel.openNewTab(isPrivate = false, initialUrl = "")
+            viewModel.navigateActiveTab(cleaned)
+          }
         }
       }
-      Intent.ACTION_WEB_SEARCH -> {
-        val query = intent.getStringExtra(SearchManager.QUERY) ?: return
-        val cleaned = UrlValidator.sanitizeControlChars(query)
-        if (cleaned.isNotEmpty()) {
-          viewModel.openNewTab(isPrivate = false, initialUrl = "")
-          viewModel.navigateActiveTab(cleaned)
-        }
-      }
+    } catch (_: Throwable) {
     }
   }
 

@@ -186,12 +186,34 @@ fun BrowserScreen(
   }
 
   Box(modifier = Modifier.fillMaxSize()) {
+    val activeFullscreen = fullscreenView
+    val activePageSource = pageSource
+    val activeReaderArticle = readerArticle
     when {
-      fullscreenView != null -> {
-        val (customView, _) = fullscreenView!!
+      activeFullscreen != null -> {
+        val (customView, _) = activeFullscreen
         Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
           AndroidView(
-            factory = { customView },
+            factory = { ctx -> FrameLayout(ctx) },
+            update = { container ->
+              if (container.childCount != 1 || container.getChildAt(0) !== customView) {
+                container.removeAllViews()
+                try {
+                  (customView.parent as? ViewGroup)?.removeView(customView)
+                  container.addView(
+                    customView,
+                    FrameLayout.LayoutParams(
+                      ViewGroup.LayoutParams.MATCH_PARENT,
+                      ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                  )
+                } catch (_: Throwable) {
+                }
+              }
+            },
+            onRelease = { container ->
+              container.removeAllViews()
+            },
             modifier = Modifier.fillMaxSize()
           )
           Surface(
@@ -215,8 +237,8 @@ fun BrowserScreen(
           }
         }
       }
-      pageSource != null -> {
-        val (url, html) = pageSource!!
+      activePageSource != null -> {
+        val (url, html) = activePageSource
         PageSourceOverlay(
           pageUrl = url,
           htmlSource = html,
@@ -224,9 +246,9 @@ fun BrowserScreen(
           onClose = { viewModel.closePageSource() }
         )
       }
-      readerArticle != null -> {
+      activeReaderArticle != null -> {
         ReaderModeOverlay(
-          article = readerArticle!!,
+          article = activeReaderArticle,
           fontSizeSp = settings.readerFontSizeSp,
           darkReading = settings.readerDarkMode,
           onChangeFontSize = { sz -> viewModel.updateSettings { it.copy(readerFontSizeSp = sz) } },
@@ -486,48 +508,80 @@ fun BrowserScreen(
                           factory = { ctx -> FrameLayout(ctx) },
                           update = { container ->
                             val targetWebView = viewModel.getOrCreateActiveWebView()
+                            if (targetWebView == null || !viewModel.webViewPool.isWebViewAlive(targetWebView)) {
+                              for (i in 0 until container.childCount) {
+                                val child = container.getChildAt(i) as? android.webkit.WebView
+                                if (child != null) {
+                                  child.setOnTouchListener(null)
+                                  viewModel.webViewPool.detachFromHost(child)
+                                }
+                              }
+                              container.removeAllViews()
+                              return@AndroidView
+                            }
+                            viewModel.webViewPool.attachToHost(targetWebView, container.context)
                             if (container.childCount != 1 || container.getChildAt(0) !== targetWebView) {
+                              for (i in 0 until container.childCount) {
+                                val child = container.getChildAt(i) as? android.webkit.WebView
+                                if (child != null && child !== targetWebView) {
+                                  child.setOnTouchListener(null)
+                                  viewModel.webViewPool.detachFromHost(child)
+                                }
+                              }
                               container.removeAllViews()
                               (targetWebView.parent as? ViewGroup)?.removeView(targetWebView)
-                              container.addView(
-                                targetWebView,
-                                FrameLayout.LayoutParams(
-                                  ViewGroup.LayoutParams.MATCH_PARENT,
-                                  ViewGroup.LayoutParams.MATCH_PARENT
+                              try {
+                                container.addView(
+                                  targetWebView,
+                                  FrameLayout.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.MATCH_PARENT
+                                  )
                                 )
-                              )
-                              targetWebView.setOnTouchListener { v, event ->
-                                if (v.scrollY == 0) {
-                                  when (event.actionMasked) {
-                                    MotionEvent.ACTION_DOWN -> {
-                                      pullStartX.floatValue = event.x
-                                      pullStartY.floatValue = event.y
-                                      pullProgress = 0f
-                                    }
-                                    MotionEvent.ACTION_MOVE -> {
-                                      val dy = event.y - pullStartY.floatValue
-                                      val dx = kotlin.math.abs(event.x - pullStartX.floatValue)
-                                      if (dy > slopPx && dy > dx * 1.4f && pullStartY.floatValue > 0f) {
-                                        pullProgress = ((dy - slopPx) / triggerPx).coerceIn(0f, 1f)
-                                      } else {
-                                        pullProgress = 0f
-                                      }
-                                    }
-                                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                                      if (pullProgress >= 0.95f) {
-                                        viewModel.reloadOrStop()
-                                      }
-                                      pullProgress = 0f
-                                      pullStartX.floatValue = 0f
-                                      pullStartY.floatValue = 0f
-                                    }
-                                  }
-                                } else {
-                                  pullProgress = 0f
-                                }
-                                false
+                              } catch (_: Throwable) {
                               }
                             }
+                            targetWebView.setOnTouchListener { v, event ->
+                              if (v.scrollY == 0) {
+                                when (event.actionMasked) {
+                                  MotionEvent.ACTION_DOWN -> {
+                                    pullStartX.floatValue = event.x
+                                    pullStartY.floatValue = event.y
+                                    pullProgress = 0f
+                                  }
+                                  MotionEvent.ACTION_MOVE -> {
+                                    val dy = event.y - pullStartY.floatValue
+                                    val dx = kotlin.math.abs(event.x - pullStartX.floatValue)
+                                    if (dy > slopPx && dy > dx * 1.4f && pullStartY.floatValue > 0f) {
+                                      pullProgress = ((dy - slopPx) / triggerPx).coerceIn(0f, 1f)
+                                    } else {
+                                      pullProgress = 0f
+                                    }
+                                  }
+                                  MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                                    if (pullProgress >= 0.95f) {
+                                      viewModel.reloadOrStop()
+                                    }
+                                    pullProgress = 0f
+                                    pullStartX.floatValue = 0f
+                                    pullStartY.floatValue = 0f
+                                  }
+                                }
+                              } else {
+                                pullProgress = 0f
+                              }
+                              false
+                            }
+                          },
+                          onRelease = { container ->
+                            for (i in 0 until container.childCount) {
+                              val child = container.getChildAt(i) as? android.webkit.WebView
+                              if (child != null) {
+                                child.setOnTouchListener(null)
+                                viewModel.webViewPool.detachFromHost(child)
+                              }
+                            }
+                            container.removeAllViews()
                           },
                           modifier = Modifier.fillMaxSize().testTag("webview_container")
                         )

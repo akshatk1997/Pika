@@ -10,6 +10,7 @@
 
 | Version | Version Code | Target Platforms & OS | Key Highlights |
 |---|---:|---|---|
+| **v1.1.2** | `5` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Fixed Android 17 & real-device crash vectors (`shouldInterceptRequest` background-thread host tracking, `MutableContextWrapper` + `AndroidView.onRelease` lifecycle binding, `graphics-path:1.1.0` 16 KB page alignment, Compose BOM `2025.12.01`, `ViewModel`/`WebViewClient` R8 keep rules, throwaway WebView removal, and SQLite/picker/clipboard error guards) |
 | **v1.1.1** | `4` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Removed bottom search bar (top-only omnibox), streamlined clean production UI copy without internal jargon, fixed back navigation from error/HTTP warnings, aborted-load error suppression, density-scaled pull-to-refresh, overlay snackbar feedback, and bookmark/settings validation |
 | **v1.1.0** | `3` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Rebranded to **Bat**, custom 3D Batman-inspired bat mascot icon + Material You monochrome crest, adaptive tablet `NavigationRail` + single-row wide toolbar + multi-column grids, hardware keyboard shortcuts |
 | **v1.0.0** | `1–2` | Android 7.0–16 | Initial Feather/Pika browser shell, Android Keystore AES-256-GCM settings, ad/tracker shield, Via/X power tools (< 2 MB) |
@@ -27,11 +28,11 @@ Because no platform overrides were supplied prior to implementation, Bat targets
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Bat-v1.1.1.apk`](releases/Bat-v1.1.1.apk) and attached to GitHub Releases (`v1.1.1`).
+Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Bat-v1.1.2.apk`](releases/Bat-v1.1.2.apk) and attached to GitHub Releases (`v1.1.2`).
 
 ---
 
-## Features (v1.1.1)
+## Features (v1.1.2)
 
 - **Address Bar & Swipe Gestures:** Top-docked address & navigation bar across phone and tablet, horizontal omnibox swipe to switch tabs, direct URL entry, search engine choice (DuckDuckGo, Startpage, Qwant, Brave, Wikipedia, Google, custom HTTPS), live security badge, copy, share, and external browser handoff.
 - **Power Tools (Via / X Style):** Compact 4-column Quick Grid Menu with **Media & Resource Sniffer**, **Night Web** page darkening, **No-Image** data-saver mode, **Desktop / iPhone / Mobile** User-Agent switcher, **Immersive Fullscreen**, **Save Page as PDF** (`PrintManager`), **View Page Source**, **Translate**, and **Pin Shortcut to Home Screen**.

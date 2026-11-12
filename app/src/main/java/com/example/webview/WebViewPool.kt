@@ -2,6 +2,7 @@ package com.example.webview
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.MutableContextWrapper
 import android.graphics.Bitmap
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -12,6 +13,7 @@ import android.os.Message
 import android.print.PrintAttributes
 import android.print.PrintManager
 import android.view.View
+import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.GeolocationPermissions
 import android.webkit.PermissionRequest
@@ -40,7 +42,9 @@ import com.example.security.TrackerBlocker
 import com.example.security.UrlValidator
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
+import java.util.Collections
 import java.util.LinkedHashMap
+import java.util.WeakHashMap
 import java.util.concurrent.ConcurrentHashMap
 
 interface WebViewCallbacks {
@@ -65,9 +69,8 @@ interface WebViewCallbacks {
 
 /**
  * Hardened Android System WebView pool (max 2 live WebViews in RAM).
- * Supports Android 8–17+ (API 26–37) phone & tablet compatibility (RenderProcessGone recovery,
- * algorithmic darkening, safe FileProvider/SAF integration), Via/X power tools (UA switching,
- * Night Web CSS, No-Image saver, Resource Sniffer, Page Source, PDF Print), and zero JS bridges.
+ * Thread-safe host tracking (zero off-UI WebView calls), MutableContextWrapper UI binding,
+ * defensive System WebView creation, and clean RenderProcessGone recovery.
  */
 class WebViewPool(
   private val context: Context,
@@ -84,52 +87,79 @@ class WebViewPool(
       "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1"
   }
 
+  private val appContext: Context = context.applicationContext
   private val liveViews = object : LinkedHashMap<String, WebView>(4, 0.75f, true) {}
   private val savedStates = HashMap<String, Bundle>()
   private val sniffedResourcesByTab = ConcurrentHashMap<String, LinkedHashMap<String, SniffedResource>>()
+  private val currentPageHosts = ConcurrentHashMap<String, String>()
+  private val destroyedViews = Collections.newSetFromMap(WeakHashMap<WebView, Boolean>())
   private val defaultUserAgent: String by lazy {
     try {
-      WebSettings.getDefaultUserAgent(context)
+      WebSettings.getDefaultUserAgent(appContext)
     } catch (_: Throwable) {
       ""
     }
   }
+
+  fun attachToHost(webView: WebView, hostContext: Context) {
+    if (destroyedViews.contains(webView)) return
+    val wrapper = webView.context as? MutableContextWrapper ?: return
+    if (wrapper.baseContext !== hostContext) {
+      wrapper.baseContext = hostContext
+    }
+  }
+
+  fun detachFromHost(webView: WebView) {
+    val wrapper = webView.context as? MutableContextWrapper ?: return
+    if (wrapper.baseContext !== appContext) {
+      wrapper.baseContext = appContext
+    }
+  }
+
+  fun isWebViewAlive(webView: WebView): Boolean = !destroyedViews.contains(webView)
 
   fun getOrCreateWebView(
     tabId: String,
     isPrivate: Boolean,
     userAgentMode: UserAgentMode,
     approvedHttpHosts: Set<String>
-  ): WebView {
+  ): WebView? {
     val settingsState = settingsProvider()
     liveViews[tabId]?.let { existing ->
-      applySettings(existing, isPrivate, userAgentMode, settingsState)
-      return existing
+      if (!destroyedViews.contains(existing)) {
+        applySettings(existing, isPrivate, userAgentMode, settingsState)
+        return existing
+      } else {
+        liveViews.remove(tabId)
+      }
     }
 
     while (liveViews.size >= MAX_LIVE_WEBVIEWS) {
       val eldestKey = liveViews.keys.firstOrNull() ?: break
       val eldestView = liveViews.remove(eldestKey)
       if (eldestView != null) {
-        val bundle = Bundle()
-        eldestView.saveState(bundle)
-        savedStates[eldestKey] = bundle
-        eldestView.onPause()
-        eldestView.stopLoading()
-        (eldestView.parent as? android.view.ViewGroup)?.removeView(eldestView)
-        eldestView.destroy()
+        try {
+          val bundle = Bundle()
+          eldestView.saveState(bundle)
+          savedStates[eldestKey] = bundle
+        } catch (_: Throwable) {
+        }
+        safelyDestroyWebView(eldestView)
       }
     }
 
-    val webView = createSecuredWebView(tabId, isPrivate, userAgentMode, approvedHttpHosts)
+    val webView = createSecuredWebView(tabId, isPrivate, userAgentMode, approvedHttpHosts) ?: return null
     savedStates.remove(tabId)?.let { bundle ->
-      webView.restoreState(bundle)
+      try {
+        webView.restoreState(bundle)
+      } catch (_: Throwable) {
+      }
     }
     liveViews[tabId] = webView
     return webView
   }
 
-  fun getLiveWebView(tabId: String): WebView? = liveViews[tabId]
+  fun getLiveWebView(tabId: String): WebView? = liveViews[tabId]?.takeIf { !destroyedViews.contains(it) }
 
   fun getSniffedResources(tabId: String): List<SniffedResource> {
     val map = sniffedResourcesByTab[tabId] ?: return emptyList()
@@ -141,21 +171,37 @@ class WebViewPool(
   }
 
   fun loadUrl(tabId: String, url: String) {
-    val webView = liveViews[tabId] ?: return
+    val webView = getLiveWebView(tabId) ?: return
     sniffedResourcesByTab.remove(tabId)
+    currentPageHosts[tabId] = UrlValidator.extractHost(url)
     val headers = if (settingsProvider().doNotTrackEnabled) {
       mapOf("DNT" to "1", "Sec-GPC" to "1")
     } else {
       emptyMap()
     }
-    webView.loadUrl(url, headers)
+    try {
+      webView.loadUrl(url, headers)
+    } catch (_: Throwable) {
+      callbacks.onPageError(
+        tabId,
+        PageError(
+          type = PageErrorType.GENERIC,
+          failingUrl = url,
+          host = UrlValidator.extractHost(url).ifEmpty { "Page" },
+          reason = "Unable to load this page right now."
+        )
+      )
+    }
   }
 
   fun applyUserAgentMode(tabId: String, isPrivate: Boolean, userAgentMode: UserAgentMode) {
-    val webView = liveViews[tabId] ?: return
+    val webView = getLiveWebView(tabId) ?: return
     applySettings(webView, isPrivate, userAgentMode, settingsProvider())
-    if (!webView.url.isNullOrBlank()) {
-      webView.reload()
+    try {
+      if (!webView.url.isNullOrBlank()) {
+        webView.reload()
+      }
+    } catch (_: Throwable) {
     }
   }
 
@@ -163,7 +209,8 @@ class WebViewPool(
     settingsState: SettingsState,
     tabStateLookup: (String) -> Pair<Boolean, UserAgentMode>
   ) {
-    for ((id, wv) in liveViews) {
+    for ((id, wv) in liveViews.toMap()) {
+      if (destroyedViews.contains(wv)) continue
       val (isPriv, uaMode) = tabStateLookup(id)
       applySettings(wv, isPriv, uaMode, settingsState)
       applyNightWebCss(wv, settingsState.nightWebMode)
@@ -173,52 +220,97 @@ class WebViewPool(
   fun destroyTab(tabId: String) {
     savedStates.remove(tabId)
     sniffedResourcesByTab.remove(tabId)
+    currentPageHosts.remove(tabId)
     liveViews.remove(tabId)?.let { wv ->
+      safelyDestroyWebView(wv)
+    }
+  }
+
+  private fun safelyDestroyWebView(wv: WebView) {
+    destroyedViews.add(wv)
+    detachFromHost(wv)
+    try {
+      wv.setOnTouchListener(null)
+      wv.setOnLongClickListener(null)
+      wv.setFindListener(null)
+      wv.setDownloadListener(null)
       wv.stopLoading()
       wv.onPause()
-      (wv.parent as? android.view.ViewGroup)?.removeView(wv)
+    } catch (_: Throwable) {
+    }
+    try {
+      (wv.parent as? ViewGroup)?.removeView(wv)
+    } catch (_: Throwable) {
+    }
+    try {
       wv.destroy()
+    } catch (_: Throwable) {
     }
   }
 
   fun wipePrivateSessionData(privateTabIds: List<String>) {
     privateTabIds.forEach { destroyTab(it) }
-    try {
-      CookieManager.getInstance().removeAllCookies(null)
-      CookieManager.getInstance().flush()
-      WebStorage.getInstance().deleteAllData()
-      WebViewDatabase.getInstance(context).clearFormData()
-      WebView(context).apply {
-        clearCache(true)
-        clearHistory()
+    for ((_, wv) in liveViews.toMap()) {
+      if (destroyedViews.contains(wv)) continue
+      try {
+        wv.clearCache(true)
+        wv.clearHistory()
         @Suppress("DEPRECATION")
-        clearFormData()
-        destroy()
+        wv.clearFormData()
+      } catch (_: Throwable) {
       }
+    }
+    try {
+      CookieManager.getInstance().apply {
+        removeAllCookies(null)
+        flush()
+      }
+    } catch (_: Throwable) {
+    }
+    try {
+      WebStorage.getInstance().deleteAllData()
+    } catch (_: Throwable) {
+    }
+    try {
+      @Suppress("DEPRECATION")
+      WebViewDatabase.getInstance(appContext).clearFormData()
     } catch (_: Throwable) {
     }
   }
 
   fun clearBrowsingData(options: ClearDataOptions) {
-    for ((_, wv) in liveViews) {
-      if (options.clearCache) wv.clearCache(true)
-      if (options.clearHistory) wv.clearHistory()
-      @Suppress("DEPRECATION")
-      wv.clearFormData()
+    for ((_, wv) in liveViews.toMap()) {
+      if (destroyedViews.contains(wv)) continue
+      try {
+        if (options.clearCache) wv.clearCache(true)
+        if (options.clearHistory) wv.clearHistory()
+        @Suppress("DEPRECATION")
+        wv.clearFormData()
+      } catch (_: Throwable) {
+      }
+    }
+    if (options.clearCookies) {
+      try {
+        CookieManager.getInstance().apply {
+          removeAllCookies(null)
+          flush()
+        }
+      } catch (_: Throwable) {
+      }
+      try {
+        WebStorage.getInstance().deleteAllData()
+      } catch (_: Throwable) {
+      }
     }
     try {
-      if (options.clearCookies) {
-        CookieManager.getInstance().removeAllCookies(null)
-        CookieManager.getInstance().flush()
-        WebStorage.getInstance().deleteAllData()
-      }
-      WebViewDatabase.getInstance(context).clearFormData()
+      @Suppress("DEPRECATION")
+      WebViewDatabase.getInstance(appContext).clearFormData()
     } catch (_: Throwable) {
     }
   }
 
   fun printCurrentPage(activityContext: Context, tabId: String, title: String): Boolean {
-    val webView = liveViews[tabId] ?: return false
+    val webView = getLiveWebView(tabId) ?: return false
     return try {
       val printManager = activityContext.getSystemService(Context.PRINT_SERVICE) as? PrintManager ?: return false
       val jobName = UrlValidator.sanitizeDisplayText(title, 64).ifEmpty { "Bat_Page" }
@@ -231,28 +323,32 @@ class WebViewPool(
   }
 
   fun extractPageSource(tabId: String, onResult: (String?) -> Unit) {
-    val webView = liveViews[tabId]
+    val webView = getLiveWebView(tabId)
     if (webView == null) {
       onResult(null)
       return
     }
     val js = "(function(){try{return document.documentElement?document.documentElement.outerHTML:'';}catch(e){return '';}})();"
-    webView.evaluateJavascript(js) { rawJson ->
-      try {
-        if (rawJson.isNullOrBlank() || rawJson == "null") {
+    try {
+      webView.evaluateJavascript(js) { rawJson ->
+        try {
+          if (rawJson.isNullOrBlank() || rawJson == "null") {
+            onResult(null)
+            return@evaluateJavascript
+          }
+          val unwrapped = JSONObject("{\"v\":$rawJson}").getString("v")
+          onResult(unwrapped.take(90_000).ifBlank { null })
+        } catch (_: Throwable) {
           onResult(null)
-          return@evaluateJavascript
         }
-        val unwrapped = JSONObject("{\"v\":$rawJson}").getString("v")
-        onResult(unwrapped.take(90_000).ifBlank { null })
-      } catch (_: Throwable) {
-        onResult(null)
       }
+    } catch (_: Throwable) {
+      onResult(null)
     }
   }
 
   fun extractReaderArticle(tabId: String, pageUrl: String, onResult: (ReaderArticle?) -> Unit) {
-    val webView = liveViews[tabId]
+    val webView = getLiveWebView(tabId)
     if (webView == null) {
       onResult(null)
       return
@@ -282,49 +378,54 @@ class WebViewPool(
       })();
     """.trimIndent()
 
-    webView.evaluateJavascript(js) { rawJson ->
-      try {
-        if (rawJson.isNullOrBlank() || rawJson == "null") {
-          onResult(null)
-          return@evaluateJavascript
-        }
-        val unwrapped = JSONObject("{\"v\":$rawJson}").getString("v")
-        val obj = JSONObject(unwrapped)
-        val title = UrlValidator.sanitizeDisplayText(obj.optString("title", ""), 180)
-        val arr = obj.optJSONArray("paragraphs")
-        val paras = mutableListOf<String>()
-        if (arr != null) {
-          for (i in 0 until arr.length()) {
-            val cleaned = UrlValidator.sanitizeControlChars(arr.optString(i, ""))
-            if (cleaned.isNotEmpty()) paras += cleaned
+    try {
+      webView.evaluateJavascript(js) { rawJson ->
+        try {
+          if (rawJson.isNullOrBlank() || rawJson == "null") {
+            onResult(null)
+            return@evaluateJavascript
           }
-        }
-        if (paras.isEmpty()) {
-          onResult(null)
-        } else {
-          onResult(
-            ReaderArticle(
-              title = title.ifEmpty { UrlValidator.extractHost(pageUrl) },
-              siteHost = UrlValidator.extractHost(pageUrl),
-              paragraphs = paras
+          val unwrapped = JSONObject("{\"v\":$rawJson}").getString("v")
+          val obj = JSONObject(unwrapped)
+          val title = UrlValidator.sanitizeDisplayText(obj.optString("title", ""), 180)
+          val arr = obj.optJSONArray("paragraphs")
+          val paras = mutableListOf<String>()
+          if (arr != null) {
+            for (i in 0 until arr.length()) {
+              val cleaned = UrlValidator.sanitizeControlChars(arr.optString(i, ""))
+              if (cleaned.isNotEmpty()) paras += cleaned
+            }
+          }
+          if (paras.isEmpty()) {
+            onResult(null)
+          } else {
+            onResult(
+              ReaderArticle(
+                title = title.ifEmpty { UrlValidator.extractHost(pageUrl) },
+                siteHost = UrlValidator.extractHost(pageUrl),
+                paragraphs = paras
+              )
             )
-          )
+          }
+        } catch (_: Throwable) {
+          onResult(null)
         }
-      } catch (_: Throwable) {
-        onResult(null)
       }
+    } catch (_: Throwable) {
+      onResult(null)
     }
   }
 
   fun destroyAll() {
     savedStates.clear()
     sniffedResourcesByTab.clear()
+    currentPageHosts.clear()
     val ids = liveViews.keys.toList()
     ids.forEach { destroyTab(it) }
   }
 
   private fun applyNightWebCss(webView: WebView, enabled: Boolean) {
-    if (!settingsProvider().javascriptEnabled) return
+    if (!settingsProvider().javascriptEnabled || destroyedViews.contains(webView)) return
     val js = if (enabled) {
       """
       (function(){
@@ -352,44 +453,57 @@ class WebViewPool(
     userAgentMode: UserAgentMode,
     settingsState: SettingsState
   ) {
-    webView.settings.apply {
-      javaScriptEnabled = settingsState.javascriptEnabled
-      javaScriptCanOpenWindowsAutomatically = false
-      setSupportMultipleWindows(true)
-      allowFileAccess = false
-      allowContentAccess = false
-      @Suppress("DEPRECATION")
-      allowFileAccessFromFileURLs = false
-      @Suppress("DEPRECATION")
-      allowUniversalAccessFromFileURLs = false
-      @Suppress("DEPRECATION")
-      saveFormData = false
-      mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-      domStorageEnabled = !isPrivate
-      @Suppress("DEPRECATION")
-      databaseEnabled = false
-      builtInZoomControls = true
-      displayZoomControls = false
-      useWideViewPort = true
-      loadWithOverviewMode = true
-      loadsImagesAutomatically = !settingsState.noImageMode
-      blockNetworkImage = settingsState.noImageMode
-      userAgentString = when (userAgentMode) {
-        UserAgentMode.DESKTOP -> DESKTOP_USER_AGENT
-        UserAgentMode.IPHONE -> IPHONE_USER_AGENT
-        UserAgentMode.MOBILE -> defaultUserAgent.ifEmpty { null }
+    if (destroyedViews.contains(webView)) return
+    try {
+      webView.settings.apply {
+        javaScriptEnabled = settingsState.javascriptEnabled
+        javaScriptCanOpenWindowsAutomatically = false
+        setSupportMultipleWindows(true)
+        allowFileAccess = false
+        allowContentAccess = false
+        @Suppress("DEPRECATION")
+        allowFileAccessFromFileURLs = false
+        @Suppress("DEPRECATION")
+        allowUniversalAccessFromFileURLs = false
+        @Suppress("DEPRECATION")
+        saveFormData = false
+        mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+        domStorageEnabled = !isPrivate
+        @Suppress("DEPRECATION")
+        databaseEnabled = false
+        builtInZoomControls = true
+        displayZoomControls = false
+        useWideViewPort = true
+        loadWithOverviewMode = true
+        loadsImagesAutomatically = !settingsState.noImageMode
+        blockNetworkImage = settingsState.noImageMode
+        userAgentString = when (userAgentMode) {
+          UserAgentMode.DESKTOP -> DESKTOP_USER_AGENT
+          UserAgentMode.IPHONE -> IPHONE_USER_AGENT
+          UserAgentMode.MOBILE -> defaultUserAgent.ifEmpty { null }
+        }
+        textZoom = if (userAgentMode == UserAgentMode.DESKTOP) 90 else settingsState.textZoomPercent
+        cacheMode = if (isPrivate) WebSettings.LOAD_NO_CACHE else WebSettings.LOAD_DEFAULT
+        try {
+          safeBrowsingEnabled = true
+        } catch (_: Throwable) {
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+          try {
+            isAlgorithmicDarkeningAllowed = settingsState.nightWebMode || settingsState.themeMode == ThemeMode.DARK
+          } catch (_: Throwable) {
+          }
+        }
       }
-      textZoom = if (userAgentMode == UserAgentMode.DESKTOP) 90 else settingsState.textZoomPercent
-      cacheMode = if (isPrivate) WebSettings.LOAD_NO_CACHE else WebSettings.LOAD_DEFAULT
-      safeBrowsingEnabled = true
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        isAlgorithmicDarkeningAllowed = settingsState.nightWebMode || settingsState.themeMode == ThemeMode.DARK
-      }
+    } catch (_: Throwable) {
     }
 
-    val cookieMgr = CookieManager.getInstance()
-    cookieMgr.setAcceptCookie(!isPrivate)
-    cookieMgr.setAcceptThirdPartyCookies(webView, !isPrivate && !settingsState.blockThirdPartyCookies)
+    try {
+      val cookieMgr = CookieManager.getInstance()
+      cookieMgr.setAcceptCookie(!isPrivate)
+      cookieMgr.setAcceptThirdPartyCookies(webView, !isPrivate && !settingsState.blockThirdPartyCookies)
+    } catch (_: Throwable) {
+    }
   }
 
   private fun createSecuredWebView(
@@ -397,22 +511,42 @@ class WebViewPool(
     isPrivate: Boolean,
     userAgentMode: UserAgentMode,
     approvedHttpHosts: Set<String>
-  ): WebView {
-    val webView = WebView(context)
+  ): WebView? {
+    val webView = try {
+      WebView(MutableContextWrapper(appContext))
+    } catch (t: Throwable) {
+      callbacks.onPageError(
+        tabId,
+        PageError(
+          type = PageErrorType.GENERIC,
+          failingUrl = "",
+          host = "WebView",
+          reason = UrlValidator.sanitizeDisplayText(t.message, 120).ifEmpty {
+            "System WebView is unavailable or updating."
+          }
+        )
+      )
+      return null
+    }
+
     applySettings(webView, isPrivate, userAgentMode, settingsProvider())
 
     webView.setOnLongClickListener { v ->
-      val wv = v as? WebView ?: return@setOnLongClickListener false
-      val result = wv.hitTestResult
-      val extra = result.extra
-      val isLinkOrImage = result.type == WebView.HitTestResult.SRC_ANCHOR_TYPE ||
-        result.type == WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE ||
-        result.type == WebView.HitTestResult.IMAGE_TYPE
-      if (isLinkOrImage && !extra.isNullOrBlank() && UrlValidator.isSafeWebUrl(extra)) {
-        val isImg = result.type == WebView.HitTestResult.IMAGE_TYPE
-        callbacks.onLongPressLink(tabId, extra, isImg)
-        true
-      } else {
+      try {
+        val wv = v as? WebView ?: return@setOnLongClickListener false
+        val result = wv.hitTestResult
+        val extra = result.extra
+        val isLinkOrImage = result.type == WebView.HitTestResult.SRC_ANCHOR_TYPE ||
+          result.type == WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE ||
+          result.type == WebView.HitTestResult.IMAGE_TYPE
+        if (isLinkOrImage && !extra.isNullOrBlank() && UrlValidator.isSafeWebUrl(extra)) {
+          val isImg = result.type == WebView.HitTestResult.IMAGE_TYPE
+          callbacks.onLongPressLink(tabId, extra, isImg)
+          true
+        } else {
+          false
+        }
+      } catch (_: Throwable) {
         false
       }
     }
@@ -451,6 +585,9 @@ class WebViewPool(
           }
           return true
         }
+        if (request.isForMainFrame) {
+          currentPageHosts[tabId] = host
+        }
         return false
       }
 
@@ -458,47 +595,56 @@ class WebViewPool(
         view: WebView?,
         request: WebResourceRequest?
       ): WebResourceResponse? {
-        val reqUrl = request?.url?.toString() ?: return null
-        if (!UrlValidator.isSafeWebUrl(reqUrl)) {
-          return emptyBlockedResponse()
-        }
-        val currentSettings = settingsProvider()
-        val pageHost = UrlValidator.extractHost(view?.url)
-        val customSet = currentSettings.customBlockedHosts.toSet()
-        if (TrackerBlocker.shouldBlockRequest(reqUrl, pageHost, currentSettings.trackerBlockingEnabled, customSet)) {
-          callbacks.onTrackerBlocked(tabId)
-          return emptyBlockedResponse()
-        }
-        TrackerBlocker.inferSniffedResource(reqUrl)?.let { res ->
-          val map = sniffedResourcesByTab.getOrPut(tabId) { LinkedHashMap() }
-          val newCount = synchronized(map) {
-            if (!map.containsKey(res.url) && map.size < MAX_SNIFFED_PER_TAB) {
-              map[res.url] = res
-            }
-            map.size
+        return try {
+          val reqUrl = request?.url?.toString() ?: return null
+          if (!UrlValidator.isSafeWebUrl(reqUrl)) {
+            return emptyBlockedResponse()
           }
-          callbacks.onResourceSniffed(tabId, newCount)
+          val currentSettings = settingsProvider()
+          val pageHost = currentPageHosts[tabId].orEmpty()
+          val customSet = currentSettings.customBlockedHosts.toSet()
+          if (TrackerBlocker.shouldBlockRequest(reqUrl, pageHost, currentSettings.trackerBlockingEnabled, customSet)) {
+            callbacks.onTrackerBlocked(tabId)
+            return emptyBlockedResponse()
+          }
+          TrackerBlocker.inferSniffedResource(reqUrl)?.let { res ->
+            val map = sniffedResourcesByTab.getOrPut(tabId) { LinkedHashMap() }
+            val newCount = synchronized(map) {
+              if (!map.containsKey(res.url) && map.size < MAX_SNIFFED_PER_TAB) {
+                map[res.url] = res
+              }
+              map.size
+            }
+            callbacks.onResourceSniffed(tabId, newCount)
+          }
+          null
+        } catch (_: Throwable) {
+          null
         }
-        return null
       }
 
       override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
         if (url != null) {
+          currentPageHosts[tabId] = UrlValidator.extractHost(url)
           callbacks.onPageStarted(tabId, url)
         }
       }
 
       override fun onPageFinished(view: WebView?, url: String?) {
-        if (url != null && view != null) {
+        if (url != null && view != null && !destroyedViews.contains(view)) {
+          currentPageHosts[tabId] = UrlValidator.extractHost(url)
           if (settingsProvider().nightWebMode) {
             applyNightWebCss(view, true)
           }
+          val safeTitle = try { view.title } catch (_: Throwable) { null }
+          val canBack = try { view.canGoBack() } catch (_: Throwable) { false }
+          val canFwd = try { view.canGoForward() } catch (_: Throwable) { false }
           callbacks.onPageFinished(
             tabId = tabId,
             url = url,
-            title = view.title,
-            canGoBack = view.canGoBack(),
-            canGoForward = view.canGoForward()
+            title = safeTitle,
+            canGoBack = canBack,
+            canGoForward = canFwd
           )
         }
       }
@@ -508,8 +654,11 @@ class WebViewPool(
         handler: SslErrorHandler?,
         error: SslError?
       ) {
-        handler?.cancel()
-        val failingUrl = error?.url ?: view?.url ?: ""
+        try {
+          handler?.cancel()
+        } catch (_: Throwable) {
+        }
+        val failingUrl = error?.url ?: try { view?.url } catch (_: Throwable) { null } ?: ""
         val primaryError = when (error?.primaryError) {
           SslError.SSL_EXPIRED -> "Certificate expired"
           SslError.SSL_NOTYETVALID -> "Certificate not yet valid"
@@ -537,15 +686,16 @@ class WebViewPool(
         error: WebResourceError?
       ) {
         if (request?.isForMainFrame != true) return
-        val reason = error?.description?.toString() ?: "Page load failed"
+        val reason = try { error?.description?.toString() } catch (_: Throwable) { null } ?: "Page load failed"
         if (reason.contains("ERR_ABORTED", ignoreCase = true)) return
         val failingUrl = request.url?.toString() ?: ""
         val host = UrlValidator.extractHost(failingUrl)
         val offline = !isNetworkConnected()
+        val errorCode = try { error?.errorCode ?: 0 } catch (_: Throwable) { 0 }
         val errorType = when {
           offline -> PageErrorType.OFFLINE
-          error?.errorCode == ERROR_HOST_LOOKUP -> PageErrorType.DNS_FAILURE
-          error?.errorCode == ERROR_UNSAFE_RESOURCE -> PageErrorType.BLOCKED
+          errorCode == ERROR_HOST_LOOKUP -> PageErrorType.DNS_FAILURE
+          errorCode == ERROR_UNSAFE_RESOURCE -> PageErrorType.BLOCKED
           else -> PageErrorType.GENERIC
         }
         callbacks.onPageError(
@@ -560,13 +710,10 @@ class WebViewPool(
       }
 
       override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
+        currentPageHosts.remove(tabId)
         liveViews.remove(tabId)?.let { dead ->
-          (dead.parent as? android.view.ViewGroup)?.removeView(dead)
-          try {
-            dead.destroy()
-          } catch (_: Throwable) {
-          }
-        }
+          safelyDestroyWebView(dead)
+        } ?: view?.let { safelyDestroyWebView(it) }
         callbacks.onRenderProcessCrashed(tabId)
         return true
       }
@@ -589,9 +736,9 @@ class WebViewPool(
         isUserGesture: Boolean,
         resultMsg: Message?
       ): Boolean {
-        val targetUrl = view?.hitTestResult?.extra ?: return false
+        val targetUrl = try { view?.hitTestResult?.extra } catch (_: Throwable) { null } ?: return false
         if (!isUserGesture || !UrlValidator.isSafeWebUrl(targetUrl)) return false
-        val origin = UrlValidator.extractOrigin(view.url)
+        val origin = try { UrlValidator.extractOrigin(view?.url) } catch (_: Throwable) { "" }
         callbacks.onPermissionPrompt(
           tabId = tabId,
           origin = origin.ifEmpty { "current page" },
@@ -616,7 +763,10 @@ class WebViewPool(
           kind = WebPermissionKind.LOCATION,
           detail = ""
         ) { allowed ->
-          callback?.invoke(origin, allowed, false)
+          try {
+            callback?.invoke(origin, allowed, false)
+          } catch (_: Throwable) {
+          }
         }
       }
 
@@ -634,10 +784,13 @@ class WebViewPool(
           kind = kind,
           detail = ""
         ) { allowed ->
-          if (allowed) {
-            request.grant(resources)
-          } else {
-            request.deny()
+          try {
+            if (allowed) {
+              request.grant(resources)
+            } else {
+              request.deny()
+            }
+          } catch (_: Throwable) {
           }
         }
       }
@@ -651,7 +804,7 @@ class WebViewPool(
         return true
       }
 
-      override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
+      override fun onShowCustomView(view: View?, callback: WebChromeClient.CustomViewCallback?) {
         callbacks.onFullscreenChanged(tabId, view, callback)
       }
 
@@ -675,7 +828,7 @@ class WebViewPool(
 
   private fun isNetworkConnected(): Boolean {
     return try {
-      val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+      val cm = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return true
       val net = cm.activeNetwork ?: return false
       val caps = cm.getNetworkCapabilities(net) ?: return false
       caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)

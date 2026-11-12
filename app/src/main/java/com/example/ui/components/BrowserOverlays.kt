@@ -343,7 +343,7 @@ fun NewTabHomeView(
           contentPadding = PaddingValues(bottom = 16.dp),
           horizontalArrangement = Arrangement.spacedBy(10.dp),
           verticalArrangement = Arrangement.spacedBy(10.dp),
-          modifier = Modifier.fillMaxSize()
+          modifier = Modifier.weight(1f).fillMaxWidth()
         ) {
           items(bookmarks.take(12), key = { it.id }) { bm ->
             val host = UrlValidator.extractHost(bm.url)
@@ -704,7 +704,7 @@ fun ReaderModeOverlay(
       LazyColumn(
         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 18.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.widthIn(max = 680.dp).align(Alignment.CenterHorizontally).fillMaxSize()
+        modifier = Modifier.widthIn(max = 680.dp).align(Alignment.CenterHorizontally).weight(1f).fillMaxWidth()
       ) {
         item {
           Text(
@@ -793,7 +793,8 @@ fun PageSourceOverlay(
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onBackground,
         modifier = Modifier
-          .fillMaxSize()
+          .weight(1f)
+          .fillMaxWidth()
           .verticalScroll(rememberScrollState())
           .padding(14.dp)
       )

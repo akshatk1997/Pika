@@ -54,6 +54,7 @@ import kotlinx.coroutines.withContext
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 enum class ActiveOverlay {
   NONE,
@@ -137,16 +138,24 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   private var pendingFileChooserCallback: ValueCallback<Array<Uri>>? = null
   var onLaunchFileChooser: ((Array<String>?) -> Unit)? = null
 
-  private val approvedHttpHosts = HashSet<String>()
+  private val approvedHttpHosts: MutableSet<String> = ConcurrentHashMap.newKeySet()
   private var bookmarkQuery = ""
   private var historyQuery = ""
+
+  private inline fun runOnMain(crossinline block: () -> Unit) {
+    if (Looper.myLooper() == Looper.getMainLooper()) {
+      block()
+    } else {
+      mainHandler.post { block() }
+    }
+  }
 
   val downloads: StateFlow<List<DownloadRecord>> = downloadController.downloads
   val pendingDownloadConsent: StateFlow<PendingDownloadConsent?> = downloadController.pendingConsent
 
   private val webCallbacks = object : WebViewCallbacks {
     override fun onPageStarted(tabId: String, url: String) {
-      mainHandler.post {
+      runOnMain {
         val sec = when {
           tabById(tabId)?.isPrivate == true -> SecurityState.PRIVATE
           UrlValidator.isHttpsUrl(url) -> SecurityState.SECURE_HTTPS
@@ -175,7 +184,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       canGoBack: Boolean,
       canGoForward: Boolean
     ) {
-      mainHandler.post {
+      runOnMain {
         val safeTitle = UrlValidator.sanitizeDisplayText(title, 180)
           .ifEmpty { UrlValidator.extractHost(url).ifEmpty { "Page" } }
         val tab = tabById(tabId)
@@ -199,15 +208,18 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         }
         if (tab != null && !tab.isPrivate && _settings.value.historyEnabled && tab.errorState == null) {
           viewModelScope.launch(Dispatchers.IO) {
-            db.recordHistory(safeTitle, url)
-            refreshHistory()
+            try {
+              db.recordHistory(safeTitle, url)
+              _history.value = db.getHistory(historyQuery)
+            } catch (_: Throwable) {
+            }
           }
         }
       }
     }
 
     override fun onProgressChanged(tabId: String, progress: Int) {
-      mainHandler.post {
+      runOnMain {
         updateTab(tabId) { tab ->
           if (tab.errorState != null || tab.httpWarning != null) {
             tab
@@ -219,25 +231,25 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
 
     override fun onTitleReceived(tabId: String, title: String) {
-      mainHandler.post {
+      runOnMain {
         updateTab(tabId) { it.copy(title = title) }
       }
     }
 
     override fun onTrackerBlocked(tabId: String) {
-      mainHandler.post {
+      runOnMain {
         updateTab(tabId) { it.copy(trackersBlockedCount = it.trackersBlockedCount + 1) }
       }
     }
 
     override fun onResourceSniffed(tabId: String, count: Int) {
-      mainHandler.post {
+      runOnMain {
         updateTab(tabId) { it.copy(sniffedResourcesCount = count) }
       }
     }
 
     override fun onHttpBlockedByHttpsOnly(tabId: String, url: String) {
-      mainHandler.post {
+      runOnMain {
         val host = UrlValidator.extractHost(url)
         updateTab(tabId) {
           it.copy(
@@ -250,7 +262,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
 
     override fun onBlockedScheme(tabId: String, url: String, scheme: String) {
-      mainHandler.post {
+      runOnMain {
         updateTab(tabId) {
           it.copy(
             isLoading = false,
@@ -267,7 +279,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
 
     override fun onExternalSchemePrompt(tabId: String, url: String, scheme: String) {
-      mainHandler.post {
+      runOnMain {
         _externalLinkPrompt.value = ExternalLinkPrompt(
           url = url,
           scheme = scheme,
@@ -277,7 +289,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
 
     override fun onPageError(tabId: String, error: PageError) {
-      mainHandler.post {
+      runOnMain {
         val tab = tabById(tabId)
         val upgradeOrigin = tab?.upgradedFromHttpUrl
         if (upgradeOrigin != null && error.failingUrl.startsWith("https://")) {
@@ -290,7 +302,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
               httpWarning = HttpWarningState(originalUrl = upgradeOrigin, host = host, upgradeAttemptFailed = true)
             )
           }
-          return@post
+          return@runOnMain
         }
         updateTab(tabId) {
           it.copy(
@@ -303,7 +315,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
 
     override fun onRenderProcessCrashed(tabId: String) {
-      mainHandler.post {
+      runOnMain {
         val tab = tabById(tabId)
         val url = tab?.url ?: ""
         updateTab(tabId) {
@@ -328,7 +340,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       mimeType: String?,
       contentLength: Long
     ) {
-      mainHandler.post {
+      runOnMain {
         val isPriv = tabById(tabId)?.isPrivate == true
         downloadController.requestDownloadConsent(url, contentDisposition, mimeType, contentLength, isPriv)
       }
@@ -341,13 +353,13 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       detail: String,
       onDecision: (Boolean) -> Unit
     ) {
-      mainHandler.post {
+      runOnMain {
         val isPriv = tabById(tabId)?.isPrivate == true
         if (!isPriv) {
           val existing = _sitePermissions.value.firstOrNull { it.origin == origin && it.kind == kind }
           if (existing != null) {
             onDecision(existing.allowed)
-            return@post
+            return@runOnMain
           }
         }
         pendingPermissionCallback?.invoke(false)
@@ -365,15 +377,21 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       callback: ValueCallback<Array<Uri>>?,
       acceptTypes: Array<String>?
     ) {
-      mainHandler.post {
+      runOnMain {
         pendingFileChooserCallback?.onReceiveValue(null)
         pendingFileChooserCallback = callback
-        onLaunchFileChooser?.invoke(acceptTypes)
+        val handler = onLaunchFileChooser
+        if (handler == null) {
+          pendingFileChooserCallback?.onReceiveValue(null)
+          pendingFileChooserCallback = null
+        } else {
+          handler.invoke(acceptTypes)
+        }
       }
     }
 
     override fun onFindMatches(tabId: String, activeOrdinal: Int, numberOfMatches: Int) {
-      mainHandler.post {
+      runOnMain {
         if (tabId == _activeTabId.value) {
           _findState.update {
             it.copy(
@@ -390,7 +408,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       customView: View?,
       callback: WebChromeClient.CustomViewCallback?
     ) {
-      mainHandler.post {
+      runOnMain {
         if (customView == null) {
           _fullscreenView.value = null
         } else {
@@ -400,7 +418,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
 
     override fun onLongPressLink(tabId: String, url: String, isImage: Boolean) {
-      mainHandler.post {
+      runOnMain {
         _linkContextTarget.value = LinkContextTarget(url = url, isImage = isImage)
       }
     }
@@ -421,7 +439,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
   }
 
-  fun getOrCreateActiveWebView(): WebView {
+  fun getOrCreateActiveWebView(): WebView? {
     val tab = activeTab()
     return webViewPool.getOrCreateWebView(
       tabId = tab.id,
@@ -659,31 +677,37 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     val tab = activeTab()
     val wv = webViewPool.getLiveWebView(tab.id)
     if (tab.httpWarning != null || tab.errorState != null) {
-      val liveUrl = wv?.url.orEmpty()
+      val liveUrl = try { wv?.url.orEmpty() } catch (_: Throwable) { "" }
+      val canGoBackNow = try { wv?.canGoBack() == true } catch (_: Throwable) { false }
       val failedSameUrl = liveUrl == tab.errorState?.failingUrl ||
         liveUrl == tab.httpWarning?.originalUrl ||
         (tab.httpWarning?.upgradeAttemptFailed == true &&
           liveUrl.startsWith("https://") &&
           UrlValidator.extractHost(liveUrl) == tab.httpWarning.host)
-      if (wv != null && failedSameUrl && wv.canGoBack()) {
+      if (wv != null && failedSameUrl && canGoBackNow) {
         updateTab(tab.id) { it.copy(httpWarning = null, errorState = null) }
-        wv.goBack()
+        try {
+          wv.goBack()
+        } catch (_: Throwable) {
+        }
       } else if (wv != null &&
         liveUrl.isNotBlank() &&
         liveUrl != "about:blank" &&
         UrlValidator.isSafeWebUrl(liveUrl) &&
         !failedSameUrl
       ) {
-        val restoredTitle = UrlValidator.sanitizeDisplayText(wv.title, 180)
+        val rawTitle = try { wv.title } catch (_: Throwable) { null }
+        val restoredTitle = UrlValidator.sanitizeDisplayText(rawTitle, 180)
           .ifEmpty { UrlValidator.extractHost(liveUrl).ifEmpty { "Page" } }
+        val canFwdNow = try { wv.canGoForward() } catch (_: Throwable) { false }
         updateTab(tab.id) {
           it.copy(
             httpWarning = null,
             errorState = null,
             url = liveUrl,
             title = restoredTitle,
-            canGoBack = wv.canGoBack(),
-            canGoForward = wv.canGoForward(),
+            canGoBack = canGoBackNow,
+            canGoForward = canFwdNow,
             securityState = when {
               it.isPrivate -> SecurityState.PRIVATE
               UrlValidator.isHttpsUrl(liveUrl) -> SecurityState.SECURE_HTTPS
@@ -706,17 +730,23 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       }
       return true
     }
-    if (wv != null && wv.canGoBack()) {
-      wv.goBack()
-      return true
+    try {
+      if (wv != null && wv.canGoBack()) {
+        wv.goBack()
+        return true
+      }
+    } catch (_: Throwable) {
     }
     return false
   }
 
   fun goForward() {
     val wv = webViewPool.getLiveWebView(_activeTabId.value)
-    if (wv != null && wv.canGoForward()) {
-      wv.goForward()
+    try {
+      if (wv != null && wv.canGoForward()) {
+        wv.goForward()
+      }
+    } catch (_: Throwable) {
     }
   }
 
@@ -724,7 +754,10 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     val tab = activeTab()
     val wv = webViewPool.getLiveWebView(tab.id)
     if (tab.isLoading) {
-      wv?.stopLoading()
+      try {
+        wv?.stopLoading()
+      } catch (_: Throwable) {
+      }
       updateTab(tab.id) { it.copy(isLoading = false) }
       return
     }
@@ -741,7 +774,10 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
     if (tab.url.isNotBlank()) {
       updateTab(tab.id) { it.copy(errorState = null, httpWarning = null) }
-      wv.reload()
+      try {
+        wv.reload()
+      } catch (_: Throwable) {
+      }
     }
   }
 
@@ -756,7 +792,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   fun readClipboardText(): String? {
     return try {
-      val cm = appContext.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+      val cm = appContext.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return null
       val item = cm.primaryClip?.getItemAt(0) ?: return null
       UrlValidator.sanitizeControlChars(item.coerceToText(appContext).toString()).takeIf { it.isNotBlank() }
     } catch (_: Throwable) {
@@ -766,11 +802,15 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   fun copyTextToClipboard(text: String, toastMessage: String = "Copied") {
     if (text.isBlank()) return
-    val cm = appContext.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    cm.setPrimaryClip(ClipData.newPlainText("Text", text))
-    // Android 13+ automatically shows a system clipboard confirmation overlay
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-      showToast(toastMessage)
+    try {
+      val cm = appContext.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
+      cm.setPrimaryClip(ClipData.newPlainText("Text", text))
+      // Android 13+ automatically shows a system clipboard confirmation overlay
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+        showToast(toastMessage)
+      }
+    } catch (_: Throwable) {
+      showToast("Copy unavailable")
     }
   }
 
@@ -800,14 +840,18 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   fun shareUrl(url: String) {
     if (!UrlValidator.isSafeWebUrl(url) || url == "about:blank") return
-    val intent = Intent(Intent.ACTION_SEND).apply {
-      type = "text/plain"
-      putExtra(Intent.EXTRA_TEXT, url)
+    try {
+      val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, url)
+      }
+      val chooser = Intent.createChooser(intent, "Share").apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+      }
+      appContext.startActivity(chooser)
+    } catch (_: Throwable) {
+      showToast("Unable to share")
     }
-    val chooser = Intent.createChooser(intent, "Share").apply {
-      addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    }
-    appContext.startActivity(chooser)
   }
 
   fun shareActiveUrl() {
@@ -832,7 +876,10 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   fun refreshBookmarks(query: String = bookmarkQuery) {
     bookmarkQuery = query
     viewModelScope.launch(Dispatchers.IO) {
-      _bookmarks.value = db.getBookmarks(query)
+      try {
+        _bookmarks.value = db.getBookmarks(query)
+      } catch (_: Throwable) {
+      }
     }
   }
 
@@ -845,14 +892,17 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     val tab = activeTab()
     if (!UrlValidator.isSafeWebUrl(tab.url) || tab.url == "about:blank") return
     viewModelScope.launch(Dispatchers.IO) {
-      if (db.isBookmarked(tab.url)) {
-        db.deleteBookmarkByUrl(tab.url)
-        showToast("Bookmark removed")
-      } else {
-        db.upsertBookmark(tab.title, tab.url)
-        showToast("Bookmark saved")
+      try {
+        if (db.isBookmarked(tab.url)) {
+          db.deleteBookmarkByUrl(tab.url)
+          showToast("Bookmark removed")
+        } else {
+          db.upsertBookmark(tab.title, tab.url)
+          showToast("Bookmark saved")
+        }
+        _bookmarks.value = db.getBookmarks(bookmarkQuery)
+      } catch (_: Throwable) {
       }
-      _bookmarks.value = db.getBookmarks(bookmarkQuery)
     }
   }
 
@@ -873,20 +923,26 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       return false
     }
     viewModelScope.launch(Dispatchers.IO) {
-      if (id == null || id <= 0L) {
-        db.upsertBookmark(title, normalized, folder)
-      } else {
-        db.updateBookmark(id, title, normalized, folder)
+      try {
+        if (id == null || id <= 0L) {
+          db.upsertBookmark(title, normalized, folder)
+        } else {
+          db.updateBookmark(id, title, normalized, folder)
+        }
+        _bookmarks.value = db.getBookmarks(bookmarkQuery)
+      } catch (_: Throwable) {
       }
-      _bookmarks.value = db.getBookmarks(bookmarkQuery)
     }
     return true
   }
 
   fun deleteBookmark(id: Long) {
     viewModelScope.launch(Dispatchers.IO) {
-      db.deleteBookmarkById(id)
-      _bookmarks.value = db.getBookmarks(bookmarkQuery)
+      try {
+        db.deleteBookmarkById(id)
+        _bookmarks.value = db.getBookmarks(bookmarkQuery)
+      } catch (_: Throwable) {
+      }
     }
   }
 
@@ -894,11 +950,17 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   fun importBookmarksFromText(rawContent: String) {
     viewModelScope.launch(Dispatchers.IO) {
-      val parsed = BookmarkImportExport.parseImportedBookmarks(rawContent)
-      parsed.forEach { db.upsertBookmark(it.title, it.url, it.folder) }
-      _bookmarks.value = db.getBookmarks(bookmarkQuery)
-      withContext(Dispatchers.Main) {
-        showToast("Imported ${parsed.size} bookmarks")
+      try {
+        val parsed = BookmarkImportExport.parseImportedBookmarks(rawContent)
+        parsed.forEach { db.upsertBookmark(it.title, it.url, it.folder) }
+        _bookmarks.value = db.getBookmarks(bookmarkQuery)
+        withContext(Dispatchers.Main) {
+          showToast("Imported ${parsed.size} bookmarks")
+        }
+      } catch (_: Throwable) {
+        withContext(Dispatchers.Main) {
+          showToast("Import failed")
+        }
       }
     }
   }
@@ -907,22 +969,31 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   fun refreshHistory(query: String = historyQuery) {
     historyQuery = query
     viewModelScope.launch(Dispatchers.IO) {
-      _history.value = db.getHistory(query)
+      try {
+        _history.value = db.getHistory(query)
+      } catch (_: Throwable) {
+      }
     }
   }
 
   fun deleteHistoryEntry(id: Long) {
     viewModelScope.launch(Dispatchers.IO) {
-      db.deleteHistoryEntry(id)
-      _history.value = db.getHistory(historyQuery)
+      try {
+        db.deleteHistoryEntry(id)
+        _history.value = db.getHistory(historyQuery)
+      } catch (_: Throwable) {
+      }
     }
   }
 
   fun clearAllHistory() {
     viewModelScope.launch(Dispatchers.IO) {
-      db.clearAllHistory()
-      _history.value = emptyList()
-      withContext(Dispatchers.Main) { showToast("History cleared") }
+      try {
+        db.clearAllHistory()
+        _history.value = emptyList()
+        withContext(Dispatchers.Main) { showToast("History cleared") }
+      } catch (_: Throwable) {
+      }
     }
   }
 
@@ -934,20 +1005,29 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   fun updateFindQuery(query: String) {
     _findState.update { it.copy(query = query, activeIndex = 0, totalMatches = 0) }
     val wv = webViewPool.getLiveWebView(_activeTabId.value) ?: return
-    if (query.isEmpty()) {
-      wv.clearMatches()
-    } else {
-      wv.findAllAsync(query)
+    try {
+      if (query.isEmpty()) {
+        wv.clearMatches()
+      } else {
+        wv.findAllAsync(query)
+      }
+    } catch (_: Throwable) {
     }
   }
 
   fun findNext(forward: Boolean) {
-    webViewPool.getLiveWebView(_activeTabId.value)?.findNext(forward)
+    try {
+      webViewPool.getLiveWebView(_activeTabId.value)?.findNext(forward)
+    } catch (_: Throwable) {
+    }
   }
 
   fun closeFindInPage() {
     _findState.value = FindState(isVisible = false)
-    webViewPool.getLiveWebView(_activeTabId.value)?.clearMatches()
+    try {
+      webViewPool.getLiveWebView(_activeTabId.value)?.clearMatches()
+    } catch (_: Throwable) {
+    }
   }
 
   // Reader Mode & Page Source
@@ -1030,14 +1110,21 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   }
 
   fun deliverChosenFiles(uris: Array<Uri>?) {
-    pendingFileChooserCallback?.onReceiveValue(uris)
+    val cb = pendingFileChooserCallback
     pendingFileChooserCallback = null
+    try {
+      cb?.onReceiveValue(uris)
+    } catch (_: Throwable) {
+    }
   }
 
   fun exitFullscreen() {
     val pair = _fullscreenView.value ?: return
     _fullscreenView.value = null
-    pair.second?.onCustomViewHidden()
+    try {
+      pair.second?.onCustomViewHidden()
+    } catch (_: Throwable) {
+    }
   }
 
   // Custom block rules
@@ -1080,8 +1167,11 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
     if (options.clearHistory) {
       viewModelScope.launch(Dispatchers.IO) {
-        db.clearAllHistory()
-        _history.value = emptyList()
+        try {
+          db.clearAllHistory()
+          _history.value = emptyList()
+        } catch (_: Throwable) {
+        }
       }
     }
     showToast("Browsing data cleared")

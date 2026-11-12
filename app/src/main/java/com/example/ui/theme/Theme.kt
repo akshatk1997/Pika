@@ -11,6 +11,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
 import com.example.model.ThemeMode
@@ -76,12 +77,16 @@ fun FeatherTheme(
   }
   val colorScheme = when {
     dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-      if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+      try {
+        if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+      } catch (_: Throwable) {
+        if (darkTheme) FeatherDarkColorScheme else FeatherLightColorScheme
+      }
     }
     darkTheme -> FeatherDarkColorScheme
     else -> FeatherLightColorScheme
   }
-  val reduceMotion = isReducedMotionEnabled(context)
+  val reduceMotion = remember(context) { isReducedMotionEnabled(context) }
 
   CompositionLocalProvider(LocalReduceMotion provides reduceMotion) {
     MaterialTheme(

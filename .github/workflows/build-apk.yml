@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Bat-v1.1.1.apk
+          cp "$APK_PATH" releases/Bat-v1.1.2.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Bat-v1.1.1.apk
+          git add releases/Bat-v1.1.2.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Bat-v1.1.1.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Bat-v1.1.2.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.1.1
+      - name: Create or update GitHub Release v1.1.2
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Bat-v1.1.1.apk)
-          NOTES="Bat Browser v1.1.1 (Build 4) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **What's New in v1.1.1:** Removed bottom search bar (top omnibox layout across phone & tablet), streamlined production UI copy without internal jargon, fixed back navigation from warnings/errors, aborted-load handling, pull-to-refresh density scaling, overlay snackbar visibility, and bookmark/settings validation.\n- **Signed Release APK size:** ${SIZE_BYTES} bytes (strictly < 2 MB / 2,097,152 bytes)\n- **Checks:** \`:app:testDebugUnitTest\` (API 26 & 36, Phone & Tablet), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\` passed."
-          if gh release view v1.1.1 >/dev/null 2>&1; then
-            gh release upload v1.1.1 releases/Bat-v1.1.1.apk --clobber
-            gh release edit v1.1.1 --title "Bat v1.1.1 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Bat-v1.1.2.apk)
+          NOTES="Bat Browser v1.1.2 (Build 5) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Android 17 & Real-Device Crash Fixes:** Fixed background-thread WebView access in \`shouldInterceptRequest\`, bound WebViews cleanly with \`MutableContextWrapper\` + \`onRelease\` cleanup, eliminated throwaway WebView destruction races, updated \`androidx.graphics:graphics-path:1.1.0\` (16 KB page-size support) & Compose BOM \`2025.12.01\`, preserved R8 \`ViewModel\` / \`WebViewClient\` reflection rules, and guarded clipboard/picker/database calls.\n- **Signed Release APK size:** ${SIZE_BYTES} bytes (strictly < 2 MB / 2,097,152 bytes)\n- **Checks:** \`:app:testDebugUnitTest\` (API 26 & 36, Phone & Tablet), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\` passed."
+          if gh release view v1.1.2 >/dev/null 2>&1; then
+            gh release upload v1.1.2 releases/Bat-v1.1.2.apk --clobber
+            gh release edit v1.1.2 --title "Bat v1.1.2 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.1.1 releases/Bat-v1.1.1.apk \
-              --title "Bat v1.1.1 (< 2 MB)" \
+            gh release create v1.1.2 releases/Bat-v1.1.2.apk \
+              --title "Bat v1.1.2 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

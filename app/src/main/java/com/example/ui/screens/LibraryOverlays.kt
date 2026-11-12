@@ -143,7 +143,8 @@ fun BookmarksScreen(
             columns = GridCells.Adaptive(minSize = 300.dp),
             contentPadding = PaddingValues(bottom = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.weight(1f).fillMaxWidth()
           ) {
             items(bookmarks, key = { it.id }) { bm ->
               Card(
@@ -332,7 +333,8 @@ fun HistoryScreen(
             columns = GridCells.Adaptive(minSize = 300.dp),
             contentPadding = PaddingValues(bottom = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.weight(1f).fillMaxWidth()
           ) {
             items(history, key = { it.id }) { item ->
               Card(
@@ -420,7 +422,8 @@ fun DownloadsScreen(
             columns = GridCells.Adaptive(minSize = 300.dp),
             contentPadding = PaddingValues(vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.weight(1f).fillMaxWidth()
           ) {
             items(downloads, key = { it.id }) { dl ->
               Card(
@@ -562,7 +565,8 @@ fun ResourcesScreen(
             columns = GridCells.Adaptive(minSize = 300.dp),
             contentPadding = PaddingValues(bottom = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.weight(1f).fillMaxWidth()
           ) {
             items(filtered, key = { it.url }) { res ->
               Card(
