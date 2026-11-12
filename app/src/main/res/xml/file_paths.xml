@@ -4,6 +4,9 @@
         name="downloads"
         path="Download/" />
     <files-path
+        name="internal_downloads"
+        path="downloads/" />
+    <files-path
         name="exports"
         path="exports/" />
 </paths>

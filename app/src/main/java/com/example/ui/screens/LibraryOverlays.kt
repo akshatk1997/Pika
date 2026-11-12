@@ -5,18 +5,23 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -85,6 +90,7 @@ fun BookmarksScreen(
   var showAddDialog by remember { mutableStateOf(false) }
 
   Scaffold(
+    contentWindowInsets = WindowInsets.safeDrawing,
     topBar = {
       TopAppBar(
         title = { Text(stringResource(R.string.action_bookmarks)) },
@@ -114,7 +120,7 @@ fun BookmarksScreen(
       modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
       horizontalAlignment = Alignment.CenterHorizontally
     ) {
-      Column(modifier = Modifier.widthIn(max = 720.dp).fillMaxSize()) {
+      Column(modifier = Modifier.widthIn(max = 960.dp).fillMaxSize()) {
         OutlinedTextField(
           value = query,
           onValueChange = {
@@ -133,8 +139,10 @@ fun BookmarksScreen(
             Text(stringResource(R.string.home_no_bookmarks), color = MaterialTheme.colorScheme.onSurfaceVariant)
           }
         } else {
-          LazyColumn(
+          LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 300.dp),
             contentPadding = PaddingValues(bottom = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
           ) {
             items(bookmarks, key = { it.id }) { bm ->
@@ -258,6 +266,7 @@ fun HistoryScreen(
   val dateFmt = remember { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT) }
 
   Scaffold(
+    contentWindowInsets = WindowInsets.safeDrawing,
     topBar = {
       TopAppBar(
         title = { Text(stringResource(R.string.action_history)) },
@@ -280,7 +289,7 @@ fun HistoryScreen(
       modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
       horizontalAlignment = Alignment.CenterHorizontally
     ) {
-      Column(modifier = Modifier.widthIn(max = 720.dp).fillMaxSize()) {
+      Column(modifier = Modifier.widthIn(max = 960.dp).fillMaxSize()) {
         if (!historyEnabled) {
           Card(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
@@ -311,8 +320,10 @@ fun HistoryScreen(
             Text("No history", color = MaterialTheme.colorScheme.onSurfaceVariant)
           }
         } else {
-          LazyColumn(
+          LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 300.dp),
             contentPadding = PaddingValues(bottom = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
           ) {
             items(history, key = { it.id }) { item ->
@@ -370,6 +381,7 @@ fun DownloadsScreen(
   BackHandler { onClose() }
 
   Scaffold(
+    contentWindowInsets = WindowInsets.safeDrawing,
     topBar = {
       TopAppBar(
         title = { Text(stringResource(R.string.action_downloads)) },
@@ -390,14 +402,16 @@ fun DownloadsScreen(
       modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
       horizontalAlignment = Alignment.CenterHorizontally
     ) {
-      Column(modifier = Modifier.widthIn(max = 720.dp).fillMaxSize()) {
+      Column(modifier = Modifier.widthIn(max = 960.dp).fillMaxSize()) {
         if (downloads.isEmpty()) {
           Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(stringResource(R.string.downloads_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
           }
         } else {
-          LazyColumn(
+          LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 300.dp),
             contentPadding = PaddingValues(vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
           ) {
             items(downloads, key = { it.id }) { dl ->
@@ -473,7 +487,7 @@ fun DownloadsScreen(
   }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ResourcesScreen(
   resources: List<SniffedResource>,
@@ -488,6 +502,7 @@ fun ResourcesScreen(
   }
 
   Scaffold(
+    contentWindowInsets = WindowInsets.safeDrawing,
     topBar = {
       TopAppBar(
         title = { Text("${stringResource(R.string.action_resources)} (${resources.size})") },
@@ -503,9 +518,10 @@ fun ResourcesScreen(
       modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
       horizontalAlignment = Alignment.CenterHorizontally
     ) {
-      Column(modifier = Modifier.widthIn(max = 720.dp).fillMaxSize()) {
-        Row(
+      Column(modifier = Modifier.widthIn(max = 960.dp).fillMaxSize()) {
+        FlowRow(
           horizontalArrangement = Arrangement.spacedBy(8.dp),
+          verticalArrangement = Arrangement.spacedBy(4.dp),
           modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)
         ) {
           FilterChip(
@@ -527,8 +543,10 @@ fun ResourcesScreen(
             Text("No media or files detected on this page", color = MaterialTheme.colorScheme.onSurfaceVariant)
           }
         } else {
-          LazyColumn(
+          LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 300.dp),
             contentPadding = PaddingValues(bottom = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
           ) {
             items(filtered, key = { it.url }) { res ->

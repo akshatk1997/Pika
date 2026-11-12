@@ -4,17 +4,22 @@ import android.app.SearchManager
 import android.content.Intent
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
+import android.graphics.Color
 import android.graphics.drawable.Icon
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.model.ThemeMode
 import com.example.security.UrlValidator
 import com.example.ui.BrowserViewModel
 import com.example.ui.screens.BrowserScreen
@@ -72,6 +77,27 @@ class MainActivity : ComponentActivity() {
 
     setContent {
       val settings by viewModel.settings.collectAsStateWithLifecycle()
+      val systemDark = isSystemInDarkTheme()
+      val darkTheme = when (settings.themeMode) {
+        ThemeMode.SYSTEM -> systemDark
+        ThemeMode.DARK -> true
+        ThemeMode.LIGHT -> false
+      }
+      DisposableEffect(darkTheme) {
+        enableEdgeToEdge(
+          statusBarStyle = if (darkTheme) {
+            SystemBarStyle.dark(Color.TRANSPARENT)
+          } else {
+            SystemBarStyle.light(Color.TRANSPARENT, Color.argb(0x66, 0x11, 0x18, 0x27))
+          },
+          navigationBarStyle = if (darkTheme) {
+            SystemBarStyle.dark(Color.TRANSPARENT)
+          } else {
+            SystemBarStyle.light(Color.TRANSPARENT, Color.argb(0x66, 0x11, 0x18, 0x27))
+          }
+        )
+        onDispose {}
+      }
       FeatherTheme(themeMode = settings.themeMode, dynamicColor = settings.dynamicColor) {
         BrowserScreen(
           viewModel = viewModel,
@@ -119,12 +145,57 @@ class MainActivity : ComponentActivity() {
     }
   }
 
+  override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+    if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+      val ctrlOnly = event.isCtrlPressed && !event.isAltPressed
+      if (ctrlOnly) {
+        when (event.keyCode) {
+          KeyEvent.KEYCODE_T -> {
+            viewModel.openNewTab(isPrivate = false)
+            return true
+          }
+          KeyEvent.KEYCODE_N -> if (event.isShiftPressed) {
+            viewModel.openNewTab(isPrivate = true)
+            return true
+          }
+          KeyEvent.KEYCODE_W -> {
+            viewModel.closeTab(viewModel.activeTab().id)
+            return true
+          }
+          KeyEvent.KEYCODE_F -> {
+            if (viewModel.activeTab().url.isNotBlank()) {
+              viewModel.openFindInPage()
+              return true
+            }
+          }
+          KeyEvent.KEYCODE_R -> {
+            if (viewModel.activeTab().url.isNotBlank()) {
+              viewModel.reloadOrStop()
+              return true
+            }
+          }
+        }
+      } else if (event.isAltPressed && !event.isCtrlPressed) {
+        when (event.keyCode) {
+          KeyEvent.KEYCODE_DPAD_LEFT -> {
+            viewModel.goBack()
+            return true
+          }
+          KeyEvent.KEYCODE_DPAD_RIGHT -> {
+            viewModel.goForward()
+            return true
+          }
+        }
+      } else if (event.keyCode == KeyEvent.KEYCODE_F5 && viewModel.activeTab().url.isNotBlank()) {
+        viewModel.reloadOrStop()
+        return true
+      }
+    }
+    return super.dispatchKeyEvent(event)
+  }
+
   private fun pinHomeScreenShortcut(url: String, title: String) {
     if (!UrlValidator.isSafeWebUrl(url)) return
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-      viewModel.showToast("Requires Android 8.0+")
-      return
-    }
     try {
       val sm = getSystemService(ShortcutManager::class.java)
       if (sm == null || !sm.isRequestPinShortcutSupported) {

@@ -65,9 +65,9 @@ interface WebViewCallbacks {
 
 /**
  * Hardened Android System WebView pool (max 2 live WebViews in RAM).
- * Supports Android 7–16+ compatibility (RenderProcessGone recovery, algorithmic darkening,
- * safe FileProvider/SAF integration), Via/X power tools (UA switching, Night Web CSS,
- * No-Image saver, Resource Sniffer, Page Source, PDF Print), and zero JS bridges.
+ * Supports Android 8–17+ (API 26–37) phone & tablet compatibility (RenderProcessGone recovery,
+ * algorithmic darkening, safe FileProvider/SAF integration), Via/X power tools (UA switching,
+ * Night Web CSS, No-Image saver, Resource Sniffer, Page Source, PDF Print), and zero JS bridges.
  */
 class WebViewPool(
   private val context: Context,
@@ -381,9 +381,7 @@ class WebViewPool(
       }
       textZoom = if (userAgentMode == UserAgentMode.DESKTOP) 90 else settingsState.textZoomPercent
       cacheMode = if (isPrivate) WebSettings.LOAD_NO_CACHE else WebSettings.LOAD_DEFAULT
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        safeBrowsingEnabled = true
-      }
+      safeBrowsingEnabled = true
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         isAlgorithmicDarkeningAllowed = settingsState.nightWebMode || settingsState.themeMode == ThemeMode.DARK
       }

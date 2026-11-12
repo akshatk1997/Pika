@@ -5,6 +5,11 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- Support tablets, foldables, ChromeOS, and Android desktop windowing without requiring touchscreen -->
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
+
     <application
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -12,6 +17,7 @@
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:resizeableActivity="true"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.FeatherBrowser"
@@ -19,12 +25,16 @@
 
         <activity
             android:name=".MainActivity"
-            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation|uiMode|density|fontScale|layoutDirection|locale"
             android:exported="true"
             android:label="@string/app_name"
             android:launchMode="singleTask"
+            android:resizeableActivity="true"
             android:theme="@style/Theme.FeatherBrowser"
             android:windowSoftInputMode="adjustResize">
+            <layout
+                android:minHeight="320dp"
+                android:minWidth="280dp" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

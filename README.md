@@ -9,8 +9,8 @@
 ## Assumed Target Defaults
 
 Because no platform overrides were supplied prior to implementation, Pika targets:
-1. **Target Platform:** Android (adaptive mobile + tablet/foldable UI).
-2. **Minimum / Target OS:** Android 7.0 (`minSdk = 24`) targeting Android 16 (`targetSdk = 36`).
+1. **Target Platform:** Android Phone, Tablet, Foldable & Desktop Windowing (`resizeableActivity="true"`, adaptive `NavigationRail` + single-row wide toolbar + multi-column grids).
+2. **Minimum / Target OS:** Android 8.0 (`minSdk = 26`) through Android 17 forward-compatible edge-to-edge & large-screen behavior (`targetSdk = 36`, `compileSdk = 36.1`).
 3. **Language & UI:** Kotlin + Jetpack Compose (Material 3) with zero bloated UI frameworks or icon packs.
 4. **Browser Profile:** Privacy-first general web browser shell.
 5. **License / Open Source:** Open-source-ready, modular Kotlin codebase with zero proprietary SDKs.
@@ -26,8 +26,8 @@ Pre-built signed release APK (< 2 MB) is tracked directly in this repository at 
 - **Address Bar & Swipe Gestures:** Top or Bottom toolbar placement, horizontal omnibox swipe to switch tabs, direct URL entry, search engine choice (DuckDuckGo, Startpage, Qwant, Brave, Wikipedia, Google, custom HTTPS), live HTTPS/HTTP/Private badge, copy, share, and external browser handoff.
 - **Power Tools (Via / X Style):** Compact 4-column Quick Grid Menu with **Media & Resource Sniffer**, **Night Web** page darkening, **No-Image** data-saver mode, **Desktop / iPhone / Mobile** User-Agent switcher, **Immersive Fullscreen**, **Save Page as PDF** (`PrintManager`), **View Page Source**, **Translate**, and **Pin Shortcut to Home Screen**.
 - **Privacy & Ad Shield:** Built-in ad/tracker/popup blocker + user **Custom Block Rules** stored encrypted in Android Keystore, third-party cookie blocking, query-parameter stripping, HTTPS-Only mode, `DNT: 1` / `Sec-GPC: 1`, and isolated **Private Mode** wiped cleanly on exit.
-- **Tabs, Bookmarks, History & Downloads:** 2-WebView LRU RAM saver pool with `onRenderProcessGone` crash recovery, closed tab restore, local SQLite bookmarks (Netscape HTML & JSON import/export), search/clearable history, and consent-first downloads with editable filenames and retry support.
-- **Reader & Accessibility:** Native Compose distraction-free Reader View, Find in Page, Material You Dynamic Color (Android 12+), Predictive Back (Android 14–16), full edge-to-edge inset handling, RTL + Arabic (`ar`) support, and 48dp touch targets.
+- **Tabs, Bookmarks, History & Downloads:** 2-WebView LRU RAM saver pool with `onRenderProcessGone` crash recovery, closed tab restore, local SQLite bookmarks (Netscape HTML & JSON import/export), search/clearable history, and consent-first downloads (`MediaStore.Downloads` on Android 10–17 & `FileProvider` on Android 8–9) with editable filenames and retry support.
+- **Reader, Tablet & Keyboard Support:** Adaptive tablet `NavigationRail` + single-row wide toolbar + multi-column tab/library grids, hardware keyboard shortcuts (`Ctrl+T`, `Ctrl+Shift+N`, `Ctrl+W`, `Ctrl+F`, `Ctrl+R`/`F5`, `Alt+Left/Right`), native Compose distraction-free Reader View, Find in Page, Material You Dynamic Color (Android 12+), Predictive Back (Android 14–17), reactive light/dark edge-to-edge bars (Android 8–17), RTL + Arabic (`ar`) support, and 48dp touch targets.
 
 ---
 
@@ -108,4 +108,3 @@ Pre-built signed release APK (< 2 MB) is tracked directly in this repository at 
 
 - Optional user-importable custom tracker blocklists (JSON/hosts format)
 - Tab groups and per-site JavaScript / zoom overrides
-- Multi-window desktop/tablet keyboard shortcuts (`Ctrl+T`, `Ctrl+W`, `Ctrl+L`, `Ctrl+F`)

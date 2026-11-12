@@ -31,7 +31,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Consent-first download manager using HttpURLConnection with explicit redirect/downgrade checks
- * and zero-permission MediaStore.Downloads (API 29-36+) or FileProvider (API 24-28).
+ * and zero-permission MediaStore.Downloads (API 29-37) or FileProvider (API 26-28).
  */
 class DownloadController(
   private val context: Context,
@@ -242,7 +242,8 @@ class DownloadController(
         if (mediaUri == null) throw IllegalStateException("Unable to create download destination")
         output = resolver.openOutputStream(mediaUri)
       } else {
-        val dir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: context.filesDir
+        val dir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+          ?: File(context.filesDir, "downloads")
         if (!dir.exists()) dir.mkdirs()
         val dest = File(dir, "${System.currentTimeMillis()}_${record.fileName}")
         localFile = dest

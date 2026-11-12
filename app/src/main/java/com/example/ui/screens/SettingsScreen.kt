@@ -12,10 +12,12 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -94,6 +96,7 @@ fun SettingsScreen(
   var showClearDialog by remember { mutableStateOf(false) }
 
   Scaffold(
+    contentWindowInsets = WindowInsets.safeDrawing,
     topBar = {
       TopAppBar(
         title = { Text(stringResource(R.string.settings_title)) },
@@ -219,7 +222,10 @@ fun SettingsScreen(
         SettingsSectionCard("Layout & Reading", Modifier.widthIn(max = 720.dp)) {
           Text("Theme", style = MaterialTheme.typography.titleMedium)
           Spacer(modifier = Modifier.height(6.dp))
-          Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+          FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+          ) {
             ThemeMode.entries.forEach { mode ->
               FilterChip(
                 selected = settings.themeMode == mode,
@@ -231,7 +237,10 @@ fun SettingsScreen(
           Spacer(modifier = Modifier.height(10.dp))
           Text("Address bar position", style = MaterialTheme.typography.titleMedium)
           Spacer(modifier = Modifier.height(6.dp))
-          Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+          FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+          ) {
             ToolbarPosition.entries.forEach { pos ->
               FilterChip(
                 selected = settings.toolbarPosition == pos,

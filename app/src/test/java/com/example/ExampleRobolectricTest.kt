@@ -19,7 +19,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
+@Config(sdk = [26, 36])
 class ExampleRobolectricTest {
 
   @get:Rule
@@ -86,5 +86,22 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("Pika Privacy Core").assertIsDisplayed()
+  }
+
+  @Test
+  @Config(sdk = [26, 36], qualifiers = "sw600dp-w1024dp-h768dp-xhdpi")
+  fun tabletNavigationRailAndAdaptiveTabsWorkAcrossAndroidVersions() {
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("Pika").assertIsDisplayed()
+    // Tablet layout renders persistent NavigationRail shortcuts and single-row top toolbar
+    composeTestRule.onNodeWithText("Bookmarks").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Downloads").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Settings").assertIsDisplayed()
+
+    composeTestRule.onNodeWithTag("nav_tabs_button").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("tabs_new_button").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("HTTPS-Only", substring = true).assertIsDisplayed()
   }
 }

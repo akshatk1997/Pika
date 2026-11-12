@@ -6,19 +6,21 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -108,7 +110,7 @@ fun NewTabHomeView(
   val surfaceColor = MaterialTheme.colorScheme.surface
   val outlineColor = MaterialTheme.colorScheme.outline
 
-  Box(
+  BoxWithConstraints(
     modifier = modifier
       .fillMaxSize()
       .background(MaterialTheme.colorScheme.background)
@@ -140,21 +142,23 @@ fun NewTabHomeView(
           style = Stroke(width = 1.dp.toPx())
         )
       }
-      .padding(horizontal = 20.dp, vertical = 20.dp),
+      .padding(horizontal = 20.dp, vertical = 14.dp),
     contentAlignment = Alignment.TopCenter
   ) {
+    val isCompactHeight = maxHeight < 460.dp
     Column(
-      modifier = Modifier.widthIn(max = 620.dp).fillMaxSize(),
+      modifier = Modifier.widthIn(max = 760.dp).fillMaxSize(),
       horizontalAlignment = Alignment.CenterHorizontally
     ) {
-      Spacer(modifier = Modifier.height(20.dp))
+      Spacer(modifier = Modifier.height(if (isCompactHeight) 6.dp else 18.dp))
 
       // Hero Emblem (Pika electric-mouse vector crest or Private mask)
+      val crestSize = if (isCompactHeight) 48.dp else 68.dp
       Surface(
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(if (isCompactHeight) 16.dp else 22.dp),
         color = if (isPrivate) primaryAccent.copy(alpha = 0.12f) else Color(0xFF111827),
         border = BorderStroke(1.2.dp, auraAccent.copy(alpha = 0.5f)),
-        modifier = Modifier.size(68.dp)
+        modifier = Modifier.size(crestSize)
       ) {
         Box(contentAlignment = Alignment.Center) {
           if (isPrivate) {
@@ -162,10 +166,10 @@ fun NewTabHomeView(
               imageVector = FeatherIcons.PrivateMask,
               contentDescription = stringResource(R.string.app_name),
               tint = primaryAccent,
-              modifier = Modifier.size(34.dp)
+              modifier = Modifier.size(if (isCompactHeight) 24.dp else 34.dp)
             )
           } else {
-            androidx.compose.foundation.Canvas(modifier = Modifier.size(44.dp)) {
+            androidx.compose.foundation.Canvas(modifier = Modifier.size(if (isCompactHeight) 32.dp else 44.dp)) {
               val w = size.width
               val h = size.height
               // Left & right pointed ears with dark tips
@@ -717,7 +721,7 @@ fun ReaderModeOverlay(
   val subColor = if (darkReading) Color(0xFF94A3B8) else Color(0xFF64748B)
 
   Surface(color = bgColor, modifier = Modifier.fillMaxSize()) {
-    Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+    Column(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
       Surface(
         color = bgColor,
         tonalElevation = 1.dp,
@@ -810,7 +814,7 @@ fun PageSourceOverlay(
     color = MaterialTheme.colorScheme.background,
     modifier = Modifier.fillMaxSize()
   ) {
-    Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+    Column(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
       Surface(
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,

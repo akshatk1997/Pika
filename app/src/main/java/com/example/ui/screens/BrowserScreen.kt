@@ -31,10 +31,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -322,7 +324,8 @@ fun BrowserScreen(
   }
 
   BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-    val isExpanded = maxWidth >= 600.dp
+    val isWideWidth = maxWidth >= 600.dp
+    val showNavRail = isWideWidth && maxHeight >= 460.dp
 
     Scaffold(
       contentWindowInsets = WindowInsets.safeDrawing,
@@ -334,10 +337,10 @@ fun BrowserScreen(
           .padding(innerPadding)
           .imePadding()
       ) {
-        if (isExpanded && !isBrowserFullscreen) {
+        if (showNavRail && !isBrowserFullscreen) {
           NavigationRail(
             containerColor = MaterialTheme.colorScheme.surface,
-            modifier = Modifier.fillMaxHeight()
+            modifier = Modifier.fillMaxHeight().verticalScroll(rememberScrollState())
           ) {
             NavigationRailItem(
               selected = false,
@@ -365,6 +368,18 @@ fun BrowserScreen(
             )
             NavigationRailItem(
               selected = false,
+              onClick = { viewModel.setOverlay(ActiveOverlay.RESOURCES) },
+              enabled = activeTab.url.isNotBlank(),
+              icon = { Icon(FeatherIcons.MediaSniff, contentDescription = null) },
+              label = {
+                Text(
+                  if (activeTab.sniffedResourcesCount > 0) "${activeTab.sniffedResourcesCount}" else stringResource(R.string.action_resources),
+                  maxLines = 1
+                )
+              }
+            )
+            NavigationRailItem(
+              selected = false,
               onClick = { viewModel.setOverlay(ActiveOverlay.SETTINGS) },
               icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
               label = { Text(stringResource(R.string.action_settings)) }
@@ -373,12 +388,13 @@ fun BrowserScreen(
         }
 
         Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-          val toolbarAtTop = isExpanded || settings.toolbarPosition == ToolbarPosition.TOP
+          val toolbarAtTop = isWideWidth || settings.toolbarPosition == ToolbarPosition.TOP
           if (toolbarAtTop && !isBrowserFullscreen) {
             BrowserToolbar(
               activeTab = activeTab,
               tabCount = tabs.size,
               settings = settings,
+              compactSingleRow = isWideWidth,
               readClipboard = { viewModel.readClipboardText() },
               onNavigate = {
                 focusManager.clearFocus()
@@ -559,6 +575,7 @@ fun BrowserScreen(
               activeTab = activeTab,
               tabCount = tabs.size,
               settings = settings,
+              compactSingleRow = false,
               readClipboard = { viewModel.readClipboardText() },
               onNavigate = {
                 focusManager.clearFocus()
@@ -571,8 +588,7 @@ fun BrowserScreen(
               onOpenSiteInfo = { showSiteInfoDialog = true },
               onOpenTabs = { viewModel.setOverlay(ActiveOverlay.TABS) },
               onSwipeTab = { delta -> viewModel.switchAdjacentTab(delta) },
-              onOpenQuickMenu = { showQuickSheet = true },
-              modifier = Modifier.navigationBarsPadding()
+              onOpenQuickMenu = { showQuickSheet = true }
             )
           }
         }
@@ -1016,6 +1032,7 @@ private fun BrowserToolbar(
   activeTab: TabInfo,
   tabCount: Int,
   settings: SettingsState,
+  compactSingleRow: Boolean,
   readClipboard: () -> String?,
   onNavigate: (String) -> Unit,
   onBack: () -> Unit,
@@ -1037,6 +1054,166 @@ private fun BrowserToolbar(
 
   val displayHost = remember(activeTab.url) {
     UrlValidator.extractHost(activeTab.url).removePrefix("www.")
+  }
+
+  val omniboxPill: @Composable (Modifier) -> Unit = { pillModifier ->
+    var swipeAccum = remember { 0f }
+    Surface(
+      shape = RoundedCornerShape(24.dp),
+      color = MaterialTheme.colorScheme.surfaceVariant,
+      border = BorderStroke(
+        width = 0.9.dp,
+        color = when {
+          isFocused -> MaterialTheme.colorScheme.primary
+          activeTab.isPrivate -> FeatherPrivateAccent.copy(alpha = 0.65f)
+          else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
+        }
+      ),
+      modifier = pillModifier
+        .height(46.dp)
+        .pointerInput(tabCount) {
+          detectHorizontalDragGestures(
+            onDragStart = { swipeAccum = 0f },
+            onDragEnd = {
+              if (swipeAccum > 90f) onSwipeTab(-1)
+              else if (swipeAccum < -90f) onSwipeTab(1)
+              swipeAccum = 0f
+            },
+            onHorizontalDrag = { _, dragAmount ->
+              swipeAccum += dragAmount
+            }
+          )
+        }
+    ) {
+      Row(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        val (secIcon, secTint, secDesc) = when (activeTab.securityState) {
+          SecurityState.PRIVATE -> Triple(FeatherIcons.PrivateMask, FeatherPrivateAccent, stringResource(R.string.cd_security_private))
+          SecurityState.SECURE_HTTPS -> Triple(Icons.Filled.Lock, FeatherSecureGreen, stringResource(R.string.cd_security_https))
+          SecurityState.INSECURE_HTTP, SecurityState.ERROR -> Triple(Icons.Filled.Warning, FeatherWarningAmber, stringResource(R.string.cd_security_http))
+          SecurityState.HOME -> Triple(Icons.Filled.Search, MaterialTheme.colorScheme.onSurfaceVariant, stringResource(R.string.cd_security_home))
+        }
+        Surface(
+          shape = RoundedCornerShape(10.dp),
+          color = secTint.copy(alpha = 0.14f),
+          modifier = Modifier
+            .size(30.dp)
+            .clickable { onOpenSiteInfo() }
+            .testTag("security_badge_button")
+        ) {
+          Box(contentAlignment = Alignment.Center) {
+            Icon(
+              imageVector = secIcon,
+              contentDescription = secDesc,
+              tint = secTint,
+              modifier = Modifier.size(16.dp)
+            )
+          }
+        }
+        Spacer(modifier = Modifier.width(10.dp))
+        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+          if (!isFocused && displayHost.isNotEmpty()) {
+            val modeTag = when (activeTab.userAgentMode) {
+              UserAgentMode.DESKTOP -> " · PC"
+              UserAgentMode.IPHONE -> " · iOS"
+              UserAgentMode.MOBILE -> ""
+            }
+            Text(
+              text = "$displayHost$modeTag",
+              style = MaterialTheme.typography.bodyMedium,
+              fontWeight = FontWeight.Medium,
+              color = MaterialTheme.colorScheme.onSurface,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis
+            )
+          } else if (omniboxValue.text.isEmpty()) {
+            Text(
+              text = stringResource(R.string.omnibox_hint),
+              style = MaterialTheme.typography.bodyMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis
+            )
+          }
+          BasicTextField(
+            value = if (!isFocused && displayHost.isNotEmpty()) TextFieldValue("") else omniboxValue,
+            onValueChange = { omniboxValue = it },
+            singleLine = true,
+            textStyle = MaterialTheme.typography.bodyMedium.copy(
+              color = MaterialTheme.colorScheme.onSurface
+            ),
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+            keyboardActions = KeyboardActions(onGo = {
+              if (omniboxValue.text.isNotBlank()) {
+                focusManager.clearFocus()
+                onNavigate(omniboxValue.text)
+              }
+            }),
+            modifier = Modifier
+              .fillMaxWidth()
+              .onFocusChanged { focusState ->
+                isFocused = focusState.isFocused
+                if (focusState.isFocused) {
+                  clipboardCandidate = readClipboard()
+                  val currentUrl = activeTab.url
+                  if (currentUrl.isNotEmpty()) {
+                    omniboxValue = TextFieldValue(currentUrl, TextRange(0, currentUrl.length))
+                  }
+                }
+              }
+              .testTag("address_bar_input")
+          )
+        }
+        if (isFocused && omniboxValue.text.isNotEmpty()) {
+          IconButton(
+            onClick = { omniboxValue = TextFieldValue("") },
+            modifier = Modifier.minimumInteractiveComponentSize().testTag("address_clear_button")
+          ) {
+            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.cd_clear_input), modifier = Modifier.size(18.dp))
+          }
+        } else if (activeTab.url.isNotBlank()) {
+          IconButton(
+            onClick = onCopyUrl,
+            modifier = Modifier.minimumInteractiveComponentSize().testTag("address_copy_button")
+          ) {
+            Icon(FeatherIcons.Copy, contentDescription = stringResource(R.string.cd_copy_url), modifier = Modifier.size(17.dp))
+          }
+        }
+        if (settings.noImageMode) {
+          Icon(
+            FeatherIcons.NoImage,
+            contentDescription = "No-Image mode active",
+            tint = FeatherWarningAmber,
+            modifier = Modifier.padding(end = 6.dp).size(15.dp)
+          )
+        }
+        if (activeTab.trackersBlockedCount > 0) {
+          Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.primaryContainer,
+            border = BorderStroke(0.6.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+            modifier = Modifier.clickable { onOpenSiteInfo() }
+          ) {
+            Row(
+              modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Icon(FeatherIcons.Shield, contentDescription = "Blocked", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(12.dp))
+              Spacer(modifier = Modifier.width(3.dp))
+              Text(
+                text = activeTab.trackersBlockedCount.toString(),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+              )
+            }
+          }
+        }
+      }
+    }
   }
 
   Surface(
@@ -1087,171 +1264,10 @@ private fun BrowserToolbar(
         }
       }
 
-      Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp)) {
-        var swipeAccum = remember { 0f }
-        // Swipeable Frosted Omnibox Pill
-        Surface(
-          shape = RoundedCornerShape(24.dp),
-          color = MaterialTheme.colorScheme.surfaceVariant,
-          border = BorderStroke(
-            width = 0.9.dp,
-            color = when {
-              isFocused -> MaterialTheme.colorScheme.primary
-              activeTab.isPrivate -> FeatherPrivateAccent.copy(alpha = 0.65f)
-              else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
-            }
-          ),
-          modifier = Modifier
-            .fillMaxWidth()
-            .height(46.dp)
-            .pointerInput(tabCount) {
-              detectHorizontalDragGestures(
-                onDragStart = { swipeAccum = 0f },
-                onDragEnd = {
-                  if (swipeAccum > 90f) onSwipeTab(-1)
-                  else if (swipeAccum < -90f) onSwipeTab(1)
-                  swipeAccum = 0f
-                },
-                onHorizontalDrag = { _, dragAmount ->
-                  swipeAccum += dragAmount
-                }
-              )
-            }
-        ) {
-          Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            val (secIcon, secTint, secDesc) = when (activeTab.securityState) {
-              SecurityState.PRIVATE -> Triple(FeatherIcons.PrivateMask, FeatherPrivateAccent, stringResource(R.string.cd_security_private))
-              SecurityState.SECURE_HTTPS -> Triple(Icons.Filled.Lock, FeatherSecureGreen, stringResource(R.string.cd_security_https))
-              SecurityState.INSECURE_HTTP, SecurityState.ERROR -> Triple(Icons.Filled.Warning, FeatherWarningAmber, stringResource(R.string.cd_security_http))
-              SecurityState.HOME -> Triple(Icons.Filled.Search, MaterialTheme.colorScheme.onSurfaceVariant, stringResource(R.string.cd_security_home))
-            }
-            Surface(
-              shape = RoundedCornerShape(10.dp),
-              color = secTint.copy(alpha = 0.14f),
-              modifier = Modifier
-                .size(30.dp)
-                .clickable { onOpenSiteInfo() }
-                .testTag("security_badge_button")
-            ) {
-              Box(contentAlignment = Alignment.Center) {
-                Icon(
-                  imageVector = secIcon,
-                  contentDescription = secDesc,
-                  tint = secTint,
-                  modifier = Modifier.size(16.dp)
-                )
-              }
-            }
-            Spacer(modifier = Modifier.width(10.dp))
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-              if (!isFocused && displayHost.isNotEmpty()) {
-                val modeTag = when (activeTab.userAgentMode) {
-                  UserAgentMode.DESKTOP -> " · PC"
-                  UserAgentMode.IPHONE -> " · iOS"
-                  UserAgentMode.MOBILE -> ""
-                }
-                Text(
-                  text = "$displayHost$modeTag",
-                  style = MaterialTheme.typography.bodyMedium,
-                  fontWeight = FontWeight.Medium,
-                  color = MaterialTheme.colorScheme.onSurface,
-                  maxLines = 1,
-                  overflow = TextOverflow.Ellipsis
-                )
-              } else if (omniboxValue.text.isEmpty()) {
-                Text(
-                  text = stringResource(R.string.omnibox_hint),
-                  style = MaterialTheme.typography.bodyMedium,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
-                  maxLines = 1,
-                  overflow = TextOverflow.Ellipsis
-                )
-              }
-              BasicTextField(
-                value = if (!isFocused && displayHost.isNotEmpty()) TextFieldValue("") else omniboxValue,
-                onValueChange = { omniboxValue = it },
-                singleLine = true,
-                textStyle = MaterialTheme.typography.bodyMedium.copy(
-                  color = MaterialTheme.colorScheme.onSurface
-                ),
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-                keyboardActions = KeyboardActions(onGo = {
-                  if (omniboxValue.text.isNotBlank()) {
-                    focusManager.clearFocus()
-                    onNavigate(omniboxValue.text)
-                  }
-                }),
-                modifier = Modifier
-                  .fillMaxWidth()
-                  .onFocusChanged { focusState ->
-                    isFocused = focusState.isFocused
-                    if (focusState.isFocused) {
-                      clipboardCandidate = readClipboard()
-                      val currentUrl = activeTab.url
-                      if (currentUrl.isNotEmpty()) {
-                        omniboxValue = TextFieldValue(currentUrl, TextRange(0, currentUrl.length))
-                      }
-                    }
-                  }
-                  .testTag("address_bar_input")
-              )
-            }
-            if (isFocused && omniboxValue.text.isNotEmpty()) {
-              IconButton(
-                onClick = { omniboxValue = TextFieldValue("") },
-                modifier = Modifier.minimumInteractiveComponentSize().testTag("address_clear_button")
-              ) {
-                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.cd_clear_input), modifier = Modifier.size(18.dp))
-              }
-            } else if (activeTab.url.isNotBlank()) {
-              IconButton(
-                onClick = onCopyUrl,
-                modifier = Modifier.minimumInteractiveComponentSize().testTag("address_copy_button")
-              ) {
-                Icon(FeatherIcons.Copy, contentDescription = stringResource(R.string.cd_copy_url), modifier = Modifier.size(17.dp))
-              }
-            }
-            if (settings.noImageMode) {
-              Icon(
-                FeatherIcons.NoImage,
-                contentDescription = "No-Image mode active",
-                tint = FeatherWarningAmber,
-                modifier = Modifier.padding(end = 6.dp).size(15.dp)
-              )
-            }
-            if (activeTab.trackersBlockedCount > 0) {
-              Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
-                border = BorderStroke(0.6.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
-                modifier = Modifier.clickable { onOpenSiteInfo() }
-              ) {
-                Row(
-                  modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
-                  verticalAlignment = Alignment.CenterVertically
-                ) {
-                  Icon(FeatherIcons.Shield, contentDescription = "Blocked", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(12.dp))
-                  Spacer(modifier = Modifier.width(3.dp))
-                  Text(
-                    text = activeTab.trackersBlockedCount.toString(),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                  )
-                }
-              }
-            }
-          }
-        }
-
-        // Precision Action Bar
+      if (compactSingleRow) {
+        // Tablet, foldable & desktop-window single-row toolbar
         Row(
-          modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
-          horizontalArrangement = Arrangement.SpaceBetween,
+          modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
           verticalAlignment = Alignment.CenterVertically
         ) {
           IconButton(
@@ -1278,7 +1294,9 @@ private fun BrowserToolbar(
               contentDescription = if (activeTab.isLoading) stringResource(R.string.cd_stop) else stringResource(R.string.cd_reload)
             )
           }
-
+          Spacer(modifier = Modifier.width(6.dp))
+          omniboxPill(Modifier.weight(1f))
+          Spacer(modifier = Modifier.width(6.dp))
           Surface(
             shape = RoundedCornerShape(10.dp),
             border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)),
@@ -1299,12 +1317,75 @@ private fun BrowserToolbar(
               )
             }
           }
-
           IconButton(
             onClick = onOpenQuickMenu,
             modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_menu_button")
           ) {
             Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.cd_menu))
+          }
+        }
+      } else {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp)) {
+          omniboxPill(Modifier.fillMaxWidth())
+
+          // Precision Action Bar
+          Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            IconButton(
+              onClick = onBack,
+              enabled = activeTab.canGoBack || activeTab.httpWarning != null || activeTab.errorState != null,
+              modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_back_button")
+            ) {
+              Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
+            }
+            IconButton(
+              onClick = onForward,
+              enabled = activeTab.canGoForward,
+              modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_forward_button")
+            ) {
+              Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = stringResource(R.string.cd_forward))
+            }
+            IconButton(
+              onClick = onReloadOrStop,
+              enabled = activeTab.url.isNotBlank(),
+              modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_reload_button")
+            ) {
+              Icon(
+                imageVector = if (activeTab.isLoading) Icons.Filled.Close else Icons.Filled.Refresh,
+                contentDescription = if (activeTab.isLoading) stringResource(R.string.cd_stop) else stringResource(R.string.cd_reload)
+              )
+            }
+
+            Surface(
+              shape = RoundedCornerShape(10.dp),
+              border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)),
+              color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+              modifier = Modifier
+                .minimumInteractiveComponentSize()
+                .clickable { onOpenTabs() }
+                .testTag("nav_tabs_button")
+            ) {
+              Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.padding(horizontal = 11.dp, vertical = 4.dp)
+              ) {
+                Text(
+                  text = tabCount.toString(),
+                  style = MaterialTheme.typography.labelMedium,
+                  fontWeight = FontWeight.Bold
+                )
+              }
+            }
+
+            IconButton(
+              onClick = onOpenQuickMenu,
+              modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_menu_button")
+            ) {
+              Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.cd_menu))
+            }
           }
         }
       }

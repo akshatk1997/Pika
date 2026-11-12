@@ -93,5 +93,5 @@
     <string name="settings_title">Settings</string>
     <string name="settings_dnt_note">Sends DNT: 1 / Sec-GPC: 1 (sites may ignore)</string>
     <string name="settings_clear_data">Clear browsing data</string>
-    <string name="settings_engine_note">Engine: Android System WebView · Permissions: Network only</string>
+    <string name="settings_engine_note">Engine: System WebView · Android 8–17 Phone &amp; Tablet</string>
 </resources>
