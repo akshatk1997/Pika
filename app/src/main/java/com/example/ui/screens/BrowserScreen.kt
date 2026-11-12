@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import android.annotation.SuppressLint
 import android.view.MotionEvent
+import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
@@ -10,6 +11,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -92,6 +94,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -189,436 +192,470 @@ fun BrowserScreen(
     val activeFullscreen = fullscreenView
     val activePageSource = pageSource
     val activeReaderArticle = readerArticle
-    when {
-      activeFullscreen != null -> {
-        val (customView, _) = activeFullscreen
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-          AndroidView(
-            factory = { ctx -> FrameLayout(ctx) },
-            update = { container ->
-              if (container.childCount != 1 || container.getChildAt(0) !== customView) {
-                container.removeAllViews()
-                try {
-                  (customView.parent as? ViewGroup)?.removeView(customView)
-                  container.addView(
-                    customView,
-                    FrameLayout.LayoutParams(
-                      ViewGroup.LayoutParams.MATCH_PARENT,
-                      ViewGroup.LayoutParams.MATCH_PARENT
-                    )
+    val hasFullOverlay = activeFullscreen != null ||
+      activePageSource != null ||
+      activeReaderArticle != null ||
+      activeOverlay != ActiveOverlay.NONE
+
+    // Always keep the main browser Scaffold + live WebView mounted underneath overlays
+    // so opening/updating Settings or Tabs never detaches or resets active web pages.
+    BoxWithConstraints(
+      modifier = Modifier
+        .fillMaxSize()
+        .let { if (hasFullOverlay) it.clearAndSetSemantics {} else it }
+    ) {
+      val isWideWidth = maxWidth >= 600.dp
+      val showNavRail = isWideWidth && maxHeight >= 460.dp
+
+      Scaffold(
+        contentWindowInsets = WindowInsets.safeDrawing
+      ) { innerPadding ->
+        Row(
+          modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)
+            .imePadding()
+        ) {
+          if (showNavRail && !isBrowserFullscreen) {
+            NavigationRail(
+              containerColor = MaterialTheme.colorScheme.surface,
+              modifier = Modifier.fillMaxHeight().verticalScroll(rememberScrollState())
+            ) {
+              NavigationRailItem(
+                selected = false,
+                onClick = { viewModel.setOverlay(ActiveOverlay.TABS) },
+                icon = { Text(tabs.size.toString(), fontWeight = FontWeight.Bold) },
+                label = { Text(stringResource(R.string.tabs_title)) }
+              )
+              NavigationRailItem(
+                selected = false,
+                onClick = { viewModel.setOverlay(ActiveOverlay.BOOKMARKS) },
+                icon = { Icon(FeatherIcons.Bookmark, contentDescription = null) },
+                label = { Text(stringResource(R.string.action_bookmarks)) }
+              )
+              NavigationRailItem(
+                selected = false,
+                onClick = { viewModel.setOverlay(ActiveOverlay.HISTORY) },
+                icon = { Icon(FeatherIcons.History, contentDescription = null) },
+                label = { Text(stringResource(R.string.action_history)) }
+              )
+              NavigationRailItem(
+                selected = false,
+                onClick = { viewModel.setOverlay(ActiveOverlay.DOWNLOADS) },
+                icon = { Icon(FeatherIcons.Download, contentDescription = null) },
+                label = { Text(stringResource(R.string.action_downloads)) }
+              )
+              NavigationRailItem(
+                selected = false,
+                onClick = { viewModel.setOverlay(ActiveOverlay.RESOURCES) },
+                enabled = activeTab.url.isNotBlank(),
+                icon = { Icon(FeatherIcons.MediaSniff, contentDescription = null) },
+                label = {
+                  Text(
+                    if (activeTab.sniffedResourcesCount > 0) "${activeTab.sniffedResourcesCount}" else stringResource(R.string.action_resources),
+                    maxLines = 1
                   )
-                } catch (_: Throwable) {
+                }
+              )
+              NavigationRailItem(
+                selected = false,
+                onClick = { viewModel.setOverlay(ActiveOverlay.SETTINGS) },
+                icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
+                label = { Text(stringResource(R.string.action_settings)) }
+              )
+            }
+          }
+
+          Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+            if (!isBrowserFullscreen) {
+              BrowserToolbar(
+                activeTab = activeTab,
+                tabCount = tabs.size,
+                settings = settings,
+                compactSingleRow = isWideWidth,
+                readClipboard = { viewModel.readClipboardText() },
+                onNavigate = {
+                  focusManager.clearFocus()
+                  viewModel.navigateActiveTab(it)
+                },
+                onBack = { viewModel.goBack() },
+                onForward = { viewModel.goForward() },
+                onReloadOrStop = { viewModel.reloadOrStop() },
+                onCopyUrl = { viewModel.copyActiveUrl() },
+                onOpenSiteInfo = { showSiteInfoDialog = true },
+                onOpenTabs = { viewModel.setOverlay(ActiveOverlay.TABS) },
+                onSwipeTab = { delta -> viewModel.switchAdjacentTab(delta) },
+                onOpenQuickMenu = { showQuickSheet = true }
+              )
+            }
+
+            if (activeTab.isLoading && activeTab.progress in 1..99) {
+              Box(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .height(2.5.dp)
+                  .background(MaterialTheme.colorScheme.surfaceVariant)
+              ) {
+                Box(
+                  modifier = Modifier
+                    .fillMaxWidth(fraction = (activeTab.progress / 100f).coerceIn(0.05f, 1f))
+                    .fillMaxHeight()
+                    .background(
+                      Brush.horizontalGradient(
+                        listOf(
+                          if (activeTab.isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.primary,
+                          FeatherMintDark
+                        )
+                      )
+                    )
+                )
+              }
+            }
+
+            val reduceMotion = LocalReduceMotion.current
+            if (reduceMotion) {
+              if (findState.isVisible) {
+                FindInPageBar(
+                  findState = findState,
+                  onQueryChange = { viewModel.updateFindQuery(it) },
+                  onPrev = { viewModel.findNext(false) },
+                  onNext = { viewModel.findNext(true) },
+                  onClose = { viewModel.closeFindInPage() }
+                )
+              }
+            } else {
+              AnimatedVisibility(visible = findState.isVisible) {
+                FindInPageBar(
+                  findState = findState,
+                  onQueryChange = { viewModel.updateFindQuery(it) },
+                  onPrev = { viewModel.findNext(false) },
+                  onNext = { viewModel.findNext(true) },
+                  onClose = { viewModel.closeFindInPage() }
+                )
+              }
+            }
+
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+              when {
+                activeTab.httpWarning != null -> {
+                  HttpWarningOverlay(
+                    warning = activeTab.httpWarning,
+                    onGoBackSafely = { viewModel.goBack() },
+                    onProceedAnyway = { viewModel.proceedToHttpAnyway() }
+                  )
+                }
+                activeTab.errorState != null -> {
+                  PageErrorOverlay(
+                    error = activeTab.errorState,
+                    onRetry = {
+                      val url = activeTab.errorState.failingUrl
+                      if (url.isNotBlank()) viewModel.navigateActiveTab(url)
+                    },
+                    onGoHome = { viewModel.goBack() }
+                  )
+                }
+                activeTab.url.isBlank() -> {
+                  NewTabHomeView(
+                    isPrivate = activeTab.isPrivate,
+                    searchEngineName = settings.searchEngine.label,
+                    bookmarks = bookmarks,
+                    onSubmitQuery = { viewModel.navigateActiveTab(it) },
+                    onOpenBookmark = { viewModel.navigateActiveTab(it) }
+                  )
+                }
+                else -> {
+                  val density = LocalDensity.current
+                  val slopPx = remember(density) { with(density) { 18.dp.toPx() } }
+                  val triggerPx = remember(density) { with(density) { 120.dp.toPx() } }
+                  var pullProgress by remember { mutableFloatStateOf(0f) }
+                  val pullStartX = remember { mutableFloatStateOf(0f) }
+                  val pullStartY = remember { mutableFloatStateOf(0f) }
+                  val webContainerVisibility = if (hasFullOverlay) View.INVISIBLE else View.VISIBLE
+
+                  Box(modifier = Modifier.fillMaxSize()) {
+                    AndroidView(
+                      factory = { ctx -> FrameLayout(ctx) },
+                      update = { container ->
+                        if (container.visibility != webContainerVisibility) {
+                          container.visibility = webContainerVisibility
+                        }
+                        val targetWebView = viewModel.getOrCreateActiveWebView()
+                        if (targetWebView == null || !viewModel.webViewPool.isWebViewAlive(targetWebView)) {
+                          for (i in 0 until container.childCount) {
+                            val child = container.getChildAt(i) as? android.webkit.WebView
+                            if (child != null) {
+                              child.setOnTouchListener(null)
+                              viewModel.webViewPool.detachFromHost(child)
+                            }
+                          }
+                          container.removeAllViews()
+                          return@AndroidView
+                        }
+                        viewModel.webViewPool.attachToHost(targetWebView, container.context)
+                        if (container.childCount != 1 || container.getChildAt(0) !== targetWebView) {
+                          for (i in 0 until container.childCount) {
+                            val child = container.getChildAt(i) as? android.webkit.WebView
+                            if (child != null && child !== targetWebView) {
+                              child.setOnTouchListener(null)
+                              viewModel.webViewPool.detachFromHost(child)
+                            }
+                          }
+                          container.removeAllViews()
+                          (targetWebView.parent as? ViewGroup)?.removeView(targetWebView)
+                          try {
+                            container.addView(
+                              targetWebView,
+                              FrameLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT
+                              )
+                            )
+                          } catch (_: Throwable) {
+                          }
+                        }
+                        targetWebView.setOnTouchListener { v, event ->
+                          if (v.scrollY == 0) {
+                            when (event.actionMasked) {
+                              MotionEvent.ACTION_DOWN -> {
+                                pullStartX.floatValue = event.x
+                                pullStartY.floatValue = event.y
+                                pullProgress = 0f
+                              }
+                              MotionEvent.ACTION_MOVE -> {
+                                val dy = event.y - pullStartY.floatValue
+                                val dx = kotlin.math.abs(event.x - pullStartX.floatValue)
+                                if (dy > slopPx && dy > dx * 1.4f && pullStartY.floatValue > 0f) {
+                                  pullProgress = ((dy - slopPx) / triggerPx).coerceIn(0f, 1f)
+                                } else {
+                                  pullProgress = 0f
+                                }
+                              }
+                              MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                                if (pullProgress >= 0.95f) {
+                                  viewModel.reloadOrStop()
+                                }
+                                pullProgress = 0f
+                                pullStartX.floatValue = 0f
+                                pullStartY.floatValue = 0f
+                              }
+                            }
+                          } else {
+                            pullProgress = 0f
+                          }
+                          false
+                        }
+                      },
+                      onRelease = { container ->
+                        for (i in 0 until container.childCount) {
+                          val child = container.getChildAt(i) as? android.webkit.WebView
+                          if (child != null) {
+                            child.setOnTouchListener(null)
+                            viewModel.webViewPool.detachFromHost(child)
+                          }
+                        }
+                        container.removeAllViews()
+                      },
+                      modifier = Modifier.fillMaxSize().testTag("webview_container")
+                    )
+                    if (pullProgress > 0.1f) {
+                      LinearProgressIndicator(
+                        progress = { pullProgress },
+                        modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter)
+                      )
+                    }
+                  }
                 }
               }
-            },
-            onRelease = { container ->
-              container.removeAllViews()
-            },
-            modifier = Modifier.fillMaxSize()
-          )
-          Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-            border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
-            modifier = Modifier
-              .align(Alignment.TopEnd)
-              .statusBarsPadding()
-              .padding(16.dp)
-              .clickable { viewModel.exitFullscreen() }
-          ) {
-            Row(
-              modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Icon(Icons.Filled.Close, contentDescription = "Exit fullscreen", modifier = Modifier.size(18.dp))
-              Spacer(modifier = Modifier.width(6.dp))
-              Text("Exit fullscreen", style = MaterialTheme.typography.labelMedium)
+
+              if (isBrowserFullscreen) {
+                Surface(
+                  shape = RoundedCornerShape(24.dp),
+                  color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                  border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)),
+                  shadowElevation = 6.dp,
+                  modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(14.dp)
+                    .clickable { viewModel.exitBrowserFullscreen() }
+                ) {
+                  Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                  ) {
+                    Icon(Icons.Filled.Close, contentDescription = "Exit fullscreen", modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Exit fullscreen", style = MaterialTheme.typography.labelMedium)
+                  }
+                }
+              }
             }
           }
         }
       }
-      activePageSource != null -> {
-        val (url, html) = activePageSource
-        PageSourceOverlay(
-          pageUrl = url,
-          htmlSource = html,
-          onCopy = { viewModel.copyTextToClipboard(it, "Source copied") },
-          onClose = { viewModel.closePageSource() }
-        )
-      }
-      activeReaderArticle != null -> {
-        ReaderModeOverlay(
-          article = activeReaderArticle,
-          fontSizeSp = settings.readerFontSizeSp,
-          darkReading = settings.readerDarkMode,
-          onChangeFontSize = { sz -> viewModel.updateSettings { it.copy(readerFontSizeSp = sz) } },
-          onToggleDark = { dark -> viewModel.updateSettings { it.copy(readerDarkMode = dark) } },
-          onClose = { viewModel.closeReaderMode() }
-        )
-      }
-      activeOverlay == ActiveOverlay.TABS -> {
-        TabsSheet(
-          tabs = tabs,
-          activeTabId = activeTabId,
-          closedTabs = closedTabs,
-          onSelectTab = { viewModel.switchToTab(it) },
-          onCloseTab = { viewModel.closeTab(it) },
-          onMoveTab = { id, delta -> viewModel.moveTab(id, delta) },
-          onNewTab = { isPriv -> viewModel.openNewTab(isPrivate = isPriv) },
-          onRestoreClosedTab = { viewModel.restoreLastClosedTab() },
-          onEndPrivateSession = { viewModel.endAllPrivateTabs() },
-          onCloseSheet = { viewModel.setOverlay(ActiveOverlay.NONE) }
-        )
-      }
-      activeOverlay == ActiveOverlay.BOOKMARKS -> {
-        BookmarksScreen(
-          bookmarks = bookmarks,
-          onSearch = { viewModel.refreshBookmarks(it) },
-          onOpenUrl = { viewModel.navigateActiveTab(it) },
-          onSaveBookmark = { id, title, url, folder -> viewModel.addOrUpdateBookmark(id, title, url, folder) },
-          onDeleteBookmark = { viewModel.deleteBookmark(it) },
-          onExportBookmarks = onExportBookmarks,
-          onImportBookmarks = onImportBookmarks,
-          onClose = { viewModel.setOverlay(ActiveOverlay.NONE) }
-        )
-      }
-      activeOverlay == ActiveOverlay.HISTORY -> {
-        HistoryScreen(
-          history = history,
-          historyEnabled = settings.historyEnabled,
-          onSearch = { viewModel.refreshHistory(it) },
-          onOpenUrl = { viewModel.navigateActiveTab(it) },
-          onDeleteEntry = { viewModel.deleteHistoryEntry(it) },
-          onClearAll = { viewModel.clearAllHistory() },
-          onClose = { viewModel.setOverlay(ActiveOverlay.NONE) }
-        )
-      }
-      activeOverlay == ActiveOverlay.DOWNLOADS -> {
-        DownloadsScreen(
-          downloads = downloads,
-          onCancel = { viewModel.downloadController.cancelDownload(it) },
-          onRetry = { viewModel.downloadController.retryDownload(it) },
-          onOpen = {
-            if (!viewModel.downloadController.openDownloadedFile(it)) {
-              viewModel.showToast("No app found to open this file")
-            }
-          },
-          onReveal = { viewModel.downloadController.revealDownloadedLocation(it) },
-          onClearAll = { viewModel.downloadController.clearAllDownloads() },
-          onClose = { viewModel.setOverlay(ActiveOverlay.NONE) }
-        )
-      }
-      activeOverlay == ActiveOverlay.RESOURCES -> {
-        ResourcesScreen(
-          resources = viewModel.getActiveSniffedResources(),
-          onDownloadResource = { res ->
-            viewModel.setOverlay(ActiveOverlay.NONE)
-            viewModel.downloadUrlWithConsent(res.url)
-          },
-          onCopyUrl = { viewModel.copyTextToClipboard(it, "Link copied") },
-          onClose = { viewModel.setOverlay(ActiveOverlay.NONE) }
-        )
-      }
-      activeOverlay == ActiveOverlay.SETTINGS -> {
-        SettingsScreen(
-          settings = settings,
-          sitePermissions = sitePermissions,
-          onUpdateSettings = { viewModel.updateSettings(it) },
-          onAddCustomBlockedHost = { host -> viewModel.addCustomBlockedHost(host) },
-          onRemoveCustomBlockedHost = { host -> viewModel.removeCustomBlockedHost(host) },
-          onRemovePermissionRule = { viewModel.removeSitePermissionRule(it) },
-          onClearBrowsingData = { opts -> viewModel.clearSelectedBrowsingData(opts) },
-          onExportBookmarks = onExportBookmarks,
-          onImportBookmarks = onImportBookmarks,
-          onShowMessage = { viewModel.showToast(it) },
-          onClose = { viewModel.setOverlay(ActiveOverlay.NONE) }
-        )
-      }
-      else -> {
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-          val isWideWidth = maxWidth >= 600.dp
-          val showNavRail = isWideWidth && maxHeight >= 460.dp
+    }
 
-          Scaffold(
-            contentWindowInsets = WindowInsets.safeDrawing
-          ) { innerPadding ->
-            Row(
-              modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .imePadding()
-            ) {
-              if (showNavRail && !isBrowserFullscreen) {
-                NavigationRail(
-                  containerColor = MaterialTheme.colorScheme.surface,
-                  modifier = Modifier.fillMaxHeight().verticalScroll(rememberScrollState())
+    if (hasFullOverlay) {
+      Box(
+        modifier = Modifier
+          .fillMaxSize()
+          .clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null
+          ) {}
+      ) {
+        when {
+          activeFullscreen != null -> {
+            val (customView, _) = activeFullscreen
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+              AndroidView(
+                factory = { ctx -> FrameLayout(ctx) },
+                update = { container ->
+                  if (container.childCount != 1 || container.getChildAt(0) !== customView) {
+                    container.removeAllViews()
+                    try {
+                      (customView.parent as? ViewGroup)?.removeView(customView)
+                      container.addView(
+                        customView,
+                        FrameLayout.LayoutParams(
+                          ViewGroup.LayoutParams.MATCH_PARENT,
+                          ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                      )
+                    } catch (_: Throwable) {
+                    }
+                  }
+                },
+                onRelease = { container ->
+                  container.removeAllViews()
+                },
+                modifier = Modifier.fillMaxSize()
+              )
+              Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                modifier = Modifier
+                  .align(Alignment.TopEnd)
+                  .statusBarsPadding()
+                  .padding(16.dp)
+                  .clickable { viewModel.exitFullscreen() }
+              ) {
+                Row(
+                  modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                  verticalAlignment = Alignment.CenterVertically
                 ) {
-                  NavigationRailItem(
-                    selected = false,
-                    onClick = { viewModel.setOverlay(ActiveOverlay.TABS) },
-                    icon = { Text(tabs.size.toString(), fontWeight = FontWeight.Bold) },
-                    label = { Text(stringResource(R.string.tabs_title)) }
-                  )
-                  NavigationRailItem(
-                    selected = false,
-                    onClick = { viewModel.setOverlay(ActiveOverlay.BOOKMARKS) },
-                    icon = { Icon(FeatherIcons.Bookmark, contentDescription = null) },
-                    label = { Text(stringResource(R.string.action_bookmarks)) }
-                  )
-                  NavigationRailItem(
-                    selected = false,
-                    onClick = { viewModel.setOverlay(ActiveOverlay.HISTORY) },
-                    icon = { Icon(FeatherIcons.History, contentDescription = null) },
-                    label = { Text(stringResource(R.string.action_history)) }
-                  )
-                  NavigationRailItem(
-                    selected = false,
-                    onClick = { viewModel.setOverlay(ActiveOverlay.DOWNLOADS) },
-                    icon = { Icon(FeatherIcons.Download, contentDescription = null) },
-                    label = { Text(stringResource(R.string.action_downloads)) }
-                  )
-                  NavigationRailItem(
-                    selected = false,
-                    onClick = { viewModel.setOverlay(ActiveOverlay.RESOURCES) },
-                    enabled = activeTab.url.isNotBlank(),
-                    icon = { Icon(FeatherIcons.MediaSniff, contentDescription = null) },
-                    label = {
-                      Text(
-                        if (activeTab.sniffedResourcesCount > 0) "${activeTab.sniffedResourcesCount}" else stringResource(R.string.action_resources),
-                        maxLines = 1
-                      )
-                    }
-                  )
-                  NavigationRailItem(
-                    selected = false,
-                    onClick = { viewModel.setOverlay(ActiveOverlay.SETTINGS) },
-                    icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
-                    label = { Text(stringResource(R.string.action_settings)) }
-                  )
-                }
-              }
-
-              Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                if (!isBrowserFullscreen) {
-                  BrowserToolbar(
-                    activeTab = activeTab,
-                    tabCount = tabs.size,
-                    settings = settings,
-                    compactSingleRow = isWideWidth,
-                    readClipboard = { viewModel.readClipboardText() },
-                    onNavigate = {
-                      focusManager.clearFocus()
-                      viewModel.navigateActiveTab(it)
-                    },
-                    onBack = { viewModel.goBack() },
-                    onForward = { viewModel.goForward() },
-                    onReloadOrStop = { viewModel.reloadOrStop() },
-                    onCopyUrl = { viewModel.copyActiveUrl() },
-                    onOpenSiteInfo = { showSiteInfoDialog = true },
-                    onOpenTabs = { viewModel.setOverlay(ActiveOverlay.TABS) },
-                    onSwipeTab = { delta -> viewModel.switchAdjacentTab(delta) },
-                    onOpenQuickMenu = { showQuickSheet = true }
-                  )
-                }
-
-                if (activeTab.isLoading && activeTab.progress in 1..99) {
-                  Box(
-                    modifier = Modifier
-                      .fillMaxWidth()
-                      .height(2.5.dp)
-                      .background(MaterialTheme.colorScheme.surfaceVariant)
-                  ) {
-                    Box(
-                      modifier = Modifier
-                        .fillMaxWidth(fraction = (activeTab.progress / 100f).coerceIn(0.05f, 1f))
-                        .fillMaxHeight()
-                        .background(
-                          Brush.horizontalGradient(
-                            listOf(
-                              if (activeTab.isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.primary,
-                              FeatherMintDark
-                            )
-                          )
-                        )
-                    )
-                  }
-                }
-
-                val reduceMotion = LocalReduceMotion.current
-                if (reduceMotion) {
-                  if (findState.isVisible) {
-                    FindInPageBar(
-                      findState = findState,
-                      onQueryChange = { viewModel.updateFindQuery(it) },
-                      onPrev = { viewModel.findNext(false) },
-                      onNext = { viewModel.findNext(true) },
-                      onClose = { viewModel.closeFindInPage() }
-                    )
-                  }
-                } else {
-                  AnimatedVisibility(visible = findState.isVisible) {
-                    FindInPageBar(
-                      findState = findState,
-                      onQueryChange = { viewModel.updateFindQuery(it) },
-                      onPrev = { viewModel.findNext(false) },
-                      onNext = { viewModel.findNext(true) },
-                      onClose = { viewModel.closeFindInPage() }
-                    )
-                  }
-                }
-
-                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                  when {
-                    activeTab.httpWarning != null -> {
-                      HttpWarningOverlay(
-                        warning = activeTab.httpWarning,
-                        onGoBackSafely = { viewModel.goBack() },
-                        onProceedAnyway = { viewModel.proceedToHttpAnyway() }
-                      )
-                    }
-                    activeTab.errorState != null -> {
-                      PageErrorOverlay(
-                        error = activeTab.errorState,
-                        onRetry = {
-                          val url = activeTab.errorState.failingUrl
-                          if (url.isNotBlank()) viewModel.navigateActiveTab(url)
-                        },
-                        onGoHome = { viewModel.goBack() }
-                      )
-                    }
-                    activeTab.url.isBlank() -> {
-                      NewTabHomeView(
-                        isPrivate = activeTab.isPrivate,
-                        searchEngineName = settings.searchEngine.label,
-                        bookmarks = bookmarks,
-                        onSubmitQuery = { viewModel.navigateActiveTab(it) },
-                        onOpenBookmark = { viewModel.navigateActiveTab(it) }
-                      )
-                    }
-                    else -> {
-                      val density = LocalDensity.current
-                      val slopPx = remember(density) { with(density) { 18.dp.toPx() } }
-                      val triggerPx = remember(density) { with(density) { 120.dp.toPx() } }
-                      var pullProgress by remember { mutableFloatStateOf(0f) }
-                      val pullStartX = remember { mutableFloatStateOf(0f) }
-                      val pullStartY = remember { mutableFloatStateOf(0f) }
-
-                      Box(modifier = Modifier.fillMaxSize()) {
-                        AndroidView(
-                          factory = { ctx -> FrameLayout(ctx) },
-                          update = { container ->
-                            val targetWebView = viewModel.getOrCreateActiveWebView()
-                            if (targetWebView == null || !viewModel.webViewPool.isWebViewAlive(targetWebView)) {
-                              for (i in 0 until container.childCount) {
-                                val child = container.getChildAt(i) as? android.webkit.WebView
-                                if (child != null) {
-                                  child.setOnTouchListener(null)
-                                  viewModel.webViewPool.detachFromHost(child)
-                                }
-                              }
-                              container.removeAllViews()
-                              return@AndroidView
-                            }
-                            viewModel.webViewPool.attachToHost(targetWebView, container.context)
-                            if (container.childCount != 1 || container.getChildAt(0) !== targetWebView) {
-                              for (i in 0 until container.childCount) {
-                                val child = container.getChildAt(i) as? android.webkit.WebView
-                                if (child != null && child !== targetWebView) {
-                                  child.setOnTouchListener(null)
-                                  viewModel.webViewPool.detachFromHost(child)
-                                }
-                              }
-                              container.removeAllViews()
-                              (targetWebView.parent as? ViewGroup)?.removeView(targetWebView)
-                              try {
-                                container.addView(
-                                  targetWebView,
-                                  FrameLayout.LayoutParams(
-                                    ViewGroup.LayoutParams.MATCH_PARENT,
-                                    ViewGroup.LayoutParams.MATCH_PARENT
-                                  )
-                                )
-                              } catch (_: Throwable) {
-                              }
-                            }
-                            targetWebView.setOnTouchListener { v, event ->
-                              if (v.scrollY == 0) {
-                                when (event.actionMasked) {
-                                  MotionEvent.ACTION_DOWN -> {
-                                    pullStartX.floatValue = event.x
-                                    pullStartY.floatValue = event.y
-                                    pullProgress = 0f
-                                  }
-                                  MotionEvent.ACTION_MOVE -> {
-                                    val dy = event.y - pullStartY.floatValue
-                                    val dx = kotlin.math.abs(event.x - pullStartX.floatValue)
-                                    if (dy > slopPx && dy > dx * 1.4f && pullStartY.floatValue > 0f) {
-                                      pullProgress = ((dy - slopPx) / triggerPx).coerceIn(0f, 1f)
-                                    } else {
-                                      pullProgress = 0f
-                                    }
-                                  }
-                                  MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                                    if (pullProgress >= 0.95f) {
-                                      viewModel.reloadOrStop()
-                                    }
-                                    pullProgress = 0f
-                                    pullStartX.floatValue = 0f
-                                    pullStartY.floatValue = 0f
-                                  }
-                                }
-                              } else {
-                                pullProgress = 0f
-                              }
-                              false
-                            }
-                          },
-                          onRelease = { container ->
-                            for (i in 0 until container.childCount) {
-                              val child = container.getChildAt(i) as? android.webkit.WebView
-                              if (child != null) {
-                                child.setOnTouchListener(null)
-                                viewModel.webViewPool.detachFromHost(child)
-                              }
-                            }
-                            container.removeAllViews()
-                          },
-                          modifier = Modifier.fillMaxSize().testTag("webview_container")
-                        )
-                        if (pullProgress > 0.1f) {
-                          LinearProgressIndicator(
-                            progress = { pullProgress },
-                            modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter)
-                          )
-                        }
-                      }
-                    }
-                  }
-
-                  if (isBrowserFullscreen) {
-                    Surface(
-                      shape = RoundedCornerShape(24.dp),
-                      color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
-                      border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)),
-                      shadowElevation = 6.dp,
-                      modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(14.dp)
-                        .clickable { viewModel.exitBrowserFullscreen() }
-                    ) {
-                      Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                      ) {
-                        Icon(Icons.Filled.Close, contentDescription = "Exit fullscreen", modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Exit fullscreen", style = MaterialTheme.typography.labelMedium)
-                      }
-                    }
-                  }
+                  Icon(Icons.Filled.Close, contentDescription = "Exit fullscreen", modifier = Modifier.size(18.dp))
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Text("Exit fullscreen", style = MaterialTheme.typography.labelMedium)
                 }
               }
             }
+          }
+          activePageSource != null -> {
+            val (url, html) = activePageSource
+            PageSourceOverlay(
+              pageUrl = url,
+              htmlSource = html,
+              onCopy = { viewModel.copyTextToClipboard(it, "Source copied") },
+              onClose = { viewModel.closePageSource() }
+            )
+          }
+          activeReaderArticle != null -> {
+            ReaderModeOverlay(
+              article = activeReaderArticle,
+              fontSizeSp = settings.readerFontSizeSp,
+              darkReading = settings.readerDarkMode,
+              onChangeFontSize = { sz -> viewModel.updateSettings { it.copy(readerFontSizeSp = sz) } },
+              onToggleDark = { dark -> viewModel.updateSettings { it.copy(readerDarkMode = dark) } },
+              onClose = { viewModel.closeReaderMode() }
+            )
+          }
+          activeOverlay == ActiveOverlay.TABS -> {
+            TabsSheet(
+              tabs = tabs,
+              activeTabId = activeTabId,
+              closedTabs = closedTabs,
+              onSelectTab = { viewModel.switchToTab(it) },
+              onCloseTab = { viewModel.closeTab(it) },
+              onMoveTab = { id, delta -> viewModel.moveTab(id, delta) },
+              onNewTab = { isPriv -> viewModel.openNewTab(isPrivate = isPriv) },
+              onRestoreClosedTab = { viewModel.restoreLastClosedTab() },
+              onEndPrivateSession = { viewModel.endAllPrivateTabs() },
+              onCloseSheet = { viewModel.setOverlay(ActiveOverlay.NONE) }
+            )
+          }
+          activeOverlay == ActiveOverlay.BOOKMARKS -> {
+            BookmarksScreen(
+              bookmarks = bookmarks,
+              onSearch = { viewModel.refreshBookmarks(it) },
+              onOpenUrl = { viewModel.navigateActiveTab(it) },
+              onSaveBookmark = { id, title, url, folder -> viewModel.addOrUpdateBookmark(id, title, url, folder) },
+              onDeleteBookmark = { viewModel.deleteBookmark(it) },
+              onExportBookmarks = onExportBookmarks,
+              onImportBookmarks = onImportBookmarks,
+              onClose = { viewModel.setOverlay(ActiveOverlay.NONE) }
+            )
+          }
+          activeOverlay == ActiveOverlay.HISTORY -> {
+            HistoryScreen(
+              history = history,
+              historyEnabled = settings.historyEnabled,
+              onSearch = { viewModel.refreshHistory(it) },
+              onOpenUrl = { viewModel.navigateActiveTab(it) },
+              onDeleteEntry = { viewModel.deleteHistoryEntry(it) },
+              onClearAll = { viewModel.clearAllHistory() },
+              onClose = { viewModel.setOverlay(ActiveOverlay.NONE) }
+            )
+          }
+          activeOverlay == ActiveOverlay.DOWNLOADS -> {
+            DownloadsScreen(
+              downloads = downloads,
+              onCancel = { viewModel.downloadController.cancelDownload(it) },
+              onRetry = { viewModel.downloadController.retryDownload(it) },
+              onOpen = {
+                if (!viewModel.downloadController.openDownloadedFile(it)) {
+                  viewModel.showToast("No app found to open this file")
+                }
+              },
+              onReveal = { viewModel.downloadController.revealDownloadedLocation(it) },
+              onClearAll = { viewModel.downloadController.clearAllDownloads() },
+              onClose = { viewModel.setOverlay(ActiveOverlay.NONE) }
+            )
+          }
+          activeOverlay == ActiveOverlay.RESOURCES -> {
+            ResourcesScreen(
+              resources = viewModel.getActiveSniffedResources(),
+              onDownloadResource = { res ->
+                viewModel.setOverlay(ActiveOverlay.NONE)
+                viewModel.downloadUrlWithConsent(res.url)
+              },
+              onCopyUrl = { viewModel.copyTextToClipboard(it, "Link copied") },
+              onClose = { viewModel.setOverlay(ActiveOverlay.NONE) }
+            )
+          }
+          activeOverlay == ActiveOverlay.SETTINGS -> {
+            val shareableUrl = if (!activeTab.isPrivate &&
+              UrlValidator.isSafeWebUrl(activeTab.url) &&
+              activeTab.url != "about:blank"
+            ) {
+              activeTab.url
+            } else {
+              ""
+            }
+            SettingsScreen(
+              settings = settings,
+              currentUrl = shareableUrl,
+              sitePermissions = sitePermissions,
+              onUpdateSettings = { viewModel.updateSettings(it) },
+              onAddCustomBlockedHost = { host -> viewModel.addCustomBlockedHost(host) },
+              onRemoveCustomBlockedHost = { host -> viewModel.removeCustomBlockedHost(host) },
+              onRemovePermissionRule = { viewModel.removeSitePermissionRule(it) },
+              onClearBrowsingData = { opts -> viewModel.clearSelectedBrowsingData(opts) },
+              onExportBookmarks = onExportBookmarks,
+              onImportBookmarks = onImportBookmarks,
+              onShowMessage = { viewModel.showToast(it) },
+              onClose = { viewModel.setOverlay(ActiveOverlay.NONE) }
+            )
           }
         }
       }

@@ -204,6 +204,7 @@ data class SettingsState(
   val searchEngine: SearchEngine = SearchEngine.DUCKDUCKGO,
   val customSearchTemplate: String = "https://duckduckgo.com/?q=%s",
   val homepageUrl: String = "",
+  val retainOpenTabs: Boolean = true,
   val httpsOnlyEnabled: Boolean = true,
   val blockThirdPartyCookies: Boolean = true,
   val trackerBlockingEnabled: Boolean = true,

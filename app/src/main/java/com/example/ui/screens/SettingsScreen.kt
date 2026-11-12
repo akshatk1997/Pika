@@ -23,6 +23,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -62,6 +64,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.example.BuildConfig
 import com.example.R
@@ -79,6 +82,7 @@ import kotlin.math.roundToInt
 @Composable
 fun SettingsScreen(
   settings: SettingsState,
+  currentUrl: String = "",
   sitePermissions: List<SitePermissionRule>,
   onUpdateSettings: ((SettingsState) -> SettingsState) -> Unit,
   onAddCustomBlockedHost: (String) -> Boolean,
@@ -182,27 +186,45 @@ fun SettingsScreen(
             }
           }
           if (settings.searchEngine == SearchEngine.CUSTOM) {
+            val saveCustomSearch = {
+              if (UrlValidator.isValidCustomSearchTemplate(customSearchDraft)) {
+                onUpdateSettings { it.copy(customSearchTemplate = customSearchDraft.trim()) }
+                onShowMessage("Search URL saved")
+              } else {
+                onShowMessage("Enter an https:// URL containing %s")
+              }
+            }
             OutlinedTextField(
               value = customSearchDraft,
               onValueChange = { customSearchDraft = it },
               label = { Text("Search URL (%s)") },
               singleLine = true,
               isError = !UrlValidator.isValidCustomSearchTemplate(customSearchDraft),
+              keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+              keyboardActions = KeyboardActions(onDone = { saveCustomSearch() }),
               modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(6.dp))
-            OutlinedButton(
-              onClick = {
-                if (UrlValidator.isValidCustomSearchTemplate(customSearchDraft)) {
-                  onUpdateSettings { it.copy(customSearchTemplate = customSearchDraft.trim()) }
-                  onShowMessage("Search URL saved")
-                } else {
-                  onShowMessage("Enter an https:// URL containing %s")
-                }
-              }
-            ) { Text("Save") }
+            OutlinedButton(onClick = saveCustomSearch) { Text("Save") }
           }
           Spacer(modifier = Modifier.height(8.dp))
+          val commitHomepage = { raw: String ->
+            val cleaned = UrlValidator.sanitizeControlChars(raw)
+            val normalized = if (cleaned.isNotEmpty() && !cleaned.contains("://") && !cleaned.contains(' ') && cleaned.contains('.')) {
+              "https://$cleaned"
+            } else {
+              cleaned
+            }
+            if (normalized.isEmpty() || (UrlValidator.isSafeWebUrl(normalized) && normalized != "about:blank")) {
+              homepageDraft = normalized
+              homepageError = false
+              onUpdateSettings { it.copy(homepageUrl = normalized) }
+              onShowMessage(if (normalized.isEmpty()) "Homepage set to Start page" else "Homepage saved")
+            } else {
+              homepageError = true
+              onShowMessage("Enter a valid URL")
+            }
+          }
           OutlinedTextField(
             value = homepageDraft,
             onValueChange = {
@@ -214,29 +236,40 @@ fun SettingsScreen(
             isError = homepageError,
             singleLine = true,
             shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.fillMaxWidth()
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { commitHomepage(homepageDraft) }),
+            modifier = Modifier.fillMaxWidth().testTag("setting_homepage_input")
           )
           Spacer(modifier = Modifier.height(8.dp))
-          OutlinedButton(
-            shape = RoundedCornerShape(12.dp),
-            onClick = {
-              val cleaned = UrlValidator.sanitizeControlChars(homepageDraft)
-              val normalized = if (cleaned.isNotEmpty() && !cleaned.contains("://") && !cleaned.contains(' ') && cleaned.contains('.')) {
-                "https://$cleaned"
-              } else {
-                cleaned
-              }
-              if (normalized.isEmpty() || (UrlValidator.isSafeWebUrl(normalized) && normalized != "about:blank")) {
-                homepageDraft = normalized
-                homepageError = false
-                onUpdateSettings { it.copy(homepageUrl = normalized) }
-                onShowMessage(if (normalized.isEmpty()) "Homepage set to Start page" else "Homepage saved")
-              } else {
-                homepageError = true
-                onShowMessage("Enter a valid URL")
-              }
+          FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+          ) {
+            OutlinedButton(
+              shape = RoundedCornerShape(12.dp),
+              modifier = Modifier.testTag("setting_homepage_save"),
+              onClick = { commitHomepage(homepageDraft) }
+            ) { Text("Save") }
+            if (currentUrl.isNotBlank() && UrlValidator.isSafeWebUrl(currentUrl) && currentUrl != "about:blank") {
+              OutlinedButton(
+                shape = RoundedCornerShape(12.dp),
+                onClick = { commitHomepage(currentUrl) }
+              ) { Text("Use current") }
             }
-          ) { Text("Save") }
+            if (homepageDraft.isNotBlank() || settings.homepageUrl.isNotBlank()) {
+              TextButton(
+                onClick = { commitHomepage("") }
+              ) { Text("Reset") }
+            }
+          }
+          HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+          SettingSwitchRow(
+            title = "Retain open web pages",
+            subtitle = "Keep open tabs and pages across restarts",
+            checked = settings.retainOpenTabs,
+            tag = "setting_retain_tabs",
+            onCheckedChange = { v -> onUpdateSettings { it.copy(retainOpenTabs = v) } }
+          )
         }
       }
 

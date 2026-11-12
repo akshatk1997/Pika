@@ -2,9 +2,12 @@ package com.example.data
 
 import android.content.Context
 import com.example.model.SearchEngine
+import com.example.model.SecurityState
 import com.example.model.SettingsState
 import com.example.model.SitePermissionRule
+import com.example.model.TabInfo
 import com.example.model.ThemeMode
+import com.example.model.UserAgentMode
 import com.example.model.WebPermissionKind
 import com.example.security.SecureKeystoreStorage
 import com.example.security.TrackerBlocker
@@ -13,20 +16,58 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Persists browser settings and per-site permission rules encrypted via Android Keystore.
- * Zero plaintext preferences or telemetry.
+ * Persists browser settings, non-private retained session tabs, and per-site permission rules
+ * using Android Keystore (AES-256-GCM), with private local fallback if Keystore HAL is unavailable.
  */
 class SettingsRepository(context: Context) {
 
-  private val secureStorage = SecureKeystoreStorage(context.applicationContext)
+  private val appContext = context.applicationContext
+  private val secureStorage = SecureKeystoreStorage(appContext)
+  private val fallbackPrefs by lazy {
+    appContext.getSharedPreferences(FALLBACK_PREFS, Context.MODE_PRIVATE)
+  }
 
   companion object {
     private const val SETTINGS_FILE = "feather_settings.enc"
     private const val PERMISSIONS_FILE = "feather_site_perms.enc"
+    private const val RETAINED_TABS_FILE = "bat_retained_tabs.enc"
+    private const val FALLBACK_PREFS = "bat_local_state_fallback"
+    private const val MAX_RETAINED_TABS = 24
+  }
+
+  private fun writePayload(fileName: String, json: String) {
+    if (secureStorage.writeEncryptedString(fileName, json)) {
+      try {
+        fallbackPrefs.edit().remove(fileName).apply()
+      } catch (_: Throwable) {
+      }
+    } else {
+      try {
+        fallbackPrefs.edit().putString(fileName, json).apply()
+      } catch (_: Throwable) {
+      }
+    }
+  }
+
+  private fun readPayload(fileName: String): String? {
+    secureStorage.readEncryptedString(fileName)?.let { return it }
+    return try {
+      fallbackPrefs.getString(fileName, null)
+    } catch (_: Throwable) {
+      null
+    }
+  }
+
+  private fun deletePayload(fileName: String) {
+    secureStorage.deleteEncryptedFile(fileName)
+    try {
+      fallbackPrefs.edit().remove(fileName).apply()
+    } catch (_: Throwable) {
+    }
   }
 
   fun loadSettings(): SettingsState {
-    val jsonStr = secureStorage.readEncryptedString(SETTINGS_FILE) ?: return SettingsState()
+    val jsonStr = readPayload(SETTINGS_FILE) ?: return SettingsState()
     return try {
       val obj = JSONObject(jsonStr)
       val customArr = obj.optJSONArray("customBlockedHosts")
@@ -43,6 +84,7 @@ class SettingsRepository(context: Context) {
         searchEngine = SearchEngine.fromId(obj.optString("searchEngine", SearchEngine.DUCKDUCKGO.id)),
         customSearchTemplate = obj.optString("customSearchTemplate", SearchEngine.DUCKDUCKGO.queryTemplate),
         homepageUrl = UrlValidator.sanitizeControlChars(obj.optString("homepageUrl", "")),
+        retainOpenTabs = obj.optBoolean("retainOpenTabs", true),
         httpsOnlyEnabled = obj.optBoolean("httpsOnlyEnabled", true),
         blockThirdPartyCookies = obj.optBoolean("blockThirdPartyCookies", true),
         trackerBlockingEnabled = obj.optBoolean("trackerBlockingEnabled", true),
@@ -68,6 +110,7 @@ class SettingsRepository(context: Context) {
       put("searchEngine", state.searchEngine.id)
       put("customSearchTemplate", state.customSearchTemplate)
       put("homepageUrl", state.homepageUrl)
+      put("retainOpenTabs", state.retainOpenTabs)
       put("httpsOnlyEnabled", state.httpsOnlyEnabled)
       put("blockThirdPartyCookies", state.blockThirdPartyCookies)
       put("trackerBlockingEnabled", state.trackerBlockingEnabled)
@@ -83,11 +126,82 @@ class SettingsRepository(context: Context) {
       put("readerFontSizeSp", state.readerFontSizeSp)
       put("readerDarkMode", state.readerDarkMode)
     }
-    secureStorage.writeEncryptedString(SETTINGS_FILE, obj.toString())
+    writePayload(SETTINGS_FILE, obj.toString())
+  }
+
+  fun saveRetainedTabs(tabs: List<TabInfo>, activeTabId: String) {
+    val normalTabs = tabs.filter { !it.isPrivate }.takeLast(MAX_RETAINED_TABS)
+    if (normalTabs.isEmpty()) {
+      deletePayload(RETAINED_TABS_FILE)
+      return
+    }
+    val arr = JSONArray()
+    for (t in normalTabs) {
+      val safeUrl = if (UrlValidator.isSafeWebUrl(t.url) && t.url != "about:blank") t.url else ""
+      arr.put(
+        JSONObject().apply {
+          put("id", t.id)
+          put("title", UrlValidator.sanitizeDisplayText(t.title, 180).ifEmpty { "New Tab" })
+          put("url", safeUrl)
+          put("ua", t.userAgentMode.id)
+        }
+      )
+    }
+    val root = JSONObject().apply {
+      put("activeTabId", activeTabId)
+      put("tabs", arr)
+    }
+    writePayload(RETAINED_TABS_FILE, root.toString())
+  }
+
+  fun loadRetainedTabs(): Pair<List<TabInfo>, String>? {
+    val raw = readPayload(RETAINED_TABS_FILE) ?: return null
+    return try {
+      val root = JSONObject(raw)
+      val arr = root.optJSONArray("tabs") ?: return null
+      val list = mutableListOf<TabInfo>()
+      for (i in 0 until arr.length()) {
+        val obj = arr.optJSONObject(i) ?: continue
+        val id = obj.optString("id", "").ifBlank { continue }
+        val rawUrl = UrlValidator.sanitizeControlChars(obj.optString("url", ""))
+        val safeUrl = if (UrlValidator.isSafeWebUrl(rawUrl) && rawUrl != "about:blank") rawUrl else ""
+        val defaultTitle = if (safeUrl.isNotEmpty()) {
+          UrlValidator.extractHost(safeUrl).ifEmpty { "Page" }
+        } else {
+          "New Tab"
+        }
+        val title = UrlValidator.sanitizeDisplayText(obj.optString("title", ""), 180)
+          .ifEmpty { defaultTitle }
+        val sec = when {
+          safeUrl.isEmpty() -> SecurityState.HOME
+          UrlValidator.isHttpsUrl(safeUrl) -> SecurityState.SECURE_HTTPS
+          else -> SecurityState.INSECURE_HTTP
+        }
+        list += TabInfo(
+          id = id,
+          title = title,
+          url = safeUrl,
+          isPrivate = false,
+          userAgentMode = UserAgentMode.fromId(obj.optString("ua", UserAgentMode.MOBILE.id)),
+          securityState = sec,
+          faviconInitial = UrlValidator.extractHost(safeUrl).firstOrNull()?.uppercase() ?: ""
+        )
+      }
+      if (list.isEmpty()) return null
+      val savedActive = root.optString("activeTabId", "")
+      val resolvedActive = if (list.any { it.id == savedActive }) savedActive else list.first().id
+      list to resolvedActive
+    } catch (_: Throwable) {
+      null
+    }
+  }
+
+  fun clearRetainedTabs() {
+    deletePayload(RETAINED_TABS_FILE)
   }
 
   fun loadSitePermissions(): List<SitePermissionRule> {
-    val raw = secureStorage.readEncryptedString(PERMISSIONS_FILE) ?: return emptyList()
+    val raw = readPayload(PERMISSIONS_FILE) ?: return emptyList()
     return try {
       val arr = JSONArray(raw)
       val out = mutableListOf<SitePermissionRule>()
@@ -118,10 +232,10 @@ class SettingsRepository(context: Context) {
         }
       )
     }
-    secureStorage.writeEncryptedString(PERMISSIONS_FILE, arr.toString())
+    writePayload(PERMISSIONS_FILE, arr.toString())
   }
 
   fun clearAllSitePermissions() {
-    secureStorage.deleteEncryptedFile(PERMISSIONS_FILE)
+    deletePayload(PERMISSIONS_FILE)
   }
 }

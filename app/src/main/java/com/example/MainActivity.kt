@@ -137,6 +137,14 @@ class MainActivity : ComponentActivity() {
     }
   }
 
+  override fun onStop() {
+    super.onStop()
+    try {
+      viewModel.flushRetainedTabs()
+    } catch (_: Throwable) {
+    }
+  }
+
   override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
     setIntent(intent)

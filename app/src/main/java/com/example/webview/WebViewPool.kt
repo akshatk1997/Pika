@@ -122,7 +122,8 @@ class WebViewPool(
     tabId: String,
     isPrivate: Boolean,
     userAgentMode: UserAgentMode,
-    approvedHttpHosts: Set<String>
+    approvedHttpHosts: Set<String>,
+    fallbackUrl: String = ""
   ): WebView? {
     val settingsState = settingsProvider()
     liveViews[tabId]?.let { existing ->
@@ -140,8 +141,10 @@ class WebViewPool(
       if (eldestView != null) {
         try {
           val bundle = Bundle()
-          eldestView.saveState(bundle)
-          savedStates[eldestKey] = bundle
+          val savedList = eldestView.saveState(bundle)
+          if (savedList != null && savedList.size > 0) {
+            savedStates[eldestKey] = bundle
+          }
         } catch (_: Throwable) {
         }
         safelyDestroyWebView(eldestView)
@@ -149,15 +152,22 @@ class WebViewPool(
     }
 
     val webView = createSecuredWebView(tabId, isPrivate, userAgentMode, approvedHttpHosts) ?: return null
+    liveViews[tabId] = webView
+    var restoredOk = false
     savedStates.remove(tabId)?.let { bundle ->
       try {
-        webView.restoreState(bundle)
+        val restored = webView.restoreState(bundle)
+        restoredOk = restored != null && restored.size > 0
       } catch (_: Throwable) {
       }
     }
-    liveViews[tabId] = webView
+    if (!restoredOk && fallbackUrl.isNotBlank() && UrlValidator.isSafeWebUrl(fallbackUrl) && fallbackUrl != "about:blank") {
+      loadUrl(tabId, fallbackUrl)
+    }
     return webView
   }
+
+  fun hasSavedState(tabId: String): Boolean = savedStates.containsKey(tabId)
 
   fun getLiveWebView(tabId: String): WebView? = liveViews[tabId]?.takeIf { !destroyedViews.contains(it) }
 
@@ -477,10 +487,13 @@ class WebViewPool(
         loadWithOverviewMode = true
         loadsImagesAutomatically = !settingsState.noImageMode
         blockNetworkImage = settingsState.noImageMode
-        userAgentString = when (userAgentMode) {
+        val targetUa = when (userAgentMode) {
           UserAgentMode.DESKTOP -> DESKTOP_USER_AGENT
           UserAgentMode.IPHONE -> IPHONE_USER_AGENT
           UserAgentMode.MOBILE -> defaultUserAgent.ifEmpty { null }
+        }
+        if (userAgentString != targetUa) {
+          userAgentString = targetUa
         }
         textZoom = if (userAgentMode == UserAgentMode.DESKTOP) 90 else settingsState.textZoomPercent
         cacheMode = if (isPrivate) WebSettings.LOAD_NO_CACHE else WebSettings.LOAD_DEFAULT

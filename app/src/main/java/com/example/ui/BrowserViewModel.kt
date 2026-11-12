@@ -174,6 +174,9 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             faviconInitial = UrlValidator.extractHost(url).firstOrNull()?.uppercase() ?: ""
           )
         }
+        if (tabById(tabId)?.isPrivate != true) {
+          persistOpenTabs()
+        }
       }
     }
 
@@ -215,6 +218,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             }
           }
         }
+        persistOpenTabs()
       }
     }
 
@@ -433,19 +437,72 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   init {
     refreshBookmarks()
     refreshHistory()
-    val home = _settings.value.homepageUrl
-    if (home.isNotBlank() && UrlValidator.isSafeWebUrl(home)) {
-      navigateActiveTab(home)
+    val retained = if (_settings.value.retainOpenTabs) settingsRepo.loadRetainedTabs() else null
+    if (retained != null) {
+      val (restoredTabs, restoredActiveId) = retained
+      _tabs.value = restoredTabs
+      _activeTabId.value = restoredActiveId
+      val current = activeTab()
+      if (current.url.isNotBlank() && UrlValidator.isSafeWebUrl(current.url)) {
+        loadRestoredTabSafely(current.id, current.url)
+      }
+    } else {
+      val home = _settings.value.homepageUrl
+      if (home.isNotBlank() && UrlValidator.isSafeWebUrl(home)) {
+        navigateActiveTab(home)
+      }
     }
+  }
+
+  private fun loadRestoredTabSafely(tabId: String, rawUrl: String) {
+    val tab = tabById(tabId) ?: return
+    val s = _settings.value
+    val res = UrlValidator.resolveInputToTarget(rawUrl, s.searchEngine, s.customSearchTemplate, s.httpsOnlyEnabled)
+    if (res is ResolvedNavigation.LoadUrl) {
+      val host = UrlValidator.extractHost(res.url)
+      val customSet = s.customBlockedHosts.toSet()
+      if (customSet.isNotEmpty() && TrackerBlocker.isHostMatchingSet(host, customSet)) {
+        return
+      }
+      val originalHttp = if (res.upgradedFromHttp && res.url.startsWith("https://")) {
+        "http://" + res.url.removePrefix("https://")
+      } else {
+        null
+      }
+      updateTab(tab.id) {
+        it.copy(
+          url = res.url,
+          upgradedFromHttpUrl = originalHttp,
+          isLoading = true,
+          progress = 10,
+          errorState = null,
+          httpWarning = null
+        )
+      }
+      webViewPool.getOrCreateWebView(tab.id, tab.isPrivate, tab.userAgentMode, approvedHttpHosts)
+      webViewPool.loadUrl(tab.id, res.url)
+    }
+  }
+
+  private fun persistOpenTabs() {
+    if (_settings.value.retainOpenTabs) {
+      settingsRepo.saveRetainedTabs(_tabs.value, _activeTabId.value)
+    }
+  }
+
+  fun flushRetainedTabs() {
+    persistOpenTabs()
   }
 
   fun getOrCreateActiveWebView(): WebView? {
     val tab = activeTab()
+    val safeFallback = if (tab.errorState == null && tab.httpWarning == null) tab.url else ""
     return webViewPool.getOrCreateWebView(
       tabId = tab.id,
       isPrivate = tab.isPrivate,
       userAgentMode = tab.userAgentMode,
-      approvedHttpHosts = approvedHttpHosts
+      approvedHttpHosts = approvedHttpHosts,
+      fallbackUrl = safeFallback
     )
   }
 
@@ -519,6 +576,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         }
         webViewPool.getOrCreateWebView(tab.id, tab.isPrivate, tab.userAgentMode, approvedHttpHosts)
         webViewPool.loadUrl(tab.id, res.url)
+        persistOpenTabs()
       }
     }
   }
@@ -527,6 +585,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     val tab = activeTab()
     updateTab(tab.id) { it.copy(userAgentMode = mode) }
     webViewPool.applyUserAgentMode(tab.id, tab.isPrivate, mode)
+    persistOpenTabs()
     showToast("${mode.label} site")
   }
 
@@ -575,17 +634,27 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     val target = initialUrl.ifBlank { if (!isPrivate) _settings.value.homepageUrl else "" }
     if (target.isNotBlank() && UrlValidator.isSafeWebUrl(target)) {
       navigateActiveTab(target)
+    } else {
+      persistOpenTabs()
     }
   }
 
   fun switchToTab(tabId: String) {
-    if (_tabs.value.any { it.id == tabId }) {
-      _activeTabId.value = tabId
-      updateTab(tabId) { it.copy(lastActiveAt = System.currentTimeMillis()) }
-      _activeOverlay.value = ActiveOverlay.NONE
-      _readerArticle.value = null
-      _pageSource.value = null
-      closeFindInPage()
+    val targetTab = _tabs.value.firstOrNull { it.id == tabId } ?: return
+    _activeTabId.value = tabId
+    updateTab(tabId) { it.copy(lastActiveAt = System.currentTimeMillis()) }
+    _activeOverlay.value = ActiveOverlay.NONE
+    _readerArticle.value = null
+    _pageSource.value = null
+    closeFindInPage()
+    persistOpenTabs()
+    if (targetTab.url.isNotBlank() &&
+      targetTab.errorState == null &&
+      targetTab.httpWarning == null &&
+      webViewPool.getLiveWebView(tabId) == null &&
+      !webViewPool.hasSavedState(tabId)
+    ) {
+      loadRestoredTabSafely(tabId, targetTab.url)
     }
   }
 
@@ -609,6 +678,16 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     if (closing.isPrivate && _tabs.value.none { it.isPrivate }) {
       endPrivateSessionCleanup(emptyList())
     }
+    persistOpenTabs()
+    val nextActive = activeTab()
+    if (nextActive.url.isNotBlank() &&
+      nextActive.errorState == null &&
+      nextActive.httpWarning == null &&
+      webViewPool.getLiveWebView(nextActive.id) == null &&
+      !webViewPool.hasSavedState(nextActive.id)
+    ) {
+      loadRestoredTabSafely(nextActive.id, nextActive.url)
+    }
   }
 
   fun moveTab(tabId: String, delta: Int) {
@@ -622,6 +701,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       mutable.add(target, item)
       mutable
     }
+    persistOpenTabs()
   }
 
   fun restoreLastClosedTab() {
@@ -645,6 +725,16 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       }
     }
     endPrivateSessionCleanup(privateIds)
+    persistOpenTabs()
+    val nextActive = activeTab()
+    if (nextActive.url.isNotBlank() &&
+      nextActive.errorState == null &&
+      nextActive.httpWarning == null &&
+      webViewPool.getLiveWebView(nextActive.id) == null &&
+      !webViewPool.hasSavedState(nextActive.id)
+    ) {
+      loadRestoredTabSafely(nextActive.id, nextActive.url)
+    }
     showToast("Private tabs closed")
   }
 
@@ -1149,6 +1239,11 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     val updated = transform(_settings.value)
     _settings.value = updated
     settingsRepo.saveSettings(updated)
+    if (updated.retainOpenTabs) {
+      settingsRepo.saveRetainedTabs(_tabs.value, _activeTabId.value)
+    } else {
+      settingsRepo.clearRetainedTabs()
+    }
     webViewPool.applySettingsToAll(updated) { id ->
       val t = tabById(id)
       (t?.isPrivate == true) to (t?.userAgentMode ?: UserAgentMode.MOBILE)
@@ -1166,6 +1261,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       _sitePermissions.value = emptyList()
     }
     if (options.clearHistory) {
+      settingsRepo.clearRetainedTabs()
       viewModelScope.launch(Dispatchers.IO) {
         try {
           db.clearAllHistory()

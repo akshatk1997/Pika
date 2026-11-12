@@ -6,11 +6,19 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.LocalBrowserDatabase
+import com.example.data.SettingsRepository
+import com.example.model.SearchEngine
+import com.example.model.SettingsState
+import com.example.model.TabInfo
+import com.example.model.UserAgentMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -30,8 +38,50 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Bat", appName)
-    assertEquals("1.1.2", BuildConfig.VERSION_NAME)
-    assertEquals(5, BuildConfig.VERSION_CODE)
+    assertEquals("1.1.3", BuildConfig.VERSION_NAME)
+    assertEquals(6, BuildConfig.VERSION_CODE)
+  }
+
+  @Test
+  fun settingsAndRetainedNonPrivateTabsPersistAcrossRepositoryInstances() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val repo1 = SettingsRepository(context)
+    val customSettings = SettingsState(
+      searchEngine = SearchEngine.STARTPAGE,
+      homepageUrl = "https://example.org",
+      retainOpenTabs = true,
+      nightWebMode = true
+    )
+    repo1.saveSettings(customSettings)
+
+    val normalTab1 = TabInfo(id = "t1", title = "Example", url = "https://example.org/docs")
+    val privateTab = TabInfo(id = "t2", title = "Secret", url = "https://private.example.org", isPrivate = true)
+    val normalTab2 = TabInfo(
+      id = "t3",
+      title = "News",
+      url = "https://news.example.org",
+      userAgentMode = UserAgentMode.DESKTOP
+    )
+    repo1.saveRetainedTabs(listOf(normalTab1, privateTab, normalTab2), activeTabId = "t3")
+
+    val repo2 = SettingsRepository(context)
+    val loadedSettings = repo2.loadSettings()
+    assertEquals(SearchEngine.STARTPAGE, loadedSettings.searchEngine)
+    assertEquals("https://example.org", loadedSettings.homepageUrl)
+    assertTrue(loadedSettings.retainOpenTabs)
+    assertTrue(loadedSettings.nightWebMode)
+
+    val restored = repo2.loadRetainedTabs()
+    assertNotNull(restored)
+    val (restoredTabs, activeId) = restored!!
+    assertEquals(2, restoredTabs.size)
+    assertEquals("t3", activeId)
+    assertTrue(restoredTabs.none { it.isPrivate })
+    assertEquals("https://example.org/docs", restoredTabs[0].url)
+    assertEquals(UserAgentMode.DESKTOP, restoredTabs[1].userAgentMode)
+
+    repo2.clearRetainedTabs()
+    assertNull(repo2.loadRetainedTabs())
   }
 
   @Test
@@ -87,8 +137,13 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.1.2").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.1.3").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("setting_retain_tabs").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("settings_back_button").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("Private browsing is active").assertDoesNotExist()
+    composeTestRule.onNodeWithText("History, cookies & cache are cleared on exit").assertIsDisplayed()
   }
 
   @Test

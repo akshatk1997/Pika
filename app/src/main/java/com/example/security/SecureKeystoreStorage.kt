@@ -28,7 +28,15 @@ class SecureKeystoreStorage(private val context: Context) {
   private fun getOrCreateKey(): SecretKey? {
     return try {
       val ks = KeyStore.getInstance(KEYSTORE_PROVIDER).apply { load(null) }
-      val existing = ks.getKey(KEY_ALIAS, null) as? SecretKey
+      val existing = try {
+        ks.getKey(KEY_ALIAS, null) as? SecretKey
+      } catch (_: Throwable) {
+        try {
+          ks.deleteEntry(KEY_ALIAS)
+        } catch (_: Throwable) {
+        }
+        null
+      }
       if (existing != null) return existing
 
       val keyGen = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE_PROVIDER)
