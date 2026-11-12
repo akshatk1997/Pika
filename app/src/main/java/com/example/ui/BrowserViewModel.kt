@@ -134,13 +134,12 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   private val _statusToast = MutableStateFlow<String?>(null)
   val statusToast: StateFlow<String?> = _statusToast.asStateFlow()
 
-  private val _sessionTrackersBlocked = MutableStateFlow(0)
-  val sessionTrackersBlocked: StateFlow<Int> = _sessionTrackersBlocked.asStateFlow()
-
   private var pendingFileChooserCallback: ValueCallback<Array<Uri>>? = null
   var onLaunchFileChooser: ((Array<String>?) -> Unit)? = null
 
   private val approvedHttpHosts = HashSet<String>()
+  private var bookmarkQuery = ""
+  private var historyQuery = ""
 
   val downloads: StateFlow<List<DownloadRecord>> = downloadController.downloads
   val pendingDownloadConsent: StateFlow<PendingDownloadConsent?> = downloadController.pendingConsent
@@ -209,7 +208,13 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     override fun onProgressChanged(tabId: String, progress: Int) {
       mainHandler.post {
-        updateTab(tabId) { it.copy(progress = progress, isLoading = progress < 100) }
+        updateTab(tabId) { tab ->
+          if (tab.errorState != null || tab.httpWarning != null) {
+            tab
+          } else {
+            tab.copy(progress = progress, isLoading = progress < 100 && tab.isLoading)
+          }
+        }
       }
     }
 
@@ -221,7 +226,6 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     override fun onTrackerBlocked(tabId: String) {
       mainHandler.post {
-        _sessionTrackersBlocked.update { it + 1 }
         updateTab(tabId) { it.copy(trackersBlockedCount = it.trackersBlockedCount + 1) }
       }
     }
@@ -255,7 +259,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
               type = PageErrorType.BLOCKED,
               failingUrl = UrlValidator.sanitizeDisplayText(url, 180),
               host = scheme,
-              reason = "Blocked '$scheme:'"
+              reason = "Unsupported link ($scheme:)"
             )
           )
         }
@@ -309,8 +313,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             errorState = PageError(
               type = PageErrorType.GENERIC,
               failingUrl = url,
-              host = UrlValidator.extractHost(url).ifEmpty { "WebView" },
-              reason = "Page renderer restarted. Tap Retry to reload."
+              host = UrlValidator.extractHost(url).ifEmpty { "Page" },
+              reason = "This page stopped responding."
             )
           )
         }
@@ -454,7 +458,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
               type = PageErrorType.BLOCKED,
               failingUrl = UrlValidator.sanitizeDisplayText(res.rawInput, 180),
               host = res.scheme,
-              reason = "Blocked unsafe URI scheme '${res.scheme}:'"
+              reason = "Unsupported link (${res.scheme}:)"
             )
           )
         }
@@ -470,7 +474,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                 type = PageErrorType.BLOCKED,
                 failingUrl = res.url,
                 host = host,
-                reason = "Blocked by custom host rule ($host)"
+                reason = host
               )
             )
           }
@@ -623,7 +627,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       }
     }
     endPrivateSessionCleanup(privateIds)
-    showToast("Private session wiped")
+    showToast("Private tabs closed")
   }
 
   private fun endPrivateSessionCleanup(privateIds: List<String>) {
@@ -653,19 +657,55 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       return true
     }
     val tab = activeTab()
+    val wv = webViewPool.getLiveWebView(tab.id)
     if (tab.httpWarning != null || tab.errorState != null) {
-      updateTab(tab.id) {
-        it.copy(
-          httpWarning = null,
-          errorState = null,
-          url = "",
-          title = if (it.isPrivate) "Private Tab" else "New Tab",
-          securityState = if (it.isPrivate) SecurityState.PRIVATE else SecurityState.HOME
-        )
+      val liveUrl = wv?.url.orEmpty()
+      val failedSameUrl = liveUrl == tab.errorState?.failingUrl ||
+        liveUrl == tab.httpWarning?.originalUrl ||
+        (tab.httpWarning?.upgradeAttemptFailed == true &&
+          liveUrl.startsWith("https://") &&
+          UrlValidator.extractHost(liveUrl) == tab.httpWarning.host)
+      if (wv != null && failedSameUrl && wv.canGoBack()) {
+        updateTab(tab.id) { it.copy(httpWarning = null, errorState = null) }
+        wv.goBack()
+      } else if (wv != null &&
+        liveUrl.isNotBlank() &&
+        liveUrl != "about:blank" &&
+        UrlValidator.isSafeWebUrl(liveUrl) &&
+        !failedSameUrl
+      ) {
+        val restoredTitle = UrlValidator.sanitizeDisplayText(wv.title, 180)
+          .ifEmpty { UrlValidator.extractHost(liveUrl).ifEmpty { "Page" } }
+        updateTab(tab.id) {
+          it.copy(
+            httpWarning = null,
+            errorState = null,
+            url = liveUrl,
+            title = restoredTitle,
+            canGoBack = wv.canGoBack(),
+            canGoForward = wv.canGoForward(),
+            securityState = when {
+              it.isPrivate -> SecurityState.PRIVATE
+              UrlValidator.isHttpsUrl(liveUrl) -> SecurityState.SECURE_HTTPS
+              else -> SecurityState.INSECURE_HTTP
+            }
+          )
+        }
+      } else {
+        updateTab(tab.id) {
+          it.copy(
+            httpWarning = null,
+            errorState = null,
+            url = "",
+            title = if (it.isPrivate) "Private Tab" else "New Tab",
+            canGoBack = false,
+            canGoForward = false,
+            securityState = if (it.isPrivate) SecurityState.PRIVATE else SecurityState.HOME
+          )
+        }
       }
       return true
     }
-    val wv = webViewPool.getLiveWebView(tab.id)
     if (wv != null && wv.canGoBack()) {
       wv.goBack()
       return true
@@ -683,16 +723,23 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   fun reloadOrStop() {
     val tab = activeTab()
     val wv = webViewPool.getLiveWebView(tab.id)
+    if (tab.isLoading) {
+      wv?.stopLoading()
+      updateTab(tab.id) { it.copy(isLoading = false) }
+      return
+    }
+    val errUrl = tab.errorState?.failingUrl.orEmpty()
+    if (tab.errorState != null && errUrl.isNotBlank()) {
+      navigateActiveTab(errUrl)
+      return
+    }
     if (wv == null) {
       if (tab.url.isNotBlank()) {
         navigateActiveTab(tab.url)
       }
       return
     }
-    if (tab.isLoading) {
-      wv.stopLoading()
-      updateTab(tab.id) { it.copy(isLoading = false) }
-    } else if (tab.url.isNotBlank()) {
+    if (tab.url.isNotBlank()) {
       updateTab(tab.id) { it.copy(errorState = null, httpWarning = null) }
       wv.reload()
     }
@@ -733,7 +780,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   fun openInSystemBrowser() {
     val url = activeTab().url
-    if (!UrlValidator.isSafeWebUrl(url)) return
+    if (!UrlValidator.isSafeWebUrl(url) || url == "about:blank") return
     try {
       val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -746,13 +793,13 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   fun translateActivePage() {
     val url = activeTab().url
-    if (!UrlValidator.isSafeWebUrl(url)) return
+    if (!UrlValidator.isSafeWebUrl(url) || url == "about:blank") return
     val encoded = URLEncoder.encode(url, StandardCharsets.UTF_8.name())
     navigateActiveTab("https://translate.google.com/translate?sl=auto&tl=en&u=$encoded")
   }
 
   fun shareUrl(url: String) {
-    if (!UrlValidator.isSafeWebUrl(url)) return
+    if (!UrlValidator.isSafeWebUrl(url) || url == "about:blank") return
     val intent = Intent(Intent.ACTION_SEND).apply {
       type = "text/plain"
       putExtra(Intent.EXTRA_TEXT, url)
@@ -782,7 +829,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   }
 
   // Bookmarks
-  fun refreshBookmarks(query: String = "") {
+  fun refreshBookmarks(query: String = bookmarkQuery) {
+    bookmarkQuery = query
     viewModelScope.launch(Dispatchers.IO) {
       _bookmarks.value = db.getBookmarks(query)
     }
@@ -795,34 +843,50 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   fun toggleCurrentBookmark() {
     val tab = activeTab()
-    if (!UrlValidator.isSafeWebUrl(tab.url)) return
+    if (!UrlValidator.isSafeWebUrl(tab.url) || tab.url == "about:blank") return
     viewModelScope.launch(Dispatchers.IO) {
       if (db.isBookmarked(tab.url)) {
         db.deleteBookmarkByUrl(tab.url)
         showToast("Bookmark removed")
       } else {
         db.upsertBookmark(tab.title, tab.url)
-        showToast("Bookmarked")
+        showToast("Bookmark saved")
       }
-      _bookmarks.value = db.getBookmarks()
+      _bookmarks.value = db.getBookmarks(bookmarkQuery)
     }
   }
 
-  fun addOrUpdateBookmark(id: Long?, title: String, url: String, folder: String) {
+  fun normalizeWebUrlInput(rawUrl: String): String {
+    val cleaned = UrlValidator.sanitizeControlChars(rawUrl)
+    if (cleaned.isEmpty()) return ""
+    return if (!cleaned.contains("://") && !cleaned.contains(' ') && cleaned.contains('.')) {
+      "https://$cleaned"
+    } else {
+      cleaned
+    }
+  }
+
+  fun addOrUpdateBookmark(id: Long?, title: String, url: String, folder: String): Boolean {
+    val normalized = normalizeWebUrlInput(url)
+    if (!UrlValidator.isSafeWebUrl(normalized) || normalized == "about:blank") {
+      showToast("Enter a valid URL")
+      return false
+    }
     viewModelScope.launch(Dispatchers.IO) {
       if (id == null || id <= 0L) {
-        db.upsertBookmark(title, url, folder)
+        db.upsertBookmark(title, normalized, folder)
       } else {
-        db.updateBookmark(id, title, url, folder)
+        db.updateBookmark(id, title, normalized, folder)
       }
-      _bookmarks.value = db.getBookmarks()
+      _bookmarks.value = db.getBookmarks(bookmarkQuery)
     }
+    return true
   }
 
   fun deleteBookmark(id: Long) {
     viewModelScope.launch(Dispatchers.IO) {
       db.deleteBookmarkById(id)
-      _bookmarks.value = db.getBookmarks()
+      _bookmarks.value = db.getBookmarks(bookmarkQuery)
     }
   }
 
@@ -832,7 +896,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     viewModelScope.launch(Dispatchers.IO) {
       val parsed = BookmarkImportExport.parseImportedBookmarks(rawContent)
       parsed.forEach { db.upsertBookmark(it.title, it.url, it.folder) }
-      _bookmarks.value = db.getBookmarks()
+      _bookmarks.value = db.getBookmarks(bookmarkQuery)
       withContext(Dispatchers.Main) {
         showToast("Imported ${parsed.size} bookmarks")
       }
@@ -840,7 +904,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   }
 
   // History
-  fun refreshHistory(query: String = "") {
+  fun refreshHistory(query: String = historyQuery) {
+    historyQuery = query
     viewModelScope.launch(Dispatchers.IO) {
       _history.value = db.getHistory(query)
     }
@@ -849,7 +914,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   fun deleteHistoryEntry(id: Long) {
     viewModelScope.launch(Dispatchers.IO) {
       db.deleteHistoryEntry(id)
-      _history.value = db.getHistory()
+      _history.value = db.getHistory(historyQuery)
     }
   }
 
@@ -1014,15 +1079,18 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       _sitePermissions.value = emptyList()
     }
     if (options.clearHistory) {
-      clearAllHistory()
+      viewModelScope.launch(Dispatchers.IO) {
+        db.clearAllHistory()
+        _history.value = emptyList()
+      }
     }
-    showToast("Data cleared")
+    showToast("Browsing data cleared")
   }
 
   fun setOverlay(overlay: ActiveOverlay) {
     _activeOverlay.value = overlay
-    if (overlay == ActiveOverlay.BOOKMARKS) refreshBookmarks()
-    if (overlay == ActiveOverlay.HISTORY) refreshHistory()
+    if (overlay == ActiveOverlay.BOOKMARKS) refreshBookmarks("")
+    if (overlay == ActiveOverlay.HISTORY) refreshHistory("")
   }
 
   fun showToast(message: String) {

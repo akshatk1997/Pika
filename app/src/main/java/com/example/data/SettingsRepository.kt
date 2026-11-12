@@ -5,7 +5,6 @@ import com.example.model.SearchEngine
 import com.example.model.SettingsState
 import com.example.model.SitePermissionRule
 import com.example.model.ThemeMode
-import com.example.model.ToolbarPosition
 import com.example.model.WebPermissionKind
 import com.example.security.SecureKeystoreStorage
 import com.example.security.TrackerBlocker
@@ -53,7 +52,6 @@ class SettingsRepository(context: Context) {
         textZoomPercent = obj.optInt("textZoomPercent", 100).coerceIn(75, 200),
         themeMode = ThemeMode.fromId(obj.optString("themeMode", ThemeMode.SYSTEM.id)),
         dynamicColor = obj.optBoolean("dynamicColor", false),
-        toolbarPosition = ToolbarPosition.fromId(obj.optString("toolbarPosition", ToolbarPosition.BOTTOM.id)),
         nightWebMode = obj.optBoolean("nightWebMode", false),
         noImageMode = obj.optBoolean("noImageMode", false),
         customBlockedHosts = customHosts,
@@ -79,7 +77,6 @@ class SettingsRepository(context: Context) {
       put("textZoomPercent", state.textZoomPercent)
       put("themeMode", state.themeMode.id)
       put("dynamicColor", state.dynamicColor)
-      put("toolbarPosition", state.toolbarPosition.id)
       put("nightWebMode", state.nightWebMode)
       put("noImageMode", state.noImageMode)
       put("customBlockedHosts", JSONArray(state.customBlockedHosts))

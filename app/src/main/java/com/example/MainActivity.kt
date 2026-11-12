@@ -203,7 +203,7 @@ class MainActivity : ComponentActivity() {
         return
       }
       val safeLabel = UrlValidator.sanitizeDisplayText(title, 32)
-        .ifEmpty { UrlValidator.extractHost(url).ifEmpty { "Bat Link" } }
+        .ifEmpty { UrlValidator.extractHost(url).ifEmpty { "Web link" } }
       val launchIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url), this, MainActivity::class.java)
       val shortcut = ShortcutInfo.Builder(this, "bat_${url.hashCode()}")
         .setShortLabel(safeLabel)

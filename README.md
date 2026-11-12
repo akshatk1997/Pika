@@ -10,7 +10,8 @@
 
 | Version | Version Code | Target Platforms & OS | Key Highlights |
 |---|---:|---|---|
-| **v1.1.0** | `3` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Rebranded to **Bat**, custom 3D Batman-inspired bat mascot icon + Material You monochrome crest, adaptive tablet `NavigationRail` + single-row wide toolbar + multi-column grids, hardware keyboard shortcuts, Android 8–17 compatibility fixes |
+| **v1.1.1** | `4` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Removed bottom search bar (top-only omnibox), streamlined clean production UI copy without internal jargon, fixed back navigation from error/HTTP warnings, aborted-load error suppression, density-scaled pull-to-refresh, overlay snackbar feedback, and bookmark/settings validation |
+| **v1.1.0** | `3` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Rebranded to **Bat**, custom 3D Batman-inspired bat mascot icon + Material You monochrome crest, adaptive tablet `NavigationRail` + single-row wide toolbar + multi-column grids, hardware keyboard shortcuts |
 | **v1.0.0** | `1–2` | Android 7.0–16 | Initial Feather/Pika browser shell, Android Keystore AES-256-GCM settings, ad/tracker shield, Via/X power tools (< 2 MB) |
 
 ---
@@ -26,13 +27,13 @@ Because no platform overrides were supplied prior to implementation, Bat targets
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Bat-v1.1.0.apk`](releases/Bat-v1.1.0.apk) and attached to GitHub Releases (`v1.1.0`).
+Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Bat-v1.1.1.apk`](releases/Bat-v1.1.1.apk) and attached to GitHub Releases (`v1.1.1`).
 
 ---
 
-## Features (v1.1.0)
+## Features (v1.1.1)
 
-- **Address Bar & Swipe Gestures:** Top or Bottom toolbar placement, horizontal omnibox swipe to switch tabs, direct URL entry, search engine choice (DuckDuckGo, Startpage, Qwant, Brave, Wikipedia, Google, custom HTTPS), live HTTPS/HTTP/Private badge, copy, share, and external browser handoff.
+- **Address Bar & Swipe Gestures:** Top-docked address & navigation bar across phone and tablet, horizontal omnibox swipe to switch tabs, direct URL entry, search engine choice (DuckDuckGo, Startpage, Qwant, Brave, Wikipedia, Google, custom HTTPS), live security badge, copy, share, and external browser handoff.
 - **Power Tools (Via / X Style):** Compact 4-column Quick Grid Menu with **Media & Resource Sniffer**, **Night Web** page darkening, **No-Image** data-saver mode, **Desktop / iPhone / Mobile** User-Agent switcher, **Immersive Fullscreen**, **Save Page as PDF** (`PrintManager`), **View Page Source**, **Translate**, and **Pin Shortcut to Home Screen**.
 - **Privacy & Ad Shield:** Built-in ad/tracker/popup blocker + user **Custom Block Rules** stored encrypted in Android Keystore, third-party cookie blocking, query-parameter stripping, HTTPS-Only mode, `DNT: 1` / `Sec-GPC: 1`, and isolated **Private Mode** wiped cleanly on exit.
 - **Tabs, Bookmarks, History & Downloads:** 2-WebView LRU RAM saver pool with `onRenderProcessGone` crash recovery, closed tab restore, local SQLite bookmarks (Netscape HTML & JSON import/export), search/clearable history, and consent-first downloads (`MediaStore.Downloads` on Android 10–17 & `FileProvider` on Android 8–9) with editable filenames and retry support.

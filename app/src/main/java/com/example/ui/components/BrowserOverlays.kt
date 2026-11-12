@@ -92,14 +92,12 @@ import com.example.ui.theme.BatSignalGold
 import com.example.ui.theme.FeatherDangerRed
 import com.example.ui.theme.FeatherMintDark
 import com.example.ui.theme.FeatherPrivateAccent
-import com.example.ui.theme.FeatherSecureGreen
 import com.example.ui.theme.FeatherWarningAmber
 
 @Composable
 fun NewTabHomeView(
   isPrivate: Boolean,
   searchEngineName: String,
-  trackersBlockedCount: Int,
   bookmarks: List<BookmarkItem>,
   onSubmitQuery: (String) -> Unit,
   onOpenBookmark: (String) -> Unit,
@@ -191,47 +189,43 @@ fun NewTabHomeView(
         color = MaterialTheme.colorScheme.onBackground
       )
 
-      Spacer(modifier = Modifier.height(8.dp))
-
-      // Sleek Privacy Status Pill
-      Surface(
-        shape = RoundedCornerShape(50),
-        color = surfaceColor.copy(alpha = 0.85f),
-        border = BorderStroke(0.8.dp, outlineColor.copy(alpha = 0.65f))
-      ) {
-        Row(
-          modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-          verticalAlignment = Alignment.CenterVertically
+      if (isPrivate) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Surface(
+          shape = RoundedCornerShape(50),
+          color = surfaceColor.copy(alpha = 0.85f),
+          border = BorderStroke(0.8.dp, FeatherPrivateAccent.copy(alpha = 0.5f))
         ) {
-          Box(
-            modifier = Modifier
-              .size(7.dp)
-              .clip(CircleShape)
-              .background(if (isPrivate) FeatherPrivateAccent else FeatherSecureGreen)
-          )
-          Spacer(modifier = Modifier.width(8.dp))
-          Text(
-            text = if (isPrivate) {
-              "Ephemeral session · Zero trace"
-            } else {
-              "HTTPS-Only · ${stringResource(R.string.home_trackers_blocked, trackersBlockedCount)}"
-            },
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-          )
+          Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Box(
+              modifier = Modifier
+                .size(7.dp)
+                .clip(CircleShape)
+                .background(FeatherPrivateAccent)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+              text = stringResource(R.string.tabs_private_banner),
+              style = MaterialTheme.typography.labelMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+          }
         }
       }
 
-      Spacer(modifier = Modifier.height(22.dp))
+      Spacer(modifier = Modifier.height(20.dp))
 
-      // Premium Floating Omnibox Search Pill
+      // Home Search Box
       Surface(
         shape = RoundedCornerShape(28.dp),
         color = surfaceColor,
         tonalElevation = 4.dp,
         shadowElevation = 6.dp,
         border = BorderStroke(1.dp, primaryAccent.copy(alpha = 0.28f)),
-        modifier = Modifier.fillMaxWidth().height(56.dp)
+        modifier = Modifier.fillMaxWidth().height(54.dp)
       ) {
         Row(
           modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -247,7 +241,7 @@ fun NewTabHomeView(
           Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
             if (homeSearch.isEmpty()) {
               Text(
-                text = stringResource(R.string.omnibox_hint),
+                text = stringResource(R.string.home_search_hint, searchEngineName),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
               )
@@ -281,18 +275,6 @@ fun NewTabHomeView(
                 contentDescription = "Go",
                 tint = primaryAccent,
                 modifier = Modifier.size(20.dp)
-              )
-            }
-          } else {
-            Surface(
-              shape = RoundedCornerShape(14.dp),
-              color = MaterialTheme.colorScheme.surfaceVariant
-            ) {
-              Text(
-                text = searchEngineName,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
               )
             }
           }
@@ -365,7 +347,7 @@ fun NewTabHomeView(
         ) {
           items(bookmarks.take(12), key = { it.id }) { bm ->
             val host = UrlValidator.extractHost(bm.url)
-            val initial = host.firstOrNull()?.uppercase() ?: "F"
+            val initial = host.firstOrNull()?.uppercase() ?: "B"
             Surface(
               shape = RoundedCornerShape(16.dp),
               color = surfaceColor,

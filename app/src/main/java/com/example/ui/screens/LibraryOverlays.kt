@@ -78,7 +78,7 @@ fun BookmarksScreen(
   bookmarks: List<BookmarkItem>,
   onSearch: (String) -> Unit,
   onOpenUrl: (String) -> Unit,
-  onSaveBookmark: (Long?, String, String, String) -> Unit,
+  onSaveBookmark: (Long?, String, String, String) -> Boolean,
   onDeleteBookmark: (Long) -> Unit,
   onExportBookmarks: () -> Unit,
   onImportBookmarks: () -> Unit,
@@ -204,6 +204,7 @@ fun BookmarksScreen(
     var titleInput by remember(targetEdit) { mutableStateOf(targetEdit?.title ?: "") }
     var urlInput by remember(targetEdit) { mutableStateOf(targetEdit?.url ?: "https://") }
     var folderInput by remember(targetEdit) { mutableStateOf(targetEdit?.folder ?: "Bookmarks") }
+    var urlError by remember(targetEdit) { mutableStateOf(false) }
 
     AlertDialog(
       onDismissRequest = {
@@ -221,8 +222,12 @@ fun BookmarksScreen(
           )
           OutlinedTextField(
             value = urlInput,
-            onValueChange = { urlInput = it },
-            label = { Text("HTTPS URL") },
+            onValueChange = {
+              urlInput = it
+              urlError = false
+            },
+            label = { Text("URL") },
+            isError = urlError,
             singleLine = true
           )
           OutlinedTextField(
@@ -235,9 +240,12 @@ fun BookmarksScreen(
       },
       confirmButton = {
         TextButton(onClick = {
-          onSaveBookmark(targetEdit?.id, titleInput, urlInput, folderInput)
-          showAddDialog = false
-          editingItem = null
+          if (onSaveBookmark(targetEdit?.id, titleInput, urlInput, folderInput)) {
+            showAddDialog = false
+            editingItem = null
+          } else {
+            urlError = true
+          }
         }) { Text("Save") }
       },
       dismissButton = {
@@ -426,8 +434,15 @@ fun DownloadsScreen(
                     Spacer(modifier = Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
                       Text(dl.fileName, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                      val statusLabel = when (dl.status) {
+                        DownloadStatus.PENDING_CONSENT -> "Pending"
+                        DownloadStatus.DOWNLOADING -> "Downloading"
+                        DownloadStatus.COMPLETED -> "Completed"
+                        DownloadStatus.CANCELLED -> "Cancelled"
+                        DownloadStatus.FAILED -> "Failed"
+                      }
                       Text(
-                        text = "${dl.status.name} · ${formatBytes(dl.downloadedBytes)}" +
+                        text = "$statusLabel · ${formatBytes(dl.downloadedBytes)}" +
                           if (dl.totalBytes > 0) " / ${formatBytes(dl.totalBytes)}" else "",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant

@@ -446,7 +446,9 @@ class WebViewPool(
           return true
         }
         if (currentSettings.httpsOnlyEnabled && UrlValidator.isHttpUrl(url) && host !in approvedHttpHosts) {
-          callbacks.onHttpBlockedByHttpsOnly(tabId, url)
+          if (request.isForMainFrame) {
+            callbacks.onHttpBlockedByHttpsOnly(tabId, url)
+          }
           return true
         }
         return false
@@ -535,6 +537,8 @@ class WebViewPool(
         error: WebResourceError?
       ) {
         if (request?.isForMainFrame != true) return
+        val reason = error?.description?.toString() ?: "Page load failed"
+        if (reason.contains("ERR_ABORTED", ignoreCase = true)) return
         val failingUrl = request.url?.toString() ?: ""
         val host = UrlValidator.extractHost(failingUrl)
         val offline = !isNetworkConnected()
@@ -544,7 +548,6 @@ class WebViewPool(
           error?.errorCode == ERROR_UNSAFE_RESOURCE -> PageErrorType.BLOCKED
           else -> PageErrorType.GENERIC
         }
-        val reason = error?.description?.toString() ?: "Page load failed"
         callbacks.onPageError(
           tabId,
           PageError(
@@ -611,7 +614,7 @@ class WebViewPool(
           tabId = tabId,
           origin = safeOrigin,
           kind = WebPermissionKind.LOCATION,
-          detail = "Site requested location access (restricted by Bat privacy policy)."
+          detail = ""
         ) { allowed ->
           callback?.invoke(origin, allowed, false)
         }
@@ -629,7 +632,7 @@ class WebViewPool(
           tabId = tabId,
           origin = origin,
           kind = kind,
-          detail = resources.joinToString(", ")
+          detail = ""
         ) { allowed ->
           if (allowed) {
             request.grant(resources)

@@ -70,7 +70,6 @@ import com.example.model.SearchEngine
 import com.example.model.SettingsState
 import com.example.model.SitePermissionRule
 import com.example.model.ThemeMode
-import com.example.model.ToolbarPosition
 import com.example.security.UrlValidator
 import com.example.ui.components.FeatherIcons
 import com.example.ui.theme.FeatherSecureGreen
@@ -88,12 +87,15 @@ fun SettingsScreen(
   onClearBrowsingData: (ClearDataOptions) -> Unit,
   onExportBookmarks: () -> Unit,
   onImportBookmarks: () -> Unit,
+  onShowMessage: (String) -> Unit,
   onClose: () -> Unit
 ) {
   BackHandler { onClose() }
   var homepageDraft by remember(settings.homepageUrl) { mutableStateOf(settings.homepageUrl) }
+  var homepageError by remember { mutableStateOf(false) }
   var customSearchDraft by remember(settings.customSearchTemplate) { mutableStateOf(settings.customSearchTemplate) }
   var customBlockDraft by remember { mutableStateOf("") }
+  var customBlockError by remember { mutableStateOf(false) }
   var showClearDialog by remember { mutableStateOf(false) }
 
   Scaffold(
@@ -146,12 +148,12 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
               Text(
-                text = "Bat Privacy Core",
+                text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
               )
               Text(
-                text = "v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) · Encrypted · Zero telemetry",
+                text = "Version ${BuildConfig.VERSION_NAME}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
               )
@@ -161,7 +163,7 @@ fun SettingsScreen(
       }
 
       item {
-        SettingsSectionCard("Search & Homepage", Modifier.widthIn(max = 720.dp)) {
+        SettingsSectionCard("General", Modifier.widthIn(max = 720.dp)) {
           Text("Search engine", style = MaterialTheme.typography.titleMedium)
           Spacer(modifier = Modifier.height(4.dp))
           SearchEngine.entries.forEach { engine ->
@@ -183,7 +185,7 @@ fun SettingsScreen(
             OutlinedTextField(
               value = customSearchDraft,
               onValueChange = { customSearchDraft = it },
-              label = { Text("HTTPS template (%s)") },
+              label = { Text("Search URL (%s)") },
               singleLine = true,
               isError = !UrlValidator.isValidCustomSearchTemplate(customSearchDraft),
               modifier = Modifier.fillMaxWidth()
@@ -193,15 +195,23 @@ fun SettingsScreen(
               onClick = {
                 if (UrlValidator.isValidCustomSearchTemplate(customSearchDraft)) {
                   onUpdateSettings { it.copy(customSearchTemplate = customSearchDraft.trim()) }
+                  onShowMessage("Search URL saved")
+                } else {
+                  onShowMessage("Enter an https:// URL containing %s")
                 }
               }
-            ) { Text("Save template") }
+            ) { Text("Save") }
           }
           Spacer(modifier = Modifier.height(8.dp))
           OutlinedTextField(
             value = homepageDraft,
-            onValueChange = { homepageDraft = it },
-            label = { Text("Homepage (blank = Start Page)") },
+            onValueChange = {
+              homepageDraft = it
+              homepageError = false
+            },
+            label = { Text("Homepage") },
+            placeholder = { Text("Start page") },
+            isError = homepageError,
             singleLine = true,
             shape = RoundedCornerShape(14.dp),
             modifier = Modifier.fillMaxWidth()
@@ -211,16 +221,27 @@ fun SettingsScreen(
             shape = RoundedCornerShape(12.dp),
             onClick = {
               val cleaned = UrlValidator.sanitizeControlChars(homepageDraft)
-              if (cleaned.isEmpty() || UrlValidator.isSafeWebUrl(cleaned)) {
-                onUpdateSettings { it.copy(homepageUrl = cleaned) }
+              val normalized = if (cleaned.isNotEmpty() && !cleaned.contains("://") && !cleaned.contains(' ') && cleaned.contains('.')) {
+                "https://$cleaned"
+              } else {
+                cleaned
+              }
+              if (normalized.isEmpty() || (UrlValidator.isSafeWebUrl(normalized) && normalized != "about:blank")) {
+                homepageDraft = normalized
+                homepageError = false
+                onUpdateSettings { it.copy(homepageUrl = normalized) }
+                onShowMessage(if (normalized.isEmpty()) "Homepage set to Start page" else "Homepage saved")
+              } else {
+                homepageError = true
+                onShowMessage("Enter a valid URL")
               }
             }
-          ) { Text("Save homepage") }
+          ) { Text("Save") }
         }
       }
 
       item {
-        SettingsSectionCard("Layout & Reading", Modifier.widthIn(max = 720.dp)) {
+        SettingsSectionCard("Appearance", Modifier.widthIn(max = 720.dp)) {
           Text("Theme", style = MaterialTheme.typography.titleMedium)
           Spacer(modifier = Modifier.height(6.dp))
           FlowRow(
@@ -235,26 +256,11 @@ fun SettingsScreen(
               )
             }
           }
-          Spacer(modifier = Modifier.height(10.dp))
-          Text("Address bar position", style = MaterialTheme.typography.titleMedium)
-          Spacer(modifier = Modifier.height(6.dp))
-          FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-          ) {
-            ToolbarPosition.entries.forEach { pos ->
-              FilterChip(
-                selected = settings.toolbarPosition == pos,
-                onClick = { onUpdateSettings { it.copy(toolbarPosition = pos) } },
-                label = { Text(pos.label) }
-              )
-            }
-          }
           if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SettingSwitchRow(
-              title = "Dynamic Color",
-              subtitle = "Match wallpaper palette",
+              title = "Dynamic theme",
+              subtitle = "Use wallpaper colors",
               checked = settings.dynamicColor,
               tag = "setting_dynamic_color",
               onCheckedChange = { v -> onUpdateSettings { it.copy(dynamicColor = v) } }
@@ -262,16 +268,16 @@ fun SettingsScreen(
           }
           HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
           SettingSwitchRow(
-            title = "Night Web Mode",
-            subtitle = "Darken light web pages",
+            title = "Dark mode for sites",
+            subtitle = "Invert light web pages",
             checked = settings.nightWebMode,
             tag = "setting_night_web",
             onCheckedChange = { v -> onUpdateSettings { it.copy(nightWebMode = v) } }
           )
           HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
           SettingSwitchRow(
-            title = "No-Image Mode",
-            subtitle = "Block web images to save data",
+            title = "Block images",
+            subtitle = "Save data on slow connections",
             checked = settings.noImageMode,
             tag = "setting_no_image",
             onCheckedChange = { v -> onUpdateSettings { it.copy(noImageMode = v) } }
@@ -290,34 +296,34 @@ fun SettingsScreen(
       }
 
       item {
-        SettingsSectionCard("Privacy & Ad Shield", Modifier.widthIn(max = 720.dp)) {
+        SettingsSectionCard("Privacy & Security", Modifier.widthIn(max = 720.dp)) {
           SettingSwitchRow(
-            title = "HTTPS-Only Mode",
-            subtitle = "Upgrade HTTP and warn on unencrypted sites",
+            title = "HTTPS-Only mode",
+            subtitle = "Warn before unencrypted connections",
             checked = settings.httpsOnlyEnabled,
             tag = "setting_https_only",
             onCheckedChange = { v -> onUpdateSettings { it.copy(httpsOnlyEnabled = v) } }
           )
           HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
           SettingSwitchRow(
-            title = "Block 3rd-Party Cookies",
-            subtitle = "Stop cross-site tracking cookies",
+            title = "Block third-party cookies",
+            subtitle = "Limit cross-site tracking",
             checked = settings.blockThirdPartyCookies,
             tag = "setting_block_3p_cookies",
             onCheckedChange = { v -> onUpdateSettings { it.copy(blockThirdPartyCookies = v) } }
           )
           HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
           SettingSwitchRow(
-            title = "Ad & Tracker Blocker",
-            subtitle = "Block ads, popups & analytics hosts",
+            title = "Block ads & trackers",
+            subtitle = "Filter known ad and analytics domains",
             checked = settings.trackerBlockingEnabled,
             tag = "setting_tracker_blocker",
             onCheckedChange = { v -> onUpdateSettings { it.copy(trackerBlockingEnabled = v) } }
           )
           HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
           SettingSwitchRow(
-            title = "Save History",
-            subtitle = "Keep local history in standard tabs",
+            title = "Save history",
+            subtitle = "Keep visited pages on device",
             checked = settings.historyEnabled,
             tag = "setting_history_enabled",
             onCheckedChange = { v -> onUpdateSettings { it.copy(historyEnabled = v) } }
@@ -333,19 +339,23 @@ fun SettingsScreen(
           HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
           SettingSwitchRow(
             title = "JavaScript",
-            subtitle = "Disable for strict site sandboxing",
+            subtitle = "Allow sites to run scripts",
             checked = settings.javascriptEnabled,
             tag = "setting_js",
             onCheckedChange = { v -> onUpdateSettings { it.copy(javascriptEnabled = v) } }
           )
           HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-          Text("Custom block rules", style = MaterialTheme.typography.titleMedium)
+          Text("Blocked domains", style = MaterialTheme.typography.titleMedium)
           Spacer(modifier = Modifier.height(6.dp))
           Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             OutlinedTextField(
               value = customBlockDraft,
-              onValueChange = { customBlockDraft = it },
+              onValueChange = {
+                customBlockDraft = it
+                customBlockError = false
+              },
               placeholder = { Text("ads.example.com") },
+              isError = customBlockError,
               singleLine = true,
               shape = RoundedCornerShape(12.dp),
               modifier = Modifier.weight(1f).testTag("custom_block_input")
@@ -355,12 +365,16 @@ fun SettingsScreen(
               onClick = {
                 if (onAddCustomBlockedHost(customBlockDraft)) {
                   customBlockDraft = ""
+                  customBlockError = false
+                } else {
+                  customBlockError = true
+                  onShowMessage("Enter a valid domain")
                 }
               },
               shape = RoundedCornerShape(12.dp),
               modifier = Modifier.minimumInteractiveComponentSize().testTag("custom_block_add")
             ) {
-              Icon(Icons.Filled.Add, contentDescription = "Add host rule")
+              Icon(Icons.Filled.Add, contentDescription = "Add blocked domain")
             }
           }
           if (settings.customBlockedHosts.isNotEmpty()) {
@@ -386,7 +400,7 @@ fun SettingsScreen(
 
       if (sitePermissions.isNotEmpty()) {
         item {
-          SettingsSectionCard("Site Permissions", Modifier.widthIn(max = 720.dp)) {
+          SettingsSectionCard("Site permissions", Modifier.widthIn(max = 720.dp)) {
             sitePermissions.forEach { rule ->
               Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -395,7 +409,7 @@ fun SettingsScreen(
                 Column(modifier = Modifier.weight(1f)) {
                   Text(rule.origin, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                   Text(
-                    "${rule.kind.name}: ${if (rule.allowed) "Allowed" else "Blocked"}",
+                    "${rule.kind.name.lowercase().replace('_', ' ')}: ${if (rule.allowed) "Allowed" else "Blocked"}",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                   )
@@ -404,7 +418,7 @@ fun SettingsScreen(
                   onClick = { onRemovePermissionRule(rule) },
                   modifier = Modifier.minimumInteractiveComponentSize()
                 ) {
-                  Icon(Icons.Filled.Delete, contentDescription = "Revoke ${rule.origin}")
+                  Icon(Icons.Filled.Delete, contentDescription = "Remove ${rule.origin}")
                 }
               }
             }
@@ -413,7 +427,7 @@ fun SettingsScreen(
       }
 
       item {
-        SettingsSectionCard("Data & Bookmarks", Modifier.widthIn(max = 720.dp)) {
+        SettingsSectionCard("Data", Modifier.widthIn(max = 720.dp)) {
           Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
             OutlinedButton(
               onClick = onImportBookmarks,
@@ -438,15 +452,6 @@ fun SettingsScreen(
             Text(stringResource(R.string.settings_clear_data))
           }
         }
-      }
-
-      item {
-        Text(
-          text = stringResource(R.string.settings_engine_note),
-          style = MaterialTheme.typography.labelSmall,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-          modifier = Modifier.padding(vertical = 6.dp)
-        )
       }
     }
   }

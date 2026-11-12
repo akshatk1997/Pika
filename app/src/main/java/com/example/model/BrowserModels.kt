@@ -75,15 +75,6 @@ enum class UserAgentMode(val id: String, val label: String) {
   }
 }
 
-enum class ToolbarPosition(val id: String, val label: String) {
-  BOTTOM("bottom", "Bottom"),
-  TOP("top", "Top");
-
-  companion object {
-    fun fromId(id: String): ToolbarPosition = entries.firstOrNull { it.id == id } ?: BOTTOM
-  }
-}
-
 enum class SniffedMediaType(val label: String) {
   VIDEO("Video"),
   AUDIO("Audio"),
@@ -222,7 +213,6 @@ data class SettingsState(
   val textZoomPercent: Int = 100,
   val themeMode: ThemeMode = ThemeMode.SYSTEM,
   val dynamicColor: Boolean = false,
-  val toolbarPosition: ToolbarPosition = ToolbarPosition.BOTTOM,
   val nightWebMode: Boolean = false,
   val noImageMode: Boolean = false,
   val customBlockedHosts: List<String> = emptyList(),

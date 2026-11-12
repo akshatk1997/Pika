@@ -266,7 +266,7 @@ fun TabsSheet(
                       overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                      text = tab.url.ifBlank { "Local start page" },
+                      text = tab.url.ifBlank { stringResource(R.string.cd_security_home) },
                       style = MaterialTheme.typography.labelSmall,
                       color = MaterialTheme.colorScheme.onSurfaceVariant,
                       maxLines = 1,

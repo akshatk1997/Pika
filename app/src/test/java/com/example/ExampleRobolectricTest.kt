@@ -30,8 +30,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Bat", appName)
-    assertEquals("1.1.0", BuildConfig.VERSION_NAME)
-    assertEquals(3, BuildConfig.VERSION_CODE)
+    assertEquals("1.1.1", BuildConfig.VERSION_NAME)
+    assertEquals(4, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -71,23 +71,24 @@ class ExampleRobolectricTest {
 
     // Verify Private Mode UI badge and banner
     composeTestRule.onNodeWithText("Private").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Ephemeral session", substring = true).assertIsDisplayed()
+    composeTestRule.onNodeWithText("History, cookies & cache are cleared on exit").assertIsDisplayed()
 
     // Open Security Site Info dialog from omnibox security badge
     composeTestRule.onNodeWithTag("security_badge_button").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Private tab:", substring = true).assertIsDisplayed()
+    composeTestRule.onNodeWithText("Private browsing is active").assertIsDisplayed()
     composeTestRule.onNodeWithText("Done").performClick()
     composeTestRule.waitForIdle()
 
     // Open Quick Action Grid Menu and navigate to Settings
     composeTestRule.onNodeWithTag("nav_menu_button").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Night Web").assertIsDisplayed()
-    composeTestRule.onNodeWithText("No Images").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Night mode").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Bat Privacy Core").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.1.1").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
   }
 
   @Test
@@ -104,6 +105,6 @@ class ExampleRobolectricTest {
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("tabs_new_button").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("HTTPS-Only", substring = true).assertIsDisplayed()
+    composeTestRule.onNodeWithText("Search with DuckDuckGo").assertIsDisplayed()
   }
 }
