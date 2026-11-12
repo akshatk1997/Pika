@@ -9,10 +9,13 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -27,6 +30,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -35,7 +39,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
@@ -43,18 +46,21 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -63,6 +69,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -72,10 +79,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -83,13 +93,17 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
 import com.example.model.SecurityState
+import com.example.model.SettingsState
 import com.example.model.TabInfo
+import com.example.model.ToolbarPosition
+import com.example.model.UserAgentMode
 import com.example.security.UrlValidator
 import com.example.ui.ActiveOverlay
 import com.example.ui.BrowserViewModel
@@ -98,6 +112,7 @@ import com.example.ui.components.FindInPageBar
 import com.example.ui.components.HttpWarningOverlay
 import com.example.ui.components.NewTabHomeView
 import com.example.ui.components.PageErrorOverlay
+import com.example.ui.components.PageSourceOverlay
 import com.example.ui.components.ReaderModeOverlay
 import com.example.ui.theme.FeatherMintDark
 import com.example.ui.theme.FeatherPrivateAccent
@@ -105,12 +120,15 @@ import com.example.ui.theme.FeatherSecureGreen
 import com.example.ui.theme.FeatherWarningAmber
 import com.example.ui.theme.LocalReduceMotion
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @SuppressLint("ClickableViewAccessibility")
 @Composable
 fun BrowserScreen(
   viewModel: BrowserViewModel,
   onExportBookmarks: () -> Unit,
-  onImportBookmarks: () -> Unit
+  onImportBookmarks: () -> Unit,
+  onSavePdf: () -> Unit,
+  onPinHomeShortcut: (String, String) -> Unit
 ) {
   val tabs by viewModel.tabs.collectAsStateWithLifecycle()
   val activeTabId by viewModel.activeTabId.collectAsStateWithLifecycle()
@@ -123,6 +141,8 @@ fun BrowserScreen(
   val activeOverlay by viewModel.activeOverlay.collectAsStateWithLifecycle()
   val findState by viewModel.findState.collectAsStateWithLifecycle()
   val readerArticle by viewModel.readerArticle.collectAsStateWithLifecycle()
+  val pageSource by viewModel.pageSource.collectAsStateWithLifecycle()
+  val isBrowserFullscreen by viewModel.isBrowserFullscreen.collectAsStateWithLifecycle()
   val pendingDownload by viewModel.pendingDownloadConsent.collectAsStateWithLifecycle()
   val externalLinkPrompt by viewModel.externalLinkPrompt.collectAsStateWithLifecycle()
   val permissionPrompt by viewModel.permissionPrompt.collectAsStateWithLifecycle()
@@ -132,6 +152,7 @@ fun BrowserScreen(
   val sessionTrackersBlocked by viewModel.sessionTrackersBlocked.collectAsStateWithLifecycle()
 
   var showSiteInfoDialog by remember { mutableStateOf(false) }
+  var showQuickSheet by remember { mutableStateOf(false) }
 
   val activeTab = tabs.firstOrNull { it.id == activeTabId } ?: tabs.first()
   val snackbarHostState = remember { SnackbarHostState() }
@@ -146,6 +167,8 @@ fun BrowserScreen(
 
   BackHandler(
     enabled = fullscreenView != null ||
+      isBrowserFullscreen ||
+      pageSource != null ||
       readerArticle != null ||
       findState.isVisible ||
       activeOverlay != ActiveOverlay.NONE ||
@@ -186,6 +209,16 @@ fun BrowserScreen(
         }
       }
     }
+    return
+  }
+
+  pageSource?.let { (url, html) ->
+    PageSourceOverlay(
+      pageUrl = url,
+      htmlSource = html,
+      onCopy = { viewModel.copyTextToClipboard(it, "Source copied") },
+      onClose = { viewModel.closePageSource() }
+    )
     return
   }
 
@@ -246,6 +279,7 @@ fun BrowserScreen(
       DownloadsScreen(
         downloads = downloads,
         onCancel = { viewModel.downloadController.cancelDownload(it) },
+        onRetry = { viewModel.downloadController.retryDownload(it) },
         onOpen = {
           if (!viewModel.downloadController.openDownloadedFile(it)) {
             viewModel.showToast("No app found to open this file")
@@ -257,11 +291,25 @@ fun BrowserScreen(
       )
       return
     }
+    ActiveOverlay.RESOURCES -> {
+      ResourcesScreen(
+        resources = viewModel.getActiveSniffedResources(),
+        onDownloadResource = { res ->
+          viewModel.setOverlay(ActiveOverlay.NONE)
+          viewModel.downloadUrlWithConsent(res.url)
+        },
+        onCopyUrl = { viewModel.copyTextToClipboard(it, "Link copied") },
+        onClose = { viewModel.setOverlay(ActiveOverlay.NONE) }
+      )
+      return
+    }
     ActiveOverlay.SETTINGS -> {
       SettingsScreen(
         settings = settings,
         sitePermissions = sitePermissions,
         onUpdateSettings = { viewModel.updateSettings(it) },
+        onAddCustomBlockedHost = { host -> viewModel.addCustomBlockedHost(host) },
+        onRemoveCustomBlockedHost = { host -> viewModel.removeCustomBlockedHost(host) },
         onRemovePermissionRule = { viewModel.removeSitePermissionRule(it) },
         onClearBrowsingData = { opts -> viewModel.clearSelectedBrowsingData(opts) },
         onExportBookmarks = onExportBookmarks,
@@ -286,7 +334,7 @@ fun BrowserScreen(
           .padding(innerPadding)
           .imePadding()
       ) {
-        if (isExpanded) {
+        if (isExpanded && !isBrowserFullscreen) {
           NavigationRail(
             containerColor = MaterialTheme.colorScheme.surface,
             modifier = Modifier.fillMaxHeight()
@@ -325,11 +373,12 @@ fun BrowserScreen(
         }
 
         Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-          if (isExpanded) {
+          val toolbarAtTop = isExpanded || settings.toolbarPosition == ToolbarPosition.TOP
+          if (toolbarAtTop && !isBrowserFullscreen) {
             BrowserToolbar(
               activeTab = activeTab,
               tabCount = tabs.size,
-              isBookmarked = viewModel.isCurrentPageBookmarked(),
+              settings = settings,
               readClipboard = { viewModel.readClipboardText() },
               onNavigate = {
                 focusManager.clearFocus()
@@ -341,7 +390,8 @@ fun BrowserScreen(
               onCopyUrl = { viewModel.copyActiveUrl() },
               onOpenSiteInfo = { showSiteInfoDialog = true },
               onOpenTabs = { viewModel.setOverlay(ActiveOverlay.TABS) },
-              onMenuAction = { action -> handleMenuAction(action, viewModel) }
+              onSwipeTab = { delta -> viewModel.switchAdjacentTab(delta) },
+              onOpenQuickMenu = { showQuickSheet = true }
             )
           }
 
@@ -480,13 +530,35 @@ fun BrowserScreen(
                 }
               }
             }
+
+            if (isBrowserFullscreen) {
+              Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)),
+                shadowElevation = 6.dp,
+                modifier = Modifier
+                  .align(Alignment.BottomEnd)
+                  .padding(14.dp)
+                  .clickable { viewModel.exitBrowserFullscreen() }
+              ) {
+                Row(
+                  modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Icon(Icons.Filled.Close, contentDescription = "Exit fullscreen", modifier = Modifier.size(16.dp))
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Text("Toolbar", style = MaterialTheme.typography.labelMedium)
+                }
+              }
+            }
           }
 
-          if (!isExpanded) {
+          if (!toolbarAtTop && !isBrowserFullscreen) {
             BrowserToolbar(
               activeTab = activeTab,
               tabCount = tabs.size,
-              isBookmarked = viewModel.isCurrentPageBookmarked(),
+              settings = settings,
               readClipboard = { viewModel.readClipboardText() },
               onNavigate = {
                 focusManager.clearFocus()
@@ -498,7 +570,8 @@ fun BrowserScreen(
               onCopyUrl = { viewModel.copyActiveUrl() },
               onOpenSiteInfo = { showSiteInfoDialog = true },
               onOpenTabs = { viewModel.setOverlay(ActiveOverlay.TABS) },
-              onMenuAction = { action -> handleMenuAction(action, viewModel) },
+              onSwipeTab = { delta -> viewModel.switchAdjacentTab(delta) },
+              onOpenQuickMenu = { showQuickSheet = true },
               modifier = Modifier.navigationBarsPadding()
             )
           }
@@ -507,9 +580,195 @@ fun BrowserScreen(
     }
   }
 
-  // Site Info & Connection Security Sheet Dialog
+  // Via / X Browser Quick Action Grid Sheet
+  if (showQuickSheet) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val hasUrl = activeTab.url.isNotBlank()
+    val isBookmarked = viewModel.isCurrentPageBookmarked()
+    ModalBottomSheet(
+      onDismissRequest = { showQuickSheet = false },
+      sheetState = sheetState,
+      containerColor = MaterialTheme.colorScheme.surface
+    ) {
+      Column(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(horizontal = 16.dp)
+          .padding(bottom = 20.dp)
+      ) {
+        // Quick Modes Row
+        FlowRow(
+          horizontalArrangement = Arrangement.spacedBy(8.dp),
+          verticalArrangement = Arrangement.spacedBy(6.dp),
+          modifier = Modifier.fillMaxWidth()
+        ) {
+          FilterChip(
+            selected = activeTab.userAgentMode == UserAgentMode.DESKTOP,
+            onClick = {
+              showQuickSheet = false
+              viewModel.toggleDesktopMode()
+            },
+            leadingIcon = { Icon(FeatherIcons.DesktopPc, contentDescription = null, modifier = Modifier.size(16.dp)) },
+            label = { Text("Desktop") }
+          )
+          FilterChip(
+            selected = activeTab.userAgentMode == UserAgentMode.IPHONE,
+            onClick = {
+              showQuickSheet = false
+              val next = if (activeTab.userAgentMode == UserAgentMode.IPHONE) UserAgentMode.MOBILE else UserAgentMode.IPHONE
+              viewModel.setUserAgentMode(next)
+            },
+            label = { Text("iPhone") }
+          )
+          FilterChip(
+            selected = settings.nightWebMode,
+            onClick = { viewModel.updateSettings { it.copy(nightWebMode = !it.nightWebMode) } },
+            leadingIcon = { Icon(FeatherIcons.NightMoon, contentDescription = null, modifier = Modifier.size(16.dp)) },
+            label = { Text("Night Web") }
+          )
+          FilterChip(
+            selected = settings.noImageMode,
+            onClick = { viewModel.updateSettings { it.copy(noImageMode = !it.noImageMode) } },
+            leadingIcon = { Icon(FeatherIcons.NoImage, contentDescription = null, modifier = Modifier.size(16.dp)) },
+            label = { Text("No Images") }
+          )
+          FilterChip(
+            selected = isBrowserFullscreen,
+            onClick = {
+              showQuickSheet = false
+              viewModel.toggleBrowserFullscreen()
+            },
+            leadingIcon = { Icon(FeatherIcons.Fullscreen, contentDescription = null, modifier = Modifier.size(16.dp)) },
+            label = { Text("Fullscreen") }
+          )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // 4-Column Crisp Grid Actions
+        val gridActions = listOf(
+          QuickActionItem(Icons.Filled.Add, stringResource(R.string.action_new_tab), true) {
+            showQuickSheet = false
+            viewModel.openNewTab(isPrivate = false)
+          },
+          QuickActionItem(FeatherIcons.PrivateMask, stringResource(R.string.action_new_private_tab), true) {
+            showQuickSheet = false
+            viewModel.openNewTab(isPrivate = true)
+          },
+          QuickActionItem(
+            if (isBookmarked) FeatherIcons.Bookmark else FeatherIcons.BookmarkOutline,
+            if (isBookmarked) stringResource(R.string.action_remove_bookmark) else stringResource(R.string.action_add_bookmark),
+            hasUrl
+          ) {
+            showQuickSheet = false
+            viewModel.toggleCurrentBookmark()
+          },
+          QuickActionItem(Icons.Filled.Search, stringResource(R.string.action_find_in_page), hasUrl) {
+            showQuickSheet = false
+            viewModel.openFindInPage()
+          },
+          QuickActionItem(FeatherIcons.Bookmark, stringResource(R.string.action_bookmarks), true) {
+            showQuickSheet = false
+            viewModel.setOverlay(ActiveOverlay.BOOKMARKS)
+          },
+          QuickActionItem(FeatherIcons.History, stringResource(R.string.action_history), true) {
+            showQuickSheet = false
+            viewModel.setOverlay(ActiveOverlay.HISTORY)
+          },
+          QuickActionItem(FeatherIcons.Download, stringResource(R.string.action_downloads), true) {
+            showQuickSheet = false
+            viewModel.setOverlay(ActiveOverlay.DOWNLOADS)
+          },
+          QuickActionItem(
+            FeatherIcons.MediaSniff,
+            if (activeTab.sniffedResourcesCount > 0) "${stringResource(R.string.action_resources)} (${activeTab.sniffedResourcesCount})"
+            else stringResource(R.string.action_resources),
+            hasUrl
+          ) {
+            showQuickSheet = false
+            viewModel.setOverlay(ActiveOverlay.RESOURCES)
+          },
+          QuickActionItem(FeatherIcons.Reader, stringResource(R.string.action_reader_mode), hasUrl) {
+            showQuickSheet = false
+            viewModel.toggleReaderMode()
+          },
+          QuickActionItem(FeatherIcons.PrintPdf, stringResource(R.string.action_save_pdf), hasUrl) {
+            showQuickSheet = false
+            onSavePdf()
+          },
+          QuickActionItem(FeatherIcons.CodeSource, stringResource(R.string.action_view_source), hasUrl) {
+            showQuickSheet = false
+            viewModel.openPageSource()
+          },
+          QuickActionItem(FeatherIcons.Translate, stringResource(R.string.action_translate), hasUrl) {
+            showQuickSheet = false
+            viewModel.translateActivePage()
+          },
+          QuickActionItem(Icons.Filled.Share, stringResource(R.string.action_share), hasUrl) {
+            showQuickSheet = false
+            viewModel.shareActiveUrl()
+          },
+          QuickActionItem(FeatherIcons.OpenInNew, stringResource(R.string.action_open_external), hasUrl) {
+            showQuickSheet = false
+            viewModel.openInSystemBrowser()
+          },
+          QuickActionItem(Icons.Filled.Star, stringResource(R.string.action_pin_home), hasUrl) {
+            showQuickSheet = false
+            onPinHomeShortcut(activeTab.url, activeTab.title)
+          },
+          QuickActionItem(Icons.Filled.Settings, stringResource(R.string.action_settings), true) {
+            showQuickSheet = false
+            viewModel.setOverlay(ActiveOverlay.SETTINGS)
+          }
+        )
+
+        gridActions.chunked(4).forEach { rowItems ->
+          Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+          ) {
+            rowItems.forEach { item ->
+              Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (item.enabled) 0.55f else 0.2f),
+                modifier = Modifier
+                  .weight(1f)
+                  .clip(RoundedCornerShape(14.dp))
+                  .clickable(enabled = item.enabled, onClick = item.onClick)
+              ) {
+                Column(
+                  horizontalAlignment = Alignment.CenterHorizontally,
+                  modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp)
+                ) {
+                  Icon(
+                    imageVector = item.icon,
+                    contentDescription = item.label,
+                    tint = if (item.enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
+                    modifier = Modifier.size(20.dp)
+                  )
+                  Spacer(modifier = Modifier.height(5.dp))
+                  Text(
+                    text = item.label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (item.enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center
+                  )
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Site Info & Connection Security Dialog
   if (showSiteInfoDialog) {
-    val host = UrlValidator.extractHost(activeTab.url).ifEmpty { "Pika Start Page" }
+    val host = UrlValidator.extractHost(activeTab.url).ifEmpty { "Start Page" }
     AlertDialog(
       onDismissRequest = { showSiteInfoDialog = false },
       title = {
@@ -534,41 +793,49 @@ fun BrowserScreen(
         }
       },
       text = {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
           Text(
             text = when (activeTab.securityState) {
-              SecurityState.SECURE_HTTPS -> "Connection is encrypted with verified TLS (HTTPS)."
-              SecurityState.PRIVATE -> "Private tab: cookies, cache, history, and storage are isolated and wiped on session end."
-              SecurityState.INSECURE_HTTP -> "Connection is unencrypted (HTTP). Avoid entering passwords or sensitive data."
-              SecurityState.HOME -> "Local Pika start page. Zero network requests."
-              SecurityState.ERROR -> "Connection blocked or failed security checks."
+              SecurityState.SECURE_HTTPS -> "HTTPS encrypted connection."
+              SecurityState.PRIVATE -> "Private tab: cookies, cache & history wiped on exit."
+              SecurityState.INSECURE_HTTP -> "Unencrypted HTTP connection."
+              SecurityState.HOME -> "Local Pika start page."
+              SecurityState.ERROR -> "Blocked or failed security checks."
             },
             style = MaterialTheme.typography.bodyMedium
           )
           Text(
-            text = "Trackers blocked on this tab: ${activeTab.trackersBlockedCount}",
+            text = "Blocked on tab: ${activeTab.trackersBlockedCount}",
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.primary
           )
           HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-          ) {
+          Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Text("JavaScript", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
             Switch(
               checked = settings.javascriptEnabled,
               onCheckedChange = { enabled -> viewModel.updateSettings { it.copy(javascriptEnabled = enabled) } }
             )
           }
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-          ) {
-            Text("Tracker blocker", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+          Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Text("Ad & tracker shield", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
             Switch(
               checked = settings.trackerBlockingEnabled,
               onCheckedChange = { enabled -> viewModel.updateSettings { it.copy(trackerBlockingEnabled = enabled) } }
+            )
+          }
+          Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Text("Night web", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            Switch(
+              checked = settings.nightWebMode,
+              onCheckedChange = { enabled -> viewModel.updateSettings { it.copy(nightWebMode = enabled) } }
+            )
+          }
+          Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Text("No images", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            Switch(
+              checked = settings.noImageMode,
+              onCheckedChange = { enabled -> viewModel.updateSettings { it.copy(noImageMode = enabled) } }
             )
           }
         }
@@ -594,7 +861,7 @@ fun BrowserScreen(
     val safeDisplay = UrlValidator.sanitizeDisplayText(target.url, 110)
     AlertDialog(
       onDismissRequest = { viewModel.dismissLinkContext() },
-      title = { Text(if (target.isImage) "Image / Link Options" else "Link Options") },
+      title = { Text(if (target.isImage) "Image Options" else "Link Options") },
       text = {
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
           Text(
@@ -613,15 +880,15 @@ fun BrowserScreen(
             viewModel.dismissLinkContext()
             viewModel.openNewTab(isPrivate = true, initialUrl = target.url)
           }
-          ContextActionRow("Copy link address") {
+          ContextActionRow("Copy URL") {
             viewModel.dismissLinkContext()
             viewModel.copyTextToClipboard(target.url)
           }
-          ContextActionRow("Download target") {
+          ContextActionRow("Download") {
             viewModel.dismissLinkContext()
             viewModel.downloadUrlWithConsent(target.url)
           }
-          ContextActionRow("Share link") {
+          ContextActionRow("Share") {
             viewModel.dismissLinkContext()
             viewModel.shareUrl(target.url)
           }
@@ -633,15 +900,25 @@ fun BrowserScreen(
     )
   }
 
+  // Consent-First Download Dialog (with customizable filename)
   pendingDownload?.let { req ->
+    var customName by remember(req.id) { mutableStateOf(req.fileName) }
     AlertDialog(
       onDismissRequest = { viewModel.downloadController.dismissPendingConsent() },
       title = { Text(stringResource(R.string.download_consent_title)) },
       text = {
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
           Text(stringResource(R.string.download_consent_body, req.fileName, req.host))
+          OutlinedTextField(
+            value = customName,
+            onValueChange = { customName = it },
+            label = { Text("Filename") },
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth()
+          )
           Text(
-            text = "Type: ${req.mimeType} · ${if (req.isHttps) "HTTPS Verified" else "Unencrypted HTTP"}",
+            text = "${req.mimeType} · ${if (req.isHttps) "HTTPS" else "HTTP"}",
             style = MaterialTheme.typography.labelSmall,
             color = if (req.isHttps) FeatherSecureGreen else FeatherWarningAmber
           )
@@ -649,7 +926,7 @@ fun BrowserScreen(
       },
       confirmButton = {
         TextButton(
-          onClick = { viewModel.downloadController.approvePendingDownload() },
+          onClick = { viewModel.downloadController.approvePendingDownload(customName) },
           modifier = Modifier.testTag("download_confirm_button")
         ) { Text(stringResource(R.string.download_allow)) }
       },
@@ -664,9 +941,9 @@ fun BrowserScreen(
   externalLinkPrompt?.let { ext ->
     AlertDialog(
       onDismissRequest = { viewModel.dismissExternalLinkPrompt() },
-      title = { Text("Open external application?") },
+      title = { Text("Open external app?") },
       text = {
-        Text("This page wants to open an external '${ext.scheme}:' link:\n\n${ext.targetSummary}")
+        Text("Open '${ext.scheme}:' link?\n\n${ext.targetSummary}")
       },
       confirmButton = {
         TextButton(onClick = { viewModel.confirmExternalLinkPrompt() }) { Text("Open") }
@@ -681,10 +958,10 @@ fun BrowserScreen(
     var rememberSite by remember(perm.id) { mutableStateOf(false) }
     AlertDialog(
       onDismissRequest = { viewModel.resolvePermissionPrompt(allowed = false, rememberSite = false) },
-      title = { Text("Site permission request") },
+      title = { Text("Permission request") },
       text = {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-          Text("${perm.origin} is requesting ${perm.kind.name.lowercase().replace('_', ' ')} permission.")
+          Text("${perm.origin} requests ${perm.kind.name.lowercase().replace('_', ' ')}.")
           if (perm.detail.isNotBlank()) {
             Text(perm.detail, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
           }
@@ -694,7 +971,7 @@ fun BrowserScreen(
               modifier = Modifier.clickable { rememberSite = !rememberSite }
             ) {
               Checkbox(checked = rememberSite, onCheckedChange = { rememberSite = it })
-              Text("Remember decision for this site", style = MaterialTheme.typography.bodyMedium)
+              Text("Remember for this site", style = MaterialTheme.typography.bodyMedium)
             }
           }
         }
@@ -713,6 +990,13 @@ fun BrowserScreen(
   }
 }
 
+private data class QuickActionItem(
+  val icon: ImageVector,
+  val label: String,
+  val enabled: Boolean,
+  val onClick: () -> Unit
+)
+
 @Composable
 private fun ContextActionRow(label: String, onClick: () -> Unit) {
   Row(
@@ -727,43 +1011,11 @@ private fun ContextActionRow(label: String, onClick: () -> Unit) {
   }
 }
 
-private enum class MenuAction {
-  NEW_TAB,
-  NEW_PRIVATE_TAB,
-  TOGGLE_BOOKMARK,
-  TOGGLE_DESKTOP_SITE,
-  BOOKMARKS,
-  HISTORY,
-  DOWNLOADS,
-  FIND_IN_PAGE,
-  READER_MODE,
-  OPEN_SYSTEM_BROWSER,
-  SHARE,
-  SETTINGS
-}
-
-private fun handleMenuAction(action: MenuAction, viewModel: BrowserViewModel) {
-  when (action) {
-    MenuAction.NEW_TAB -> viewModel.openNewTab(isPrivate = false)
-    MenuAction.NEW_PRIVATE_TAB -> viewModel.openNewTab(isPrivate = true)
-    MenuAction.TOGGLE_BOOKMARK -> viewModel.toggleCurrentBookmark()
-    MenuAction.TOGGLE_DESKTOP_SITE -> viewModel.toggleDesktopMode()
-    MenuAction.BOOKMARKS -> viewModel.setOverlay(ActiveOverlay.BOOKMARKS)
-    MenuAction.HISTORY -> viewModel.setOverlay(ActiveOverlay.HISTORY)
-    MenuAction.DOWNLOADS -> viewModel.setOverlay(ActiveOverlay.DOWNLOADS)
-    MenuAction.FIND_IN_PAGE -> viewModel.openFindInPage()
-    MenuAction.READER_MODE -> viewModel.toggleReaderMode()
-    MenuAction.OPEN_SYSTEM_BROWSER -> viewModel.openInSystemBrowser()
-    MenuAction.SHARE -> viewModel.shareActiveUrl()
-    MenuAction.SETTINGS -> viewModel.setOverlay(ActiveOverlay.SETTINGS)
-  }
-}
-
 @Composable
 private fun BrowserToolbar(
   activeTab: TabInfo,
   tabCount: Int,
-  isBookmarked: Boolean,
+  settings: SettingsState,
   readClipboard: () -> String?,
   onNavigate: (String) -> Unit,
   onBack: () -> Unit,
@@ -772,14 +1024,14 @@ private fun BrowserToolbar(
   onCopyUrl: () -> Unit,
   onOpenSiteInfo: () -> Unit,
   onOpenTabs: () -> Unit,
-  onMenuAction: (MenuAction) -> Unit,
+  onSwipeTab: (Int) -> Unit,
+  onOpenQuickMenu: () -> Unit,
   modifier: Modifier = Modifier
 ) {
   var omniboxValue by remember(activeTab.id, activeTab.url) {
     mutableStateOf(TextFieldValue(activeTab.url, TextRange(0, activeTab.url.length)))
   }
   var isFocused by remember { mutableStateOf(false) }
-  var menuExpanded by remember { mutableStateOf(false) }
   var clipboardCandidate by remember { mutableStateOf<String?>(null) }
   val focusManager = LocalFocusManager.current
 
@@ -835,8 +1087,9 @@ private fun BrowserToolbar(
         }
       }
 
-      Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp)) {
-        // Frosted Omnibox Pill
+      Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp)) {
+        var swipeAccum = remember { 0f }
+        // Swipeable Frosted Omnibox Pill
         Surface(
           shape = RoundedCornerShape(24.dp),
           color = MaterialTheme.colorScheme.surfaceVariant,
@@ -848,7 +1101,22 @@ private fun BrowserToolbar(
               else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
             }
           ),
-          modifier = Modifier.fillMaxWidth().height(48.dp)
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(46.dp)
+            .pointerInput(tabCount) {
+              detectHorizontalDragGestures(
+                onDragStart = { swipeAccum = 0f },
+                onDragEnd = {
+                  if (swipeAccum > 90f) onSwipeTab(-1)
+                  else if (swipeAccum < -90f) onSwipeTab(1)
+                  swipeAccum = 0f
+                },
+                onHorizontalDrag = { _, dragAmount ->
+                  swipeAccum += dragAmount
+                }
+              )
+            }
         ) {
           Row(
             modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp),
@@ -880,8 +1148,13 @@ private fun BrowserToolbar(
             Spacer(modifier = Modifier.width(10.dp))
             Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
               if (!isFocused && displayHost.isNotEmpty()) {
+                val modeTag = when (activeTab.userAgentMode) {
+                  UserAgentMode.DESKTOP -> " · PC"
+                  UserAgentMode.IPHONE -> " · iOS"
+                  UserAgentMode.MOBILE -> ""
+                }
                 Text(
-                  text = if (activeTab.isDesktopMode) "$displayHost · Desktop" else displayHost,
+                  text = "$displayHost$modeTag",
                   style = MaterialTheme.typography.bodyMedium,
                   fontWeight = FontWeight.Medium,
                   color = MaterialTheme.colorScheme.onSurface,
@@ -942,6 +1215,14 @@ private fun BrowserToolbar(
                 Icon(FeatherIcons.Copy, contentDescription = stringResource(R.string.cd_copy_url), modifier = Modifier.size(17.dp))
               }
             }
+            if (settings.noImageMode) {
+              Icon(
+                FeatherIcons.NoImage,
+                contentDescription = "No-Image mode active",
+                tint = FeatherWarningAmber,
+                modifier = Modifier.padding(end = 6.dp).size(15.dp)
+              )
+            }
             if (activeTab.trackersBlockedCount > 0) {
               Surface(
                 shape = RoundedCornerShape(12.dp),
@@ -953,7 +1234,7 @@ private fun BrowserToolbar(
                   modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
                   verticalAlignment = Alignment.CenterVertically
                 ) {
-                  Icon(FeatherIcons.Shield, contentDescription = "Trackers blocked", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(12.dp))
+                  Icon(FeatherIcons.Shield, contentDescription = "Blocked", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(12.dp))
                   Spacer(modifier = Modifier.width(3.dp))
                   Text(
                     text = activeTab.trackersBlockedCount.toString(),
@@ -967,9 +1248,9 @@ private fun BrowserToolbar(
           }
         }
 
-        // Precision Bottom Action Bar
+        // Precision Action Bar
         Row(
-          modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+          modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
           horizontalArrangement = Arrangement.SpaceBetween,
           verticalAlignment = Alignment.CenterVertically
         ) {
@@ -1019,87 +1300,11 @@ private fun BrowserToolbar(
             }
           }
 
-          Box {
-            IconButton(
-              onClick = { menuExpanded = true },
-              modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_menu_button")
-            ) {
-              Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.cd_menu))
-            }
-            DropdownMenu(
-              expanded = menuExpanded,
-              onDismissRequest = { menuExpanded = false }
-            ) {
-              DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_new_tab)) },
-                leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                onClick = { menuExpanded = false; onMenuAction(MenuAction.NEW_TAB) }
-              )
-              DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_new_private_tab)) },
-                leadingIcon = { Icon(FeatherIcons.PrivateMask, contentDescription = null) },
-                onClick = { menuExpanded = false; onMenuAction(MenuAction.NEW_PRIVATE_TAB) }
-              )
-              if (activeTab.url.isNotBlank()) {
-                DropdownMenuItem(
-                  text = {
-                    Text(if (isBookmarked) stringResource(R.string.action_remove_bookmark) else stringResource(R.string.action_add_bookmark))
-                  },
-                  leadingIcon = {
-                    Icon(if (isBookmarked) FeatherIcons.Bookmark else FeatherIcons.BookmarkOutline, contentDescription = null)
-                  },
-                  onClick = { menuExpanded = false; onMenuAction(MenuAction.TOGGLE_BOOKMARK) }
-                )
-                DropdownMenuItem(
-                  text = { Text("Desktop site") },
-                  leadingIcon = {
-                    if (activeTab.isDesktopMode) Icon(Icons.Filled.Check, contentDescription = null)
-                  },
-                  onClick = { menuExpanded = false; onMenuAction(MenuAction.TOGGLE_DESKTOP_SITE) }
-                )
-                DropdownMenuItem(
-                  text = { Text(stringResource(R.string.action_find_in_page)) },
-                  leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                  onClick = { menuExpanded = false; onMenuAction(MenuAction.FIND_IN_PAGE) }
-                )
-                DropdownMenuItem(
-                  text = { Text(stringResource(R.string.action_reader_mode)) },
-                  leadingIcon = { Icon(FeatherIcons.Reader, contentDescription = null) },
-                  onClick = { menuExpanded = false; onMenuAction(MenuAction.READER_MODE) }
-                )
-                DropdownMenuItem(
-                  text = { Text(stringResource(R.string.action_share)) },
-                  leadingIcon = { Icon(Icons.Filled.Share, contentDescription = null) },
-                  onClick = { menuExpanded = false; onMenuAction(MenuAction.SHARE) }
-                )
-                DropdownMenuItem(
-                  text = { Text(stringResource(R.string.action_open_external)) },
-                  leadingIcon = { Icon(FeatherIcons.OpenInNew, contentDescription = null) },
-                  onClick = { menuExpanded = false; onMenuAction(MenuAction.OPEN_SYSTEM_BROWSER) }
-                )
-              }
-              HorizontalDivider()
-              DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_bookmarks)) },
-                leadingIcon = { Icon(FeatherIcons.Bookmark, contentDescription = null) },
-                onClick = { menuExpanded = false; onMenuAction(MenuAction.BOOKMARKS) }
-              )
-              DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_history)) },
-                leadingIcon = { Icon(FeatherIcons.History, contentDescription = null) },
-                onClick = { menuExpanded = false; onMenuAction(MenuAction.HISTORY) }
-              )
-              DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_downloads)) },
-                leadingIcon = { Icon(FeatherIcons.Download, contentDescription = null) },
-                onClick = { menuExpanded = false; onMenuAction(MenuAction.DOWNLOADS) }
-              )
-              DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_settings)) },
-                leadingIcon = { Icon(Icons.Filled.Settings, contentDescription = null) },
-                onClick = { menuExpanded = false; onMenuAction(MenuAction.SETTINGS) }
-              )
-            }
+          IconButton(
+            onClick = onOpenQuickMenu,
+            modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_menu_button")
+          ) {
+            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.cd_menu))
           }
         }
       }

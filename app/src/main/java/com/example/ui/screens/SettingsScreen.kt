@@ -1,11 +1,14 @@
 package com.example.ui.screens
 
+import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,6 +23,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -32,6 +37,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -61,17 +67,20 @@ import com.example.model.SearchEngine
 import com.example.model.SettingsState
 import com.example.model.SitePermissionRule
 import com.example.model.ThemeMode
+import com.example.model.ToolbarPosition
 import com.example.security.UrlValidator
 import com.example.ui.components.FeatherIcons
 import com.example.ui.theme.FeatherSecureGreen
 import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
   settings: SettingsState,
   sitePermissions: List<SitePermissionRule>,
   onUpdateSettings: ((SettingsState) -> SettingsState) -> Unit,
+  onAddCustomBlockedHost: (String) -> Boolean,
+  onRemoveCustomBlockedHost: (String) -> Unit,
   onRemovePermissionRule: (SitePermissionRule) -> Unit,
   onClearBrowsingData: (ClearDataOptions) -> Unit,
   onExportBookmarks: () -> Unit,
@@ -81,6 +90,7 @@ fun SettingsScreen(
   BackHandler { onClose() }
   var homepageDraft by remember(settings.homepageUrl) { mutableStateOf(settings.homepageUrl) }
   var customSearchDraft by remember(settings.customSearchTemplate) { mutableStateOf(settings.customSearchTemplate) }
+  var customBlockDraft by remember { mutableStateOf("") }
   var showClearDialog by remember { mutableStateOf(false) }
 
   Scaffold(
@@ -100,44 +110,44 @@ fun SettingsScreen(
   ) { padding ->
     LazyColumn(
       contentPadding = PaddingValues(16.dp),
-      verticalArrangement = Arrangement.spacedBy(14.dp),
+      verticalArrangement = Arrangement.spacedBy(12.dp),
       horizontalAlignment = Alignment.CenterHorizontally,
       modifier = Modifier.fillMaxSize().padding(padding)
     ) {
       item {
         Card(
-          shape = RoundedCornerShape(20.dp),
-          border = BorderStroke(1.dp, FeatherSecureGreen.copy(alpha = 0.35f)),
+          shape = RoundedCornerShape(18.dp),
+          border = BorderStroke(0.9.dp, FeatherSecureGreen.copy(alpha = 0.35f)),
           colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
           modifier = Modifier.widthIn(max = 720.dp).fillMaxWidth()
         ) {
           Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
           ) {
             Surface(
-              shape = RoundedCornerShape(14.dp),
+              shape = RoundedCornerShape(12.dp),
               color = FeatherSecureGreen.copy(alpha = 0.14f),
-              modifier = Modifier.size(44.dp)
+              modifier = Modifier.size(40.dp)
             ) {
               Box(contentAlignment = Alignment.Center) {
                 Icon(
                   FeatherIcons.Shield,
                   contentDescription = null,
                   tint = FeatherSecureGreen,
-                  modifier = Modifier.size(22.dp)
+                  modifier = Modifier.size(20.dp)
                 )
               }
             }
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
               Text(
-                text = "Pika Hardened Shell",
+                text = "Pika Privacy Core",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
               )
               Text(
-                text = "Keystore AES-256 encrypted settings · Zero telemetry · System WebView",
+                text = "Encrypted settings · Zero telemetry · System WebView",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
               )
@@ -148,8 +158,8 @@ fun SettingsScreen(
 
       item {
         SettingsSectionCard("Search & Homepage", Modifier.widthIn(max = 720.dp)) {
-          Text("Default search engine", style = MaterialTheme.typography.titleMedium)
-          Spacer(modifier = Modifier.height(6.dp))
+          Text("Search engine", style = MaterialTheme.typography.titleMedium)
+          Spacer(modifier = Modifier.height(4.dp))
           SearchEngine.entries.forEach { engine ->
             Row(
               modifier = Modifier
@@ -169,7 +179,7 @@ fun SettingsScreen(
             OutlinedTextField(
               value = customSearchDraft,
               onValueChange = { customSearchDraft = it },
-              label = { Text("HTTPS search template (use %s)") },
+              label = { Text("HTTPS template (%s)") },
               singleLine = true,
               isError = !UrlValidator.isValidCustomSearchTemplate(customSearchDraft),
               modifier = Modifier.fillMaxWidth()
@@ -181,13 +191,13 @@ fun SettingsScreen(
                   onUpdateSettings { it.copy(customSearchTemplate = customSearchDraft.trim()) }
                 }
               }
-            ) { Text("Save custom template") }
+            ) { Text("Save template") }
           }
-          Spacer(modifier = Modifier.height(10.dp))
+          Spacer(modifier = Modifier.height(8.dp))
           OutlinedTextField(
             value = homepageDraft,
             onValueChange = { homepageDraft = it },
-            label = { Text("Homepage URL (blank = local Start Page)") },
+            label = { Text("Homepage (blank = Start Page)") },
             singleLine = true,
             shape = RoundedCornerShape(14.dp),
             modifier = Modifier.fillMaxWidth()
@@ -206,61 +216,9 @@ fun SettingsScreen(
       }
 
       item {
-        SettingsSectionCard("Privacy & Security (Default-On)", Modifier.widthIn(max = 720.dp)) {
-          SettingSwitchRow(
-            title = "HTTPS-Only Mode",
-            subtitle = "Upgrade HTTP URLs to HTTPS and warn before unencrypted HTTP connections.",
-            checked = settings.httpsOnlyEnabled,
-            tag = "setting_https_only",
-            onCheckedChange = { v -> onUpdateSettings { it.copy(httpsOnlyEnabled = v) } }
-          )
-          HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-          SettingSwitchRow(
-            title = "Block Third-Party Cookies",
-            subtitle = "Prevent cross-site tracking cookies in standard tabs.",
-            checked = settings.blockThirdPartyCookies,
-            tag = "setting_block_3p_cookies",
-            onCheckedChange = { v -> onUpdateSettings { it.copy(blockThirdPartyCookies = v) } }
-          )
-          HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-          SettingSwitchRow(
-            title = "Tracker & Ad Network Blocker",
-            subtitle = "Block known third-party analytics and ad trackers at request level.",
-            checked = settings.trackerBlockingEnabled,
-            tag = "setting_tracker_blocker",
-            onCheckedChange = { v -> onUpdateSettings { it.copy(trackerBlockingEnabled = v) } }
-          )
-          HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-          SettingSwitchRow(
-            title = "Record Browsing History",
-            subtitle = "Disable to stop saving visited pages locally even in standard tabs.",
-            checked = settings.historyEnabled,
-            tag = "setting_history_enabled",
-            onCheckedChange = { v -> onUpdateSettings { it.copy(historyEnabled = v) } }
-          )
-          HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-          SettingSwitchRow(
-            title = "Do Not Track / Global Privacy Control",
-            subtitle = stringResource(R.string.settings_dnt_note),
-            checked = settings.doNotTrackEnabled,
-            tag = "setting_dnt",
-            onCheckedChange = { v -> onUpdateSettings { it.copy(doNotTrackEnabled = v) } }
-          )
-          HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-          SettingSwitchRow(
-            title = "JavaScript Execution",
-            subtitle = "Disable for maximum attack-surface reduction on untrusted sites.",
-            checked = settings.javascriptEnabled,
-            tag = "setting_js",
-            onCheckedChange = { v -> onUpdateSettings { it.copy(javascriptEnabled = v) } }
-          )
-        }
-      }
-
-      item {
-        SettingsSectionCard("Appearance & Zoom", Modifier.widthIn(max = 720.dp)) {
+        SettingsSectionCard("Layout & Reading", Modifier.widthIn(max = 720.dp)) {
           Text("Theme", style = MaterialTheme.typography.titleMedium)
-          Spacer(modifier = Modifier.height(8.dp))
+          Spacer(modifier = Modifier.height(6.dp))
           Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ThemeMode.entries.forEach { mode ->
               FilterChip(
@@ -270,8 +228,46 @@ fun SettingsScreen(
               )
             }
           }
-          Spacer(modifier = Modifier.height(12.dp))
-          Text("Page text zoom: ${settings.textZoomPercent}%", style = MaterialTheme.typography.titleMedium)
+          Spacer(modifier = Modifier.height(10.dp))
+          Text("Address bar position", style = MaterialTheme.typography.titleMedium)
+          Spacer(modifier = Modifier.height(6.dp))
+          Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ToolbarPosition.entries.forEach { pos ->
+              FilterChip(
+                selected = settings.toolbarPosition == pos,
+                onClick = { onUpdateSettings { it.copy(toolbarPosition = pos) } },
+                label = { Text(pos.label) }
+              )
+            }
+          }
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            SettingSwitchRow(
+              title = "Dynamic Color",
+              subtitle = "Match wallpaper palette",
+              checked = settings.dynamicColor,
+              tag = "setting_dynamic_color",
+              onCheckedChange = { v -> onUpdateSettings { it.copy(dynamicColor = v) } }
+            )
+          }
+          HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+          SettingSwitchRow(
+            title = "Night Web Mode",
+            subtitle = "Darken light web pages",
+            checked = settings.nightWebMode,
+            tag = "setting_night_web",
+            onCheckedChange = { v -> onUpdateSettings { it.copy(nightWebMode = v) } }
+          )
+          HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+          SettingSwitchRow(
+            title = "No-Image Mode",
+            subtitle = "Block web images to save data",
+            checked = settings.noImageMode,
+            tag = "setting_no_image",
+            onCheckedChange = { v -> onUpdateSettings { it.copy(noImageMode = v) } }
+          )
+          Spacer(modifier = Modifier.height(10.dp))
+          Text("Text zoom: ${settings.textZoomPercent}%", style = MaterialTheme.typography.titleMedium)
           Slider(
             value = settings.textZoomPercent.toFloat(),
             onValueChange = { raw ->
@@ -283,9 +279,104 @@ fun SettingsScreen(
         }
       }
 
+      item {
+        SettingsSectionCard("Privacy & Ad Shield", Modifier.widthIn(max = 720.dp)) {
+          SettingSwitchRow(
+            title = "HTTPS-Only Mode",
+            subtitle = "Upgrade HTTP and warn on unencrypted sites",
+            checked = settings.httpsOnlyEnabled,
+            tag = "setting_https_only",
+            onCheckedChange = { v -> onUpdateSettings { it.copy(httpsOnlyEnabled = v) } }
+          )
+          HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+          SettingSwitchRow(
+            title = "Block 3rd-Party Cookies",
+            subtitle = "Stop cross-site tracking cookies",
+            checked = settings.blockThirdPartyCookies,
+            tag = "setting_block_3p_cookies",
+            onCheckedChange = { v -> onUpdateSettings { it.copy(blockThirdPartyCookies = v) } }
+          )
+          HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+          SettingSwitchRow(
+            title = "Ad & Tracker Blocker",
+            subtitle = "Block ads, popups & analytics hosts",
+            checked = settings.trackerBlockingEnabled,
+            tag = "setting_tracker_blocker",
+            onCheckedChange = { v -> onUpdateSettings { it.copy(trackerBlockingEnabled = v) } }
+          )
+          HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+          SettingSwitchRow(
+            title = "Save History",
+            subtitle = "Keep local history in standard tabs",
+            checked = settings.historyEnabled,
+            tag = "setting_history_enabled",
+            onCheckedChange = { v -> onUpdateSettings { it.copy(historyEnabled = v) } }
+          )
+          HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+          SettingSwitchRow(
+            title = "Do Not Track / GPC",
+            subtitle = stringResource(R.string.settings_dnt_note),
+            checked = settings.doNotTrackEnabled,
+            tag = "setting_dnt",
+            onCheckedChange = { v -> onUpdateSettings { it.copy(doNotTrackEnabled = v) } }
+          )
+          HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+          SettingSwitchRow(
+            title = "JavaScript",
+            subtitle = "Disable for strict site sandboxing",
+            checked = settings.javascriptEnabled,
+            tag = "setting_js",
+            onCheckedChange = { v -> onUpdateSettings { it.copy(javascriptEnabled = v) } }
+          )
+          HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+          Text("Custom block rules", style = MaterialTheme.typography.titleMedium)
+          Spacer(modifier = Modifier.height(6.dp))
+          Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+              value = customBlockDraft,
+              onValueChange = { customBlockDraft = it },
+              placeholder = { Text("ads.example.com") },
+              singleLine = true,
+              shape = RoundedCornerShape(12.dp),
+              modifier = Modifier.weight(1f).testTag("custom_block_input")
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            OutlinedButton(
+              onClick = {
+                if (onAddCustomBlockedHost(customBlockDraft)) {
+                  customBlockDraft = ""
+                }
+              },
+              shape = RoundedCornerShape(12.dp),
+              modifier = Modifier.minimumInteractiveComponentSize().testTag("custom_block_add")
+            ) {
+              Icon(Icons.Filled.Add, contentDescription = "Add host rule")
+            }
+          }
+          if (settings.customBlockedHosts.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            FlowRow(
+              horizontalArrangement = Arrangement.spacedBy(8.dp),
+              verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+              settings.customBlockedHosts.forEach { host ->
+                InputChip(
+                  selected = false,
+                  onClick = { onRemoveCustomBlockedHost(host) },
+                  label = { Text(host) },
+                  trailingIcon = {
+                    Icon(Icons.Filled.Close, contentDescription = "Remove $host", modifier = Modifier.size(16.dp))
+                  }
+                )
+              }
+            }
+          }
+        }
+      }
+
       if (sitePermissions.isNotEmpty()) {
         item {
-          SettingsSectionCard("Saved Site Permissions", Modifier.widthIn(max = 720.dp)) {
+          SettingsSectionCard("Site Permissions", Modifier.widthIn(max = 720.dp)) {
             sitePermissions.forEach { rule ->
               Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -303,7 +394,7 @@ fun SettingsScreen(
                   onClick = { onRemovePermissionRule(rule) },
                   modifier = Modifier.minimumInteractiveComponentSize()
                 ) {
-                  Icon(Icons.Filled.Delete, contentDescription = "Revoke permission for ${rule.origin}")
+                  Icon(Icons.Filled.Delete, contentDescription = "Revoke ${rule.origin}")
                 }
               }
             }
@@ -312,7 +403,7 @@ fun SettingsScreen(
       }
 
       item {
-        SettingsSectionCard("Bookmarks & Browsing Data", Modifier.widthIn(max = 720.dp)) {
+        SettingsSectionCard("Data & Bookmarks", Modifier.widthIn(max = 720.dp)) {
           Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
             OutlinedButton(
               onClick = onImportBookmarks,
@@ -340,18 +431,12 @@ fun SettingsScreen(
       }
 
       item {
-        SettingsSectionCard("Engine & Network Transparency", Modifier.widthIn(max = 720.dp)) {
-          Text(
-            text = stringResource(R.string.settings_engine_note),
-            style = MaterialTheme.typography.bodyMedium
-          )
-          Spacer(modifier = Modifier.height(6.dp))
-          Text(
-            text = "Permissions declared: INTERNET (page loading & user-approved downloads) and ACCESS_NETWORK_STATE (offline detection). Zero analytics, zero crash reporting, zero background services.",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-          )
-        }
+        Text(
+          text = stringResource(R.string.settings_engine_note),
+          style = MaterialTheme.typography.labelSmall,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          modifier = Modifier.padding(vertical = 6.dp)
+        )
       }
     }
   }
@@ -368,9 +453,9 @@ fun SettingsScreen(
       text = {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
           ClearOptionRow("Browsing history", clearHistory) { clearHistory = it }
-          ClearOptionRow("Cookies & site storage", clearCookies) { clearCookies = it }
-          ClearOptionRow("Cached files", clearCache) { clearCache = it }
-          ClearOptionRow("Saved site permissions", clearPerms) { clearPerms = it }
+          ClearOptionRow("Cookies & site data", clearCookies) { clearCookies = it }
+          ClearOptionRow("Cache", clearCache) { clearCache = it }
+          ClearOptionRow("Site permissions", clearPerms) { clearPerms = it }
         }
       },
       confirmButton = {
@@ -413,19 +498,19 @@ private fun SettingsSectionCard(
   content: @Composable () -> Unit
 ) {
   Card(
-    shape = RoundedCornerShape(20.dp),
+    shape = RoundedCornerShape(18.dp),
     border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)),
     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     modifier = modifier.fillMaxWidth()
   ) {
-    Column(modifier = Modifier.padding(18.dp)) {
+    Column(modifier = Modifier.padding(16.dp)) {
       Text(
         text = title.uppercase(),
         style = MaterialTheme.typography.labelMedium,
         fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.primary
       )
-      Spacer(modifier = Modifier.height(10.dp))
+      Spacer(modifier = Modifier.height(8.dp))
       content()
     }
   }

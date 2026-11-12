@@ -5,8 +5,10 @@ import com.example.model.SearchEngine
 import com.example.model.SettingsState
 import com.example.model.SitePermissionRule
 import com.example.model.ThemeMode
+import com.example.model.ToolbarPosition
 import com.example.model.WebPermissionKind
 import com.example.security.SecureKeystoreStorage
+import com.example.security.TrackerBlocker
 import com.example.security.UrlValidator
 import org.json.JSONArray
 import org.json.JSONObject
@@ -28,6 +30,16 @@ class SettingsRepository(context: Context) {
     val jsonStr = secureStorage.readEncryptedString(SETTINGS_FILE) ?: return SettingsState()
     return try {
       val obj = JSONObject(jsonStr)
+      val customArr = obj.optJSONArray("customBlockedHosts")
+      val customHosts = mutableListOf<String>()
+      if (customArr != null) {
+        for (i in 0 until customArr.length()) {
+          val normalized = TrackerBlocker.normalizeCustomHost(customArr.optString(i, ""))
+          if (normalized.isNotEmpty() && normalized !in customHosts) {
+            customHosts += normalized
+          }
+        }
+      }
       SettingsState(
         searchEngine = SearchEngine.fromId(obj.optString("searchEngine", SearchEngine.DUCKDUCKGO.id)),
         customSearchTemplate = obj.optString("customSearchTemplate", SearchEngine.DUCKDUCKGO.queryTemplate),
@@ -40,6 +52,11 @@ class SettingsRepository(context: Context) {
         javascriptEnabled = obj.optBoolean("javascriptEnabled", true),
         textZoomPercent = obj.optInt("textZoomPercent", 100).coerceIn(75, 200),
         themeMode = ThemeMode.fromId(obj.optString("themeMode", ThemeMode.SYSTEM.id)),
+        dynamicColor = obj.optBoolean("dynamicColor", false),
+        toolbarPosition = ToolbarPosition.fromId(obj.optString("toolbarPosition", ToolbarPosition.BOTTOM.id)),
+        nightWebMode = obj.optBoolean("nightWebMode", false),
+        noImageMode = obj.optBoolean("noImageMode", false),
+        customBlockedHosts = customHosts,
         readerFontSizeSp = obj.optInt("readerFontSizeSp", 18).coerceIn(14, 28),
         readerDarkMode = obj.optBoolean("readerDarkMode", false)
       )
@@ -61,6 +78,11 @@ class SettingsRepository(context: Context) {
       put("javascriptEnabled", state.javascriptEnabled)
       put("textZoomPercent", state.textZoomPercent)
       put("themeMode", state.themeMode.id)
+      put("dynamicColor", state.dynamicColor)
+      put("toolbarPosition", state.toolbarPosition.id)
+      put("nightWebMode", state.nightWebMode)
+      put("noImageMode", state.noImageMode)
+      put("customBlockedHosts", JSONArray(state.customBlockedHosts))
       put("readerFontSizeSp", state.readerFontSizeSp)
       put("readerDarkMode", state.readerDarkMode)
     }

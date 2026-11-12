@@ -1,6 +1,12 @@
 package com.example
 
+import android.app.SearchManager
 import android.content.Intent
+import android.content.pm.ShortcutInfo
+import android.content.pm.ShortcutManager
+import android.graphics.drawable.Icon
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -29,7 +35,7 @@ class MainActivity : ComponentActivity() {
         }
         viewModel.showToast("Bookmarks exported")
       } catch (_: Throwable) {
-        viewModel.showToast("Failed to export bookmarks")
+        viewModel.showToast("Export failed")
       }
     }
   }
@@ -42,7 +48,7 @@ class MainActivity : ComponentActivity() {
         val raw = contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: ""
         viewModel.importBookmarksFromText(raw)
       } catch (_: Throwable) {
-        viewModel.showToast("Failed to import bookmarks")
+        viewModel.showToast("Import failed")
       }
     }
   }
@@ -66,7 +72,7 @@ class MainActivity : ComponentActivity() {
 
     setContent {
       val settings by viewModel.settings.collectAsStateWithLifecycle()
-      FeatherTheme(themeMode = settings.themeMode) {
+      FeatherTheme(themeMode = settings.themeMode, dynamicColor = settings.dynamicColor) {
         BrowserScreen(
           viewModel = viewModel,
           onExportBookmarks = {
@@ -74,6 +80,15 @@ class MainActivity : ComponentActivity() {
           },
           onImportBookmarks = {
             importBookmarksLauncher.launch(arrayOf("text/html", "application/json", "text/plain"))
+          },
+          onSavePdf = {
+            val tab = viewModel.activeTab()
+            if (tab.url.isBlank() || !viewModel.webViewPool.printCurrentPage(this, tab.id, tab.title)) {
+              viewModel.showToast("Open a page first")
+            }
+          },
+          onPinHomeShortcut = { url, title ->
+            pinHomeScreenShortcut(url, title)
           }
         )
       }
@@ -86,11 +101,49 @@ class MainActivity : ComponentActivity() {
   }
 
   private fun handleIncomingIntent(intent: Intent?) {
-    if (intent?.action == Intent.ACTION_VIEW) {
-      val target = intent.dataString ?: return
-      if (UrlValidator.isSafeWebUrl(target)) {
-        viewModel.openNewTab(isPrivate = false, initialUrl = target)
+    when (intent?.action) {
+      Intent.ACTION_VIEW -> {
+        val target = intent.dataString ?: return
+        if (UrlValidator.isSafeWebUrl(target)) {
+          viewModel.openNewTab(isPrivate = false, initialUrl = target)
+        }
       }
+      Intent.ACTION_WEB_SEARCH -> {
+        val query = intent.getStringExtra(SearchManager.QUERY) ?: return
+        val cleaned = UrlValidator.sanitizeControlChars(query)
+        if (cleaned.isNotEmpty()) {
+          viewModel.openNewTab(isPrivate = false, initialUrl = "")
+          viewModel.navigateActiveTab(cleaned)
+        }
+      }
+    }
+  }
+
+  private fun pinHomeScreenShortcut(url: String, title: String) {
+    if (!UrlValidator.isSafeWebUrl(url)) return
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+      viewModel.showToast("Requires Android 8.0+")
+      return
+    }
+    try {
+      val sm = getSystemService(ShortcutManager::class.java)
+      if (sm == null || !sm.isRequestPinShortcutSupported) {
+        viewModel.showToast("Launcher does not support pinned shortcuts")
+        return
+      }
+      val safeLabel = UrlValidator.sanitizeDisplayText(title, 32)
+        .ifEmpty { UrlValidator.extractHost(url).ifEmpty { "Pika Link" } }
+      val launchIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url), this, MainActivity::class.java)
+      val shortcut = ShortcutInfo.Builder(this, "pika_${url.hashCode()}")
+        .setShortLabel(safeLabel)
+        .setLongLabel(safeLabel)
+        .setIcon(Icon.createWithResource(this, R.mipmap.ic_launcher))
+        .setIntent(launchIntent)
+        .build()
+      sm.requestPinShortcut(shortcut, null)
+      viewModel.showToast("Shortcut requested")
+    } catch (_: Throwable) {
+      viewModel.showToast("Unable to pin shortcut")
     }
   }
 }

@@ -23,16 +23,11 @@ Pre-built signed release APK (< 2 MB) is tracked directly in this repository at 
 
 ## Features (v1.0)
 
-- **Address Bar & Navigation:** Direct URL entry, automatic URL vs. search query detection, user-selectable default search engine (DuckDuckGo default, Startpage, Qwant, Brave Search, Wikipedia, Google, or custom HTTPS template), live HTTPS/HTTP/Private security indicator, back, forward, reload/stop, pull-to-refresh at scroll top, copy URL, share, and open in system browser.
-- **Tabs & Memory Saver:** Open, close, switch, search, reorder (accessible move up/down controls), and restore closed tabs. Uses a 2-WebView LRU pool that saves navigation `Bundle` state and destroys background `WebView` instances to minimize idle RAM and battery drain.
-- **Error & Interstitial Pages:** Dedicated views for Offline, DNS Failure, Blocked Schemes/Resources, HTTPS-Only HTTP Interstitial Warning, and TLS Certificate Errors (with expandable certificate details and **no bypass option**).
-- **Local Bookmarks:** Add, edit, delete, folder-organize, search, and import/export via Storage Access Framework (Netscape Bookmark HTML & JSON). Stored locally in SQLite only.
-- **History:** Browse, search, delete individual entries, clear all history, or disable history recording entirely in Settings.
-- **Consent-First Downloads:** Prompts before every download with filename, host, MIME type, and HTTPS status. Shows real-time progress, cancel support, open file (`FileProvider` / `MediaStore.Downloads`), and share/reveal location. Private downloads are wiped when the private session ends.
-- **Find in Page:** Asynchronous in-page search with match counter and previous/next navigation.
-- **Private Mode:** Isolated ephemeral tabs with `LOAD_NO_CACHE`, disabled DOM storage/history/cookies, distinct visual badge, and full wipe of cookies, WebStorage, cache, form data, and private downloads when ended.
-- **Reader Mode:** On-demand distraction-free native Compose article view extracted without any `addJavascriptInterface` bridge, featuring adjustable font size and dark/light reading mode.
-- **Settings & Accessibility:** Theme (System / Light / Dark), text zoom (75%–200%), RTL layout + Arabic (`ar`) localization, 48dp minimum touch targets, TalkBack content descriptions, reduced-motion awareness, and per-site permission management.
+- **Address Bar & Swipe Gestures:** Top or Bottom toolbar placement, horizontal omnibox swipe to switch tabs, direct URL entry, search engine choice (DuckDuckGo, Startpage, Qwant, Brave, Wikipedia, Google, custom HTTPS), live HTTPS/HTTP/Private badge, copy, share, and external browser handoff.
+- **Power Tools (Via / X Style):** Compact 4-column Quick Grid Menu with **Media & Resource Sniffer**, **Night Web** page darkening, **No-Image** data-saver mode, **Desktop / iPhone / Mobile** User-Agent switcher, **Immersive Fullscreen**, **Save Page as PDF** (`PrintManager`), **View Page Source**, **Translate**, and **Pin Shortcut to Home Screen**.
+- **Privacy & Ad Shield:** Built-in ad/tracker/popup blocker + user **Custom Block Rules** stored encrypted in Android Keystore, third-party cookie blocking, query-parameter stripping, HTTPS-Only mode, `DNT: 1` / `Sec-GPC: 1`, and isolated **Private Mode** wiped cleanly on exit.
+- **Tabs, Bookmarks, History & Downloads:** 2-WebView LRU RAM saver pool with `onRenderProcessGone` crash recovery, closed tab restore, local SQLite bookmarks (Netscape HTML & JSON import/export), search/clearable history, and consent-first downloads with editable filenames and retry support.
+- **Reader & Accessibility:** Native Compose distraction-free Reader View, Find in Page, Material You Dynamic Color (Android 12+), Predictive Back (Android 14–16), full edge-to-edge inset handling, RTL + Arabic (`ar`) support, and 48dp touch targets.
 
 ---
 

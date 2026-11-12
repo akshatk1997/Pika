@@ -21,7 +21,8 @@ data class PageError(
   val failingUrl: String,
   val host: String,
   val reason: String,
-  val certificateDetail: String? = null
+  val certificateDetail: String? = null,
+  val upgradedFromHttpUrl: String? = null
 )
 
 data class HttpWarningState(
@@ -64,23 +65,60 @@ data class ClearDataOptions(
   val clearSitePermissions: Boolean = false
 )
 
+enum class UserAgentMode(val id: String, val label: String) {
+  MOBILE("mobile", "Mobile"),
+  DESKTOP("desktop", "Desktop"),
+  IPHONE("iphone", "iPhone");
+
+  companion object {
+    fun fromId(id: String): UserAgentMode = entries.firstOrNull { it.id == id } ?: MOBILE
+  }
+}
+
+enum class ToolbarPosition(val id: String, val label: String) {
+  BOTTOM("bottom", "Bottom"),
+  TOP("top", "Top");
+
+  companion object {
+    fun fromId(id: String): ToolbarPosition = entries.firstOrNull { it.id == id } ?: BOTTOM
+  }
+}
+
+enum class SniffedMediaType(val label: String) {
+  VIDEO("Video"),
+  AUDIO("Audio"),
+  IMAGE("Image"),
+  DOCUMENT("File")
+}
+
+data class SniffedResource(
+  val url: String,
+  val host: String,
+  val fileName: String,
+  val type: SniffedMediaType
+)
+
 data class TabInfo(
   val id: String,
   val title: String = "New Tab",
   val url: String = "",
   val isPrivate: Boolean = false,
-  val isDesktopMode: Boolean = false,
+  val userAgentMode: UserAgentMode = UserAgentMode.MOBILE,
+  val upgradedFromHttpUrl: String? = null,
   val isLoading: Boolean = false,
   val progress: Int = 0,
   val canGoBack: Boolean = false,
   val canGoForward: Boolean = false,
   val securityState: SecurityState = SecurityState.HOME,
   val trackersBlockedCount: Int = 0,
+  val sniffedResourcesCount: Int = 0,
   val errorState: PageError? = null,
   val httpWarning: HttpWarningState? = null,
   val faviconInitial: String = "",
   val lastActiveAt: Long = System.currentTimeMillis()
-)
+) {
+  val isDesktopMode: Boolean get() = userAgentMode == UserAgentMode.DESKTOP
+}
 
 data class ClosedTabRecord(
   val title: String,
@@ -183,6 +221,11 @@ data class SettingsState(
   val javascriptEnabled: Boolean = true,
   val textZoomPercent: Int = 100,
   val themeMode: ThemeMode = ThemeMode.SYSTEM,
+  val dynamicColor: Boolean = false,
+  val toolbarPosition: ToolbarPosition = ToolbarPosition.BOTTOM,
+  val nightWebMode: Boolean = false,
+  val noImageMode: Boolean = false,
+  val customBlockedHosts: List<String> = emptyList(),
   val readerFontSizeSp: Int = 18,
   val readerDarkMode: Boolean = false
 )

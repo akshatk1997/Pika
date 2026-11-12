@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.view.View
@@ -33,10 +34,13 @@ import com.example.model.ReaderArticle
 import com.example.model.SecurityState
 import com.example.model.SettingsState
 import com.example.model.SitePermissionRule
+import com.example.model.SniffedResource
 import com.example.model.TabInfo
+import com.example.model.UserAgentMode
 import com.example.model.WebPermissionKind
 import com.example.model.WebPermissionPrompt
 import com.example.security.ResolvedNavigation
+import com.example.security.TrackerBlocker
 import com.example.security.UrlValidator
 import com.example.webview.WebViewCallbacks
 import com.example.webview.WebViewPool
@@ -47,6 +51,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.util.UUID
 
 enum class ActiveOverlay {
@@ -55,6 +61,7 @@ enum class ActiveOverlay {
   BOOKMARKS,
   HISTORY,
   DOWNLOADS,
+  RESOURCES,
   SETTINGS
 }
 
@@ -105,6 +112,12 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   private val _readerArticle = MutableStateFlow<ReaderArticle?>(null)
   val readerArticle: StateFlow<ReaderArticle?> = _readerArticle.asStateFlow()
 
+  private val _pageSource = MutableStateFlow<Pair<String, String>?>(null)
+  val pageSource: StateFlow<Pair<String, String>?> = _pageSource.asStateFlow()
+
+  private val _isBrowserFullscreen = MutableStateFlow(false)
+  val isBrowserFullscreen: StateFlow<Boolean> = _isBrowserFullscreen.asStateFlow()
+
   private val _externalLinkPrompt = MutableStateFlow<ExternalLinkPrompt?>(null)
   val externalLinkPrompt: StateFlow<ExternalLinkPrompt?> = _externalLinkPrompt.asStateFlow()
 
@@ -149,6 +162,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             securityState = sec,
             errorState = null,
             httpWarning = null,
+            sniffedResourcesCount = 0,
             faviconInitial = UrlValidator.extractHost(url).firstOrNull()?.uppercase() ?: ""
           )
         }
@@ -212,6 +226,12 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       }
     }
 
+    override fun onResourceSniffed(tabId: String, count: Int) {
+      mainHandler.post {
+        updateTab(tabId) { it.copy(sniffedResourcesCount = count) }
+      }
+    }
+
     override fun onHttpBlockedByHttpsOnly(tabId: String, url: String) {
       mainHandler.post {
         val host = UrlValidator.extractHost(url)
@@ -235,7 +255,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
               type = PageErrorType.BLOCKED,
               failingUrl = UrlValidator.sanitizeDisplayText(url, 180),
               host = scheme,
-              reason = "Blocked unsafe scheme '$scheme:'"
+              reason = "Blocked '$scheme:'"
             )
           )
         }
@@ -254,11 +274,44 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     override fun onPageError(tabId: String, error: PageError) {
       mainHandler.post {
+        val tab = tabById(tabId)
+        val upgradeOrigin = tab?.upgradedFromHttpUrl
+        if (upgradeOrigin != null && error.failingUrl.startsWith("https://")) {
+          val host = UrlValidator.extractHost(upgradeOrigin)
+          updateTab(tabId) {
+            it.copy(
+              isLoading = false,
+              upgradedFromHttpUrl = null,
+              securityState = SecurityState.INSECURE_HTTP,
+              httpWarning = HttpWarningState(originalUrl = upgradeOrigin, host = host, upgradeAttemptFailed = true)
+            )
+          }
+          return@post
+        }
         updateTab(tabId) {
           it.copy(
             isLoading = false,
             securityState = SecurityState.ERROR,
             errorState = error
+          )
+        }
+      }
+    }
+
+    override fun onRenderProcessCrashed(tabId: String) {
+      mainHandler.post {
+        val tab = tabById(tabId)
+        val url = tab?.url ?: ""
+        updateTab(tabId) {
+          it.copy(
+            isLoading = false,
+            securityState = SecurityState.ERROR,
+            errorState = PageError(
+              type = PageErrorType.GENERIC,
+              failingUrl = url,
+              host = UrlValidator.extractHost(url).ifEmpty { "WebView" },
+              reason = "Page renderer restarted. Tap Retry to reload."
+            )
           )
         }
       }
@@ -369,10 +422,13 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     return webViewPool.getOrCreateWebView(
       tabId = tab.id,
       isPrivate = tab.isPrivate,
-      isDesktopMode = tab.isDesktopMode,
+      userAgentMode = tab.userAgentMode,
       approvedHttpHosts = approvedHttpHosts
     )
   }
+
+  fun getActiveSniffedResources(): List<SniffedResource> =
+    webViewPool.getSniffedResources(activeTab().id)
 
   fun activeTab(): TabInfo {
     val currentId = _activeTabId.value
@@ -404,29 +460,80 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         }
       }
       is ResolvedNavigation.LoadUrl -> {
+        val host = UrlValidator.extractHost(res.url)
+        val customSet = s.customBlockedHosts.toSet()
+        if (customSet.isNotEmpty() && TrackerBlocker.isHostMatchingSet(host, customSet)) {
+          updateTab(tab.id) {
+            it.copy(
+              securityState = SecurityState.ERROR,
+              errorState = PageError(
+                type = PageErrorType.BLOCKED,
+                failingUrl = res.url,
+                host = host,
+                reason = "Blocked by custom host rule ($host)"
+              )
+            )
+          }
+          return
+        }
         _readerArticle.value = null
+        _pageSource.value = null
         closeFindInPage()
+        val originalHttp = if (res.upgradedFromHttp && res.url.startsWith("https://")) {
+          "http://" + res.url.removePrefix("https://")
+        } else {
+          null
+        }
         updateTab(tab.id) {
           it.copy(
             url = res.url,
+            upgradedFromHttpUrl = originalHttp,
             isLoading = true,
             progress = 10,
             errorState = null,
-            httpWarning = null
+            httpWarning = null,
+            sniffedResourcesCount = 0
           )
         }
-        webViewPool.getOrCreateWebView(tab.id, tab.isPrivate, tab.isDesktopMode, approvedHttpHosts)
+        webViewPool.getOrCreateWebView(tab.id, tab.isPrivate, tab.userAgentMode, approvedHttpHosts)
         webViewPool.loadUrl(tab.id, res.url)
       }
     }
   }
 
-  fun toggleDesktopMode() {
+  fun setUserAgentMode(mode: UserAgentMode) {
     val tab = activeTab()
-    val nextDesktop = !tab.isDesktopMode
-    updateTab(tab.id) { it.copy(isDesktopMode = nextDesktop) }
-    webViewPool.applyDesktopMode(tab.id, tab.isPrivate, nextDesktop)
-    showToast(if (nextDesktop) "Desktop site enabled" else "Mobile site enabled")
+    updateTab(tab.id) { it.copy(userAgentMode = mode) }
+    webViewPool.applyUserAgentMode(tab.id, tab.isPrivate, mode)
+    showToast("${mode.label} site")
+  }
+
+  fun toggleDesktopMode() {
+    val next = if (activeTab().userAgentMode == UserAgentMode.DESKTOP) {
+      UserAgentMode.MOBILE
+    } else {
+      UserAgentMode.DESKTOP
+    }
+    setUserAgentMode(next)
+  }
+
+  fun toggleBrowserFullscreen() {
+    _isBrowserFullscreen.update { !it }
+  }
+
+  fun exitBrowserFullscreen() {
+    _isBrowserFullscreen.value = false
+  }
+
+  fun switchAdjacentTab(delta: Int): Boolean {
+    val list = _tabs.value
+    if (list.size <= 1) return false
+    val idx = list.indexOfFirst { it.id == _activeTabId.value }
+    if (idx < 0) return false
+    val targetIdx = (idx + delta).coerceIn(0, list.lastIndex)
+    if (targetIdx == idx) return false
+    switchToTab(list[targetIdx].id)
+    return true
   }
 
   fun openNewTab(isPrivate: Boolean = false, initialUrl: String = "") {
@@ -440,6 +547,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     _activeTabId.value = newTab.id
     _activeOverlay.value = ActiveOverlay.NONE
     _readerArticle.value = null
+    _pageSource.value = null
     closeFindInPage()
 
     val target = initialUrl.ifBlank { if (!isPrivate) _settings.value.homepageUrl else "" }
@@ -454,6 +562,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       updateTab(tabId) { it.copy(lastActiveAt = System.currentTimeMillis()) }
       _activeOverlay.value = ActiveOverlay.NONE
       _readerArticle.value = null
+      _pageSource.value = null
       closeFindInPage()
     }
   }
@@ -514,7 +623,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       }
     }
     endPrivateSessionCleanup(privateIds)
-    showToast("Private session erased")
+    showToast("Private session wiped")
   }
 
   private fun endPrivateSessionCleanup(privateIds: List<String>) {
@@ -523,6 +632,14 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   }
 
   fun goBack(): Boolean {
+    if (_isBrowserFullscreen.value) {
+      _isBrowserFullscreen.value = false
+      return true
+    }
+    if (_pageSource.value != null) {
+      _pageSource.value = null
+      return true
+    }
     if (_readerArticle.value != null) {
       _readerArticle.value = null
       return true
@@ -565,7 +682,13 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   fun reloadOrStop() {
     val tab = activeTab()
-    val wv = webViewPool.getLiveWebView(tab.id) ?: return
+    val wv = webViewPool.getLiveWebView(tab.id)
+    if (wv == null) {
+      if (tab.url.isNotBlank()) {
+        navigateActiveTab(tab.url)
+      }
+      return
+    }
     if (tab.isLoading) {
       wv.stopLoading()
       updateTab(tab.id) { it.copy(isLoading = false) }
@@ -580,7 +703,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     val warning = tab.httpWarning ?: return
     approvedHttpHosts.add(warning.host)
     updateTab(tab.id) { it.copy(httpWarning = null, isLoading = true) }
-    webViewPool.getOrCreateWebView(tab.id, tab.isPrivate, tab.isDesktopMode, approvedHttpHosts)
+    webViewPool.getOrCreateWebView(tab.id, tab.isPrivate, tab.userAgentMode, approvedHttpHosts)
     webViewPool.loadUrl(tab.id, warning.originalUrl)
   }
 
@@ -594,15 +717,18 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
   }
 
-  fun copyTextToClipboard(text: String, toastMessage: String = "URL copied") {
+  fun copyTextToClipboard(text: String, toastMessage: String = "Copied") {
     if (text.isBlank()) return
     val cm = appContext.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    cm.setPrimaryClip(ClipData.newPlainText("URL", text))
-    showToast(toastMessage)
+    cm.setPrimaryClip(ClipData.newPlainText("Text", text))
+    // Android 13+ automatically shows a system clipboard confirmation overlay
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+      showToast(toastMessage)
+    }
   }
 
   fun copyActiveUrl() {
-    copyTextToClipboard(activeTab().url)
+    copyTextToClipboard(activeTab().url, "URL copied")
   }
 
   fun openInSystemBrowser() {
@@ -614,8 +740,15 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       }
       appContext.startActivity(intent)
     } catch (_: Throwable) {
-      showToast("No external browser available")
+      showToast("No external browser found")
     }
+  }
+
+  fun translateActivePage() {
+    val url = activeTab().url
+    if (!UrlValidator.isSafeWebUrl(url)) return
+    val encoded = URLEncoder.encode(url, StandardCharsets.UTF_8.name())
+    navigateActiveTab("https://translate.google.com/translate?sl=auto&tl=en&u=$encoded")
   }
 
   fun shareUrl(url: String) {
@@ -624,7 +757,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       type = "text/plain"
       putExtra(Intent.EXTRA_TEXT, url)
     }
-    val chooser = Intent.createChooser(intent, "Share link").apply {
+    val chooser = Intent.createChooser(intent, "Share").apply {
       addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     appContext.startActivity(chooser)
@@ -669,7 +802,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         showToast("Bookmark removed")
       } else {
         db.upsertBookmark(tab.title, tab.url)
-        showToast("Bookmark saved locally")
+        showToast("Bookmarked")
       }
       _bookmarks.value = db.getBookmarks()
     }
@@ -752,7 +885,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     webViewPool.getLiveWebView(_activeTabId.value)?.clearMatches()
   }
 
-  // Reader mode
+  // Reader Mode & Page Source
   fun toggleReaderMode() {
     if (_readerArticle.value != null) {
       _readerArticle.value = null
@@ -762,7 +895,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     if (tab.url.isBlank()) return
     webViewPool.extractReaderArticle(tab.id, tab.url) { article ->
       if (article == null) {
-        showToast("No readable article text found")
+        showToast("No readable text found")
       } else {
         _readerArticle.value = article
       }
@@ -771,6 +904,22 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   fun closeReaderMode() {
     _readerArticle.value = null
+  }
+
+  fun openPageSource() {
+    val tab = activeTab()
+    if (tab.url.isBlank()) return
+    webViewPool.extractPageSource(tab.id) { html ->
+      if (html == null) {
+        showToast("Source unavailable")
+      } else {
+        _pageSource.value = tab.url to html
+      }
+    }
+  }
+
+  fun closePageSource() {
+    _pageSource.value = null
   }
 
   // Permissions & External links
@@ -811,7 +960,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       }
       appContext.startActivity(intent)
     } catch (_: Throwable) {
-      showToast("No app found to handle ${prompt.scheme}:")
+      showToast("No app for ${prompt.scheme}:")
     }
   }
 
@@ -826,6 +975,23 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     pair.second?.onCustomViewHidden()
   }
 
+  // Custom block rules
+  fun addCustomBlockedHost(rawHost: String): Boolean {
+    val normalized = TrackerBlocker.normalizeCustomHost(rawHost)
+    if (normalized.isEmpty()) return false
+    updateSettings { cur ->
+      if (normalized in cur.customBlockedHosts) cur
+      else cur.copy(customBlockedHosts = cur.customBlockedHosts + normalized)
+    }
+    return true
+  }
+
+  fun removeCustomBlockedHost(host: String) {
+    updateSettings { cur ->
+      cur.copy(customBlockedHosts = cur.customBlockedHosts.filterNot { it == host })
+    }
+  }
+
   // Settings
   fun updateSettings(transform: (SettingsState) -> SettingsState) {
     val updated = transform(_settings.value)
@@ -833,7 +999,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     settingsRepo.saveSettings(updated)
     webViewPool.applySettingsToAll(updated) { id ->
       val t = tabById(id)
-      (t?.isPrivate == true) to (t?.isDesktopMode == true)
+      (t?.isPrivate == true) to (t?.userAgentMode ?: UserAgentMode.MOBILE)
     }
   }
 
@@ -850,7 +1016,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     if (options.clearHistory) {
       clearAllHistory()
     }
-    showToast("Selected browsing data cleared")
+    showToast("Data cleared")
   }
 
   fun setOverlay(overlay: ActiveOverlay) {

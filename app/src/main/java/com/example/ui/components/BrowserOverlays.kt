@@ -13,8 +13,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -250,7 +252,7 @@ fun NewTabHomeView(
           Spacer(modifier = Modifier.width(8.dp))
           Text(
             text = if (isPrivate) {
-              "Ephemeral session · Zero trace on exit"
+              "Ephemeral session · Zero trace"
             } else {
               "HTTPS-Only · ${stringResource(R.string.home_trackers_blocked, trackersBlockedCount)}"
             },
@@ -258,17 +260,6 @@ fun NewTabHomeView(
             color = MaterialTheme.colorScheme.onSurfaceVariant
           )
         }
-      }
-
-      if (isPrivate) {
-        Spacer(modifier = Modifier.height(10.dp))
-        Text(
-          text = stringResource(R.string.tabs_private_banner),
-          style = MaterialTheme.typography.labelSmall,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-          textAlign = TextAlign.Center,
-          modifier = Modifier.padding(horizontal = 12.dp)
-        )
       }
 
       Spacer(modifier = Modifier.height(22.dp))
@@ -726,7 +717,7 @@ fun ReaderModeOverlay(
   val subColor = if (darkReading) Color(0xFF94A3B8) else Color(0xFF64748B)
 
   Surface(color = bgColor, modifier = Modifier.fillMaxSize()) {
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
       Surface(
         color = bgColor,
         tonalElevation = 1.dp,
@@ -803,6 +794,67 @@ fun ReaderModeOverlay(
           )
         }
       }
+    }
+  }
+}
+
+@Composable
+fun PageSourceOverlay(
+  pageUrl: String,
+  htmlSource: String,
+  onCopy: (String) -> Unit,
+  onClose: () -> Unit
+) {
+  BackHandler { onClose() }
+  Surface(
+    color = MaterialTheme.colorScheme.background,
+    modifier = Modifier.fillMaxSize()
+  ) {
+    Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+      Surface(
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth()
+      ) {
+        Row(
+          modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Icon(FeatherIcons.CodeSource, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+          Spacer(modifier = Modifier.width(8.dp))
+          Column(modifier = Modifier.weight(1f)) {
+            Text(stringResource(R.string.action_view_source), style = MaterialTheme.typography.titleMedium)
+            Text(
+              UrlValidator.extractHost(pageUrl),
+              style = MaterialTheme.typography.labelSmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis
+            )
+          }
+          IconButton(
+            onClick = { onCopy(htmlSource) },
+            modifier = Modifier.minimumInteractiveComponentSize()
+          ) {
+            Icon(FeatherIcons.Copy, contentDescription = "Copy source")
+          }
+          IconButton(
+            onClick = onClose,
+            modifier = Modifier.minimumInteractiveComponentSize()
+          ) {
+            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.reader_close))
+          }
+        }
+      }
+      Text(
+        text = htmlSource,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onBackground,
+        modifier = Modifier
+          .fillMaxSize()
+          .verticalScroll(rememberScrollState())
+          .padding(14.dp)
+      )
     }
   }
 }

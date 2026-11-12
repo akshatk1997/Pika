@@ -52,7 +52,7 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun fullMainActivityStartPageTabsAndMenuNavigation() {
+  fun fullMainActivityStartPageTabsAndQuickMenuNavigation() {
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("Pika").assertIsDisplayed()
     composeTestRule.onNodeWithTag("home_search_input").performTextInput("privacy")
@@ -75,5 +75,16 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithTag("security_badge_button").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("Private tab:", substring = true).assertIsDisplayed()
+    composeTestRule.onNodeWithText("Done").performClick()
+    composeTestRule.waitForIdle()
+
+    // Open Quick Action Grid Menu and navigate to Settings
+    composeTestRule.onNodeWithTag("nav_menu_button").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("Night Web").assertIsDisplayed()
+    composeTestRule.onNodeWithText("No Images").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Settings").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("Pika Privacy Core").assertIsDisplayed()
   }
 }

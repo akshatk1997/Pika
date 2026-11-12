@@ -24,11 +24,13 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -36,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -58,6 +61,8 @@ import com.example.model.BookmarkItem
 import com.example.model.DownloadRecord
 import com.example.model.DownloadStatus
 import com.example.model.HistoryItem
+import com.example.model.SniffedMediaType
+import com.example.model.SniffedResource
 import com.example.ui.components.FeatherIcons
 import java.text.DateFormat
 import java.util.Date
@@ -303,7 +308,7 @@ fun HistoryScreen(
         Spacer(modifier = Modifier.height(12.dp))
         if (history.isEmpty()) {
           Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No browsing history", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("No history", color = MaterialTheme.colorScheme.onSurfaceVariant)
           }
         } else {
           LazyColumn(
@@ -356,6 +361,7 @@ fun HistoryScreen(
 fun DownloadsScreen(
   downloads: List<DownloadRecord>,
   onCancel: (String) -> Unit,
+  onRetry: (DownloadRecord) -> Unit,
   onOpen: (DownloadRecord) -> Unit,
   onReveal: (DownloadRecord) -> Unit,
   onClearAll: () -> Unit,
@@ -420,6 +426,13 @@ fun DownloadsScreen(
                       ) {
                         Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.download_cancel))
                       }
+                    } else if (dl.status == DownloadStatus.FAILED || dl.status == DownloadStatus.CANCELLED) {
+                      IconButton(
+                        onClick = { onRetry(dl) },
+                        modifier = Modifier.minimumInteractiveComponentSize()
+                      ) {
+                        Icon(Icons.Filled.Refresh, contentDescription = "Retry download")
+                      }
                     }
                   }
                   if (dl.status == DownloadStatus.DOWNLOADING) {
@@ -449,6 +462,113 @@ fun DownloadsScreen(
                   if (!dl.errorMessage.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(dl.errorMessage, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ResourcesScreen(
+  resources: List<SniffedResource>,
+  onDownloadResource: (SniffedResource) -> Unit,
+  onCopyUrl: (String) -> Unit,
+  onClose: () -> Unit
+) {
+  BackHandler { onClose() }
+  var selectedType by remember { mutableStateOf<SniffedMediaType?>(null) }
+  val filtered = remember(resources, selectedType) {
+    if (selectedType == null) resources else resources.filter { it.type == selectedType }
+  }
+
+  Scaffold(
+    topBar = {
+      TopAppBar(
+        title = { Text("${stringResource(R.string.action_resources)} (${resources.size})") },
+        navigationIcon = {
+          IconButton(onClick = onClose, modifier = Modifier.minimumInteractiveComponentSize()) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
+          }
+        }
+      )
+    }
+  ) { padding ->
+    Column(
+      modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
+      horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+      Column(modifier = Modifier.widthIn(max = 720.dp).fillMaxSize()) {
+        Row(
+          horizontalArrangement = Arrangement.spacedBy(8.dp),
+          modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)
+        ) {
+          FilterChip(
+            selected = selectedType == null,
+            onClick = { selectedType = null },
+            label = { Text("All") }
+          )
+          SniffedMediaType.entries.forEach { t ->
+            FilterChip(
+              selected = selectedType == t,
+              onClick = { selectedType = if (selectedType == t) null else t },
+              label = { Text(t.label) }
+            )
+          }
+        }
+
+        if (filtered.isEmpty()) {
+          Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("No media or files detected on this page", color = MaterialTheme.colorScheme.onSurfaceVariant)
+          }
+        } else {
+          LazyColumn(
+            contentPadding = PaddingValues(bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+          ) {
+            items(filtered, key = { it.url }) { res ->
+              Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier.fillMaxWidth()
+              ) {
+                Row(
+                  modifier = Modifier.padding(12.dp),
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer
+                  ) {
+                    Text(
+                      text = res.type.label,
+                      style = MaterialTheme.typography.labelSmall,
+                      fontWeight = FontWeight.SemiBold,
+                      color = MaterialTheme.colorScheme.onPrimaryContainer,
+                      modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                  }
+                  Spacer(modifier = Modifier.width(10.dp))
+                  Column(modifier = Modifier.weight(1f)) {
+                    Text(res.fileName, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(res.host, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                  }
+                  IconButton(
+                    onClick = { onCopyUrl(res.url) },
+                    modifier = Modifier.minimumInteractiveComponentSize()
+                  ) {
+                    Icon(FeatherIcons.Copy, contentDescription = stringResource(R.string.cd_copy_url))
+                  }
+                  IconButton(
+                    onClick = { onDownloadResource(res) },
+                    modifier = Modifier.minimumInteractiveComponentSize()
+                  ) {
+                    Icon(FeatherIcons.Download, contentDescription = stringResource(R.string.download_allow))
                   }
                 }
               }

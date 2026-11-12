@@ -9,10 +9,13 @@ import android.net.http.SslError
 import android.os.Build
 import android.os.Bundle
 import android.os.Message
+import android.print.PrintAttributes
+import android.print.PrintManager
 import android.view.View
 import android.webkit.CookieManager
 import android.webkit.GeolocationPermissions
 import android.webkit.PermissionRequest
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.SslErrorHandler
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -29,12 +32,16 @@ import com.example.model.PageError
 import com.example.model.PageErrorType
 import com.example.model.ReaderArticle
 import com.example.model.SettingsState
+import com.example.model.SniffedResource
+import com.example.model.ThemeMode
+import com.example.model.UserAgentMode
 import com.example.model.WebPermissionKind
 import com.example.security.TrackerBlocker
 import com.example.security.UrlValidator
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.util.LinkedHashMap
+import java.util.concurrent.ConcurrentHashMap
 
 interface WebViewCallbacks {
   fun onPageStarted(tabId: String, url: String)
@@ -42,10 +49,12 @@ interface WebViewCallbacks {
   fun onProgressChanged(tabId: String, progress: Int)
   fun onTitleReceived(tabId: String, title: String)
   fun onTrackerBlocked(tabId: String)
+  fun onResourceSniffed(tabId: String, count: Int)
   fun onHttpBlockedByHttpsOnly(tabId: String, url: String)
   fun onBlockedScheme(tabId: String, url: String, scheme: String)
   fun onExternalSchemePrompt(tabId: String, url: String, scheme: String)
   fun onPageError(tabId: String, error: PageError)
+  fun onRenderProcessCrashed(tabId: String)
   fun onDownloadRequested(tabId: String, url: String, contentDisposition: String?, mimeType: String?, contentLength: Long)
   fun onPermissionPrompt(tabId: String, origin: String, kind: WebPermissionKind, detail: String, onDecision: (Boolean) -> Unit)
   fun onFileChooserRequested(callback: ValueCallback<Array<android.net.Uri>>?, acceptTypes: Array<String>?)
@@ -55,8 +64,10 @@ interface WebViewCallbacks {
 }
 
 /**
- * Manages hardened WebView instances with an LRU pool (max 2 live WebViews in RAM).
- * Reads live SettingsState dynamically via settingsProvider so changes take effect immediately.
+ * Hardened Android System WebView pool (max 2 live WebViews in RAM).
+ * Supports Android 7–16+ compatibility (RenderProcessGone recovery, algorithmic darkening,
+ * safe FileProvider/SAF integration), Via/X power tools (UA switching, Night Web CSS,
+ * No-Image saver, Resource Sniffer, Page Source, PDF Print), and zero JS bridges.
  */
 class WebViewPool(
   private val context: Context,
@@ -66,12 +77,16 @@ class WebViewPool(
 
   companion object {
     private const val MAX_LIVE_WEBVIEWS = 2
+    private const val MAX_SNIFFED_PER_TAB = 50
     private const val DESKTOP_USER_AGENT =
-      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
+    private const val IPHONE_USER_AGENT =
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1"
   }
 
   private val liveViews = object : LinkedHashMap<String, WebView>(4, 0.75f, true) {}
   private val savedStates = HashMap<String, Bundle>()
+  private val sniffedResourcesByTab = ConcurrentHashMap<String, LinkedHashMap<String, SniffedResource>>()
   private val defaultUserAgent: String by lazy {
     try {
       WebSettings.getDefaultUserAgent(context)
@@ -83,12 +98,12 @@ class WebViewPool(
   fun getOrCreateWebView(
     tabId: String,
     isPrivate: Boolean,
-    isDesktopMode: Boolean,
+    userAgentMode: UserAgentMode,
     approvedHttpHosts: Set<String>
   ): WebView {
     val settingsState = settingsProvider()
     liveViews[tabId]?.let { existing ->
-      applySettings(existing, isPrivate, isDesktopMode, settingsState)
+      applySettings(existing, isPrivate, userAgentMode, settingsState)
       return existing
     }
 
@@ -106,7 +121,7 @@ class WebViewPool(
       }
     }
 
-    val webView = createSecuredWebView(tabId, isPrivate, isDesktopMode, approvedHttpHosts)
+    val webView = createSecuredWebView(tabId, isPrivate, userAgentMode, approvedHttpHosts)
     savedStates.remove(tabId)?.let { bundle ->
       webView.restoreState(bundle)
     }
@@ -116,8 +131,18 @@ class WebViewPool(
 
   fun getLiveWebView(tabId: String): WebView? = liveViews[tabId]
 
+  fun getSniffedResources(tabId: String): List<SniffedResource> {
+    val map = sniffedResourcesByTab[tabId] ?: return emptyList()
+    return synchronized(map) { map.values.toList().reversed() }
+  }
+
+  fun clearSniffedResources(tabId: String) {
+    sniffedResourcesByTab.remove(tabId)
+  }
+
   fun loadUrl(tabId: String, url: String) {
     val webView = liveViews[tabId] ?: return
+    sniffedResourcesByTab.remove(tabId)
     val headers = if (settingsProvider().doNotTrackEnabled) {
       mapOf("DNT" to "1", "Sec-GPC" to "1")
     } else {
@@ -126,9 +151,9 @@ class WebViewPool(
     webView.loadUrl(url, headers)
   }
 
-  fun applyDesktopMode(tabId: String, isPrivate: Boolean, isDesktopMode: Boolean) {
+  fun applyUserAgentMode(tabId: String, isPrivate: Boolean, userAgentMode: UserAgentMode) {
     val webView = liveViews[tabId] ?: return
-    applySettings(webView, isPrivate, isDesktopMode, settingsProvider())
+    applySettings(webView, isPrivate, userAgentMode, settingsProvider())
     if (!webView.url.isNullOrBlank()) {
       webView.reload()
     }
@@ -136,16 +161,18 @@ class WebViewPool(
 
   fun applySettingsToAll(
     settingsState: SettingsState,
-    tabStateLookup: (String) -> Pair<Boolean, Boolean>
+    tabStateLookup: (String) -> Pair<Boolean, UserAgentMode>
   ) {
     for ((id, wv) in liveViews) {
-      val (isPriv, isDesktop) = tabStateLookup(id)
-      applySettings(wv, isPriv, isDesktop, settingsState)
+      val (isPriv, uaMode) = tabStateLookup(id)
+      applySettings(wv, isPriv, uaMode, settingsState)
+      applyNightWebCss(wv, settingsState.nightWebMode)
     }
   }
 
   fun destroyTab(tabId: String) {
     savedStates.remove(tabId)
+    sniffedResourcesByTab.remove(tabId)
     liveViews.remove(tabId)?.let { wv ->
       wv.stopLoading()
       wv.onPause()
@@ -187,6 +214,40 @@ class WebViewPool(
       }
       WebViewDatabase.getInstance(context).clearFormData()
     } catch (_: Throwable) {
+    }
+  }
+
+  fun printCurrentPage(activityContext: Context, tabId: String, title: String): Boolean {
+    val webView = liveViews[tabId] ?: return false
+    return try {
+      val printManager = activityContext.getSystemService(Context.PRINT_SERVICE) as? PrintManager ?: return false
+      val jobName = UrlValidator.sanitizeDisplayText(title, 64).ifEmpty { "Pika_Page" }
+      val adapter = webView.createPrintDocumentAdapter(jobName)
+      printManager.print(jobName, adapter, PrintAttributes.Builder().build())
+      true
+    } catch (_: Throwable) {
+      false
+    }
+  }
+
+  fun extractPageSource(tabId: String, onResult: (String?) -> Unit) {
+    val webView = liveViews[tabId]
+    if (webView == null) {
+      onResult(null)
+      return
+    }
+    val js = "(function(){try{return document.documentElement?document.documentElement.outerHTML:'';}catch(e){return '';}})();"
+    webView.evaluateJavascript(js) { rawJson ->
+      try {
+        if (rawJson.isNullOrBlank() || rawJson == "null") {
+          onResult(null)
+          return@evaluateJavascript
+        }
+        val unwrapped = JSONObject("{\"v\":$rawJson}").getString("v")
+        onResult(unwrapped.take(90_000).ifBlank { null })
+      } catch (_: Throwable) {
+        onResult(null)
+      }
     }
   }
 
@@ -257,15 +318,38 @@ class WebViewPool(
 
   fun destroyAll() {
     savedStates.clear()
+    sniffedResourcesByTab.clear()
     val ids = liveViews.keys.toList()
     ids.forEach { destroyTab(it) }
+  }
+
+  private fun applyNightWebCss(webView: WebView, enabled: Boolean) {
+    if (!settingsProvider().javascriptEnabled) return
+    val js = if (enabled) {
+      """
+      (function(){
+        var id='pika-night-style';
+        if(document.getElementById(id))return;
+        var s=document.createElement('style');
+        s.id=id;
+        s.textContent='html{filter:invert(0.92) hue-rotate(180deg)!important;background:#111!important;color-scheme:dark!important;}img,video,picture,canvas,svg,iframe{filter:invert(1) hue-rotate(180deg)!important;}';
+        (document.head||document.documentElement).appendChild(s);
+      })();
+      """.trimIndent()
+    } else {
+      "(function(){var s=document.getElementById('pika-night-style');if(s)s.remove();})();"
+    }
+    try {
+      webView.evaluateJavascript(js, null)
+    } catch (_: Throwable) {
+    }
   }
 
   @SuppressLint("SetJavaScriptEnabled")
   private fun applySettings(
     webView: WebView,
     isPrivate: Boolean,
-    isDesktopMode: Boolean,
+    userAgentMode: UserAgentMode,
     settingsState: SettingsState
   ) {
     webView.settings.apply {
@@ -288,14 +372,20 @@ class WebViewPool(
       displayZoomControls = false
       useWideViewPort = true
       loadWithOverviewMode = true
-      userAgentString = if (isDesktopMode) DESKTOP_USER_AGENT else defaultUserAgent.ifEmpty { null }
-      textZoom = if (isDesktopMode) 90 else settingsState.textZoomPercent
+      loadsImagesAutomatically = !settingsState.noImageMode
+      blockNetworkImage = settingsState.noImageMode
+      userAgentString = when (userAgentMode) {
+        UserAgentMode.DESKTOP -> DESKTOP_USER_AGENT
+        UserAgentMode.IPHONE -> IPHONE_USER_AGENT
+        UserAgentMode.MOBILE -> defaultUserAgent.ifEmpty { null }
+      }
+      textZoom = if (userAgentMode == UserAgentMode.DESKTOP) 90 else settingsState.textZoomPercent
       cacheMode = if (isPrivate) WebSettings.LOAD_NO_CACHE else WebSettings.LOAD_DEFAULT
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         safeBrowsingEnabled = true
       }
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        isAlgorithmicDarkeningAllowed = settingsState.themeMode == com.example.model.ThemeMode.DARK
+        isAlgorithmicDarkeningAllowed = settingsState.nightWebMode || settingsState.themeMode == ThemeMode.DARK
       }
     }
 
@@ -307,11 +397,11 @@ class WebViewPool(
   private fun createSecuredWebView(
     tabId: String,
     isPrivate: Boolean,
-    isDesktopMode: Boolean,
+    userAgentMode: UserAgentMode,
     approvedHttpHosts: Set<String>
   ): WebView {
     val webView = WebView(context)
-    applySettings(webView, isPrivate, isDesktopMode, settingsProvider())
+    applySettings(webView, isPrivate, userAgentMode, settingsProvider())
 
     webView.setOnLongClickListener { v ->
       val wv = v as? WebView ?: return@setOnLongClickListener false
@@ -352,6 +442,11 @@ class WebViewPool(
           return true
         }
         val host = UrlValidator.extractHost(url)
+        val customSet = currentSettings.customBlockedHosts.toSet()
+        if (customSet.isNotEmpty() && TrackerBlocker.isHostMatchingSet(host, customSet)) {
+          callbacks.onBlockedScheme(tabId, url, "blocked-host")
+          return true
+        }
         if (currentSettings.httpsOnlyEnabled && UrlValidator.isHttpUrl(url) && host !in approvedHttpHosts) {
           callbacks.onHttpBlockedByHttpsOnly(tabId, url)
           return true
@@ -367,10 +462,22 @@ class WebViewPool(
         if (!UrlValidator.isSafeWebUrl(reqUrl)) {
           return emptyBlockedResponse()
         }
+        val currentSettings = settingsProvider()
         val pageHost = UrlValidator.extractHost(view?.url)
-        if (TrackerBlocker.shouldBlockRequest(reqUrl, pageHost, settingsProvider().trackerBlockingEnabled)) {
+        val customSet = currentSettings.customBlockedHosts.toSet()
+        if (TrackerBlocker.shouldBlockRequest(reqUrl, pageHost, currentSettings.trackerBlockingEnabled, customSet)) {
           callbacks.onTrackerBlocked(tabId)
           return emptyBlockedResponse()
+        }
+        TrackerBlocker.inferSniffedResource(reqUrl)?.let { res ->
+          val map = sniffedResourcesByTab.getOrPut(tabId) { LinkedHashMap() }
+          val newCount = synchronized(map) {
+            if (!map.containsKey(res.url) && map.size < MAX_SNIFFED_PER_TAB) {
+              map[res.url] = res
+            }
+            map.size
+          }
+          callbacks.onResourceSniffed(tabId, newCount)
         }
         return null
       }
@@ -383,6 +490,9 @@ class WebViewPool(
 
       override fun onPageFinished(view: WebView?, url: String?) {
         if (url != null && view != null) {
+          if (settingsProvider().nightWebMode) {
+            applyNightWebCss(view, true)
+          }
           callbacks.onPageFinished(
             tabId = tabId,
             url = url,
@@ -446,6 +556,18 @@ class WebViewPool(
             reason = UrlValidator.sanitizeDisplayText(reason, 180)
           )
         )
+      }
+
+      override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
+        liveViews.remove(tabId)?.let { dead ->
+          (dead.parent as? android.view.ViewGroup)?.removeView(dead)
+          try {
+            dead.destroy()
+          } catch (_: Throwable) {
+          }
+        }
+        callbacks.onRenderProcessCrashed(tabId)
+        return true
       }
     }
 

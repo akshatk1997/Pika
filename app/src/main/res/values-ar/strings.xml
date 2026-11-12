@@ -29,6 +29,11 @@
     <string name="action_open_external">فتح في متصفح النظام</string>
     <string name="action_share">مشاركة الرابط</string>
     <string name="action_settings">الإعدادات</string>
+    <string name="action_resources">الموارد</string>
+    <string name="action_save_pdf">حفظ PDF</string>
+    <string name="action_view_source">المصدر</string>
+    <string name="action_translate">ترجمة</string>
+    <string name="action_pin_home">اختصار</string>
 
     <string name="tabs_title">التبويبات</string>
     <string name="tabs_normal">عادي</string>

@@ -1,13 +1,17 @@
 package com.example
 
 import com.example.data.BookmarkImportExport
+import com.example.download.DownloadController
 import com.example.model.BookmarkItem
 import com.example.model.SearchEngine
+import com.example.model.SniffedMediaType
 import com.example.security.ResolvedNavigation
 import com.example.security.TrackerBlocker
 import com.example.security.UrlValidator
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -58,11 +62,43 @@ class FeatherSecurityAndDataTest {
   }
 
   @Test
-  fun trackerBlockerBlocksKnownThirdPartyTrackersOnly() {
+  fun trackerBlockerAndCustomRulesWork() {
     assertTrue(TrackerBlocker.shouldBlockRequest("https://www.google-analytics.com/analytics.js", "example.com", true))
     assertTrue(TrackerBlocker.shouldBlockRequest("https://cdn.segment.com/analytics.js", "news.ycombinator.com", true))
     assertFalse(TrackerBlocker.shouldBlockRequest("https://example.com/app.js", "example.com", true))
     assertFalse(TrackerBlocker.shouldBlockRequest("https://www.google-analytics.com/analytics.js", "example.com", false))
+
+    val normalized = TrackerBlocker.normalizeCustomHost("HTTPS://Ads.CustomHost.com/path")
+    assertEquals("ads.customhost.com", normalized)
+    assertTrue(
+      TrackerBlocker.shouldBlockRequest(
+        "https://sub.ads.customhost.com/banner.js",
+        "example.com",
+        enabled = false,
+        customBlockedHosts = setOf(normalized)
+      )
+    )
+  }
+
+  @Test
+  fun mediaSnifferClassifiesValidResourcesOnly() {
+    val video = TrackerBlocker.inferSniffedResource("https://cdn.example.org/videos/clip.mp4?token=1")
+    assertNotNull(video)
+    assertEquals(SniffedMediaType.VIDEO, video?.type)
+    assertEquals("clip.mp4", video?.fileName)
+
+    val pdf = TrackerBlocker.inferSniffedResource("https://docs.example.org/manual.pdf")
+    assertNotNull(pdf)
+    assertEquals(SniffedMediaType.DOCUMENT, pdf?.type)
+
+    assertNull(TrackerBlocker.inferSniffedResource("https://example.org/index.html"))
+    assertNull(TrackerBlocker.inferSniffedResource("javascript:alert(1)"))
+  }
+
+  @Test
+  fun downloadMimeSanitizerStripsCharsetParams() {
+    assertEquals("application/pdf", DownloadController.sanitizeMimeType("application/pdf; charset=utf-8"))
+    assertEquals("application/octet-stream", DownloadController.sanitizeMimeType(""))
   }
 
   @Test
