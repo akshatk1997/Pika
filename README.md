@@ -1,14 +1,23 @@
-# Pika
+# Bat
 
-**Pika** is a minimal, privacy-first, security-hardened Android web browser shell built around the operating system's maintained **Android System WebView** (`android.webkit.WebView`) — with **zero bundled rendering engine**, **zero telemetry**, **zero dangerous Android permissions**, and a verified **1.29 MB (`1,286,849` bytes)** R8-minified release APK.
+**Bat** is a minimal, privacy-first, security-hardened Android web browser shell built around the operating system's maintained **Android System WebView** (`android.webkit.WebView`) — with **zero bundled rendering engine**, **zero telemetry**, **zero dangerous Android permissions**, and a **signed R8-minified release APK strictly under 2 MB**.
 
-> **Engine Statement:** Pika is **not** a standalone browser rendering engine. It does not bundle Chromium, Blink, Gecko, or WebKit. All web rendering, TLS/HTTP transport inside WebView, and sandboxing are delegated to the OS-maintained **Android System WebView**.
+> **Engine Statement:** Bat is **not** a standalone browser rendering engine. It does not bundle Chromium, Blink, Gecko, or WebKit. All web rendering, TLS/HTTP transport inside WebView, and sandboxing are delegated to the OS-maintained **Android System WebView**.
+
+---
+
+## Version History
+
+| Version | Version Code | Target Platforms & OS | Key Highlights |
+|---|---:|---|---|
+| **v1.1.0** | `3` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Rebranded to **Bat**, custom 3D Batman-inspired bat mascot icon + Material You monochrome crest, adaptive tablet `NavigationRail` + single-row wide toolbar + multi-column grids, hardware keyboard shortcuts, Android 8–17 compatibility fixes |
+| **v1.0.0** | `1–2` | Android 7.0–16 | Initial Feather/Pika browser shell, Android Keystore AES-256-GCM settings, ad/tracker shield, Via/X power tools (< 2 MB) |
 
 ---
 
 ## Assumed Target Defaults
 
-Because no platform overrides were supplied prior to implementation, Pika targets:
+Because no platform overrides were supplied prior to implementation, Bat targets:
 1. **Target Platform:** Android Phone, Tablet, Foldable & Desktop Windowing (`resizeableActivity="true"`, adaptive `NavigationRail` + single-row wide toolbar + multi-column grids).
 2. **Minimum / Target OS:** Android 8.0 (`minSdk = 26`) through Android 17 forward-compatible edge-to-edge & large-screen behavior (`targetSdk = 36`, `compileSdk = 36.1`).
 3. **Language & UI:** Kotlin + Jetpack Compose (Material 3) with zero bloated UI frameworks or icon packs.
@@ -17,11 +26,11 @@ Because no platform overrides were supplied prior to implementation, Pika target
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Pika-v1.0.0.apk`](releases/Pika-v1.0.0.apk) and attached to GitHub Releases (`v1.0.0`).
+Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Bat-v1.1.0.apk`](releases/Bat-v1.1.0.apk) and attached to GitHub Releases (`v1.1.0`).
 
 ---
 
-## Features (v1.0)
+## Features (v1.1.0)
 
 - **Address Bar & Swipe Gestures:** Top or Bottom toolbar placement, horizontal omnibox swipe to switch tabs, direct URL entry, search engine choice (DuckDuckGo, Startpage, Qwant, Brave, Wikipedia, Google, custom HTTPS), live HTTPS/HTTP/Private badge, copy, share, and external browser handoff.
 - **Power Tools (Via / X Style):** Compact 4-column Quick Grid Menu with **Media & Resource Sniffer**, **Night Web** page darkening, **No-Image** data-saver mode, **Desktop / iPhone / Mobile** User-Agent switcher, **Immersive Fullscreen**, **Save Page as PDF** (`PrintManager`), **View Page Source**, **Translate**, and **Pin Shortcut to Home Screen**.
@@ -46,7 +55,7 @@ Pre-built signed release APK (< 2 MB) is tracked directly in this repository at 
 
 ## Privacy Policy & Network Transparency
 
-- **Zero Telemetry & Zero Analytics:** Pika contains no analytics SDKs, crash reporters, ad SDKs, remote-config endpoints, or update checkers.
+- **Zero Telemetry & Zero Analytics:** Bat contains no analytics SDKs, crash reporters, ad SDKs, remote-config endpoints, or update checkers.
 - **Zero Background Network Activity:** No background services, polling, or pre-fetching occur. Network requests happen only when you navigate, search, or explicitly approve a download.
 - **Tracking Protection (Default-On):** Strips common tracking query parameters (`utm_*`, `fbclid`, `gclid`, `mc_eid`, `igshid`, etc.), blocks known third-party tracker/analytics hosts in `shouldInterceptRequest`, blocks third-party cookies by default, and sends `DNT: 1` / `Sec-GPC: 1` headers (with an explicit Settings notice explaining that websites are not forced to honor DNT).
 - **Declared Android Permissions:**
@@ -61,7 +70,7 @@ Pre-built signed release APK (< 2 MB) is tracked directly in this repository at 
 | Component | Budget | Measured (Release APK) |
 |---|---:|---:|
 | Application binary (`classes.dex` + `lib/` + builtins) | 900 KB | ~1,111 KB compressed (`classes.dex`: 1,037 KB + `libandroidx.graphics.path.so`: 37 KB + kotlin builtins: 12 KB) |
-| UI assets | 200 KB | ~7 KB (`pika_icon_fg_1794511007288.jpg`) |
+| UI assets | 200 KB | ~15 KB (`bat_icon_fg.png` 3D mascot crest) |
 | Icons | 100 KB | ~71 KB across 10 mipmap PNGs (zero `material-icons-extended`) |
 | Localized strings & resources (`resources.arsc` + XML) | 200 KB | ~21 KB (`en` + `ar` RTL only via `localeFilters`) |
 | Configuration and metadata | 100 KB | ~8 KB |
@@ -101,7 +110,7 @@ Pre-built signed release APK (< 2 MB) is tracked directly in this repository at 
 ## Known Limitations
 
 - Web rendering features, codec support, and OS-level sandboxing depend on the installed version of **Android System WebView**.
-- Android `WebView` instances share a single process-wide `CookieManager` / `WebStorage` namespace across tabs; therefore, Pika enforces strict session isolation by disabling persistent cookies/DOM storage in private tabs and performing a full wipe (`removeAllCookies`, `WebStorage.deleteAllData`, cache/history/form-data purge) when private sessions end.
+- Android `WebView` instances share a single process-wide `CookieManager` / `WebStorage` namespace across tabs; therefore, Bat enforces strict session isolation by disabling persistent cookies/DOM storage in private tabs and performing a full wipe (`removeAllCookies`, `WebStorage.deleteAllData`, cache/history/form-data purge) when private sessions end.
 - Hardware permissions (Camera, Microphone, GPS) are intentionally omitted from `AndroidManifest.xml` for minimal privilege; sites requesting them show a consent/policy prompt and cannot access device hardware.
 
 ## Roadmap

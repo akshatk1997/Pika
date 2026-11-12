@@ -221,7 +221,7 @@ class WebViewPool(
     val webView = liveViews[tabId] ?: return false
     return try {
       val printManager = activityContext.getSystemService(Context.PRINT_SERVICE) as? PrintManager ?: return false
-      val jobName = UrlValidator.sanitizeDisplayText(title, 64).ifEmpty { "Pika_Page" }
+      val jobName = UrlValidator.sanitizeDisplayText(title, 64).ifEmpty { "Bat_Page" }
       val adapter = webView.createPrintDocumentAdapter(jobName)
       printManager.print(jobName, adapter, PrintAttributes.Builder().build())
       true
@@ -328,7 +328,7 @@ class WebViewPool(
     val js = if (enabled) {
       """
       (function(){
-        var id='pika-night-style';
+        var id='bat-night-style';
         if(document.getElementById(id))return;
         var s=document.createElement('style');
         s.id=id;
@@ -337,7 +337,7 @@ class WebViewPool(
       })();
       """.trimIndent()
     } else {
-      "(function(){var s=document.getElementById('pika-night-style');if(s)s.remove();})();"
+      "(function(){var s=document.getElementById('bat-night-style');if(s)s.remove();})();"
     }
     try {
       webView.evaluateJavascript(js, null)
@@ -611,7 +611,7 @@ class WebViewPool(
           tabId = tabId,
           origin = safeOrigin,
           kind = WebPermissionKind.LOCATION,
-          detail = "Site requested location access (restricted by Pika privacy policy)."
+          detail = "Site requested location access (restricted by Bat privacy policy)."
         ) { allowed ->
           callback?.invoke(origin, allowed, false)
         }

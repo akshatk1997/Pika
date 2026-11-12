@@ -21,7 +21,7 @@ object BookmarkImportExport {
     sb.appendLine("<!DOCTYPE NETSCAPE-Bookmark-file-1>")
     sb.appendLine("<!-- This is an automatically generated file. -->")
     sb.appendLine("<META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html; charset=UTF-8\">")
-    sb.appendLine("<TITLE>Pika Bookmarks</TITLE>")
+    sb.appendLine("<TITLE>Bat Bookmarks</TITLE>")
     sb.appendLine("<H1>Bookmarks</H1>")
     sb.appendLine("<DL><p>")
 

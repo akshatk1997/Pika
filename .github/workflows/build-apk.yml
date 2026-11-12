@@ -1,4 +1,4 @@
-name: Build & Package Pika APK (< 2 MB)
+name: Build & Package Bat APK (< 2 MB)
 
 on:
   push:
@@ -36,15 +36,15 @@ jobs:
         run: |
           keytool -genkeypair -v -keystore "${{ runner.temp }}/release.jks" \
             -storetype PKCS12 -alias upload -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass pika-ci-release-pass -keypass pika-ci-release-pass \
-            -dname "CN=Pika Browser, OU=Mobile, O=Pika, L=Unknown, S=Unknown, C=US"
+            -storepass bat-ci-release-pass -keypass bat-ci-release-pass \
+            -dname "CN=Bat Browser, OU=Mobile, O=Bat, L=Unknown, S=Unknown, C=US"
           keytool -genkeypair -v -keystore debug.keystore \
             -storetype PKCS12 -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass android -keypass android \
             -dname "CN=Android Debug,O=Android,C=US"
           echo "KEYSTORE_PATH=${{ runner.temp }}/release.jks" >> "$GITHUB_ENV"
-          echo "STORE_PASSWORD=pika-ci-release-pass" >> "$GITHUB_ENV"
-          echo "KEY_PASSWORD=pika-ci-release-pass" >> "$GITHUB_ENV"
+          echo "STORE_PASSWORD=bat-ci-release-pass" >> "$GITHUB_ENV"
+          echo "KEY_PASSWORD=bat-ci-release-pass" >> "$GITHUB_ENV"
 
       - name: Run unit & Robolectric tests
         run: gradle :app:testDebugUnitTest --no-daemon
@@ -66,31 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Pika-v1.0.0.apk
+          cp "$APK_PATH" releases/Bat-v1.1.0.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Pika-v1.0.0.apk
+          git add releases/Bat-v1.1.0.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Pika-v1.0.0.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Bat-v1.1.0.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.0.0
+      - name: Create or update GitHub Release v1.1.0
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Pika-v1.0.0.apk)
-          NOTES="Pika Browser v1.0.0 — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Signed Release APK size:** ${SIZE_BYTES} bytes (strictly < 2 MB / 2,097,152 bytes)\n- **Checks:** \`:app:testDebugUnitTest\`, \`:app:lintVitalRelease\`, and \`:app:assembleRelease\` passed."
-          if gh release view v1.0.0 >/dev/null 2>&1; then
-            gh release upload v1.0.0 releases/Pika-v1.0.0.apk --clobber
+          SIZE_BYTES=$(stat -c%s releases/Bat-v1.1.0.apk)
+          NOTES="Bat Browser v1.1.0 (Build 3) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **What's New in v1.1.0:** Rebranded to **Bat** with custom 3D Bat mascot crest launcher icon & monochrome Material You icon; full Android 8.0 (API 26) to Android 17 Phone, Tablet & Foldable compatibility; hardware keyboard shortcuts; Via/X power tools.\n- **Signed Release APK size:** ${SIZE_BYTES} bytes (strictly < 2 MB / 2,097,152 bytes)\n- **Checks:** \`:app:testDebugUnitTest\` (API 26 & 36, Phone & Tablet), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\` passed."
+          if gh release view v1.1.0 >/dev/null 2>&1; then
+            gh release upload v1.1.0 releases/Bat-v1.1.0.apk --clobber
+            gh release edit v1.1.0 --title "Bat v1.1.0 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.0.0 releases/Pika-v1.0.0.apk \
-              --title "Pika v1.0.0 (< 2 MB)" \
+            gh release create v1.1.0 releases/Bat-v1.1.0.apk \
+              --title "Bat v1.1.0 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

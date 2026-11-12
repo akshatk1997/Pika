@@ -815,7 +815,7 @@ fun BrowserScreen(
               SecurityState.SECURE_HTTPS -> "HTTPS encrypted connection."
               SecurityState.PRIVATE -> "Private tab: cookies, cache & history wiped on exit."
               SecurityState.INSECURE_HTTP -> "Unencrypted HTTP connection."
-              SecurityState.HOME -> "Local Pika start page."
+              SecurityState.HOME -> "Local Bat start page."
               SecurityState.ERROR -> "Blocked or failed security checks."
             },
             style = MaterialTheme.typography.bodyMedium

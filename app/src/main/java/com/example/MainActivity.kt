@@ -102,7 +102,7 @@ class MainActivity : ComponentActivity() {
         BrowserScreen(
           viewModel = viewModel,
           onExportBookmarks = {
-            exportBookmarksLauncher.launch("pika-bookmarks.html")
+            exportBookmarksLauncher.launch("bat-bookmarks.html")
           },
           onImportBookmarks = {
             importBookmarksLauncher.launch(arrayOf("text/html", "application/json", "text/plain"))
@@ -203,9 +203,9 @@ class MainActivity : ComponentActivity() {
         return
       }
       val safeLabel = UrlValidator.sanitizeDisplayText(title, 32)
-        .ifEmpty { UrlValidator.extractHost(url).ifEmpty { "Pika Link" } }
+        .ifEmpty { UrlValidator.extractHost(url).ifEmpty { "Bat Link" } }
       val launchIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url), this, MainActivity::class.java)
-      val shortcut = ShortcutInfo.Builder(this, "pika_${url.hashCode()}")
+      val shortcut = ShortcutInfo.Builder(this, "bat_${url.hashCode()}")
         .setShortLabel(safeLabel)
         .setLongLabel(safeLabel)
         .setIcon(Icon.createWithResource(this, R.mipmap.ic_launcher))

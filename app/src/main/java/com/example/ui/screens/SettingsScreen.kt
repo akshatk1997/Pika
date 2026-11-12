@@ -63,6 +63,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.BuildConfig
 import com.example.R
 import com.example.model.ClearDataOptions
 import com.example.model.SearchEngine
@@ -145,12 +146,12 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
               Text(
-                text = "Pika Privacy Core",
+                text = "Bat Privacy Core",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
               )
               Text(
-                text = "Encrypted settings · Zero telemetry · System WebView",
+                text = "v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) · Encrypted · Zero telemetry",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
               )

@@ -26,10 +26,12 @@ class ExampleRobolectricTest {
   val composeTestRule = createAndroidComposeRule<MainActivity>()
 
   @Test
-  fun appNameMatchesPika() {
+  fun appNameMatchesBatAndVersionIsUpdated() {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
-    assertEquals("Pika", appName)
+    assertEquals("Bat", appName)
+    assertEquals("1.1.0", BuildConfig.VERSION_NAME)
+    assertEquals(3, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -54,7 +56,7 @@ class ExampleRobolectricTest {
   @Test
   fun fullMainActivityStartPageTabsAndQuickMenuNavigation() {
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Pika").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Bat").assertIsDisplayed()
     composeTestRule.onNodeWithTag("home_search_input").performTextInput("privacy")
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("home_search_go").assertIsDisplayed()
@@ -85,14 +87,14 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("No Images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Pika Privacy Core").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Bat Privacy Core").assertIsDisplayed()
   }
 
   @Test
   @Config(sdk = [26, 36], qualifiers = "sw600dp-w1024dp-h768dp-xhdpi")
   fun tabletNavigationRailAndAdaptiveTabsWorkAcrossAndroidVersions() {
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Pika").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Bat").assertIsDisplayed()
     // Tablet layout renders persistent NavigationRail shortcuts and single-row top toolbar
     composeTestRule.onNodeWithText("Bookmarks").assertIsDisplayed()
     composeTestRule.onNodeWithText("Downloads").assertIsDisplayed()

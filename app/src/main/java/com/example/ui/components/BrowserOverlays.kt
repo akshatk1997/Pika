@@ -2,6 +2,7 @@ package com.example.ui.components
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -66,10 +67,11 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -85,13 +87,13 @@ import com.example.model.PageErrorType
 import com.example.model.ReaderArticle
 import com.example.security.UrlValidator
 import com.example.ui.FindState
+import com.example.ui.theme.BatMidnight
+import com.example.ui.theme.BatSignalGold
 import com.example.ui.theme.FeatherDangerRed
 import com.example.ui.theme.FeatherMintDark
 import com.example.ui.theme.FeatherPrivateAccent
 import com.example.ui.theme.FeatherSecureGreen
 import com.example.ui.theme.FeatherWarningAmber
-import com.example.ui.theme.PikaCheekRed
-import com.example.ui.theme.PikaElectricGold
 
 @Composable
 fun NewTabHomeView(
@@ -105,7 +107,7 @@ fun NewTabHomeView(
 ) {
   var homeSearch by remember { mutableStateOf("") }
   val primaryAccent = if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.primary
-  val auraAccent = if (isPrivate) FeatherPrivateAccent else PikaElectricGold
+  val auraAccent = if (isPrivate) FeatherPrivateAccent else BatSignalGold
   val secondaryAccent = if (isPrivate) Color(0xFF6366F1) else FeatherMintDark
   val surfaceColor = MaterialTheme.colorScheme.surface
   val outlineColor = MaterialTheme.colorScheme.outline
@@ -152,12 +154,13 @@ fun NewTabHomeView(
     ) {
       Spacer(modifier = Modifier.height(if (isCompactHeight) 6.dp else 18.dp))
 
-      // Hero Emblem (Pika electric-mouse vector crest or Private mask)
-      val crestSize = if (isCompactHeight) 48.dp else 68.dp
+      // Hero Emblem (3D Bat Mascot Crest or Private Mask)
+      val crestSize = if (isCompactHeight) 52.dp else 74.dp
       Surface(
         shape = RoundedCornerShape(if (isCompactHeight) 16.dp else 22.dp),
-        color = if (isPrivate) primaryAccent.copy(alpha = 0.12f) else Color(0xFF111827),
-        border = BorderStroke(1.2.dp, auraAccent.copy(alpha = 0.5f)),
+        color = if (isPrivate) primaryAccent.copy(alpha = 0.12f) else BatMidnight,
+        border = BorderStroke(1.2.dp, auraAccent.copy(alpha = 0.55f)),
+        shadowElevation = 6.dp,
         modifier = Modifier.size(crestSize)
       ) {
         Box(contentAlignment = Alignment.Center) {
@@ -169,59 +172,12 @@ fun NewTabHomeView(
               modifier = Modifier.size(if (isCompactHeight) 24.dp else 34.dp)
             )
           } else {
-            androidx.compose.foundation.Canvas(modifier = Modifier.size(if (isCompactHeight) 32.dp else 44.dp)) {
-              val w = size.width
-              val h = size.height
-              // Left & right pointed ears with dark tips
-              val leftEar = Path().apply {
-                moveTo(w * 0.28f, h * 0.42f)
-                lineTo(w * 0.12f, h * 0.08f)
-                lineTo(w * 0.42f, h * 0.32f)
-                close()
-              }
-              val rightEar = Path().apply {
-                moveTo(w * 0.72f, h * 0.42f)
-                lineTo(w * 0.88f, h * 0.08f)
-                lineTo(w * 0.58f, h * 0.32f)
-                close()
-              }
-              drawPath(leftEar, PikaElectricGold)
-              drawPath(rightEar, PikaElectricGold)
-              // Head oval
-              drawCircle(
-                color = PikaElectricGold,
-                radius = w * 0.31f,
-                center = Offset(w * 0.5f, h * 0.60f)
-              )
-              // Red electric cheeks
-              drawCircle(
-                color = PikaCheekRed,
-                radius = w * 0.075f,
-                center = Offset(w * 0.30f, h * 0.67f)
-              )
-              drawCircle(
-                color = PikaCheekRed,
-                radius = w * 0.075f,
-                center = Offset(w * 0.70f, h * 0.67f)
-              )
-              // Dark expressive eyes
-              drawCircle(
-                color = Color(0xFF111827),
-                radius = w * 0.048f,
-                center = Offset(w * 0.39f, h * 0.55f)
-              )
-              drawCircle(
-                color = Color(0xFF111827),
-                radius = w * 0.048f,
-                center = Offset(w * 0.61f, h * 0.55f)
-              )
-              // Tiny dark nose
-              drawCircle(
-                color = Color(0xFF111827),
-                radius = w * 0.024f,
-                center = Offset(w * 0.5f, h * 0.62f)
-              )
-            }
+            Image(
+              painter = painterResource(id = R.drawable.bat_icon_fg),
+              contentDescription = stringResource(R.string.app_name),
+              contentScale = ContentScale.Fit,
+              modifier = Modifier.fillMaxSize().padding(3.dp)
+            )
           }
         }
       }

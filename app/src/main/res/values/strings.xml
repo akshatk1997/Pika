@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Pika</string>
+    <string name="app_name">Bat</string>
     <string name="tagline">Fast, private web shell</string>
 
     <!-- Navigation & Omnibox -->
@@ -65,7 +65,7 @@
     <string name="error_ssl_title">Certificate Error</string>
     <string name="error_ssl_body">TLS verification failed for %1$s. Bypassing is disabled.</string>
     <string name="error_blocked_title">Blocked</string>
-    <string name="error_blocked_body">Blocked by Pika policy (%1$s).</string>
+    <string name="error_blocked_body">Blocked by Bat policy (%1$s).</string>
     <string name="error_retry">Retry</string>
 
     <!-- Bookmarks, History, Downloads -->
