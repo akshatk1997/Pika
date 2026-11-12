@@ -1,0 +1,84 @@
+<resources>
+    <string name="app_name">بيكا</string>
+    <string name="tagline">متصفح خفيف يركز على الخصوصية</string>
+
+    <string name="omnibox_hint">ابحث أو أدخل رابطاً</string>
+    <string name="cd_back">رجوع</string>
+    <string name="cd_forward">إلى الأمام</string>
+    <string name="cd_reload">إعادة تحميل الصفحة</string>
+    <string name="cd_stop">إيقاف التحميل</string>
+    <string name="cd_tabs">علامات التبويب، %1$d مفتوحة</string>
+    <string name="cd_menu">قائمة المتصفح</string>
+    <string name="cd_security_https">اتصال HTTPS آمن</string>
+    <string name="cd_security_http">اتصال HTTP غير آمن</string>
+    <string name="cd_security_private">وضع التصفح الخاص</string>
+    <string name="cd_security_home">صفحة البداية المحلية</string>
+    <string name="cd_copy_url">نسخ الرابط</string>
+    <string name="cd_clear_input">مسح شريط العنوان</string>
+    <string name="copied_url">تم نسخ الرابط</string>
+
+    <string name="action_new_tab">تبويب جديد</string>
+    <string name="action_new_private_tab">تبويب خاص جديد</string>
+    <string name="action_bookmarks">الإشارات المرجعية</string>
+    <string name="action_add_bookmark">إضافة إلى الإشارات</string>
+    <string name="action_remove_bookmark">إزالة الإشارة</string>
+    <string name="action_history">السجل</string>
+    <string name="action_downloads">التنزيلات</string>
+    <string name="action_find_in_page">البحث في الصفحة</string>
+    <string name="action_reader_mode">وضع القراءة</string>
+    <string name="action_open_external">فتح في متصفح النظام</string>
+    <string name="action_share">مشاركة الرابط</string>
+    <string name="action_settings">الإعدادات</string>
+
+    <string name="tabs_title">التبويبات</string>
+    <string name="tabs_normal">عادي</string>
+    <string name="tabs_private">خاص</string>
+    <string name="tabs_search_hint">البحث في التبويبات</string>
+    <string name="tabs_restore">استعادة تبويب مغلق</string>
+    <string name="tabs_close_all_private">إنهاء الجلسة الخاصة</string>
+    <string name="tabs_empty_private">لا توجد تبويبات خاصة</string>
+    <string name="tabs_private_banner">الوضع الخاص: يتم مسح السجل وملفات الارتباط وذاكرة التخزين المؤقت عند انتهاء الجلسة.</string>
+
+    <string name="home_bookmarks_section">إشارات سريعة</string>
+    <string name="home_no_bookmarks">لا توجد إشارات بعد.</string>
+    <string name="home_trackers_blocked">المتتبعات المحجوبة: %1$d</string>
+
+    <string name="http_warning_title">تم حظر اتصال HTTP غير آمن</string>
+    <string name="http_warning_body">منع وضع HTTPS فقط الاتصال غير المشفر بـ %1$s.</string>
+    <string name="http_go_back">العودة بأمان</string>
+    <string name="http_proceed_anyway">المتابعة عبر HTTP</string>
+
+    <string name="error_offline_title">أنت غير متصل</string>
+    <string name="error_offline_body">لا يوجد اتصال بالشبكة.</string>
+    <string name="error_dns_title">تعذر العثور على العنوان</string>
+    <string name="error_dns_body">تعذر تحليل المضيف %1$s عبر DNS.</string>
+    <string name="error_ssl_title">فشل التحقق من الشهادة</string>
+    <string name="error_ssl_body">رفض المتصفح الاتصال بـ %1$s لأن شهادة TLS غير صالحة.</string>
+    <string name="error_blocked_title">تم حظر التنقل</string>
+    <string name="error_blocked_body">تم حظر الطلب بواسطة سياسة الأمان (%1$s).</string>
+    <string name="error_retry">إعادة المحاولة</string>
+
+    <string name="bookmarks_search_hint">البحث في الإشارات</string>
+    <string name="bookmarks_export">تصدير</string>
+    <string name="bookmarks_import">استيراد</string>
+    <string name="history_search_hint">البحث في السجل</string>
+    <string name="history_clear_all">مسح الكل</string>
+    <string name="history_disabled_notice">تسجيل السجل معطل حالياً في الإعدادات.</string>
+    <string name="downloads_empty">لا توجد تنزيلات بعد.</string>
+    <string name="download_consent_title">تنزيل الملف؟</string>
+    <string name="download_consent_body">السماح بتنزيل %1$s من %2$s؟</string>
+    <string name="download_allow">تنزيل</string>
+    <string name="download_cancel">إلغاء</string>
+    <string name="download_open">فتح الملف</string>
+    <string name="download_reveal">عرض الموقع</string>
+
+    <string name="find_hint">البحث في الصفحة</string>
+    <string name="reader_title">وضع القراءة</string>
+    <string name="reader_close">إغلاق القارئ</string>
+    <string name="reader_dark">القراءة الداكنة</string>
+
+    <string name="settings_title">الإعدادات</string>
+    <string name="settings_dnt_note">يرسل ترويسة DNT: 1 / Sec-GPC. ملاحظة: المواقع غير ملزمة بالاستجابة لها.</string>
+    <string name="settings_clear_data">مسح بيانات التصفح</string>
+    <string name="settings_engine_note">محرك العرض: Android System WebView (مدار من النظام).</string>
+</resources>

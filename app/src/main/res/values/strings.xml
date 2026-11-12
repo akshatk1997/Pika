@@ -1,0 +1,92 @@
+<resources>
+    <string name="app_name">Pika</string>
+    <string name="tagline">Minimal, private web shell</string>
+
+    <!-- Navigation & Omnibox -->
+    <string name="omnibox_hint">Search or enter URL</string>
+    <string name="cd_back">Back</string>
+    <string name="cd_forward">Forward</string>
+    <string name="cd_reload">Reload page</string>
+    <string name="cd_stop">Stop loading</string>
+    <string name="cd_tabs">Tabs, %1$d open</string>
+    <string name="cd_menu">Browser menu</string>
+    <string name="cd_security_https">Secure HTTPS connection</string>
+    <string name="cd_security_http">Insecure HTTP connection</string>
+    <string name="cd_security_private">Private browsing mode</string>
+    <string name="cd_security_home">Pika local start page</string>
+    <string name="cd_copy_url">Copy URL</string>
+    <string name="cd_clear_input">Clear address bar</string>
+    <string name="copied_url">URL copied to clipboard</string>
+
+    <!-- Menu & Actions -->
+    <string name="action_new_tab">New tab</string>
+    <string name="action_new_private_tab">New private tab</string>
+    <string name="action_bookmarks">Bookmarks</string>
+    <string name="action_add_bookmark">Bookmark this page</string>
+    <string name="action_remove_bookmark">Remove bookmark</string>
+    <string name="action_history">History</string>
+    <string name="action_downloads">Downloads</string>
+    <string name="action_find_in_page">Find in page</string>
+    <string name="action_reader_mode">Reader mode</string>
+    <string name="action_open_external">Open in system browser</string>
+    <string name="action_share">Share link</string>
+    <string name="action_settings">Settings</string>
+
+    <!-- Tabs -->
+    <string name="tabs_title">Tabs</string>
+    <string name="tabs_normal">Standard</string>
+    <string name="tabs_private">Private</string>
+    <string name="tabs_search_hint">Search open tabs</string>
+    <string name="tabs_restore">Restore closed tab</string>
+    <string name="tabs_close_all_private">End private session</string>
+    <string name="tabs_empty_private">No private tabs open</string>
+    <string name="tabs_private_banner">Private mode: history, cookies, cache, form data, and private downloads are erased when this session ends.</string>
+
+    <!-- Home -->
+    <string name="home_bookmarks_section">Quick bookmarks</string>
+    <string name="home_no_bookmarks">No bookmarks yet. Tap the menu on any page to save one locally.</string>
+    <string name="home_trackers_blocked">Trackers blocked this session: %1$d</string>
+
+    <!-- Warnings & Errors -->
+    <string name="http_warning_title">Insecure HTTP Connection Blocked</string>
+    <string name="http_warning_body">HTTPS-Only mode prevented loading an unencrypted connection to %1$s. Traffic on HTTP can be read or altered on the network.</string>
+    <string name="http_go_back">Go back safely</string>
+    <string name="http_proceed_anyway">Proceed to HTTP (Not recommended)</string>
+
+    <string name="error_offline_title">You are offline</string>
+    <string name="error_offline_body">No network connection is available. Check Wi-Fi or mobile data and try again.</string>
+    <string name="error_dns_title">Address could not be found</string>
+    <string name="error_dns_body">The host %1$s could not be resolved by DNS.</string>
+    <string name="error_ssl_title">Certificate Verification Failed</string>
+    <string name="error_ssl_body">Pika refused to connect to %1$s because its TLS certificate could not be verified. Bypassing certificate errors is disabled for your security.</string>
+    <string name="error_blocked_title">Navigation Blocked</string>
+    <string name="error_blocked_body">This request was blocked by Pika security policy (%1$s).</string>
+    <string name="error_retry">Try again</string>
+
+    <!-- Bookmarks, History, Downloads -->
+    <string name="bookmarks_search_hint">Search bookmarks</string>
+    <string name="bookmarks_export">Export</string>
+    <string name="bookmarks_import">Import</string>
+    <string name="history_search_hint">Search history</string>
+    <string name="history_clear_all">Clear all</string>
+    <string name="history_disabled_notice">Browsing history recording is currently disabled in Settings.</string>
+    <string name="downloads_empty">No downloads yet.</string>
+    <string name="download_consent_title">Download file?</string>
+    <string name="download_consent_body">Allow downloading %1$s from %2$s?</string>
+    <string name="download_allow">Download</string>
+    <string name="download_cancel">Cancel</string>
+    <string name="download_open">Open file</string>
+    <string name="download_reveal">Show location</string>
+
+    <!-- Find & Reader -->
+    <string name="find_hint">Find in page</string>
+    <string name="reader_title">Reader View</string>
+    <string name="reader_close">Exit reader</string>
+    <string name="reader_dark">Dark reading</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_dnt_note">Sends the Sec-GPC / DNT: 1 header. Note: Websites are not legally or technically required to honor Do Not Track requests.</string>
+    <string name="settings_clear_data">Clear browsing data</string>
+    <string name="settings_engine_note">Rendering engine: Android System WebView (OS-maintained, zero bundled browser engine).</string>
+</resources>
