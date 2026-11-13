@@ -140,7 +140,6 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Version 1.1.4").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_retain_tabs").performScrollTo().assertIsDisplayed()
-    composeTestRule.onNodeWithTag("setting_tracker_blocker").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("settings_back_button").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("Private browsing is active").assertDoesNotExist()

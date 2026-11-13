@@ -261,12 +261,12 @@ object TrackerBlocker {
     enabled: Boolean,
     customBlockedHosts: Set<String> = emptySet()
   ): Boolean {
-    if (!enabled) return false
     val reqHost = UrlValidator.extractHost(requestUrl)
     if (reqHost.isEmpty()) return false
     if (customBlockedHosts.isNotEmpty() && isHostMatchingSet(reqHost, customBlockedHosts)) {
       return true
     }
+    if (!enabled) return false
     // Block video ad requests & ad serving endpoints even if hosted on the same domain (e.g. youtube.com/api/stats/ads)
     if (isAdPathOrQuery(requestUrl)) {
       return true
