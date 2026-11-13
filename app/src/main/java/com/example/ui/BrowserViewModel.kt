@@ -119,6 +119,14 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   private val _isBrowserFullscreen = MutableStateFlow(false)
   val isBrowserFullscreen: StateFlow<Boolean> = _isBrowserFullscreen.asStateFlow()
 
+  private val _showIntro = MutableStateFlow(!settingsRepo.hasSeenIntro())
+  val showIntro: StateFlow<Boolean> = _showIntro.asStateFlow()
+
+  fun dismissIntro() {
+    _showIntro.value = false
+    settingsRepo.setIntroSeen(true)
+  }
+
   private val _externalLinkPrompt = MutableStateFlow<ExternalLinkPrompt?>(null)
   val externalLinkPrompt: StateFlow<ExternalLinkPrompt?> = _externalLinkPrompt.asStateFlow()
 

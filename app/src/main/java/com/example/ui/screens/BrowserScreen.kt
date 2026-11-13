@@ -155,6 +155,7 @@ fun BrowserScreen(
   val linkContextTarget by viewModel.linkContextTarget.collectAsStateWithLifecycle()
   val fullscreenView by viewModel.fullscreenView.collectAsStateWithLifecycle()
   val statusToast by viewModel.statusToast.collectAsStateWithLifecycle()
+  val showIntro by viewModel.showIntro.collectAsStateWithLifecycle()
 
   var showSiteInfoDialog by remember { mutableStateOf(false) }
   var showQuickSheet by remember { mutableStateOf(false) }
@@ -171,7 +172,8 @@ fun BrowserScreen(
   }
 
   BackHandler(
-    enabled = fullscreenView != null ||
+    enabled = showIntro ||
+      fullscreenView != null ||
       isBrowserFullscreen ||
       pageSource != null ||
       readerArticle != null ||
@@ -181,7 +183,9 @@ fun BrowserScreen(
       activeTab.errorState != null ||
       activeTab.canGoBack
   ) {
-    if (fullscreenView != null) {
+    if (showIntro) {
+      viewModel.dismissIntro()
+    } else if (fullscreenView != null) {
       viewModel.exitFullscreen()
     } else {
       viewModel.goBack()
@@ -192,7 +196,8 @@ fun BrowserScreen(
     val activeFullscreen = fullscreenView
     val activePageSource = pageSource
     val activeReaderArticle = readerArticle
-    val hasFullOverlay = activeFullscreen != null ||
+    val hasFullOverlay = showIntro ||
+      activeFullscreen != null ||
       activePageSource != null ||
       activeReaderArticle != null ||
       activeOverlay != ActiveOverlay.NONE
@@ -504,6 +509,11 @@ fun BrowserScreen(
           ) {}
       ) {
         when {
+          showIntro -> {
+            IntroScreen(
+              onGetStarted = { viewModel.dismissIntro() }
+            )
+          }
           activeFullscreen != null -> {
             val (customView, _) = activeFullscreen
             Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {

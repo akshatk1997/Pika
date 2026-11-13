@@ -111,7 +111,7 @@ class MainActivity : ComponentActivity() {
           viewModel = viewModel,
           onExportBookmarks = {
             try {
-              exportBookmarksLauncher.launch("bat-bookmarks.html")
+              exportBookmarksLauncher.launch("shiz-bookmarks.html")
             } catch (_: Throwable) {
               viewModel.showToast("Export failed")
             }
@@ -233,7 +233,7 @@ class MainActivity : ComponentActivity() {
       val safeLabel = UrlValidator.sanitizeDisplayText(title, 32)
         .ifEmpty { UrlValidator.extractHost(url).ifEmpty { "Web link" } }
       val launchIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url), this, MainActivity::class.java)
-      val shortcut = ShortcutInfo.Builder(this, "bat_${url.hashCode()}")
+      val shortcut = ShortcutInfo.Builder(this, "shiz_${url.hashCode()}")
         .setShortLabel(safeLabel)
         .setLongLabel(safeLabel)
         .setIcon(Icon.createWithResource(this, R.mipmap.ic_launcher))

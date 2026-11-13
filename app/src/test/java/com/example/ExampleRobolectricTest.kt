@@ -34,12 +34,12 @@ class ExampleRobolectricTest {
   val composeTestRule = createAndroidComposeRule<MainActivity>()
 
   @Test
-  fun appNameMatchesBatAndVersionIsUpdated() {
+  fun appNameMatchesShizAndVersionIsUpdated() {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
-    assertEquals("Bat", appName)
-    assertEquals("1.1.5", BuildConfig.VERSION_NAME)
-    assertEquals(8, BuildConfig.VERSION_CODE)
+    assertEquals("Shiz", appName)
+    assertEquals("1.2.0", BuildConfig.VERSION_NAME)
+    assertEquals(9, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -106,7 +106,12 @@ class ExampleRobolectricTest {
   @Test
   fun fullMainActivityStartPageTabsAndQuickMenuNavigation() {
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Bat").assertIsDisplayed()
+    // First-launch intro is displayed with the thought process behind "Shiz"
+    composeTestRule.onNodeWithTag("intro_thought_process").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("intro_get_started").performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithText("Shiz").assertIsDisplayed()
     composeTestRule.onNodeWithTag("home_search_input").performTextInput("privacy")
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("home_search_go").assertIsDisplayed()
@@ -137,7 +142,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.1.5").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.2.0").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_retain_tabs").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("settings_back_button").performClick()
@@ -150,7 +155,12 @@ class ExampleRobolectricTest {
   @Config(sdk = [26, 36], qualifiers = "sw600dp-w1024dp-h768dp-xhdpi")
   fun tabletNavigationRailAndAdaptiveTabsWorkAcrossAndroidVersions() {
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Bat").assertIsDisplayed()
+    try {
+      composeTestRule.onNodeWithTag("intro_get_started").performClick()
+      composeTestRule.waitForIdle()
+    } catch (_: Throwable) {
+    }
+    composeTestRule.onNodeWithText("Shiz").assertIsDisplayed()
     // Tablet layout renders persistent NavigationRail shortcuts and single-row top toolbar
     composeTestRule.onNodeWithText("Bookmarks").assertIsDisplayed()
     composeTestRule.onNodeWithText("Downloads").assertIsDisplayed()

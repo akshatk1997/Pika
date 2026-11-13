@@ -28,11 +28,27 @@ class SettingsRepository(context: Context) {
   }
 
   companion object {
-    private const val SETTINGS_FILE = "feather_settings.enc"
-    private const val PERMISSIONS_FILE = "feather_site_perms.enc"
-    private const val RETAINED_TABS_FILE = "bat_retained_tabs.enc"
-    private const val FALLBACK_PREFS = "bat_local_state_fallback"
+    private const val SETTINGS_FILE = "shiz_settings.enc"
+    private const val PERMISSIONS_FILE = "shiz_site_perms.enc"
+    private const val RETAINED_TABS_FILE = "shiz_retained_tabs.enc"
+    private const val FALLBACK_PREFS = "shiz_local_state_fallback"
+    private const val PREF_INTRO_SEEN = "shiz_intro_seen"
     private const val MAX_RETAINED_TABS = 24
+  }
+
+  fun hasSeenIntro(): Boolean {
+    return try {
+      fallbackPrefs.getBoolean(PREF_INTRO_SEEN, false)
+    } catch (_: Throwable) {
+      false
+    }
+  }
+
+  fun setIntroSeen(seen: Boolean = true) {
+    try {
+      fallbackPrefs.edit().putBoolean(PREF_INTRO_SEEN, seen).apply()
+    } catch (_: Throwable) {
+    }
   }
 
   private fun writePayload(fileName: String, json: String) {
@@ -67,7 +83,7 @@ class SettingsRepository(context: Context) {
   }
 
   fun loadSettings(): SettingsState {
-    val jsonStr = readPayload(SETTINGS_FILE) ?: return SettingsState()
+    val jsonStr = readPayload(SETTINGS_FILE) ?: readPayload("feather_settings.enc") ?: return SettingsState()
     return try {
       val obj = JSONObject(jsonStr)
       val customArr = obj.optJSONArray("customBlockedHosts")
@@ -155,7 +171,7 @@ class SettingsRepository(context: Context) {
   }
 
   fun loadRetainedTabs(): Pair<List<TabInfo>, String>? {
-    val raw = readPayload(RETAINED_TABS_FILE) ?: return null
+    val raw = readPayload(RETAINED_TABS_FILE) ?: readPayload("bat_retained_tabs.enc") ?: return null
     return try {
       val root = JSONObject(raw)
       val arr = root.optJSONArray("tabs") ?: return null

@@ -1,8 +1,8 @@
-# Bat
+# Shiz
 
-**Bat** is a minimal, privacy-first, security-hardened Android web browser shell built around the operating system's maintained **Android System WebView** (`android.webkit.WebView`) — with **zero bundled rendering engine**, **zero telemetry**, **zero dangerous Android permissions**, and a **signed R8-minified release APK strictly under 2 MB**.
+**Shiz** is a minimal, privacy-first, security-hardened Android web browser shell built around the operating system's maintained **Android System WebView** (`android.webkit.WebView`) — with **zero bundled rendering engine**, **zero telemetry**, **zero dangerous Android permissions**, and a **signed R8-minified release APK strictly under 2 MB**.
 
-> **Engine Statement:** Bat is **not** a standalone browser rendering engine. It does not bundle Chromium, Blink, Gecko, or WebKit. All web rendering, TLS/HTTP transport inside WebView, and sandboxing are delegated to the OS-maintained **Android System WebView**.
+> **Engine Statement:** Shiz is **not** a standalone browser rendering engine. It does not bundle Chromium, Blink, Gecko, or WebKit. All web rendering, TLS/HTTP transport inside WebView, and sandboxing are delegated to the OS-maintained **Android System WebView**.
 
 ---
 
@@ -10,6 +10,7 @@
 
 | Version | Version Code | Target Platforms & OS | Key Highlights |
 |---|---:|---|---|
+| **v1.2.0** | `9` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Rebranded to **Shiz** (*"Shiz: Pure speed, stealth privacy, and zero nonsense — simply the real deal."*), added first-time install onboarding intro page showcasing name thought process and core pillars, total ad & video streaming shield, retained web pages & settings across restarts, tablet navigation rail, and under 2 MB footprint |
 | **v1.1.5** | `8` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Single focused search bar on home page: removed duplicate top omnibox on the Start page while keeping all toolbar actions (Tabs, Quick Menu/Settings, Security badge, Navigation) fully accessible |
 | **v1.1.4** | `7` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Pure ad-free experience & video streaming ad shield: automatic video streaming ad fast-forward & skip, cosmetic CSS element hiding for banners/promoted cards, network blocking of HTML5 video ad SDKs (Google IMA SDK, DoubleClick, FreeWheel, Sizmek) and ad break endpoints (`/api/stats/ads`, `/pagead/`, `/youtubei/v1/player/ad_break`, `/ptracking`, `/get_midroll_info`), and popup/redirect ad suppression |
 | **v1.1.3** | `6` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Fixed web page & settings retention: kept live WebViews mounted beneath Settings/overlays without unmount reset, added persistent **Retain open web pages** setting & non-private tab restoration across restarts, improved Homepage save/Done/Use current controls, added Keystore recovery + private fallback, and added empty-bundle reload recovery |
@@ -22,7 +23,7 @@
 
 ## Assumed Target Defaults
 
-Because no platform overrides were supplied prior to implementation, Bat targets:
+Because no platform overrides were supplied prior to implementation, Shiz targets:
 1. **Target Platform:** Android Phone, Tablet, Foldable & Desktop Windowing (`resizeableActivity="true"`, adaptive `NavigationRail` + single-row wide toolbar + multi-column grids).
 2. **Minimum / Target OS:** Android 8.0 (`minSdk = 26`) through Android 17 forward-compatible edge-to-edge & large-screen behavior (`targetSdk = 36`, `compileSdk = 36.1`).
 3. **Language & UI:** Kotlin + Jetpack Compose (Material 3) with zero bloated UI frameworks or icon packs.
@@ -31,11 +32,11 @@ Because no platform overrides were supplied prior to implementation, Bat targets
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Bat-v1.1.5.apk`](releases/Bat-v1.1.5.apk) and attached to GitHub Releases (`v1.1.5`).
+Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Shiz-v1.2.0.apk`](releases/Shiz-v1.2.0.apk) and attached to GitHub Releases (`v1.2.0`).
 
 ---
 
-## Features (v1.1.5)
+## Features (v1.2.0)
 
 - **Address Bar & Swipe Gestures:** Top-docked address & navigation bar across phone and tablet, horizontal omnibox swipe to switch tabs, direct URL entry, search engine choice (DuckDuckGo, Startpage, Qwant, Brave, Wikipedia, Google, custom HTTPS), live security badge, copy, share, and external browser handoff.
 - **Power Tools (Via / X Style):** Compact 4-column Quick Grid Menu with **Media & Resource Sniffer**, **Night Web** page darkening, **No-Image** data-saver mode, **Desktop / iPhone / Mobile** User-Agent switcher, **Immersive Fullscreen**, **Save Page as PDF** (`PrintManager`), **View Page Source**, **Translate**, and **Pin Shortcut to Home Screen**.
@@ -60,7 +61,7 @@ Pre-built signed release APK (< 2 MB) is tracked directly in this repository at 
 
 ## Privacy Policy & Network Transparency
 
-- **Zero Telemetry & Zero Analytics:** Bat contains no analytics SDKs, crash reporters, ad SDKs, remote-config endpoints, or update checkers.
+- **Zero Telemetry & Zero Analytics:** Shiz contains no analytics SDKs, crash reporters, ad SDKs, remote-config endpoints, or update checkers.
 - **Zero Background Network Activity:** No background services, polling, or pre-fetching occur. Network requests happen only when you navigate, search, or explicitly approve a download.
 - **Tracking Protection (Default-On):** Strips common tracking query parameters (`utm_*`, `fbclid`, `gclid`, `mc_eid`, `igshid`, etc.), blocks known third-party tracker/analytics hosts in `shouldInterceptRequest`, blocks third-party cookies by default, and sends `DNT: 1` / `Sec-GPC: 1` headers (with an explicit Settings notice explaining that websites are not forced to honor DNT).
 - **Declared Android Permissions:**
@@ -115,7 +116,7 @@ Pre-built signed release APK (< 2 MB) is tracked directly in this repository at 
 ## Known Limitations
 
 - Web rendering features, codec support, and OS-level sandboxing depend on the installed version of **Android System WebView**.
-- Android `WebView` instances share a single process-wide `CookieManager` / `WebStorage` namespace across tabs; therefore, Bat enforces strict session isolation by disabling persistent cookies/DOM storage in private tabs and performing a full wipe (`removeAllCookies`, `WebStorage.deleteAllData`, cache/history/form-data purge) when private sessions end.
+- Android `WebView` instances share a single process-wide `CookieManager` / `WebStorage` namespace across tabs; therefore, Shiz enforces strict session isolation by disabling persistent cookies/DOM storage in private tabs and performing a full wipe (`removeAllCookies`, `WebStorage.deleteAllData`, cache/history/form-data purge) when private sessions end.
 - Hardware permissions (Camera, Microphone, GPS) are intentionally omitted from `AndroidManifest.xml` for minimal privilege; sites requesting them show a consent/policy prompt and cannot access device hardware.
 
 ## Roadmap

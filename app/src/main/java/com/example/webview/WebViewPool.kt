@@ -324,7 +324,7 @@ class WebViewPool(
     val webView = getLiveWebView(tabId) ?: return false
     return try {
       val printManager = activityContext.getSystemService(Context.PRINT_SERVICE) as? PrintManager ?: return false
-      val jobName = UrlValidator.sanitizeDisplayText(title, 64).ifEmpty { "Bat_Page" }
+      val jobName = UrlValidator.sanitizeDisplayText(title, 64).ifEmpty { "Shiz_Page" }
       val adapter = webView.createPrintDocumentAdapter(jobName)
       printManager.print(jobName, adapter, PrintAttributes.Builder().build())
       true
@@ -440,7 +440,7 @@ class WebViewPool(
     val js = if (enabled) {
       """
       (function(){
-        var id='bat-night-style';
+        var id='shiz-night-style';
         if(document.getElementById(id))return;
         var s=document.createElement('style');
         s.id=id;
@@ -449,7 +449,7 @@ class WebViewPool(
       })();
       """.trimIndent()
     } else {
-      "(function(){var s=document.getElementById('bat-night-style');if(s)s.remove();})();"
+      "(function(){var s=document.getElementById('shiz-night-style');if(s)s.remove();})();"
     }
     try {
       webView.evaluateJavascript(js, null)
@@ -462,11 +462,11 @@ class WebViewPool(
     val js = if (enabled) {
       """
       (function() {
-        if (window.__bat_adblock_installed) return;
-        window.__bat_adblock_installed = true;
+        if (window.__shiz_adblock_installed) return;
+        window.__shiz_adblock_installed = true;
 
         try {
-          var styleId = 'bat-adblock-shield-style';
+          var styleId = 'shiz-adblock-shield-style';
           if (!document.getElementById(styleId)) {
             var s = document.createElement('style');
             s.id = styleId;
@@ -557,8 +557,8 @@ class WebViewPool(
     } else {
       """
       (function() {
-        window.__bat_adblock_installed = false;
-        var s = document.getElementById('bat-adblock-shield-style');
+        window.__shiz_adblock_installed = false;
+        var s = document.getElementById('shiz-adblock-shield-style');
         if (s) s.remove();
       })();
       """.trimIndent()
