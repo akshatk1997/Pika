@@ -78,7 +78,7 @@ open class BackgroundMediaWebView(
   val isBackgroundPlayEnabled: () -> Boolean
 ) : WebView(context) {
 
-  override fun onWindowVisibilityChanged(visibility: Int) {
+  public override fun onWindowVisibilityChanged(visibility: Int) {
     if (isBackgroundPlayEnabled()) {
       super.onWindowVisibilityChanged(View.VISIBLE)
     } else {
@@ -94,7 +94,7 @@ open class BackgroundMediaWebView(
     }
   }
 
-  override fun onVisibilityChanged(changedView: View, visibility: Int) {
+  public override fun onVisibilityChanged(changedView: View, visibility: Int) {
     if (isBackgroundPlayEnabled()) {
       super.onVisibilityChanged(changedView, View.VISIBLE)
     } else {
