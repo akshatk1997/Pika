@@ -68,6 +68,42 @@ interface WebViewCallbacks {
 }
 
 /**
+ * Hardened WebView subclass that maintains active background media playback.
+ * Intercepts Android view/window visibility changes to prevent Chromium AwContents
+ * from automatically pausing HTML5 video and audio streams when the app is backgrounded
+ * or when the screen is turned off.
+ */
+open class BackgroundMediaWebView(
+  context: Context,
+  val isBackgroundPlayEnabled: () -> Boolean
+) : WebView(context) {
+
+  override fun onWindowVisibilityChanged(visibility: Int) {
+    if (isBackgroundPlayEnabled()) {
+      super.onWindowVisibilityChanged(View.VISIBLE)
+    } else {
+      super.onWindowVisibilityChanged(visibility)
+    }
+  }
+
+  override fun dispatchWindowVisibilityChanged(visibility: Int) {
+    if (isBackgroundPlayEnabled()) {
+      super.dispatchWindowVisibilityChanged(View.VISIBLE)
+    } else {
+      super.dispatchWindowVisibilityChanged(visibility)
+    }
+  }
+
+  override fun onVisibilityChanged(changedView: View, visibility: Int) {
+    if (isBackgroundPlayEnabled()) {
+      super.onVisibilityChanged(changedView, View.VISIBLE)
+    } else {
+      super.onVisibilityChanged(changedView, visibility)
+    }
+  }
+}
+
+/**
  * Hardened Android System WebView pool (max 2 live WebViews in RAM).
  * Thread-safe host tracking (zero off-UI WebView calls), MutableContextWrapper UI binding,
  * defensive System WebView creation, and clean RenderProcessGone recovery.
@@ -580,22 +616,16 @@ class WebViewPool(
 
         function spoofVisibility() {
           try {
-            Object.defineProperty(document, 'hidden', {
-              get: function() { return false; },
-              configurable: true
-            });
-            Object.defineProperty(document, 'visibilityState', {
-              get: function() { return 'visible'; },
-              configurable: true
-            });
-            Object.defineProperty(document, 'webkitHidden', {
-              get: function() { return false; },
-              configurable: true
-            });
-            Object.defineProperty(document, 'webkitVisibilityState', {
-              get: function() { return 'visible'; },
-              configurable: true
-            });
+            var desc = { get: function() { return false; }, configurable: true };
+            var descVis = { get: function() { return 'visible'; }, configurable: true };
+            Object.defineProperty(document, 'hidden', desc);
+            Object.defineProperty(Document.prototype, 'hidden', desc);
+            Object.defineProperty(document, 'visibilityState', descVis);
+            Object.defineProperty(Document.prototype, 'visibilityState', descVis);
+            Object.defineProperty(document, 'webkitHidden', desc);
+            Object.defineProperty(Document.prototype, 'webkitHidden', desc);
+            Object.defineProperty(document, 'webkitVisibilityState', descVis);
+            Object.defineProperty(Document.prototype, 'webkitVisibilityState', descVis);
             document.hasFocus = function() { return true; };
           } catch(e) {}
         }
@@ -614,6 +644,7 @@ class WebViewPool(
         window.addEventListener('webkitvisibilitychange', blockEvent, true);
         document.addEventListener('webkitvisibilitychange', blockEvent, true);
         window.addEventListener('pagehide', blockEvent, true);
+        window.addEventListener('blur', blockEvent, true);
 
         try {
           Object.defineProperty(document, 'onvisibilitychange', {
@@ -626,7 +657,7 @@ class WebViewPool(
         try {
           var origAdd = EventTarget.prototype.addEventListener;
           EventTarget.prototype.addEventListener = function(type, listener, options) {
-            if (type === 'visibilitychange' || type === 'webkitvisibilitychange') {
+            if (type === 'visibilitychange' || type === 'webkitvisibilitychange' || type === 'pagehide') {
               return;
             }
             return origAdd.apply(this, arguments);
@@ -646,6 +677,29 @@ class WebViewPool(
             spoofVisibility();
             return res;
           };
+        } catch(e) {}
+
+        try {
+          var autoResume = function(e) {
+            var target = e.target;
+            if (target && (target.nodeName === 'VIDEO' || target.nodeName === 'AUDIO')) {
+              if (target.__shiz_was_playing && !target.__shiz_user_paused) {
+                setTimeout(function() {
+                  if (target.paused && !target.__shiz_user_paused) {
+                    target.play().catch(function() {});
+                  }
+                }, 150);
+              }
+            }
+          };
+          document.addEventListener('play', function(e) {
+            var target = e.target;
+            if (target && (target.nodeName === 'VIDEO' || target.nodeName === 'AUDIO')) {
+              target.__shiz_was_playing = true;
+              target.__shiz_user_paused = false;
+            }
+          }, true);
+          document.addEventListener('pause', autoResume, true);
         } catch(e) {}
 
         setInterval(spoofVisibility, 2000);
@@ -741,7 +795,10 @@ class WebViewPool(
     approvedHttpHosts: Set<String>
   ): WebView? {
     val webView = try {
-      WebView(MutableContextWrapper(appContext))
+      BackgroundMediaWebView(
+        MutableContextWrapper(appContext),
+        isBackgroundPlayEnabled = { settingsProvider().backgroundPlayEnabled }
+      )
     } catch (t: Throwable) {
       callbacks.onPageError(
         tabId,

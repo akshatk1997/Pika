@@ -1125,8 +1125,13 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     val js = when (action) {
       MediaPlaybackService.ACTION_PLAY -> """
         (function() {
+          var player = document.querySelector('#movie_player') || document.querySelector('.html5-video-player');
+          if (player && typeof player.playVideo === 'function') {
+            player.playVideo();
+          }
           var media = document.querySelectorAll('video, audio');
           for (var i = 0; i < media.length; i++) {
+            media[i].__shiz_user_paused = false;
             if (media[i].paused) {
               media[i].play().catch(function() {});
             }
@@ -1135,8 +1140,13 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       """.trimIndent()
       MediaPlaybackService.ACTION_PAUSE -> """
         (function() {
+          var player = document.querySelector('#movie_player') || document.querySelector('.html5-video-player');
+          if (player && typeof player.pauseVideo === 'function') {
+            player.pauseVideo();
+          }
           var media = document.querySelectorAll('video, audio');
           for (var i = 0; i < media.length; i++) {
+            media[i].__shiz_user_paused = true;
             if (!media[i].paused) {
               media[i].pause();
             }
@@ -1145,29 +1155,48 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       """.trimIndent()
       MediaPlaybackService.ACTION_PREV -> """
         (function() {
-          var media = document.querySelectorAll('video, audio');
-          for (var i = 0; i < media.length; i++) {
-            media[i].currentTime = Math.max(0, (media[i].currentTime || 0) - 10);
+          var player = document.querySelector('#movie_player') || document.querySelector('.html5-video-player');
+          if (player && typeof player.seekTo === 'function' && typeof player.getCurrentTime === 'function') {
+            player.seekTo(Math.max(0, player.getCurrentTime() - 10), true);
+          } else {
+            var media = document.querySelectorAll('video, audio');
+            for (var i = 0; i < media.length; i++) {
+              media[i].currentTime = Math.max(0, (media[i].currentTime || 0) - 10);
+            }
           }
         })();
       """.trimIndent()
       MediaPlaybackService.ACTION_NEXT -> """
         (function() {
-          var nextBtn = document.querySelector('.ytp-next-button, [aria-label="Next"], [title="Next"]');
-          if (nextBtn) {
-            nextBtn.click();
+          var player = document.querySelector('#movie_player') || document.querySelector('.html5-video-player');
+          if (player && typeof player.nextVideo === 'function') {
+            player.nextVideo();
+          } else if (player && typeof player.seekTo === 'function' && typeof player.getCurrentTime === 'function') {
+            player.seekTo(player.getCurrentTime() + 10, true);
           } else {
-            var media = document.querySelectorAll('video, audio');
-            for (var i = 0; i < media.length; i++) {
-              media[i].currentTime = (media[i].currentTime || 0) + 10;
+            var nextBtn = document.querySelector('.ytp-next-button, [aria-label="Next"], [title="Next"]');
+            if (nextBtn) {
+              nextBtn.click();
+            } else {
+              var media = document.querySelectorAll('video, audio');
+              for (var i = 0; i < media.length; i++) {
+                media[i].currentTime = (media[i].currentTime || 0) + 10;
+              }
             }
           }
         })();
       """.trimIndent()
       MediaPlaybackService.ACTION_STOP -> """
         (function() {
+          var player = document.querySelector('#movie_player') || document.querySelector('.html5-video-player');
+          if (player && typeof player.stopVideo === 'function') {
+            player.stopVideo();
+          } else if (player && typeof player.pauseVideo === 'function') {
+            player.pauseVideo();
+          }
           var media = document.querySelectorAll('video, audio');
           for (var i = 0; i < media.length; i++) {
+            media[i].__shiz_user_paused = true;
             media[i].pause();
           }
         })();
@@ -1193,8 +1222,14 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     val probeJs = """
       (function() {
         try {
+          var player = document.querySelector('#movie_player') || document.querySelector('.html5-video-player');
+          var ytPlaying = false;
+          if (player && typeof player.getPlayerState === 'function') {
+            var state = player.getPlayerState();
+            ytPlaying = (state === 1 || state === 3);
+          }
           var media = document.querySelectorAll('video, audio');
-          var playing = false;
+          var playing = ytPlaying;
           for (var i = 0; i < media.length; i++) {
             var m = media[i];
             if (!m.paused && !m.ended && m.readyState > 1) {
@@ -1202,10 +1237,18 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
               break;
             }
           }
+          var docTitle = '';
+          var ytTitleEl = document.querySelector('h1.title, .slim-video-metadata-title, .video-details h1');
+          if (ytTitleEl && ytTitleEl.innerText) {
+            docTitle = ytTitleEl.innerText.trim();
+          }
+          if (!docTitle) {
+            docTitle = document.title || '';
+          }
           return JSON.stringify({
             playing: playing,
-            count: media.length,
-            title: document.title || ''
+            count: media.length + (player ? 1 : 0),
+            title: docTitle
           });
         } catch(e) {
           return JSON.stringify({ playing: false, count: 0, title: '' });

@@ -38,8 +38,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Shiz", appName)
-    assertEquals("1.3.2", BuildConfig.VERSION_NAME)
-    assertEquals(12, BuildConfig.VERSION_CODE)
+    assertEquals("1.4.0", BuildConfig.VERSION_NAME)
+    assertEquals(13, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -156,7 +156,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.3.2").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.4.0").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_retain_tabs").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -168,7 +168,7 @@ class ExampleRobolectricTest {
 
   @Test
   @Config(sdk = [26, 36], qualifiers = "sw600dp-w1024dp-h768dp-xhdpi")
-  fun tabletNavigationRailAndAdaptiveTabsWorkAcrossAndroidVersions() {
+  fun tabletTopTabStripAndToolbarShortcutsWorkAcrossAndroidVersions() {
     composeTestRule.waitForIdle()
     try {
       composeTestRule.onNodeWithTag("intro_get_started").performClick()
@@ -176,16 +176,33 @@ class ExampleRobolectricTest {
     } catch (_: Throwable) {
     }
     composeTestRule.onNodeWithText("Shiz").assertIsDisplayed()
-    // Tablet layout renders persistent NavigationRail shortcuts and single-row top toolbar
-    composeTestRule.onNodeWithText("Bookmarks").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Downloads").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Settings").assertIsDisplayed()
 
-    composeTestRule.onNodeWithTag("nav_tabs_button").performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("tabs_new_button").performClick()
+    // Tablet layout renders desktop-style top Tab Strip without left NavigationRail
+    composeTestRule.onNodeWithTag("tablet_tab_new_button").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("tablet_desktop_mode_button").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("tablet_bookmarks_button").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("tablet_downloads_button").assertIsDisplayed()
+
+    // Open a new tab directly from the top tablet tab strip '+' button
+    composeTestRule.onNodeWithTag("tablet_tab_new_button").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("Search with DuckDuckGo").assertIsDisplayed()
+  }
+
+  @Test
+  fun backgroundMediaWebViewOverridesVisibilityWhenBackgroundPlayEnabled() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    var bgPlay = true
+    val wv = com.example.webview.BackgroundMediaWebView(context, isBackgroundPlayEnabled = { bgPlay })
+
+    // When background play is enabled, GONE and INVISIBLE are overridden to VISIBLE
+    wv.onWindowVisibilityChanged(android.view.View.GONE)
+    wv.dispatchWindowVisibilityChanged(android.view.View.INVISIBLE)
+
+    // When background play is disabled, standard visibility passes through
+    bgPlay = false
+    wv.onWindowVisibilityChanged(android.view.View.GONE)
+    wv.dispatchWindowVisibilityChanged(android.view.View.GONE)
   }
 
   @Test

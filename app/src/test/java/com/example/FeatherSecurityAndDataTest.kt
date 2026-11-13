@@ -157,4 +157,10 @@ class FeatherSecurityAndDataTest {
     assertEquals(6, actions.size)
     assertEquals("shiz_media_stream", com.example.media.MediaPlaybackService.CHANNEL_ID)
   }
+
+  @Test
+  fun streamingAdRuleContainsCriticalSelectors() {
+    val adUrl = "https://www.youtube.com/api/stats/ads?v=123"
+    assertTrue(TrackerBlocker.shouldBlockRequest(adUrl, "m.youtube.com", true))
+  }
 }
