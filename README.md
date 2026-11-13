@@ -10,6 +10,7 @@
 
 | Version | Version Code | Target Platforms & OS | Key Highlights |
 |---|---:|---|---|
+| **v1.3.0** | `10` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Fully functional in-page & portal translation with locale detection and fixed query parameter encoding; continuous background video/audio streaming play when minimized or screen off; auto-hiding scroll navigation bars (slides up on scroll down, reappears on scroll up); strictly under 2 MB |
 | **v1.2.0** | `9` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Rebranded to **Shiz** (*"Shiz: Pure speed, stealth privacy, and zero nonsense — simply the real deal."*), added first-time install onboarding intro page showcasing name thought process and core pillars, total ad & video streaming shield, retained web pages & settings across restarts, tablet navigation rail, and under 2 MB footprint |
 | **v1.1.5** | `8` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Single focused search bar on home page: removed duplicate top omnibox on the Start page while keeping all toolbar actions (Tabs, Quick Menu/Settings, Security badge, Navigation) fully accessible |
 | **v1.1.4** | `7` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Pure ad-free experience & video streaming ad shield: automatic video streaming ad fast-forward & skip, cosmetic CSS element hiding for banners/promoted cards, network blocking of HTML5 video ad SDKs (Google IMA SDK, DoubleClick, FreeWheel, Sizmek) and ad break endpoints (`/api/stats/ads`, `/pagead/`, `/youtubei/v1/player/ad_break`, `/ptracking`, `/get_midroll_info`), and popup/redirect ad suppression |
@@ -32,11 +33,15 @@ Because no platform overrides were supplied prior to implementation, Shiz target
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Shiz-v1.2.0.apk`](releases/Shiz-v1.2.0.apk) and attached to GitHub Releases (`v1.2.0`).
+Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Shiz-v1.3.0.apk`](releases/Shiz-v1.3.0.apk) and attached to GitHub Releases (`v1.3.0`).
 
 ---
 
-## Features (v1.2.0)
+## Features (v1.3.0)
+
+- **Scroll-to-Hide Navigation Bars:** Clean top-docked address and toolbar automatically slides away smoothly when scrolling down through web pages to provide an immersive full-screen reading experience, and immediately reappears when scrolling back up.
+- **Background Stream Playback:** Keep videos and audio streaming continuously even when the browser interface is not opened, the app is in the background, or the screen is turned off.
+- **In-Page & Portal Translation:** Fully functional in-page translation directly translates web content without leaving the page, automatically detecting user device locale, with seamless fallback to Google's portal and no parameter double-encoding.
 
 - **Address Bar & Swipe Gestures:** Top-docked address & navigation bar across phone and tablet, horizontal omnibox swipe to switch tabs, direct URL entry, search engine choice (DuckDuckGo, Startpage, Qwant, Brave, Wikipedia, Google, custom HTTPS), live security badge, copy, share, and external browser handoff.
 - **Power Tools (Via / X Style):** Compact 4-column Quick Grid Menu with **Media & Resource Sniffer**, **Night Web** page darkening, **No-Image** data-saver mode, **Desktop / iPhone / Mobile** User-Agent switcher, **Immersive Fullscreen**, **Save Page as PDF** (`PrintManager`), **View Page Source**, **Translate**, and **Pin Shortcut to Home Screen**.

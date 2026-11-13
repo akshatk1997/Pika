@@ -38,8 +38,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Shiz", appName)
-    assertEquals("1.2.0", BuildConfig.VERSION_NAME)
-    assertEquals(9, BuildConfig.VERSION_CODE)
+    assertEquals("1.3.0", BuildConfig.VERSION_NAME)
+    assertEquals(10, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -50,7 +50,8 @@ class ExampleRobolectricTest {
       searchEngine = SearchEngine.STARTPAGE,
       homepageUrl = "https://example.org",
       retainOpenTabs = true,
-      nightWebMode = true
+      nightWebMode = true,
+      backgroundPlayEnabled = true
     )
     repo1.saveSettings(customSettings)
 
@@ -70,6 +71,7 @@ class ExampleRobolectricTest {
     assertEquals("https://example.org", loadedSettings.homepageUrl)
     assertTrue(loadedSettings.retainOpenTabs)
     assertTrue(loadedSettings.nightWebMode)
+    assertTrue(loadedSettings.backgroundPlayEnabled)
 
     val restored = repo2.loadRetainedTabs()
     assertNotNull(restored)
@@ -154,9 +156,10 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.2.0").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.3.0").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_retain_tabs").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("settings_back_button").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("Private browsing is active").assertDoesNotExist()

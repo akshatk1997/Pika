@@ -53,6 +53,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -930,10 +931,83 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   }
 
   fun translateActivePage() {
-    val url = activeTab().url
-    if (!UrlValidator.isSafeWebUrl(url) || url == "about:blank") return
+    val tab = activeTab()
+    val url = tab.url
+    if (!UrlValidator.isSafeWebUrl(url) || url == "about:blank") {
+      showToast("Open a page to translate")
+      return
+    }
+    if (url.contains(".translate.goog") || url.contains("translate.google.com")) {
+      showToast("Page is already translated")
+      return
+    }
+
+    val targetLang = Locale.getDefault().language.ifEmpty { "en" }
     val encoded = URLEncoder.encode(url, StandardCharsets.UTF_8.name())
-    navigateActiveTab("https://translate.google.com/translate?sl=auto&tl=en&u=$encoded")
+    val webTranslateUrl = "https://translate.google.com/website?sl=auto&tl=$targetLang&u=$encoded"
+
+    val inPageJs = """
+      (function() {
+        if (window.__shiz_translating) {
+          var combo = document.querySelector('.goog-te-combo');
+          if (combo) {
+            combo.value = '$targetLang';
+            combo.dispatchEvent(new Event('change'));
+            return;
+          }
+        }
+        window.__shiz_translating = true;
+
+        window.googleTranslateElementInit = function() {
+          try {
+            new google.translate.TranslateElement({
+              pageLanguage: 'auto',
+              includedLanguages: '$targetLang,en,es,fr,de,zh-CN,ja,ar,ru,hi,pt,it,ko',
+              layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+              autoDisplay: true
+            }, 'shiz_translate_element');
+
+            var count = 0;
+            var timer = setInterval(function() {
+              count++;
+              var combo = document.querySelector('.goog-te-combo');
+              if (combo) {
+                clearInterval(timer);
+                if (combo.value !== '$targetLang') {
+                  combo.value = '$targetLang';
+                  combo.dispatchEvent(new Event('change'));
+                }
+              } else if (count > 25) {
+                clearInterval(timer);
+              }
+            }, 200);
+          } catch(e) {}
+        };
+
+        var el = document.getElementById('shiz_translate_element');
+        if (!el) {
+          el = document.createElement('div');
+          el.id = 'shiz_translate_element';
+          el.style.cssText = 'position:fixed;bottom:24px;right:16px;z-index:2147483647;background:white;padding:6px 12px;border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,0.25);font-size:13px;font-family:sans-serif;border:1px solid #ccc;';
+          (document.body || document.documentElement).appendChild(el);
+        }
+
+        var s = document.createElement('script');
+        s.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+        s.onerror = function() {
+          window.location.href = '$webTranslateUrl';
+        };
+        (document.head || document.documentElement).appendChild(s);
+      })();
+    """.trimIndent()
+
+    val webView = webViewPool.getLiveWebView(tab.id)
+    if (webView != null && _settings.value.javascriptEnabled) {
+      showToast("Translating page...")
+      webView.evaluateJavascript(inPageJs, null)
+    } else {
+      navigateActiveTab(webTranslateUrl)
+    }
   }
 
   fun shareUrl(url: String) {

@@ -44,6 +44,13 @@ class FeatherSecurityAndDataTest {
   }
 
   @Test
+  fun stripTrackingParamsPreservesEncodedQueryParametersWithoutDoubleEncoding() {
+    val input = "https://translate.google.com/website?sl=auto&tl=en&u=https%3A%2F%2Fexample.com%2Fpath"
+    val res = UrlValidator.stripTrackingParams(input)
+    assertEquals(input, res)
+  }
+
+  @Test
   fun resolvesSearchQueriesToConfiguredEngine() {
     val res = UrlValidator.resolveInputToTarget(
       "kotlin compose webview",

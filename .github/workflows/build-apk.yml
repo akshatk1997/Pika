@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Shiz-v1.2.0.apk
+          cp "$APK_PATH" releases/Shiz-v1.3.0.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Shiz-v1.2.0.apk
+          git add releases/Shiz-v1.3.0.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Shiz-v1.2.0.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Shiz-v1.3.0.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.2.0
+      - name: Create or update GitHub Release v1.3.0
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Shiz-v1.2.0.apk)
-          NOTES="Shiz Browser v1.2.0 (Build 9) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Rebranded to Shiz:** Pure speed, stealth privacy, and zero nonsense — simply the real deal.\n- **First-Time Intro Onboarding:** Beautiful first-launch intro page displaying the thought process behind the name \"Shiz\" (*\"Shiz: Pure speed, stealth privacy, and zero nonsense — simply the real deal.\"*) and highlighting core pillars. Shown only once upon first launch and automatically dismissed thereafter.\n- **Pure Ad-Free & Video Shield:** Zero web ads and automated video streaming ad skip.\n- **Signed Release APK size:** ${SIZE_BYTES} bytes (strictly < 2 MB / 2,097,152 bytes).\n- **Checks:** \`:app:testDebugUnitTest\` (API 26 & 36, Phone & Tablet), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\` passed."
-          if gh release view v1.2.0 >/dev/null 2>&1; then
-            gh release upload v1.2.0 releases/Shiz-v1.2.0.apk --clobber
-            gh release edit v1.2.0 --title "Shiz v1.2.0 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Shiz-v1.3.0.apk)
+          NOTES="Shiz Browser v1.3.0 (Build 10) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Fully Functional In-Page & Portal Translation:** In-page translation directly translates web content without leaving the page, automatically detecting user device locale, with seamless fallback to Google's portal and no parameter double-encoding.\n- **Background Streaming Playback:** Continuous background video and audio streaming play even when the browser is minimized, screen is off, or user switches apps.\n- **Auto-Hiding Scroll Navigation Bars:** Smooth scroll-to-hide top navigation and address bar when scrolling down on web pages, automatically reappearing when scrolling up or tapping at the top.\n- **Signed Release APK size:** ${SIZE_BYTES} bytes (strictly < 2 MB / 2,097,152 bytes).\n- **Checks:** \`:app:testDebugUnitTest\` (API 26 & 36, Phone & Tablet), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\` passed."
+          if gh release view v1.3.0 >/dev/null 2>&1; then
+            gh release upload v1.3.0 releases/Shiz-v1.3.0.apk --clobber
+            gh release edit v1.3.0 --title "Shiz v1.3.0 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.2.0 releases/Shiz-v1.2.0.apk \
-              --title "Shiz v1.2.0 (< 2 MB)" \
+            gh release create v1.3.0 releases/Shiz-v1.3.0.apk \
+              --title "Shiz v1.3.0 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

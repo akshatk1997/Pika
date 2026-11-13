@@ -198,7 +198,9 @@ object UrlValidator {
         key !in trackingQueryKeys
       }
       val newQuery = if (keptParams.isEmpty()) null else keptParams.joinToString("&")
-      URI(uri.scheme, uri.rawAuthority, uri.rawPath, newQuery, uri.rawFragment).toASCIIString()
+      val base = url.substringBefore('?').substringBefore('#')
+      val fragment = if (url.contains('#')) "#" + url.substringAfter('#') else ""
+      if (newQuery != null) "$base?$newQuery$fragment" else "$base$fragment"
     } catch (_: Throwable) {
       url
     }

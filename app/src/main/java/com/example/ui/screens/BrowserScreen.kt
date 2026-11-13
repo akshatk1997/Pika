@@ -7,6 +7,10 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -159,10 +163,17 @@ fun BrowserScreen(
 
   var showSiteInfoDialog by remember { mutableStateOf(false) }
   var showQuickSheet by remember { mutableStateOf(false) }
+  var isNavBarVisible by remember { mutableStateOf(true) }
 
   val activeTab = tabs.firstOrNull { it.id == activeTabId } ?: tabs.first()
   val snackbarHostState = remember { SnackbarHostState() }
   val focusManager = LocalFocusManager.current
+
+  LaunchedEffect(activeTab.id, activeTab.url, activeTab.isLoading) {
+    if (activeTab.isLoading || activeTab.url.isBlank() || activeTab.url == "about:blank") {
+      isNavBarVisible = true
+    }
+  }
 
   LaunchedEffect(statusToast) {
     statusToast?.let { msg ->
@@ -272,7 +283,11 @@ fun BrowserScreen(
           }
 
           Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-            if (!isBrowserFullscreen) {
+            AnimatedVisibility(
+              visible = !isBrowserFullscreen && (isNavBarVisible || activeTab.url.isBlank() || activeTab.url == "about:blank" || activeTab.isLoading),
+              enter = expandVertically() + fadeIn(),
+              exit = shrinkVertically() + fadeOut()
+            ) {
               BrowserToolbar(
                 activeTab = activeTab,
                 tabCount = tabs.size,
@@ -402,6 +417,7 @@ fun BrowserScreen(
                             val child = container.getChildAt(i) as? android.webkit.WebView
                             if (child != null && child !== targetWebView) {
                               child.setOnTouchListener(null)
+                              child.setOnScrollChangeListener(null)
                               viewModel.webViewPool.detachFromHost(child)
                             }
                           }
@@ -418,6 +434,16 @@ fun BrowserScreen(
                           } catch (_: Throwable) {
                           }
                         }
+                        targetWebView.setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
+                          val dy = scrollY - oldScrollY
+                          if (scrollY <= 24) {
+                            if (!isNavBarVisible) isNavBarVisible = true
+                          } else if (dy > 14) {
+                            if (isNavBarVisible) isNavBarVisible = false
+                          } else if (dy < -14) {
+                            if (!isNavBarVisible) isNavBarVisible = true
+                          }
+                        }
                         targetWebView.setOnTouchListener { v, event ->
                           if (v.scrollY == 0) {
                             when (event.actionMasked) {
@@ -425,6 +451,7 @@ fun BrowserScreen(
                                 pullStartX.floatValue = event.x
                                 pullStartY.floatValue = event.y
                                 pullProgress = 0f
+                                if (!isNavBarVisible) isNavBarVisible = true
                               }
                               MotionEvent.ACTION_MOVE -> {
                                 val dy = event.y - pullStartY.floatValue
@@ -455,6 +482,7 @@ fun BrowserScreen(
                           val child = container.getChildAt(i) as? android.webkit.WebView
                           if (child != null) {
                             child.setOnTouchListener(null)
+                            child.setOnScrollChangeListener(null)
                             viewModel.webViewPool.detachFromHost(child)
                           }
                         }

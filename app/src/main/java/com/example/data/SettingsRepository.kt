@@ -114,7 +114,8 @@ class SettingsRepository(context: Context) {
         noImageMode = obj.optBoolean("noImageMode", false),
         customBlockedHosts = customHosts,
         readerFontSizeSp = obj.optInt("readerFontSizeSp", 18).coerceIn(14, 28),
-        readerDarkMode = obj.optBoolean("readerDarkMode", false)
+        readerDarkMode = obj.optBoolean("readerDarkMode", false),
+        backgroundPlayEnabled = obj.optBoolean("backgroundPlayEnabled", true)
       )
     } catch (_: Throwable) {
       SettingsState()
@@ -141,6 +142,7 @@ class SettingsRepository(context: Context) {
       put("customBlockedHosts", JSONArray(state.customBlockedHosts))
       put("readerFontSizeSp", state.readerFontSizeSp)
       put("readerDarkMode", state.readerDarkMode)
+      put("backgroundPlayEnabled", state.backgroundPlayEnabled)
     }
     writePayload(SETTINGS_FILE, obj.toString())
   }

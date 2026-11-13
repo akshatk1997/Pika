@@ -270,6 +270,14 @@ fun SettingsScreen(
             tag = "setting_retain_tabs",
             onCheckedChange = { v -> onUpdateSettings { it.copy(retainOpenTabs = v) } }
           )
+          HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+          SettingSwitchRow(
+            title = "Background stream playback",
+            subtitle = "Keep video and audio playing when browser is in background",
+            checked = settings.backgroundPlayEnabled,
+            tag = "setting_background_play",
+            onCheckedChange = { v -> onUpdateSettings { it.copy(backgroundPlayEnabled = v) } }
+          )
         }
       }
 

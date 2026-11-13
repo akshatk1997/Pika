@@ -218,7 +218,8 @@ data class SettingsState(
   val noImageMode: Boolean = false,
   val customBlockedHosts: List<String> = emptyList(),
   val readerFontSizeSp: Int = 18,
-  val readerDarkMode: Boolean = false
+  val readerDarkMode: Boolean = false,
+  val backgroundPlayEnabled: Boolean = true
 )
 
 data class ReaderArticle(

@@ -225,6 +225,7 @@ class WebViewPool(
       applySettings(wv, isPriv, uaMode, settingsState)
       applyNightWebCss(wv, settingsState.nightWebMode)
       applyAdBlocker(wv, settingsState.trackerBlockingEnabled)
+      applyBackgroundPlay(wv, settingsState.backgroundPlayEnabled)
     }
   }
 
@@ -569,6 +570,51 @@ class WebViewPool(
     }
   }
 
+  private fun applyBackgroundPlay(webView: WebView, enabled: Boolean) {
+    if (!settingsProvider().javascriptEnabled || destroyedViews.contains(webView)) return
+    val js = if (enabled) {
+      """
+      (function() {
+        if (window.__shiz_bg_play_installed) return;
+        window.__shiz_bg_play_installed = true;
+
+        try {
+          Object.defineProperty(document, 'hidden', {
+            get: function() { return false; },
+            configurable: true
+          });
+          Object.defineProperty(document, 'visibilityState', {
+            get: function() { return 'visible'; },
+            configurable: true
+          });
+          Object.defineProperty(document, 'webkitVisibilityState', {
+            get: function() { return 'visible'; },
+            configurable: true
+          });
+        } catch(e) {}
+
+        var blockVisibilityEvent = function(e) {
+          e.stopImmediatePropagation();
+        };
+
+        window.addEventListener('visibilitychange', blockVisibilityEvent, true);
+        document.addEventListener('visibilitychange', blockVisibilityEvent, true);
+        window.addEventListener('pagehide', blockVisibilityEvent, true);
+      })();
+      """.trimIndent()
+    } else {
+      """
+      (function() {
+        window.__shiz_bg_play_installed = false;
+      })();
+      """.trimIndent()
+    }
+    try {
+      webView.evaluateJavascript(js, null)
+    } catch (_: Throwable) {
+    }
+  }
+
   @SuppressLint("SetJavaScriptEnabled")
   private fun applySettings(
     webView: WebView,
@@ -581,6 +627,7 @@ class WebViewPool(
       webView.settings.apply {
         javaScriptEnabled = settingsState.javascriptEnabled
         javaScriptCanOpenWindowsAutomatically = false
+        mediaPlaybackRequiresUserGesture = false
         setSupportMultipleWindows(true)
         allowFileAccess = false
         allowContentAccess = false
@@ -757,8 +804,14 @@ class WebViewPool(
       override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
         if (url != null) {
           currentPageHosts[tabId] = UrlValidator.extractHost(url)
-          if (view != null && settingsProvider().trackerBlockingEnabled) {
-            applyAdBlocker(view, true)
+          if (view != null) {
+            val s = settingsProvider()
+            if (s.trackerBlockingEnabled) {
+              applyAdBlocker(view, true)
+            }
+            if (s.backgroundPlayEnabled) {
+              applyBackgroundPlay(view, true)
+            }
           }
           callbacks.onPageStarted(tabId, url)
         }
@@ -773,6 +826,9 @@ class WebViewPool(
           }
           if (s.trackerBlockingEnabled) {
             applyAdBlocker(view, true)
+          }
+          if (s.backgroundPlayEnabled) {
+            applyBackgroundPlay(view, true)
           }
           val safeTitle = try { view.title } catch (_: Throwable) { null }
           val canBack = try { view.canGoBack() } catch (_: Throwable) { false }
@@ -860,6 +916,15 @@ class WebViewPool(
     webView.webChromeClient = object : WebChromeClient() {
       override fun onProgressChanged(view: WebView?, newProgress: Int) {
         callbacks.onProgressChanged(tabId, newProgress)
+        if (view != null && newProgress >= 30 && !destroyedViews.contains(view)) {
+          val s = settingsProvider()
+          if (s.trackerBlockingEnabled) {
+            applyAdBlocker(view, true)
+          }
+          if (s.backgroundPlayEnabled) {
+            applyBackgroundPlay(view, true)
+          }
+        }
       }
 
       override fun onReceivedTitle(view: WebView?, title: String?) {
