@@ -238,4 +238,18 @@ class ExampleRobolectricTest {
     pool.wipePrivateSessionData(listOf("tab1"))
     assertFalse(pool.isWebViewAlive(webView))
   }
+
+  @Test
+  fun translationUrlConstructionAndReversalWorkReliably() {
+    val original = "https://example.org/news?article=123"
+    val encoded = java.net.URLEncoder.encode(original, java.nio.charset.StandardCharsets.UTF_8.name())
+    val targetUrl = "https://translate.google.com/translate?sl=auto&tl=es&u=$encoded"
+    assertTrue(targetUrl.contains("sl=auto"))
+    assertTrue(targetUrl.contains("tl=es"))
+    assertTrue(targetUrl.contains("u="))
+
+    val parsed = android.net.Uri.parse(targetUrl)
+    val restored = parsed.getQueryParameter("u")
+    assertEquals(original, restored)
+  }
 }
