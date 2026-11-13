@@ -1138,6 +1138,14 @@ private fun BrowserToolbar(
   var isFocused by remember { mutableStateOf(false) }
   var clipboardCandidate by remember { mutableStateOf<String?>(null) }
   val focusManager = LocalFocusManager.current
+  val isHomePage = activeTab.url.isBlank()
+
+  val (secIcon, secTint, secDesc) = when (activeTab.securityState) {
+    SecurityState.PRIVATE -> Triple(FeatherIcons.PrivateMask, FeatherPrivateAccent, stringResource(R.string.cd_security_private))
+    SecurityState.SECURE_HTTPS -> Triple(Icons.Filled.Lock, FeatherSecureGreen, stringResource(R.string.cd_security_https))
+    SecurityState.INSECURE_HTTP, SecurityState.ERROR -> Triple(Icons.Filled.Warning, FeatherWarningAmber, stringResource(R.string.cd_security_http))
+    SecurityState.HOME -> Triple(Icons.Filled.Search, MaterialTheme.colorScheme.onSurfaceVariant, stringResource(R.string.cd_security_home))
+  }
 
   val displayHost = remember(activeTab.url) {
     UrlValidator.extractHost(activeTab.url).removePrefix("www.")
@@ -1176,12 +1184,6 @@ private fun BrowserToolbar(
         modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        val (secIcon, secTint, secDesc) = when (activeTab.securityState) {
-          SecurityState.PRIVATE -> Triple(FeatherIcons.PrivateMask, FeatherPrivateAccent, stringResource(R.string.cd_security_private))
-          SecurityState.SECURE_HTTPS -> Triple(Icons.Filled.Lock, FeatherSecureGreen, stringResource(R.string.cd_security_https))
-          SecurityState.INSECURE_HTTP, SecurityState.ERROR -> Triple(Icons.Filled.Warning, FeatherWarningAmber, stringResource(R.string.cd_security_http))
-          SecurityState.HOME -> Triple(Icons.Filled.Search, MaterialTheme.colorScheme.onSurfaceVariant, stringResource(R.string.cd_security_home))
-        }
         Surface(
           shape = RoundedCornerShape(10.dp),
           color = secTint.copy(alpha = 0.14f),
@@ -1316,6 +1318,26 @@ private fun BrowserToolbar(
           modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
           verticalAlignment = Alignment.CenterVertically
         ) {
+          if (isHomePage) {
+            Surface(
+              shape = RoundedCornerShape(10.dp),
+              color = secTint.copy(alpha = 0.14f),
+              modifier = Modifier
+                .size(34.dp)
+                .clickable { onOpenSiteInfo() }
+                .testTag("security_badge_button")
+            ) {
+              Box(contentAlignment = Alignment.Center) {
+                Icon(
+                  imageVector = secIcon,
+                  contentDescription = secDesc,
+                  tint = secTint,
+                  modifier = Modifier.size(18.dp)
+                )
+              }
+            }
+            Spacer(modifier = Modifier.width(4.dp))
+          }
           IconButton(
             onClick = onBack,
             enabled = activeTab.canGoBack || activeTab.httpWarning != null || activeTab.errorState != null,
@@ -1340,9 +1362,13 @@ private fun BrowserToolbar(
               contentDescription = if (activeTab.isLoading) stringResource(R.string.cd_stop) else stringResource(R.string.cd_reload)
             )
           }
-          Spacer(modifier = Modifier.width(6.dp))
-          omniboxPill(Modifier.weight(1f))
-          Spacer(modifier = Modifier.width(6.dp))
+          if (!isHomePage) {
+            Spacer(modifier = Modifier.width(6.dp))
+            omniboxPill(Modifier.weight(1f))
+            Spacer(modifier = Modifier.width(6.dp))
+          } else {
+            Spacer(modifier = Modifier.weight(1f))
+          }
           Surface(
             shape = RoundedCornerShape(10.dp),
             border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)),
@@ -1371,71 +1397,144 @@ private fun BrowserToolbar(
           }
         }
       } else {
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp)) {
-          omniboxPill(Modifier.fillMaxWidth())
-
+        if (isHomePage) {
           Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
           ) {
-            IconButton(
-              onClick = onBack,
-              enabled = activeTab.canGoBack || activeTab.httpWarning != null || activeTab.errorState != null,
-              modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_back_button")
-            ) {
-              Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
-            }
-            IconButton(
-              onClick = onForward,
-              enabled = activeTab.canGoForward,
-              modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_forward_button")
-            ) {
-              Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = stringResource(R.string.cd_forward))
-            }
-            IconButton(
-              onClick = onReloadOrStop,
-              enabled = activeTab.url.isNotBlank() || activeTab.errorState != null,
-              modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_reload_button")
-            ) {
-              Icon(
-                imageVector = if (activeTab.isLoading) Icons.Filled.Close else Icons.Filled.Refresh,
-                contentDescription = if (activeTab.isLoading) stringResource(R.string.cd_stop) else stringResource(R.string.cd_reload)
-              )
-            }
-
-            Surface(
-              shape = RoundedCornerShape(10.dp),
-              border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)),
-              color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-              modifier = Modifier
-                .minimumInteractiveComponentSize()
-                .clickable { onOpenTabs() }
-                .testTag("nav_tabs_button")
-            ) {
-              Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.padding(horizontal = 11.dp, vertical = 4.dp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = secTint.copy(alpha = 0.14f),
+                modifier = Modifier
+                  .size(34.dp)
+                  .clickable { onOpenSiteInfo() }
+                  .testTag("security_badge_button")
               ) {
-                Text(
-                  text = tabCount.toString(),
-                  style = MaterialTheme.typography.labelMedium,
-                  fontWeight = FontWeight.Bold
-                )
+                Box(contentAlignment = Alignment.Center) {
+                  Icon(
+                    imageVector = secIcon,
+                    contentDescription = secDesc,
+                    tint = secTint,
+                    modifier = Modifier.size(18.dp)
+                  )
+                }
+              }
+              Spacer(modifier = Modifier.width(4.dp))
+              IconButton(
+                onClick = onBack,
+                enabled = activeTab.canGoBack || activeTab.httpWarning != null || activeTab.errorState != null,
+                modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_back_button")
+              ) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
+              }
+              IconButton(
+                onClick = onForward,
+                enabled = activeTab.canGoForward,
+                modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_forward_button")
+              ) {
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = stringResource(R.string.cd_forward))
               }
             }
 
-            IconButton(
-              onClick = onOpenQuickMenu,
-              modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_menu_button")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Surface(
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier
+                  .minimumInteractiveComponentSize()
+                  .clickable { onOpenTabs() }
+                  .testTag("nav_tabs_button")
+              ) {
+                Box(
+                  contentAlignment = Alignment.Center,
+                  modifier = Modifier.padding(horizontal = 11.dp, vertical = 4.dp)
+                ) {
+                  Text(
+                    text = tabCount.toString(),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold
+                  )
+                }
+              }
+
+              IconButton(
+                onClick = onOpenQuickMenu,
+                modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_menu_button")
+              ) {
+                Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.cd_menu))
+              }
+            }
+          }
+        } else {
+          Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp)) {
+            omniboxPill(Modifier.fillMaxWidth())
+
+            Row(
+              modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically
             ) {
-              Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.cd_menu))
+              IconButton(
+                onClick = onBack,
+                enabled = activeTab.canGoBack || activeTab.httpWarning != null || activeTab.errorState != null,
+                modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_back_button")
+              ) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
+              }
+              IconButton(
+                onClick = onForward,
+                enabled = activeTab.canGoForward,
+                modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_forward_button")
+              ) {
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = stringResource(R.string.cd_forward))
+              }
+              IconButton(
+                onClick = onReloadOrStop,
+                enabled = activeTab.url.isNotBlank() || activeTab.errorState != null,
+                modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_reload_button")
+              ) {
+                Icon(
+                  imageVector = if (activeTab.isLoading) Icons.Filled.Close else Icons.Filled.Refresh,
+                  contentDescription = if (activeTab.isLoading) stringResource(R.string.cd_stop) else stringResource(R.string.cd_reload)
+                )
+              }
+
+              Surface(
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier
+                  .minimumInteractiveComponentSize()
+                  .clickable { onOpenTabs() }
+                  .testTag("nav_tabs_button")
+              ) {
+                Box(
+                  contentAlignment = Alignment.Center,
+                  modifier = Modifier.padding(horizontal = 11.dp, vertical = 4.dp)
+                ) {
+                  Text(
+                    text = tabCount.toString(),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold
+                  )
+                }
+              }
+
+              IconButton(
+                onClick = onOpenQuickMenu,
+                modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_menu_button")
+              ) {
+                Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.cd_menu))
+              }
             }
           }
         }
       }
 
-      if (isFocused && !clipboardCandidate.isNullOrBlank() && clipboardCandidate != activeTab.url) {
+      if (!isHomePage && isFocused && !clipboardCandidate.isNullOrBlank() && clipboardCandidate != activeTab.url) {
         Surface(
           color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
           modifier = Modifier

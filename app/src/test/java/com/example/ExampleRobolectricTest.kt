@@ -38,8 +38,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Bat", appName)
-    assertEquals("1.1.4", BuildConfig.VERSION_NAME)
-    assertEquals(7, BuildConfig.VERSION_CODE)
+    assertEquals("1.1.5", BuildConfig.VERSION_NAME)
+    assertEquals(8, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -137,7 +137,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.1.4").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.1.5").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_retain_tabs").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("settings_back_button").performClick()
