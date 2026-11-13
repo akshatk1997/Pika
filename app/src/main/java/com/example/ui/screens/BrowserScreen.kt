@@ -15,7 +15,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -234,16 +233,6 @@ fun BrowserScreen(
             .navigationBarsPadding()
             .imePadding()
         ) {
-          if (isWideWidth && !isBrowserFullscreen) {
-            TabletTabStrip(
-              tabs = tabs,
-              activeTabId = activeTabId,
-              onSelectTab = { tabId -> viewModel.switchToTab(tabId) },
-              onCloseTab = { tabId -> viewModel.closeTab(tabId) },
-              onNewTab = { isPrivate -> viewModel.openNewTab(isPrivate = isPrivate) }
-            )
-          }
-
           AnimatedVisibility(
             visible = !isBrowserFullscreen && (isNavBarVisible || isImeVisible || activeTab.url.isBlank() || activeTab.url == "about:blank" || activeTab.isLoading),
             enter = expandVertically() + fadeIn(),
@@ -1117,118 +1106,6 @@ private fun ContextActionRow(label: String, onClick: () -> Unit) {
     verticalAlignment = Alignment.CenterVertically
   ) {
     Text(label, style = MaterialTheme.typography.bodyLarge)
-  }
-}
-
-@Composable
-private fun TabletTabStrip(
-  tabs: List<TabInfo>,
-  activeTabId: String,
-  onSelectTab: (String) -> Unit,
-  onCloseTab: (String) -> Unit,
-  onNewTab: (Boolean) -> Unit,
-  modifier: Modifier = Modifier
-) {
-  Surface(
-    color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.55f),
-    modifier = modifier.fillMaxWidth()
-  ) {
-    Row(
-      modifier = Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 8.dp, vertical = 4.dp),
-      verticalAlignment = Alignment.CenterVertically
-    ) {
-      Row(
-        modifier = Modifier
-          .weight(1f, fill = false)
-          .horizontalScroll(rememberScrollState()),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
-      ) {
-        tabs.forEach { tab ->
-          val isActive = tab.id == activeTabId
-          Surface(
-            shape = RoundedCornerShape(10.dp),
-            color = if (isActive) {
-              MaterialTheme.colorScheme.surface
-            } else {
-              MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            },
-            border = BorderStroke(
-              width = if (isActive) 1.dp else 0.5.dp,
-              color = if (isActive) {
-                if (tab.isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.primary
-              } else {
-                MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
-              }
-            ),
-            shadowElevation = if (isActive) 2.dp else 0.dp,
-            modifier = Modifier
-              .widthIn(min = 120.dp, max = 220.dp)
-              .height(36.dp)
-              .clickable { onSelectTab(tab.id) }
-              .testTag("tablet_tab_${tab.id}")
-          ) {
-            Row(
-              modifier = Modifier.padding(start = 10.dp, end = 4.dp),
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Icon(
-                imageVector = when {
-                  tab.isPrivate -> FeatherIcons.PrivateMask
-                  tab.url.isBlank() -> Icons.Filled.Search
-                  else -> FeatherIcons.FeatherLogo
-                },
-                contentDescription = null,
-                tint = if (tab.isPrivate) FeatherPrivateAccent else if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(14.dp)
-              )
-              Spacer(modifier = Modifier.width(6.dp))
-              val displayTitle = tab.title.ifBlank {
-                if (tab.url.isBlank()) stringResource(R.string.action_new_tab) else UrlValidator.extractHost(tab.url)
-              }
-              Text(
-                text = displayTitle,
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
-                color = if (isActive) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-              )
-              if (tabs.size > 1) {
-                IconButton(
-                  onClick = { onCloseTab(tab.id) },
-                  modifier = Modifier.size(24.dp).testTag("tablet_tab_close_${tab.id}")
-                ) {
-                  Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = stringResource(R.string.action_close_tab),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(13.dp)
-                  )
-                }
-              }
-            }
-          }
-        }
-      }
-      Spacer(modifier = Modifier.width(6.dp))
-      IconButton(
-        onClick = { onNewTab(false) },
-        modifier = Modifier
-          .size(34.dp)
-          .testTag("tablet_tab_new_button")
-      ) {
-        Icon(
-          imageVector = Icons.Filled.Add,
-          contentDescription = stringResource(R.string.action_new_tab),
-          tint = MaterialTheme.colorScheme.primary,
-          modifier = Modifier.size(20.dp)
-        )
-      }
-    }
   }
 }
 

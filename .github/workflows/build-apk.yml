@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Shiz-v1.4.0.apk
+          cp "$APK_PATH" releases/Shiz-v1.4.1.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Shiz-v1.4.0.apk
+          git add releases/Shiz-v1.4.1.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Shiz-v1.4.0.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Shiz-v1.4.1.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.4.0
+      - name: Create or update GitHub Release v1.4.1
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Shiz-v1.4.0.apk)
-          NOTES="Shiz Browser v1.4.0 (Build 13) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Hardened Background Stream Playback:** Implemented \`BackgroundMediaWebView\` overriding native Android \`onWindowVisibilityChanged\` and \`dispatchWindowVisibilityChanged\` to prevent Chromium's C++ AwContents from pausing media playback when the window is hidden or backgrounded. Added YouTube player API hooks (\`#movie_player\` / \`.html5-video-player\`) for play, pause, prev/next track, and seek commands, and enhanced DOM visibility spoofing with auto-resuming media listeners and blur event interception.\n- **Tablet Layout Overhaul & Enhanced Tablet Experience:** Removed the left sidebar (\`NavigationRail\`) to give tablet users the full screen width matching phone simplicity, while adding a desktop-style top horizontal Tab Strip (\`TabletTabStrip\`) with tab switching, title display, close buttons, and a '+' New Tab button, plus direct 1-tap tablet toolbar shortcuts for Desktop UA toggle, Bookmarks, and Downloads.\n- **Fast & Snappy Browsing:** Optimized background media synchronization and UI layout pipelines to eliminate lag and stutter across phones and tablets.\n- **Signed Release APK size:** ${SIZE_BYTES} bytes (strictly < 2 MB / 2,097,152 bytes).\n- **Checks:** \`:app:testDebugUnitTest\` (API 26 & 36, Phone & Tablet), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\` passed."
-          if gh release view v1.4.0 >/dev/null 2>&1; then
-            gh release upload v1.4.0 releases/Shiz-v1.4.0.apk --clobber
-            gh release edit v1.4.0 --title "Shiz v1.4.0 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Shiz-v1.4.1.apk)
+          NOTES="Shiz Browser v1.4.1 (Build 14) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Clean Tablet Header:** Removed the top tab bar from the header on tablet devices to provide a clean, distraction-free single-row toolbar layout matching phone simplicity with full-width browsing, while retaining instant 1-tap toolbar shortcuts for desktop site toggle, bookmarks, downloads, and new tabs.\n- **Hardened Background Stream Playback:** Implemented \`BackgroundMediaWebView\` overriding native Android \`onWindowVisibilityChanged\` and \`dispatchWindowVisibilityChanged\` to prevent Chromium's C++ AwContents from pausing media playback when the window is hidden or backgrounded. Added YouTube player API hooks (\`#movie_player\` / \`.html5-video-player\`) for play, pause, prev/next track, and seek commands, and enhanced DOM visibility spoofing with auto-resuming media listeners and blur event interception.\n- **Signed Release APK size:** ${SIZE_BYTES} bytes (strictly < 2 MB / 2,097,152 bytes).\n- **Checks:** \`:app:testDebugUnitTest\` (API 26 & 36, Phone & Tablet), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\` passed."
+          if gh release view v1.4.1 >/dev/null 2>&1; then
+            gh release upload v1.4.1 releases/Shiz-v1.4.1.apk --clobber
+            gh release edit v1.4.1 --title "Shiz v1.4.1 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.4.0 releases/Shiz-v1.4.0.apk \
-              --title "Shiz v1.4.0 (< 2 MB)" \
+            gh release create v1.4.1 releases/Shiz-v1.4.1.apk \
+              --title "Shiz v1.4.1 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

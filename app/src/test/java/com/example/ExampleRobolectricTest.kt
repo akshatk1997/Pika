@@ -38,8 +38,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Shiz", appName)
-    assertEquals("1.4.0", BuildConfig.VERSION_NAME)
-    assertEquals(13, BuildConfig.VERSION_CODE)
+    assertEquals("1.4.1", BuildConfig.VERSION_NAME)
+    assertEquals(14, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -156,7 +156,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.4.0").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.4.1").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_retain_tabs").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -168,7 +168,7 @@ class ExampleRobolectricTest {
 
   @Test
   @Config(sdk = [26, 36], qualifiers = "sw600dp-w1024dp-h768dp-xhdpi")
-  fun tabletTopTabStripAndToolbarShortcutsWorkAcrossAndroidVersions() {
+  fun tabletHeaderHasNoTabBarAndToolbarShortcutsWorkAcrossAndroidVersions() {
     composeTestRule.waitForIdle()
     try {
       composeTestRule.onNodeWithTag("intro_get_started").performClick()
@@ -177,14 +177,17 @@ class ExampleRobolectricTest {
     }
     composeTestRule.onNodeWithText("Shiz").assertIsDisplayed()
 
-    // Tablet layout renders desktop-style top Tab Strip without left NavigationRail
-    composeTestRule.onNodeWithTag("tablet_tab_new_button").assertIsDisplayed()
+    // Header tab strip is removed from tablet devices
+    composeTestRule.onNodeWithTag("tablet_tab_new_button").assertDoesNotExist()
+
+    // Tablet layout renders clean single-row top toolbar with instant shortcuts
     composeTestRule.onNodeWithTag("tablet_desktop_mode_button").assertIsDisplayed()
     composeTestRule.onNodeWithTag("tablet_bookmarks_button").assertIsDisplayed()
     composeTestRule.onNodeWithTag("tablet_downloads_button").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("tablet_new_tab_button").assertIsDisplayed()
 
-    // Open a new tab directly from the top tablet tab strip '+' button
-    composeTestRule.onNodeWithTag("tablet_tab_new_button").performClick()
+    // Open a new tab directly from the toolbar '+' button
+    composeTestRule.onNodeWithTag("tablet_new_tab_button").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("Search with DuckDuckGo").assertIsDisplayed()
   }
