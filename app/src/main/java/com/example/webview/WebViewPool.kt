@@ -587,19 +587,47 @@ class WebViewPool(
             get: function() { return 'visible'; },
             configurable: true
           });
+          Object.defineProperty(document, 'webkitHidden', {
+            get: function() { return false; },
+            configurable: true
+          });
           Object.defineProperty(document, 'webkitVisibilityState', {
             get: function() { return 'visible'; },
             configurable: true
           });
+          document.hasFocus = function() { return true; };
         } catch(e) {}
 
-        var blockVisibilityEvent = function(e) {
-          e.stopImmediatePropagation();
+        var blockEvent = function(e) {
+          if (e) {
+            e.stopImmediatePropagation();
+            e.stopPropagation();
+          }
         };
 
-        window.addEventListener('visibilitychange', blockVisibilityEvent, true);
-        document.addEventListener('visibilitychange', blockVisibilityEvent, true);
-        window.addEventListener('pagehide', blockVisibilityEvent, true);
+        window.addEventListener('visibilitychange', blockEvent, true);
+        document.addEventListener('visibilitychange', blockEvent, true);
+        window.addEventListener('webkitvisibilitychange', blockEvent, true);
+        document.addEventListener('webkitvisibilitychange', blockEvent, true);
+        window.addEventListener('pagehide', blockEvent, true);
+
+        try {
+          Object.defineProperty(document, 'onvisibilitychange', {
+            get: function() { return null; },
+            set: function(_) {},
+            configurable: true
+          });
+        } catch(e) {}
+
+        try {
+          var origAdd = EventTarget.prototype.addEventListener;
+          EventTarget.prototype.addEventListener = function(type, listener, options) {
+            if (type === 'visibilitychange' || type === 'webkitvisibilitychange') {
+              return;
+            }
+            return origAdd.apply(this, arguments);
+          };
+        } catch(e) {}
       })();
       """.trimIndent()
     } else {

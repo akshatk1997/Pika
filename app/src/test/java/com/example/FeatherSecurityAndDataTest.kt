@@ -143,4 +143,32 @@ class FeatherSecurityAndDataTest {
     assertEquals(1, imported.size)
     assertEquals("https://example.org", imported[0].url)
   }
+
+  @Test
+  fun mediaPlaybackServiceActionsAreDistinctAndValid() {
+    val actions = setOf(
+      com.example.media.MediaPlaybackService.ACTION_PLAY,
+      com.example.media.MediaPlaybackService.ACTION_PAUSE,
+      com.example.media.MediaPlaybackService.ACTION_PREV,
+      com.example.media.MediaPlaybackService.ACTION_NEXT,
+      com.example.media.MediaPlaybackService.ACTION_STOP,
+      com.example.media.MediaPlaybackService.ACTION_UPDATE_STATE
+    )
+    assertEquals(6, actions.size)
+    assertEquals("shiz_media_stream", com.example.media.MediaPlaybackService.CHANNEL_ID)
+  }
+
+  @Test
+  fun translationUrlConstructionAndReversalWorkReliably() {
+    val original = "https://example.org/news?article=123"
+    val encoded = java.net.URLEncoder.encode(original, java.nio.charset.StandardCharsets.UTF_8.name())
+    val targetUrl = "https://translate.google.com/translate?sl=auto&tl=es&u=$encoded"
+    assertTrue(targetUrl.contains("sl=auto"))
+    assertTrue(targetUrl.contains("tl=es"))
+    assertTrue(targetUrl.contains("u="))
+
+    val parsed = android.net.Uri.parse(targetUrl)
+    val restored = parsed.getQueryParameter("u")
+    assertEquals(original, restored)
+  }
 }

@@ -19,6 +19,7 @@ import com.example.data.BookmarkImportExport
 import com.example.data.LocalBrowserDatabase
 import com.example.data.SettingsRepository
 import com.example.download.DownloadController
+import com.example.media.MediaPlaybackService
 import com.example.model.BookmarkItem
 import com.example.model.ClearDataOptions
 import com.example.model.ClosedTabRecord
@@ -45,12 +46,15 @@ import com.example.security.UrlValidator
 import com.example.webview.WebViewCallbacks
 import com.example.webview.WebViewPool
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import org.json.JSONTokener
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.util.Locale
@@ -446,6 +450,25 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   init {
     refreshBookmarks()
     refreshHistory()
+
+    MediaPlaybackService.mediaControlListener = { action ->
+      runOnMain {
+        handleMediaControlAction(action)
+      }
+    }
+
+    viewModelScope.launch {
+      while (true) {
+        delay(2500)
+        if (_settings.value.backgroundPlayEnabled) {
+          val tab = activeTab()
+          if (tab.url.isNotBlank() && tab.url != "about:blank") {
+            checkAndSyncMediaPlayback(forceStart = false)
+          }
+        }
+      }
+    }
+
     val retained = if (_settings.value.retainOpenTabs) settingsRepo.loadRetainedTabs() else null
     if (retained != null) {
       val (restoredTabs, restoredActiveId) = retained
@@ -937,76 +960,155 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       showToast("Open a page to translate")
       return
     }
-    if (url.contains(".translate.goog") || url.contains("translate.google.com")) {
-      showToast("Page is already translated")
-      return
+
+    if (url.startsWith("https://translate.google.com/translate") ||
+      url.startsWith("http://translate.google.com/translate")
+    ) {
+      try {
+        val parsedUri = Uri.parse(url)
+        val originalUrl = parsedUri.getQueryParameter("u")
+        if (!originalUrl.isNullOrBlank() && UrlValidator.isSafeWebUrl(originalUrl)) {
+          showToast("Restoring original page...")
+          navigateActiveTab(originalUrl)
+          return
+        }
+      } catch (_: Throwable) {
+      }
     }
 
     val targetLang = Locale.getDefault().language.ifEmpty { "en" }
+    val targetLangName = Locale.getDefault().displayLanguage.ifBlank { targetLang }
     val encoded = URLEncoder.encode(url, StandardCharsets.UTF_8.name())
-    val webTranslateUrl = "https://translate.google.com/website?sl=auto&tl=$targetLang&u=$encoded"
+    val targetUrl = "https://translate.google.com/translate?sl=auto&tl=$targetLang&u=$encoded"
 
-    val inPageJs = """
-      (function() {
-        if (window.__shiz_translating) {
-          var combo = document.querySelector('.goog-te-combo');
-          if (combo) {
-            combo.value = '$targetLang';
-            combo.dispatchEvent(new Event('change'));
-            return;
+    showToast("Translating page to $targetLangName...")
+    navigateActiveTab(targetUrl)
+  }
+
+  fun handleMediaControlAction(action: String) {
+    val tab = activeTab()
+    val webView = webViewPool.getLiveWebView(tab.id) ?: return
+    if (!_settings.value.javascriptEnabled) return
+    val js = when (action) {
+      MediaPlaybackService.ACTION_PLAY -> """
+        (function() {
+          var media = document.querySelectorAll('video, audio');
+          for (var i = 0; i < media.length; i++) {
+            if (media[i].paused) {
+              media[i].play().catch(function() {});
+            }
           }
+        })();
+      """.trimIndent()
+      MediaPlaybackService.ACTION_PAUSE -> """
+        (function() {
+          var media = document.querySelectorAll('video, audio');
+          for (var i = 0; i < media.length; i++) {
+            if (!media[i].paused) {
+              media[i].pause();
+            }
+          }
+        })();
+      """.trimIndent()
+      MediaPlaybackService.ACTION_PREV -> """
+        (function() {
+          var media = document.querySelectorAll('video, audio');
+          for (var i = 0; i < media.length; i++) {
+            media[i].currentTime = Math.max(0, (media[i].currentTime || 0) - 10);
+          }
+        })();
+      """.trimIndent()
+      MediaPlaybackService.ACTION_NEXT -> """
+        (function() {
+          var nextBtn = document.querySelector('.ytp-next-button, [aria-label="Next"], [title="Next"]');
+          if (nextBtn) {
+            nextBtn.click();
+          } else {
+            var media = document.querySelectorAll('video, audio');
+            for (var i = 0; i < media.length; i++) {
+              media[i].currentTime = (media[i].currentTime || 0) + 10;
+            }
+          }
+        })();
+      """.trimIndent()
+      MediaPlaybackService.ACTION_STOP -> """
+        (function() {
+          var media = document.querySelectorAll('video, audio');
+          for (var i = 0; i < media.length; i++) {
+            media[i].pause();
+          }
+        })();
+      """.trimIndent()
+      else -> return
+    }
+    try {
+      webView.evaluateJavascript(js, null)
+    } catch (_: Throwable) {
+    }
+  }
+
+  fun checkAndSyncMediaPlayback(forceStart: Boolean = false) {
+    val tab = activeTab()
+    val webView = webViewPool.getLiveWebView(tab.id)
+    if (webView == null || !_settings.value.javascriptEnabled || !_settings.value.backgroundPlayEnabled) {
+      if (MediaPlaybackService.isServiceRunning && !forceStart) {
+        MediaPlaybackService.stop(appContext)
+      }
+      return
+    }
+
+    val probeJs = """
+      (function() {
+        try {
+          var media = document.querySelectorAll('video, audio');
+          var playing = false;
+          for (var i = 0; i < media.length; i++) {
+            var m = media[i];
+            if (!m.paused && !m.ended && m.readyState > 1) {
+              playing = true;
+              break;
+            }
+          }
+          return JSON.stringify({
+            playing: playing,
+            count: media.length,
+            title: document.title || ''
+          });
+        } catch(e) {
+          return JSON.stringify({ playing: false, count: 0, title: '' });
         }
-        window.__shiz_translating = true;
-
-        window.googleTranslateElementInit = function() {
-          try {
-            new google.translate.TranslateElement({
-              pageLanguage: 'auto',
-              includedLanguages: '$targetLang,en,es,fr,de,zh-CN,ja,ar,ru,hi,pt,it,ko',
-              layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
-              autoDisplay: true
-            }, 'shiz_translate_element');
-
-            var count = 0;
-            var timer = setInterval(function() {
-              count++;
-              var combo = document.querySelector('.goog-te-combo');
-              if (combo) {
-                clearInterval(timer);
-                if (combo.value !== '$targetLang') {
-                  combo.value = '$targetLang';
-                  combo.dispatchEvent(new Event('change'));
-                }
-              } else if (count > 25) {
-                clearInterval(timer);
-              }
-            }, 200);
-          } catch(e) {}
-        };
-
-        var el = document.getElementById('shiz_translate_element');
-        if (!el) {
-          el = document.createElement('div');
-          el.id = 'shiz_translate_element';
-          el.style.cssText = 'position:fixed;bottom:24px;right:16px;z-index:2147483647;background:white;padding:6px 12px;border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,0.25);font-size:13px;font-family:sans-serif;border:1px solid #ccc;';
-          (document.body || document.documentElement).appendChild(el);
-        }
-
-        var s = document.createElement('script');
-        s.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
-        s.onerror = function() {
-          window.location.href = '$webTranslateUrl';
-        };
-        (document.head || document.documentElement).appendChild(s);
-      })();
+      })()
     """.trimIndent()
 
-    val webView = webViewPool.getLiveWebView(tab.id)
-    if (webView != null && _settings.value.javascriptEnabled) {
-      showToast("Translating page...")
-      webView.evaluateJavascript(inPageJs, null)
-    } else {
-      navigateActiveTab(webTranslateUrl)
+    try {
+      webView.evaluateJavascript(probeJs) { result ->
+        if (result.isNullOrBlank() || result == "null") return@evaluateJavascript
+        try {
+          val unquoted = if (result.startsWith("\"") && result.endsWith("\"") && result.length >= 2) {
+            JSONObject(JSONTokener(result).nextValue().toString())
+          } else {
+            JSONObject(result)
+          }
+          val isPlaying = unquoted.optBoolean("playing", false)
+          val mediaCount = unquoted.optInt("count", 0)
+          val docTitle = unquoted.optString("title", "")
+
+          if (isPlaying || (forceStart && mediaCount > 0)) {
+            val pageTitle = docTitle.ifBlank { tab.title }.ifBlank { "Web Stream" }
+            val host = UrlValidator.extractHost(tab.url).ifEmpty { "Playing" }
+            MediaPlaybackService.start(
+              context = appContext,
+              title = pageTitle,
+              domain = host,
+              isPlaying = isPlaying
+            )
+          } else if (mediaCount == 0 && MediaPlaybackService.isServiceRunning) {
+            MediaPlaybackService.stop(appContext)
+          }
+        } catch (_: Throwable) {
+        }
+      }
+    } catch (_: Throwable) {
     }
   }
 
@@ -1371,6 +1473,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   override fun onCleared() {
     super.onCleared()
+    MediaPlaybackService.mediaControlListener = null
+    MediaPlaybackService.stop(appContext)
     webViewPool.destroyAll()
   }
 }

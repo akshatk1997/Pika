@@ -64,9 +64,19 @@ class MainActivity : ComponentActivity() {
     viewModel.deliverChosenFiles(if (uris.isEmpty()) null else uris.toTypedArray())
   }
 
+  private val requestNotificationPermissionLauncher = registerForActivityResult(
+    ActivityResultContracts.RequestPermission()
+  ) { _ -> }
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
+
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+      if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+        requestNotificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+      }
+    }
 
     viewModel.onLaunchFileChooser = { acceptTypes ->
       try {
@@ -134,6 +144,26 @@ class MainActivity : ComponentActivity() {
           }
         )
       }
+    }
+  }
+
+  override fun onUserLeaveHint() {
+    super.onUserLeaveHint()
+    try {
+      if (viewModel.settings.value.backgroundPlayEnabled) {
+        viewModel.checkAndSyncMediaPlayback(forceStart = true)
+      }
+    } catch (_: Throwable) {
+    }
+  }
+
+  override fun onPause() {
+    super.onPause()
+    try {
+      if (viewModel.settings.value.backgroundPlayEnabled) {
+        viewModel.checkAndSyncMediaPlayback(forceStart = true)
+      }
+    } catch (_: Throwable) {
     }
   }
 
