@@ -224,6 +224,7 @@ class WebViewPool(
       val (isPriv, uaMode) = tabStateLookup(id)
       applySettings(wv, isPriv, uaMode, settingsState)
       applyNightWebCss(wv, settingsState.nightWebMode)
+      applyAdBlocker(wv, settingsState.trackerBlockingEnabled)
     }
   }
 
@@ -456,6 +457,118 @@ class WebViewPool(
     }
   }
 
+  private fun applyAdBlocker(webView: WebView, enabled: Boolean) {
+    if (!settingsProvider().javascriptEnabled || destroyedViews.contains(webView)) return
+    val js = if (enabled) {
+      """
+      (function() {
+        if (window.__bat_adblock_installed) return;
+        window.__bat_adblock_installed = true;
+
+        try {
+          var styleId = 'bat-adblock-shield-style';
+          if (!document.getElementById(styleId)) {
+            var s = document.createElement('style');
+            s.id = styleId;
+            s.textContent = [
+              'ytd-ad-slot-renderer',
+              'ytm-ad-slot-renderer',
+              'ytm-promoted-sparkles-web-renderer',
+              'ytm-companion-ad-renderer',
+              'ytd-in-feed-ad-layout-renderer',
+              'ytd-banner-promo-renderer',
+              'ytd-statement-banner-renderer',
+              'ytm-paid-content-overlay-renderer',
+              '.ytp-ad-module',
+              '.ytp-ad-overlay-container',
+              '.ytp-ad-image-overlay',
+              '.ytp-ad-message-container',
+              '.ytp-ad-action-interstitial',
+              '.ytp-ad-player-overlay',
+              '.ytp-ad-player-overlay-flyout-cta',
+              '.video-ads',
+              '.adsbygoogle',
+              '[id^="google_ads_"]',
+              '[id^="div-gpt-ad"]',
+              '[class*="sponsored-post"]',
+              '.taboola-ad',
+              '.outbrain-ad',
+              '.trc_related_container',
+              '.mgid-ad',
+              '.ad-container',
+              '.ad-div',
+              '.ad-banner',
+              '.advertisement',
+              '.advertisement-container'
+            ].join(',') + '{display:none!important;visibility:hidden!important;height:0!important;min-height:0!important;opacity:0!important;pointer-events:none!important;}';
+            (document.head || document.documentElement).appendChild(s);
+          }
+        } catch(e) {}
+
+        function skipStreamingAds() {
+          try {
+            var player = document.querySelector('#movie_player') || document.querySelector('.html5-video-player');
+            var isAdActive = false;
+            if (player) {
+              isAdActive = player.classList.contains('ad-showing') ||
+                           player.classList.contains('ad-interrupting') ||
+                           Boolean(player.querySelector('.ytp-ad-player-overlay'));
+            }
+
+            var videos = document.querySelectorAll('video');
+            for (var i = 0; i < videos.length; i++) {
+              var v = videos[i];
+              var adContainer = v.closest && v.closest('.ad-showing, .ad-interrupting, .video-ads');
+              if (isAdActive || adContainer) {
+                v.muted = true;
+                if (isFinite(v.duration) && v.duration > 0) {
+                  v.currentTime = v.duration;
+                }
+                v.playbackRate = 16.0;
+              }
+            }
+
+            var skipButtons = document.querySelectorAll(
+              '.ytp-ad-skip-button, .ytp-ad-skip-button-modern, button.ytp-ad-skip-button, .ytp-ad-overlay-close-button, .videoAdUiSkipButton, [class*="skip-button"]'
+            );
+            for (var j = 0; j < skipButtons.length; j++) {
+              if (typeof skipButtons[j].click === 'function') {
+                skipButtons[j].click();
+              }
+            }
+          } catch(e) {}
+        }
+
+        setInterval(skipStreamingAds, 300);
+
+        if (window.MutationObserver) {
+          var observer = new MutationObserver(function() {
+            skipStreamingAds();
+          });
+          observer.observe(document.documentElement || document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['class']
+          });
+        }
+      })();
+      """.trimIndent()
+    } else {
+      """
+      (function() {
+        window.__bat_adblock_installed = false;
+        var s = document.getElementById('bat-adblock-shield-style');
+        if (s) s.remove();
+      })();
+      """.trimIndent()
+    }
+    try {
+      webView.evaluateJavascript(js, null)
+    } catch (_: Throwable) {
+    }
+  }
+
   @SuppressLint("SetJavaScriptEnabled")
   private fun applySettings(
     webView: WebView,
@@ -592,6 +705,11 @@ class WebViewPool(
           callbacks.onBlockedScheme(tabId, url, "blocked-host")
           return true
         }
+        if (currentSettings.trackerBlockingEnabled &&
+          (TrackerBlocker.isTrackerHost(host) || TrackerBlocker.isAdPathOrQuery(url))) {
+          callbacks.onTrackerBlocked(tabId)
+          return true
+        }
         if (currentSettings.httpsOnlyEnabled && UrlValidator.isHttpUrl(url) && host !in approvedHttpHosts) {
           if (request.isForMainFrame) {
             callbacks.onHttpBlockedByHttpsOnly(tabId, url)
@@ -639,6 +757,9 @@ class WebViewPool(
       override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
         if (url != null) {
           currentPageHosts[tabId] = UrlValidator.extractHost(url)
+          if (view != null && settingsProvider().trackerBlockingEnabled) {
+            applyAdBlocker(view, true)
+          }
           callbacks.onPageStarted(tabId, url)
         }
       }
@@ -646,8 +767,12 @@ class WebViewPool(
       override fun onPageFinished(view: WebView?, url: String?) {
         if (url != null && view != null && !destroyedViews.contains(view)) {
           currentPageHosts[tabId] = UrlValidator.extractHost(url)
-          if (settingsProvider().nightWebMode) {
+          val s = settingsProvider()
+          if (s.nightWebMode) {
             applyNightWebCss(view, true)
+          }
+          if (s.trackerBlockingEnabled) {
+            applyAdBlocker(view, true)
           }
           val safeTitle = try { view.title } catch (_: Throwable) { null }
           val canBack = try { view.canGoBack() } catch (_: Throwable) { false }
@@ -751,6 +876,12 @@ class WebViewPool(
       ): Boolean {
         val targetUrl = try { view?.hitTestResult?.extra } catch (_: Throwable) { null } ?: return false
         if (!isUserGesture || !UrlValidator.isSafeWebUrl(targetUrl)) return false
+        val currentSettings = settingsProvider()
+        if (currentSettings.trackerBlockingEnabled &&
+          (TrackerBlocker.isTrackerHost(UrlValidator.extractHost(targetUrl)) || TrackerBlocker.isAdPathOrQuery(targetUrl))) {
+          callbacks.onTrackerBlocked(tabId)
+          return false
+        }
         val origin = try { UrlValidator.extractOrigin(view?.url) } catch (_: Throwable) { "" }
         callbacks.onPermissionPrompt(
           tabId = tabId,

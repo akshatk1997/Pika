@@ -81,6 +81,26 @@ class FeatherSecurityAndDataTest {
   }
 
   @Test
+  fun videoStreamingAndWebAdsBlockedEffectively() {
+    // Video streaming ad endpoints blocked even when matching same host as the page (e.g. YouTube)
+    assertTrue(TrackerBlocker.shouldBlockRequest("https://www.youtube.com/api/stats/ads?v=123", "m.youtube.com", true))
+    assertTrue(TrackerBlocker.shouldBlockRequest("https://m.youtube.com/youtubei/v1/player/ad_break?ad_type=1", "m.youtube.com", true))
+    assertTrue(TrackerBlocker.shouldBlockRequest("https://www.youtube.com/pagead/parallel?video_id=abc", "youtube.com", true))
+    assertTrue(TrackerBlocker.shouldBlockRequest("https://www.youtube.com/ptracking?v=123", "youtube.com", true))
+    assertTrue(TrackerBlocker.shouldBlockRequest("https://www.youtube.com/get_midroll_info?v=123", "youtube.com", true))
+
+    // Video ad SDKs and ad networks blocked
+    assertTrue(TrackerBlocker.shouldBlockRequest("https://imasdk.googleapis.com/js/sdkloader/ima3.js", "streaming.example.com", true))
+    assertTrue(TrackerBlocker.shouldBlockRequest("https://pubads.g.doubleclick.net/gampad/ads?env=vp", "video.example.org", true))
+    assertTrue(TrackerBlocker.shouldBlockRequest("https://s0.2mdn.net/instream/video.mp4", "news.example.com", true))
+
+    // Normal non-ad resources on the video site are not blocked
+    assertFalse(TrackerBlocker.shouldBlockRequest("https://www.youtube.com/s/desktop/123/css/base.css", "youtube.com", true))
+    assertFalse(TrackerBlocker.shouldBlockRequest("https://m.youtube.com/static/player/core.js", "m.youtube.com", true))
+    assertFalse(TrackerBlocker.shouldBlockRequest("https://example.com/videos/tutorial.mp4", "example.com", true))
+  }
+
+  @Test
   fun mediaSnifferClassifiesValidResourcesOnly() {
     val video = TrackerBlocker.inferSniffedResource("https://cdn.example.org/videos/clip.mp4?token=1")
     assertNotNull(video)

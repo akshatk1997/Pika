@@ -348,7 +348,7 @@ fun SettingsScreen(
           HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
           SettingSwitchRow(
             title = "Block ads & trackers",
-            subtitle = "Filter known ad and analytics domains",
+            subtitle = "Pure ad-free browsing and video streaming ad shield",
             checked = settings.trackerBlockingEnabled,
             tag = "setting_tracker_blocker",
             onCheckedChange = { v -> onUpdateSettings { it.copy(trackerBlockingEnabled = v) } }

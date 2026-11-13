@@ -156,13 +156,89 @@ object TrackerBlocker {
     "pendo.io",
     "onetrust.com",
     "cookielaw.org",
-    "consensu.org"
+    "consensu.org",
+    // Video Streaming Ad SDKs, Video Ad Networks & Streaming Trackers
+    "imasdk.googleapis.com",
+    "pubads.g.doubleclick.net",
+    "securepubads.g.doubleclick.net",
+    "ad.doubleclick.net",
+    "static.doubleclick.net",
+    "video-stats.l.google.com",
+    "s0.2mdn.net",
+    "innovid.com",
+    "s.innovid.com",
+    "fwmrm.net",
+    "freewheel.tv",
+    "tubemogul.com",
+    "tremorhub.com",
+    "tremormedia.com",
+    "stickyadstv.com",
+    "liverail.com",
+    "vdo.ai",
+    "playwire.com",
+    "adplayer.pro",
+    "anyclip.com",
+    "vidazoo.com",
+    "aniview.com",
+    "streamrail.com",
+    "admanmedia.com",
+    "springserve.com",
+    "brid.tv",
+    "unrulymedia.com",
+    "undertone.com",
+    "gumgum.com",
+    "sovrn.com",
+    "adpushup.com",
+    // Pop-unders, Video Stream Redirects & Aggressive Ad Networks
+    "adcash.com",
+    "clickadu.com",
+    "hilltopads.com",
+    "monetag.com",
+    "infolinks.com",
+    "bidvertiser.com",
+    "yllix.com",
+    "ad-delivery.net",
+    "a-ads.com",
+    "adxprts.com",
+    "adblade.com",
+    "adtrue.com",
+    "admaven.com",
+    "yell-ad.com",
+    "ero-advertising.com",
+    "trafficstars.com"
   )
 
   private val videoExts = setOf("mp4", "m3u8", "webm", "mov", "mkv", "ts")
   private val audioExts = setOf("mp3", "m4a", "aac", "wav", "ogg", "flac", "opus")
   private val imageExts = setOf("jpg", "jpeg", "png", "webp", "gif")
   private val docExts = setOf("pdf", "zip", "apk", "epub", "csv", "json", "txt")
+
+  private val adUrlPathSignatures = listOf(
+    "/api/stats/ads",
+    "/pagead/",
+    "/ptracking",
+    "/youtubei/v1/player/ad_break",
+    "/get_midroll_info",
+    "/ad_companion",
+    "/googleads",
+    "/pagead2",
+    "/adsystem/",
+    "/adservice/",
+    "/ad-delivery/",
+    "/ad_delivery/",
+    "/vast.xml",
+    "/vmap.xml",
+    "/ads.js",
+    "/prebid.js"
+  )
+
+  fun isAdPathOrQuery(requestUrl: String): Boolean {
+    val lower = requestUrl.lowercase()
+    for (sig in adUrlPathSignatures) {
+      if (lower.contains(sig)) return true
+    }
+    return false
+  }
 
   fun isHostMatchingSet(host: String, domainSet: Set<String>): Boolean {
     val clean = host.lowercase().trimEnd('.')
@@ -185,13 +261,17 @@ object TrackerBlocker {
     enabled: Boolean,
     customBlockedHosts: Set<String> = emptySet()
   ): Boolean {
+    if (!enabled) return false
     val reqHost = UrlValidator.extractHost(requestUrl)
     if (reqHost.isEmpty()) return false
     if (customBlockedHosts.isNotEmpty() && isHostMatchingSet(reqHost, customBlockedHosts)) {
       return true
     }
-    if (!enabled) return false
-    // Do not block if the user explicitly navigated directly to that same host as top-level page
+    // Block video ad requests & ad serving endpoints even if hosted on the same domain (e.g. youtube.com/api/stats/ads)
+    if (isAdPathOrQuery(requestUrl)) {
+      return true
+    }
+    // Do not block normal site assets on the top-level domain unless matched above
     val cleanPage = pageHost.lowercase().trimEnd('.')
     if (cleanPage.isNotEmpty() && (reqHost == cleanPage || reqHost.endsWith(".$cleanPage"))) {
       return false
