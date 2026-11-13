@@ -1054,7 +1054,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       if (host.isNotEmpty()) {
         val dashedHost = host.replace("-", "--").replace(".", "-") + ".translate.goog"
         val pathAndQuery = buildString {
-          append(uri.path.ifEmpty { "/" })
+          append((uri.path ?: "").ifEmpty { "/" })
           val existingQuery = uri.query
           append("?_x_tr_sl=auto&_x_tr_tl=").append(targetLang).append("&_x_tr_hl=").append(targetLang)
           if (!existingQuery.isNullOrBlank()) {
