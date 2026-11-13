@@ -21,6 +21,8 @@
     <!-- Menu & Actions -->
     <string name="action_new_tab">New tab</string>
     <string name="action_new_private_tab">Private tab</string>
+    <string name="action_close_tab">Close tab</string>
+    <string name="action_desktop_site">Desktop site</string>
     <string name="action_bookmarks">Bookmarks</string>
     <string name="action_add_bookmark">Bookmark</string>
     <string name="action_remove_bookmark">Remove bookmark</string>

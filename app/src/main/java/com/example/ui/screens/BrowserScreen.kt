@@ -238,7 +238,7 @@ fun BrowserScreen(
             TabletTabStrip(
               tabs = tabs,
               activeTabId = activeTabId,
-              onSelectTab = { tabId -> viewModel.selectTab(tabId) },
+              onSelectTab = { tabId -> viewModel.switchToTab(tabId) },
               onCloseTab = { tabId -> viewModel.closeTab(tabId) },
               onNewTab = { isPrivate -> viewModel.openNewTab(isPrivate = isPrivate) }
             )
@@ -267,10 +267,7 @@ fun BrowserScreen(
               onOpenTabs = { viewModel.setOverlay(ActiveOverlay.TABS) },
               onSwipeTab = { delta -> viewModel.switchAdjacentTab(delta) },
               onOpenQuickMenu = { showQuickSheet = true },
-              onToggleDesktopMode = {
-                val newMode = if (activeTab.userAgentMode == UserAgentMode.DESKTOP) UserAgentMode.MOBILE else UserAgentMode.DESKTOP
-                viewModel.updateUserAgentMode(activeTab.id, newMode)
-              },
+              onToggleDesktopMode = { viewModel.toggleDesktopMode() },
               onOpenBookmarks = { viewModel.setOverlay(ActiveOverlay.BOOKMARKS) },
               onOpenDownloads = { viewModel.setOverlay(ActiveOverlay.DOWNLOADS) },
               onNewTab = { viewModel.openNewTab(isPrivate = false) }
@@ -1189,7 +1186,7 @@ private fun TabletTabStrip(
               )
               Spacer(modifier = Modifier.width(6.dp))
               val displayTitle = tab.title.ifBlank {
-                if (tab.url.isBlank()) stringResource(R.string.title_new_tab) else UrlValidator.extractHost(tab.url)
+                if (tab.url.isBlank()) stringResource(R.string.action_new_tab) else UrlValidator.extractHost(tab.url)
               }
               Text(
                 text = displayTitle,

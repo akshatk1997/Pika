@@ -19,6 +19,8 @@
 
     <string name="action_new_tab">تبويب جديد</string>
     <string name="action_new_private_tab">تبويب خاص</string>
+    <string name="action_close_tab">إغلاق التبويب</string>
+    <string name="action_desktop_site">موقع سطح المكتب</string>
     <string name="action_bookmarks">الإشارات</string>
     <string name="action_add_bookmark">إضافة إشارة</string>
     <string name="action_remove_bookmark">إزالة الإشارة</string>
