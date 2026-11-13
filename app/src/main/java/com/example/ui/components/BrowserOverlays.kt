@@ -145,12 +145,15 @@ fun NewTabHomeView(
       .padding(horizontal = 20.dp, vertical = 14.dp),
     contentAlignment = Alignment.TopCenter
   ) {
-    val isCompactHeight = maxHeight < 460.dp
+    val isCompactHeight = maxHeight < 560.dp
     Column(
-      modifier = Modifier.widthIn(max = 760.dp).fillMaxSize(),
+      modifier = Modifier
+        .widthIn(max = 760.dp)
+        .fillMaxSize()
+        .verticalScroll(rememberScrollState()),
       horizontalAlignment = Alignment.CenterHorizontally
     ) {
-      Spacer(modifier = Modifier.height(if (isCompactHeight) 6.dp else 18.dp))
+      Spacer(modifier = Modifier.height(if (isCompactHeight) 4.dp else 18.dp))
 
       // Hero Emblem (3D Bat Mascot Crest or Private Mask)
       val crestSize = if (isCompactHeight) 52.dp else 74.dp

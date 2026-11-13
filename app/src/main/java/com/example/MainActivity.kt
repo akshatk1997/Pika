@@ -151,6 +151,7 @@ class MainActivity : ComponentActivity() {
     super.onUserLeaveHint()
     try {
       if (viewModel.settings.value.backgroundPlayEnabled) {
+        viewModel.ensureMediaServiceRunningSynchronously()
         viewModel.checkAndSyncMediaPlayback(forceStart = true)
       }
     } catch (_: Throwable) {
@@ -161,6 +162,7 @@ class MainActivity : ComponentActivity() {
     super.onPause()
     try {
       if (viewModel.settings.value.backgroundPlayEnabled) {
+        viewModel.ensureMediaServiceRunningSynchronously()
         viewModel.checkAndSyncMediaPlayback(forceStart = true)
       }
     } catch (_: Throwable) {

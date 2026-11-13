@@ -10,6 +10,7 @@
 
 | Version | Version Code | Target Platforms & OS | Key Highlights |
 |---|---:|---|---|
+| **v1.3.2** | `12` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Fixed keyboard content jumping & search bar visibility on homepage and all websites (removed duplicate IME insets, enforced exact 1x keyboard height shifting, added scrollable homepage, prevented programmatic scrolls from hiding navbar); hardened background streaming with synchronous foreground service start, WakeLock, and WebView RENDERER_PRIORITY_IMPORTANT; full in-page & edge-proxy translation with original page toggle; strictly under 2 MB |
 | **v1.3.1** | `11` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Official Foreground Media Playback Service (`FOREGROUND_SERVICE_MEDIA_PLAYBACK`) with persistent Android device notification shade controls (Rewind 10s, Play/Pause toggle, Forward 10s, and Stop) allowing control without opening the app; 100% reliable full-page translation via Google Translate web proxy with automatic device locale detection and toggle back to original page; auto-hiding scroll navigation bars; strictly under 2 MB |
 | **v1.3.0** | `10` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Fully functional in-page & portal translation with locale detection and fixed query parameter encoding; continuous background video/audio streaming play when minimized or screen off; auto-hiding scroll navigation bars (slides up on scroll down, reappears on scroll up); strictly under 2 MB |
 | **v1.2.0** | `9` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Rebranded to **Shiz** (*"Shiz: Pure speed, stealth privacy, and zero nonsense — simply the real deal."*), added first-time install onboarding intro page showcasing name thought process and core pillars, total ad & video streaming shield, retained web pages & settings across restarts, tablet navigation rail, and under 2 MB footprint |
@@ -34,14 +35,15 @@ Because no platform overrides were supplied prior to implementation, Shiz target
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Shiz-v1.3.1.apk`](releases/Shiz-v1.3.1.apk) and attached to GitHub Releases (`v1.3.1`).
+Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Shiz-v1.3.2.apk`](releases/Shiz-v1.3.2.apk) and attached to GitHub Releases (`v1.3.2`).
 
 ---
 
-## Features (v1.3.1)
+## Features (v1.3.2)
 
-- **Foreground Media Playback Service & Device Notification Controls:** Continuous background video and audio streaming playback backed by an official Foreground Service (`FOREGROUND_SERVICE_MEDIA_PLAYBACK`). Live playback status and controls appear directly in the Android device notification shade (Rewind 10s, Play/Pause toggle, Forward 10s, and Stop) so users can control stream playback without visiting inside the app.
-- **100% Reliable Full-Page Web Translation:** Full-page web translation via Google Translate web proxy with automatic target language detection from device locale, support for toggling back to original page, and zero risk of Content Security Policy (CSP) script-injection failures.
+- **Keyboard-Adaptive Content Shifting & Search Bar Visibility:** Solved the issue where tapping the search button on the homepage or any website (YouTube, Google, etc.) caused the screen to jump excessively or hide the search bar. Perfectly shifts content upward by exactly the keyboard's height, prevents the auto-hiding navbar from vanishing during input focus, and provides a scrollable homepage container.
+- **Hardened Background Stream Playback & Notification Controls:** Continuous background video and audio streaming playback backed by an official Foreground Service (`FOREGROUND_SERVICE_MEDIA_PLAYBACK`) launched synchronously on app backgrounding to avoid Android 12+ background launch restrictions, `PARTIAL_WAKE_LOCK` for screen-off playback, WebView `RENDERER_PRIORITY_IMPORTANT` (`waivedWhenNotVisible = false`), and interactive device notification shade controls (Rewind 10s, Play/Pause toggle, Forward 10s, and Stop).
+- **100% Reliable In-Page & Edge-Proxy Translation:** In-page Google Translate with `googtrans` cookie auto-translation + widget injection, automatic fallback to Google's edge proxy (`.translate.goog`), and one-tap restore to original untranslated pages.
 - **Scroll-to-Hide Navigation Bars:** Clean top-docked address and toolbar automatically slides away smoothly when scrolling down through web pages to provide an immersive full-screen reading experience, and immediately reappears when scrolling back up.
 - **Background Stream Playback:** Keep videos and audio streaming continuously even when the browser interface is not opened, the app is in the background, or the screen is turned off.
 

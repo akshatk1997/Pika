@@ -30,10 +30,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -223,13 +225,16 @@ fun BrowserScreen(
       val isWideWidth = maxWidth >= 600.dp
       val showNavRail = isWideWidth && maxHeight >= 460.dp
 
+      val isImeVisible = WindowInsets.isImeVisible
+
       Scaffold(
-        contentWindowInsets = WindowInsets.safeDrawing
+        contentWindowInsets = WindowInsets.statusBars
       ) { innerPadding ->
         Row(
           modifier = Modifier
             .fillMaxSize()
             .padding(innerPadding)
+            .navigationBarsPadding()
             .imePadding()
         ) {
           if (showNavRail && !isBrowserFullscreen) {
@@ -284,7 +289,7 @@ fun BrowserScreen(
 
           Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
             AnimatedVisibility(
-              visible = !isBrowserFullscreen && (isNavBarVisible || activeTab.url.isBlank() || activeTab.url == "about:blank" || activeTab.isLoading),
+              visible = !isBrowserFullscreen && (isNavBarVisible || isImeVisible || activeTab.url.isBlank() || activeTab.url == "about:blank" || activeTab.isLoading),
               enter = expandVertically() + fadeIn(),
               exit = shrinkVertically() + fadeOut()
             ) {
@@ -435,6 +440,10 @@ fun BrowserScreen(
                           }
                         }
                         targetWebView.setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
+                          if (isImeVisible) {
+                            if (!isNavBarVisible) isNavBarVisible = true
+                            return@setOnScrollChangeListener
+                          }
                           val dy = scrollY - oldScrollY
                           if (scrollY <= 24) {
                             if (!isNavBarVisible) isNavBarVisible = true

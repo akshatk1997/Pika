@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import com.example.MainActivity
 import com.example.R
@@ -72,12 +73,19 @@ class MediaPlaybackService : Service() {
   private var currentTitle: String = "Web Stream"
   private var currentDomain: String = "Streaming"
   private var isPlaying: Boolean = true
+  private var wakeLock: PowerManager.WakeLock? = null
 
   override fun onBind(intent: Intent?): IBinder? = null
 
   override fun onCreate() {
     super.onCreate()
     isServiceRunning = true
+    try {
+      val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
+      wakeLock = pm?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "shiz:media_playback")
+      wakeLock?.acquire(4 * 60 * 60 * 1000L)
+    } catch (_: Throwable) {
+    }
     createNotificationChannel()
     val initialNotification = buildNotification()
     startForegroundCompat(initialNotification)
@@ -133,6 +141,12 @@ class MediaPlaybackService : Service() {
 
   override fun onDestroy() {
     isServiceRunning = false
+    try {
+      wakeLock?.let {
+        if (it.isHeld) it.release()
+      }
+    } catch (_: Throwable) {
+    }
     super.onDestroy()
   }
 

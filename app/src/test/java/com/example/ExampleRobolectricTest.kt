@@ -38,8 +38,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Shiz", appName)
-    assertEquals("1.3.1", BuildConfig.VERSION_NAME)
-    assertEquals(11, BuildConfig.VERSION_CODE)
+    assertEquals("1.3.2", BuildConfig.VERSION_NAME)
+    assertEquals(12, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -156,7 +156,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.3.1").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.3.2").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_retain_tabs").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -251,5 +251,16 @@ class ExampleRobolectricTest {
     val parsed = android.net.Uri.parse(targetUrl)
     val restored = parsed.getQueryParameter("u")
     assertEquals(original, restored)
+  }
+
+  @Test
+  fun dashedHostTranslationProxyFormattingAndReversal() {
+    val host = "en.wikipedia.org"
+    val dashedHost = host.replace("-", "--").replace(".", "-") + ".translate.goog"
+    assertEquals("en-wikipedia-org.translate.goog", dashedHost)
+
+    val origDashed = dashedHost.removeSuffix(".translate.goog")
+    val restoredHost = origDashed.replace("-", ".").replace("..", "-")
+    assertEquals(host, restoredHost)
   }
 }

@@ -961,28 +961,161 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       return
     }
 
-    if (url.startsWith("https://translate.google.com/translate") ||
-      url.startsWith("http://translate.google.com/translate")
-    ) {
-      try {
-        val parsedUri = Uri.parse(url)
-        val originalUrl = parsedUri.getQueryParameter("u")
-        if (!originalUrl.isNullOrBlank() && UrlValidator.isSafeWebUrl(originalUrl)) {
-          showToast("Restoring original page...")
-          navigateActiveTab(originalUrl)
-          return
-        }
-      } catch (_: Throwable) {
-      }
+    // 1. If currently on a translated page, restore original
+    if (url.contains(".translate.goog") || url.contains("translate.google.com")) {
+      restoreOriginalPage(url)
+      return
     }
 
     val targetLang = Locale.getDefault().language.ifEmpty { "en" }
     val targetLangName = Locale.getDefault().displayLanguage.ifBlank { targetLang }
-    val encoded = URLEncoder.encode(url, StandardCharsets.UTF_8.name())
-    val targetUrl = "https://translate.google.com/translate?sl=auto&tl=$targetLang&u=$encoded"
 
-    showToast("Translating page to $targetLangName...")
-    navigateActiveTab(targetUrl)
+    // 2. Try fast in-page DOM translation first via googtrans cookie & TranslateElement
+    val webView = webViewPool.getLiveWebView(tab.id)
+    if (webView != null && _settings.value.javascriptEnabled) {
+      showToast("Translating page to $targetLangName...")
+      val inPageJs = """
+        (function() {
+          try {
+            var targetLang = '$targetLang';
+            document.cookie = 'googtrans=/auto/' + targetLang + '; path=/;';
+            try {
+              var hostParts = location.hostname.split('.');
+              if (hostParts.length >= 2) {
+                document.cookie = 'googtrans=/auto/' + targetLang + '; path=/; domain=.' + hostParts.slice(-2).join('.');
+              }
+            } catch(e) {}
+
+            if (window.google && window.google.translate) {
+              var combo = document.querySelector('.goog-te-combo');
+              if (combo) {
+                combo.value = targetLang;
+                combo.dispatchEvent(new Event('change'));
+                return;
+              }
+            }
+
+            window.googleTranslateElementInit = function() {
+              try {
+                new google.translate.TranslateElement({
+                  pageLanguage: 'auto',
+                  includedLanguages: targetLang,
+                  autoDisplay: false
+                }, 'shiz_trans_elem');
+              } catch(e) {}
+            };
+
+            var elem = document.getElementById('shiz_trans_elem');
+            if (!elem) {
+              elem = document.createElement('div');
+              elem.id = 'shiz_trans_elem';
+              elem.style.display = 'none';
+              document.body.appendChild(elem);
+            }
+
+            var script = document.createElement('script');
+            script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+            script.onerror = function() {
+              window.__shiz_trans_failed = true;
+            };
+            document.body.appendChild(script);
+
+            setTimeout(function() {
+              if (!window.google || !window.google.translate) {
+                window.__shiz_trans_failed = true;
+              }
+            }, 1800);
+          } catch(e) {
+            window.__shiz_trans_failed = true;
+          }
+        })();
+      """.trimIndent()
+
+      webView.evaluateJavascript(inPageJs) { _ ->
+        mainHandler.postDelayed({
+          val checkJs = "window.__shiz_trans_failed === true"
+          webView.evaluateJavascript(checkJs) { failedResult ->
+            if (failedResult == "true") {
+              navigateToTranslateProxy(url, targetLang)
+            }
+          }
+        }, 1900)
+      }
+    } else {
+      navigateToTranslateProxy(url, targetLang)
+    }
+  }
+
+  private fun navigateToTranslateProxy(url: String, targetLang: String) {
+    try {
+      val uri = Uri.parse(url)
+      val host = uri.host ?: ""
+      val scheme = uri.scheme ?: "https"
+      if (host.isNotEmpty()) {
+        val dashedHost = host.replace("-", "--").replace(".", "-") + ".translate.goog"
+        val pathAndQuery = buildString {
+          append(uri.path.ifEmpty { "/" })
+          val existingQuery = uri.query
+          append("?_x_tr_sl=auto&_x_tr_tl=").append(targetLang).append("&_x_tr_hl=").append(targetLang)
+          if (!existingQuery.isNullOrBlank()) {
+            append("&").append(existingQuery)
+          }
+        }
+        val targetUrl = "$scheme://$dashedHost$pathAndQuery"
+        navigateActiveTab(targetUrl)
+        return
+      }
+    } catch (_: Throwable) {
+    }
+    val encoded = URLEncoder.encode(url, StandardCharsets.UTF_8.name())
+    navigateActiveTab("https://translate.google.com/translate?sl=auto&tl=$targetLang&u=$encoded")
+  }
+
+  private fun restoreOriginalPage(currentUrl: String) {
+    showToast("Restoring original page...")
+    try {
+      val uri = Uri.parse(currentUrl)
+      val queryU = uri.getQueryParameter("u")
+      if (!queryU.isNullOrBlank() && UrlValidator.isSafeWebUrl(queryU)) {
+        navigateActiveTab(queryU)
+        return
+      }
+      val host = uri.host ?: ""
+      if (host.endsWith(".translate.goog")) {
+        val origDashedHost = host.removeSuffix(".translate.goog")
+        val restoredHost = origDashedHost.replace("-", ".").replace("..", "-")
+        val scheme = uri.scheme ?: "https"
+        val path = uri.path ?: "/"
+        val cleanQuery = uri.queryParameterNames
+          ?.filterNot { it.startsWith("_x_tr_") }
+          ?.joinToString("&") { "$it=${uri.getQueryParameter(it)}" }
+        val finalUrl = buildString {
+          append(scheme).append("://").append(restoredHost).append(path)
+          if (!cleanQuery.isNullOrBlank()) append("?").append(cleanQuery)
+        }
+        navigateActiveTab(finalUrl)
+        return
+      }
+    } catch (_: Throwable) {
+    }
+    val webView = webViewPool.getLiveWebView(activeTab().id)
+    webView?.evaluateJavascript(
+      "(function() { document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'; location.reload(); })()",
+      null
+    )
+  }
+
+  fun ensureMediaServiceRunningSynchronously() {
+    val tab = activeTab()
+    if (!_settings.value.backgroundPlayEnabled || tab.url.isBlank() || tab.url == "about:blank") return
+    val host = UrlValidator.extractHost(tab.url).ifEmpty { "Playing" }
+    val title = tab.title.ifBlank { "Web Stream" }
+    MediaPlaybackService.start(
+      context = appContext,
+      title = title,
+      domain = host,
+      isPlaying = true
+    )
   }
 
   fun handleMediaControlAction(action: String) {

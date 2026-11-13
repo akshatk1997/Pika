@@ -578,25 +578,29 @@ class WebViewPool(
         if (window.__shiz_bg_play_installed) return;
         window.__shiz_bg_play_installed = true;
 
-        try {
-          Object.defineProperty(document, 'hidden', {
-            get: function() { return false; },
-            configurable: true
-          });
-          Object.defineProperty(document, 'visibilityState', {
-            get: function() { return 'visible'; },
-            configurable: true
-          });
-          Object.defineProperty(document, 'webkitHidden', {
-            get: function() { return false; },
-            configurable: true
-          });
-          Object.defineProperty(document, 'webkitVisibilityState', {
-            get: function() { return 'visible'; },
-            configurable: true
-          });
-          document.hasFocus = function() { return true; };
-        } catch(e) {}
+        function spoofVisibility() {
+          try {
+            Object.defineProperty(document, 'hidden', {
+              get: function() { return false; },
+              configurable: true
+            });
+            Object.defineProperty(document, 'visibilityState', {
+              get: function() { return 'visible'; },
+              configurable: true
+            });
+            Object.defineProperty(document, 'webkitHidden', {
+              get: function() { return false; },
+              configurable: true
+            });
+            Object.defineProperty(document, 'webkitVisibilityState', {
+              get: function() { return 'visible'; },
+              configurable: true
+            });
+            document.hasFocus = function() { return true; };
+          } catch(e) {}
+        }
+
+        spoofVisibility();
 
         var blockEvent = function(e) {
           if (e) {
@@ -628,6 +632,23 @@ class WebViewPool(
             return origAdd.apply(this, arguments);
           };
         } catch(e) {}
+
+        try {
+          var origPush = history.pushState;
+          history.pushState = function() {
+            var res = origPush.apply(this, arguments);
+            spoofVisibility();
+            return res;
+          };
+          var origReplace = history.replaceState;
+          history.replaceState = function() {
+            var res = origReplace.apply(this, arguments);
+            spoofVisibility();
+            return res;
+          };
+        } catch(e) {}
+
+        setInterval(spoofVisibility, 2000);
       })();
       """.trimIndent()
     } else {
@@ -656,6 +677,12 @@ class WebViewPool(
         javaScriptEnabled = settingsState.javascriptEnabled
         javaScriptCanOpenWindowsAutomatically = false
         mediaPlaybackRequiresUserGesture = false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+          try {
+            webView.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false)
+          } catch (_: Throwable) {
+          }
+        }
         setSupportMultipleWindows(true)
         allowFileAccess = false
         allowContentAccess = false
