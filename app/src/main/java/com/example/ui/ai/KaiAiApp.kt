@@ -439,13 +439,13 @@ object KaiAiApp {
       return '<pre><button class="copy-code-btn" onclick="copySnippet(this)">Copy</button><code>' + code + '</code></pre>';
     });
     // Inline code
-    out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
+    out = out.replace(/`([^`]+)`/g, function(m, p) { return '<code>' + p + '</code>'; });
     // Bold
-    out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    out = out.replace(/\*\*([^*]+)\*\*/g, function(m, p) { return '<strong>' + p + '</strong>'; });
     // Italic
-    out = out.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    out = out.replace(/\*([^*]+)\*/g, function(m, p) { return '<em>' + p + '</em>'; });
     // Bullet points
-    out = out.replace(/^\s*[-*]\s+(.*)$/gm, '&bull; $1<br>');
+    out = out.replace(/^\s*[-*]\s+(.*)/gm, function(m, p) { return '&bull; ' + p + '<br>'; });
     // Line breaks
     out = out.replace(/\n/g, '<br>');
     return out;
