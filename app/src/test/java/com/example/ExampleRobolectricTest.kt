@@ -314,8 +314,8 @@ class ExampleRobolectricTest {
   @Test
   fun duckAiSearchEngineQueryResolutionWorks() {
     val res = com.example.security.UrlValidator.resolveInputToTarget("what is quantum computing", SearchEngine.DUCK_AI, "", false)
-    assertTrue(res is com.example.model.ResolvedNavigation.LoadUrl)
-    val url = (res as com.example.model.ResolvedNavigation.LoadUrl).url
+    assertTrue(res is com.example.security.ResolvedNavigation.LoadUrl)
+    val url = (res as com.example.security.ResolvedNavigation.LoadUrl).url
     assertTrue(url.startsWith("https://duckduckgo.com/?ia=chat&duckchat=1&q="))
     assertTrue(url.contains("quantum"))
 
