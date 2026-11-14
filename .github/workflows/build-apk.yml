@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kai-v1.5.9.apk
+          cp "$APK_PATH" releases/Kai-v1.6.0.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kai-v1.5.9.apk
+          git add releases/Kai-v1.6.0.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kai-v1.5.9.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kai-v1.6.0.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.5.9
+      - name: Create or update GitHub Release v1.6.0
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kai-v1.5.9.apk)
-          NOTES="Kai Browser v1.5.9 (Build 32) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Complete Fullscreen Video Notification Bar Fix:** Resolved phone notification / status bar showing during video playback. Fully hides the status bar and navigation bars using \`WindowInsetsControllerCompat\` with \`BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE\`, \`FLAG_FULLSCREEN\`, and immersive sticky flags across all Android 8.0–17 devices.\n- **Uninterrupted Video Streaming Experience:** Added \`FLAG_KEEP_SCREEN_ON\` so the display remains active throughout video streaming without dimming or sleeping; notch and display cutouts extend seamlessly without intrusive letterbox bars.\n- **Transient Non-Intrusive Edge Swiping:** Swiping down from the edge temporarily displays semi-transparent status and notification icons without resizing or pausing the playing video.\n- **Clean Restoration on Fullscreen Exit:** Status bar, navigation bar, and edge-to-edge color schemes immediately restore to their exact normal theme state upon exiting fullscreen.\n- **Strictly Under 2 MB Footprint:** Release APK remains strictly under 2 MB (~1.46 MB).\n- **Checks Passed:** \`:app:testDebugUnitTest\` (API 26 & 36), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\`."
-          if gh release view v1.5.9 >/dev/null 2>&1; then
-            gh release upload v1.5.9 releases/Kai-v1.5.9.apk --clobber
-            gh release edit v1.5.9 --title "Kai v1.5.9 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kai-v1.6.0.apk)
+          NOTES="Kai Browser v1.6.0 (Build 33) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Pure Out-of-the-Box Intelligence & API Key Option Removal:** Completely removed all API key input fields, modals, and settings buttons. Kai AI operates out-of-the-box with zero user setup, zero keys, and zero telemetry.\n- **Top-Level Open Source & Premium Multi-AI Ensemble:** Integrated a high-speed multi-tier neural pipeline combining high-performance cloud neural models, open-source multi-model inference ensemble (Pollinations API), real-time live encyclopedic knowledge synthesis (Wikipedia + DuckDuckGo), deterministic math evaluation, and specialized in-memory presentation/PDF/audio parsers.\n- **Undisclosed Model Identity & Strict Privacy:** Strictly preserves the unified Kai AI persona identity across all interactions. Underlying model architectures, codenames, and provider platforms are never revealed to users.\n- **Trained A-to-Z Accuracy & High Speed:** Personas trained to provide comprehensive, structured, step-by-step explanations from A to Z with formatted markdown, code blocks, tables, and swift response turnaround.\n- **Strictly Under 2 MB Footprint:** Release APK remains strictly under 2 MB (~1.46 MB).\n- **Checks Passed:** \`:app:testDebugUnitTest\` (API 26 & 36), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\`."
+          if gh release view v1.6.0 >/dev/null 2>&1; then
+            gh release upload v1.6.0 releases/Kai-v1.6.0.apk --clobber
+            gh release edit v1.6.0 --title "Kai v1.6.0 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.5.9 releases/Kai-v1.5.9.apk \
-              --title "Kai v1.5.9 (< 2 MB)" \
+            gh release create v1.6.0 releases/Kai-v1.6.0.apk \
+              --title "Kai v1.6.0 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

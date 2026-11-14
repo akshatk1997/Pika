@@ -40,8 +40,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.5.9", BuildConfig.VERSION_NAME)
-    assertEquals(32, BuildConfig.VERSION_CODE)
+    assertEquals("1.6.0", BuildConfig.VERSION_NAME)
+    assertEquals(33, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -161,7 +161,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.5.9").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.6.0").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -552,16 +552,20 @@ class ExampleRobolectricTest {
     // 3. Verify robust URL query parameter handling with readyState check
     assertTrue(scriptContent.contains("document.readyState === 'loading'"))
 
-    // 4. Verify all critical UI elements exist in DOM
+    // 4. Verify all critical UI elements exist in DOM (with API key options removed)
     val expectedIds = listOf(
       "prompt-input", "send-btn", "chat-feed", "empty-state",
       "attach-btn", "file-input", "attach-tray", "attach-preview-img",
-      "mic-btn", "new-chat-btn", "theme-toggle-btn", "key-settings-btn",
+      "mic-btn", "new-chat-btn", "theme-toggle-btn",
       "voice-banner", "voice-status", "voice-wave", "voice-done-btn", "voice-cancel-btn"
     )
     for (id in expectedIds) {
       assertTrue("HTML must contain element id='$id'", html.contains("id=\"$id\""))
     }
+    assertFalse("HTML must not contain key-settings-btn", html.contains("id=\"key-settings-btn\""))
+    assertFalse("HTML must not contain user-api-key-input", html.contains("id=\"user-api-key-input\""))
+    assertFalse("HTML must not contain key-settings-overlay", html.contains("key-settings-overlay"))
+    assertFalse("HTML must not expose API key prompts to users", html.contains("API key"))
 
     // 5. Verify frontier multimodal and fallback models are correctly configured
     assertTrue(scriptContent.contains("gemini-3.5-flash-lite"))
