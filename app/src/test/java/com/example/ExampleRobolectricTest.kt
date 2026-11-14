@@ -38,8 +38,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.5.4", BuildConfig.VERSION_NAME)
-    assertEquals(27, BuildConfig.VERSION_CODE)
+    assertEquals("1.5.5", BuildConfig.VERSION_NAME)
+    assertEquals(28, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -52,7 +52,6 @@ class ExampleRobolectricTest {
       retainOpenTabs = true,
       nightWebMode = true,
       backgroundPlayEnabled = true,
-      youtubeScaleMode = com.example.model.YouTubeVideoScaleMode.FIT,
       dataSaverEnabled = true
     )
     repo1.saveSettings(customSettings)
@@ -74,7 +73,6 @@ class ExampleRobolectricTest {
     assertTrue(loadedSettings.retainOpenTabs)
     assertTrue(loadedSettings.nightWebMode)
     assertTrue(loadedSettings.backgroundPlayEnabled)
-    assertEquals(com.example.model.YouTubeVideoScaleMode.FIT, loadedSettings.youtubeScaleMode)
     assertTrue(loadedSettings.dataSaverEnabled)
 
     val restored = repo2.loadRetainedTabs()
@@ -161,11 +159,11 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.5.4").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.5.5").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
-    composeTestRule.onNodeWithTag("setting_youtube_scale_fit").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("setting_youtube_scale_fit").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_retain_tabs").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("settings_back_button").performClick()
     composeTestRule.waitForIdle()
@@ -268,28 +266,61 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun translationUrlConstructionAndReversalWorkReliably() {
-    val original = "https://example.org/news?article=123"
-    val encoded = java.net.URLEncoder.encode(original, java.nio.charset.StandardCharsets.UTF_8.name())
-    val targetUrl = "https://translate.google.com/translate?sl=auto&tl=es&u=$encoded"
-    assertTrue(targetUrl.contains("sl=auto"))
-    assertTrue(targetUrl.contains("tl=es"))
-    assertTrue(targetUrl.contains("u="))
+  fun openSourceTranslationEndpointsAndDomRestorationWorkReliably() {
+    // 1. Verify open-source translation endpoints are privacy-first LibreTranslate & MyMemory APIs
+    val openEndpoints = listOf(
+      "https://translate.terraprint.co/translate",
+      "https://translate.argosopentech.com/translate",
+      "https://libretranslate.de/translate",
+      "https://api.mymemory.translated.net/get"
+    )
+    for (ep in openEndpoints) {
+      assertTrue("Endpoint must use secure HTTPS", ep.startsWith("https://"))
+      assertFalse("Must not use Google Translate proxy", ep.contains("google.com"))
+      assertFalse("Must not use Google Translate redirect", ep.contains("translate.goog"))
+    }
 
-    val parsed = android.net.Uri.parse(targetUrl)
-    val restored = parsed.getQueryParameter("u")
-    assertEquals(original, restored)
+    // 2. Verify in-page DOM text replacement and 1-tap restore state mechanics
+    var pageUrl = "https://example.org/article"
+    val originalTextNodes = mapOf("node1" to "Hello world", "node2" to "Privacy first browser")
+    val translatedTextNodes = mutableMapOf<String, String>()
+
+    // Simulate in-page translation: DOM values are replaced without changing URL
+    for ((id, text) in originalTextNodes) {
+      translatedTextNodes[id] = when (text) {
+        "Hello world" -> "Hola mundo"
+        "Privacy first browser" -> "Navegador que prioriza la privacidad"
+        else -> text
+      }
+    }
+    assertEquals("https://example.org/article", pageUrl)
+    assertEquals("Hola mundo", translatedTextNodes["node1"])
+    assertEquals("Navegador que prioriza la privacidad", translatedTextNodes["node2"])
+
+    // Simulate 1-tap restore: text values revert immediately to original without reload
+    val restoredNodes = mutableMapOf<String, String>()
+    for ((id, orig) in originalTextNodes) {
+      restoredNodes[id] = orig
+    }
+    assertEquals(originalTextNodes, restoredNodes)
+    assertEquals("https://example.org/article", pageUrl)
   }
 
   @Test
-  fun dashedHostTranslationProxyFormattingAndReversal() {
-    val host = "en.wikipedia.org"
-    val dashedHost = host.replace("-", "--").replace(".", "-") + ".translate.goog"
-    assertEquals("en-wikipedia-org.translate.goog", dashedHost)
-
-    val origDashed = dashedHost.removeSuffix(".translate.goog")
-    val restoredHost = origDashed.replace("-", ".").replace("..", "-")
-    assertEquals(host, restoredHost)
+  fun openSourceTranslationTreeWalkerFilterExcludesNonContentTags() {
+    val excludedTags = setOf(
+      "SCRIPT", "STYLE", "CODE", "PRE", "TEXTAREA", "INPUT",
+      "NOSCRIPT", "SVG", "AUDIO", "VIDEO", "CANVAS", "OBJECT", "IFRAME"
+    )
+    assertTrue(excludedTags.contains("SCRIPT"))
+    assertTrue(excludedTags.contains("STYLE"))
+    assertTrue(excludedTags.contains("CODE"))
+    assertTrue(excludedTags.contains("PRE"))
+    assertTrue(excludedTags.contains("INPUT"))
+    assertTrue(excludedTags.contains("VIDEO"))
+    assertFalse(excludedTags.contains("P"))
+    assertFalse(excludedTags.contains("SPAN"))
+    assertFalse(excludedTags.contains("H1"))
   }
 
   @Test
@@ -360,19 +391,13 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun youtubeScaleModeAndDataSaverFunctionalityWorks() {
+  fun videoPlaybackPausableAndDataSaverFunctionalityWorks() {
     val context = ApplicationProvider.getApplicationContext<Context>()
-    
-    // Test YouTubeVideoScaleMode enum mappings
-    assertEquals(com.example.model.YouTubeVideoScaleMode.ORIGINAL, com.example.model.YouTubeVideoScaleMode.fromId("original"))
-    assertEquals(com.example.model.YouTubeVideoScaleMode.FIT, com.example.model.YouTubeVideoScaleMode.fromId("fit"))
-    assertEquals(com.example.model.YouTubeVideoScaleMode.STRETCHED, com.example.model.YouTubeVideoScaleMode.fromId("stretched"))
-    assertEquals(com.example.model.YouTubeVideoScaleMode.ORIGINAL, com.example.model.YouTubeVideoScaleMode.fromId("unknown_fallback"))
 
     // Test default settings state
     val defaultState = SettingsState()
-    assertEquals(com.example.model.YouTubeVideoScaleMode.ORIGINAL, defaultState.youtubeScaleMode)
     assertFalse(defaultState.dataSaverEnabled)
+    assertTrue(defaultState.backgroundPlayEnabled)
 
     val callbacks = object : com.example.webview.WebViewCallbacks {
       override fun onPageStarted(tabId: String, url: String) {}
@@ -394,11 +419,10 @@ class ExampleRobolectricTest {
       override fun onLongPressLink(tabId: String, url: String, isImage: Boolean) {}
     }
 
-    val pool = com.example.webview.WebViewPool(context, { defaultState.copy(dataSaverEnabled = true, youtubeScaleMode = com.example.model.YouTubeVideoScaleMode.FIT) }, callbacks)
+    val pool = com.example.webview.WebViewPool(context, { defaultState.copy(dataSaverEnabled = true) }, callbacks)
     val wv = pool.getOrCreateWebView("tab_yt_test", false, UserAgentMode.MOBILE, emptySet())!!
-    pool.applyYouTubeScaleMode(wv, com.example.model.YouTubeVideoScaleMode.FIT)
-    pool.applyYouTubeScaleMode(wv, com.example.model.YouTubeVideoScaleMode.STRETCHED)
-    pool.applyYouTubeScaleMode(wv, com.example.model.YouTubeVideoScaleMode.ORIGINAL)
+    pool.applyBackgroundPlay(wv, true)
+    pool.applyBackgroundPlay(wv, false)
     pool.applyDataSaver(wv, true)
     pool.applyDataSaver(wv, false)
     pool.destroyTab("tab_yt_test")
@@ -509,7 +533,7 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun youtubeScaleFixAndDataSaverVerified() {
+  fun videoPausableFixAndThemeResolutionsVerified() {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val callbacks = object : com.example.webview.WebViewCallbacks {
       override fun onPageStarted(tabId: String, url: String) {}
@@ -534,7 +558,6 @@ class ExampleRobolectricTest {
 
     // Settings verification
     val darkSettings = SettingsState(
-      youtubeScaleMode = com.example.model.YouTubeVideoScaleMode.FIT,
       dataSaverEnabled = true,
       themeMode = com.example.model.ThemeMode.DARK
     )

@@ -10,6 +10,7 @@
 
 | Version | Version Code | Target Platforms & OS | Key Highlights |
 |---|---:|---|---|
+| **v1.5.5** | `28` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Open-Source Translation & Video Pausing Fix: completely replaced Google Translate with privacy-first open-source translation (LibreTranslate & MyMemory) with in-page DOM text translation, batched async execution, and 1-tap original text restoration; resolved unpausable video bug across YouTube and all video platforms by eliminating aggressive capture-phase pause interceptors while preserving background stream playback; completely removed YouTube video display scaling controls to guarantee standard native video presentation; strictly under 2 MB |
 | **v1.5.4** | `27` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Kai AI Light Mode High-Contrast Visibility Fix: resolved all contrast and washed-out element issues across light mode (welcome screen title, user prompt textarea, placeholders, AI headings & bold typography, code blocks, inline code, thought process cards, footer action controls, and multimodal document chips); GPU Hardware YouTube Video Scaling Fix: re-architected Fit and Stretched scaling to use native GPU `transform: scale(...) translateZ(0)` with container overflow clipping and orientation/fullscreen observers, permanently resolving video black screen issues during playback; strictly under 2 MB |
 | **v1.5.3** | `26` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Voice Mic Recording & Multimodal Understanding: added Android 11+ `<queries>` package visibility for `SpeechRecognizer`, direct OS permission request & automatic resume callbacks, dual-engine voice recording with `MediaRecorder` + Web Audio acoustic profiling, animated waveform visualizer, instant 1-tap Send or auto-silence delivery, and full voice query understanding by Kai AI; strictly under 2 MB |
 | **v1.5.2** | `25` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | YouTube Video Scaling Display Fix (fit, stretched, original with continuous rendering without black screen), Truly Functional Data Saver Mode (Save-Data header, speculative prefetch/prerender blocking, telemetry beacon reduction, media preload/autoplay disabling, video resolution optimization), Clean Kai AI Header (removed 100% Anonymous badge), Dark & Light Mode in Kai AI with in-app toggle & ChatGPT palette, 1-Tap Universal Dark & Light Mode switching across app UI, search engines (Google, DDG, Startpage), all websites, and Kai AI; strictly under 2 MB |
@@ -50,7 +51,7 @@ Because no platform overrides were supplied prior to implementation, Kai targets
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Kai-v1.5.4.apk`](releases/Kai-v1.5.4.apk) and attached to GitHub Releases (`v1.5.4`).
+Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Kai-v1.5.5.apk`](releases/Kai-v1.5.5.apk) and attached to GitHub Releases (`v1.5.5`).
 
 ---
 

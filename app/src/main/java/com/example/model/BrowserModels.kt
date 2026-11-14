@@ -198,16 +198,6 @@ enum class ThemeMode(val id: String) {
   }
 }
 
-enum class YouTubeVideoScaleMode(val id: String, val label: String) {
-  ORIGINAL("original", "Original"),
-  FIT("fit", "Fit"),
-  STRETCHED("stretched", "Stretched");
-
-  companion object {
-    fun fromId(id: String): YouTubeVideoScaleMode = entries.firstOrNull { it.id == id } ?: ORIGINAL
-  }
-}
-
 data class SitePermissionRule(
   val origin: String,
   val kind: WebPermissionKind,
@@ -234,7 +224,6 @@ data class SettingsState(
   val readerFontSizeSp: Int = 18,
   val readerDarkMode: Boolean = false,
   val backgroundPlayEnabled: Boolean = true,
-  val youtubeScaleMode: YouTubeVideoScaleMode = YouTubeVideoScaleMode.ORIGINAL,
   val dataSaverEnabled: Boolean = false
 )
 

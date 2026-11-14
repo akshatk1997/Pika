@@ -973,148 +973,219 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       return
     }
 
-    // 1. If currently on a translated page, restore original
-    if (url.contains(".translate.goog") || url.contains("translate.google.com")) {
-      restoreOriginalPage(url)
+    val webView = webViewPool.getLiveWebView(tab.id)
+    if (webView == null || !_settings.value.javascriptEnabled) {
+      showToast("JavaScript is required for page translation")
       return
     }
 
     val targetLang = Locale.getDefault().language.ifEmpty { "en" }
     val targetLangName = Locale.getDefault().displayLanguage.ifBlank { targetLang }
 
-    // 2. Try fast in-page DOM translation first via googtrans cookie & TranslateElement
-    val webView = webViewPool.getLiveWebView(tab.id)
-    if (webView != null && _settings.value.javascriptEnabled) {
-      showToast("Translating page to $targetLangName...")
-      val inPageJs = """
-        (function() {
+    val openTranslateJs = """
+      (function() {
+        // 1. If currently on a translated page, restore original DOM text nodes
+        if (window.__kai_is_translated) {
           try {
-            var targetLang = '$targetLang';
-            document.cookie = 'googtrans=/auto/' + targetLang + '; path=/;';
-            try {
-              var hostParts = location.hostname.split('.');
-              if (hostParts.length >= 2) {
-                document.cookie = 'googtrans=/auto/' + targetLang + '; path=/; domain=.' + hostParts.slice(-2).join('.');
+            if (window.__kai_orig_text_nodes) {
+              for (var i = 0; i < window.__kai_orig_text_nodes.length; i++) {
+                var item = window.__kai_orig_text_nodes[i];
+                if (item.node && item.text != null) {
+                  item.node.nodeValue = item.text;
+                }
               }
-            } catch(e) {}
+            }
+            window.__kai_is_translated = false;
+            var banner = document.getElementById('kai-translate-banner');
+            if (banner) banner.remove();
+            return 'restored';
+          } catch(e) {
+            return 'error_restore';
+          }
+        }
 
-            if (window.google && window.google.translate) {
-              var combo = document.querySelector('.goog-te-combo');
-              if (combo) {
-                combo.value = targetLang;
-                combo.dispatchEvent(new Event('change'));
+        // 2. Collect visible, translatable text nodes from the live DOM
+        var targetLang = '$targetLang';
+        var walker = document.createTreeWalker(
+          document.body || document.documentElement,
+          NodeFilter.SHOW_TEXT,
+          {
+            acceptNode: function(node) {
+              if (!node || !node.nodeValue || !node.nodeValue.trim()) {
+                return NodeFilter.FILTER_REJECT;
+              }
+              var parent = node.parentElement;
+              if (!parent) return NodeFilter.FILTER_REJECT;
+              var tag = parent.tagName;
+              if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'CODE' || 
+                  tag === 'PRE' || tag === 'TEXTAREA' || tag === 'INPUT' || 
+                  tag === 'NOSCRIPT' || tag === 'SVG' || tag === 'AUDIO' || 
+                  tag === 'VIDEO' || tag === 'CANVAS' || tag === 'OBJECT' || 
+                  tag === 'IFRAME') {
+                return NodeFilter.FILTER_REJECT;
+              }
+              if (parent.closest && parent.closest('[translate="no"], .notranslate, #kai-translate-banner')) {
+                return NodeFilter.FILTER_REJECT;
+              }
+              return NodeFilter.FILTER_ACCEPT;
+            }
+          }
+        );
+
+        var nodesToTranslate = [];
+        var origNodes = [];
+        var currentNode;
+        while ((currentNode = walker.nextNode()) && nodesToTranslate.length < 250) {
+          var val = currentNode.nodeValue.trim();
+          if (val.length > 1) {
+            nodesToTranslate.push({ node: currentNode, text: val });
+            origNodes.push({ node: currentNode, text: currentNode.nodeValue });
+          }
+        }
+
+        if (nodesToTranslate.length === 0) {
+          return 'no_content';
+        }
+
+        window.__kai_orig_text_nodes = origNodes;
+
+        // 3. Create non-intrusive floating status banner
+        var oldBanner = document.getElementById('kai-translate-banner');
+        if (oldBanner) oldBanner.remove();
+        var banner = document.createElement('div');
+        banner.id = 'kai-translate-banner';
+        banner.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:999999;background:rgba(15,23,42,0.92);color:#F1F5F9;font-family:system-ui,-apple-system,sans-serif;font-size:12px;padding:8px 16px;border-radius:24px;border:1px solid rgba(0,242,254,0.3);box-shadow:0 4px 16px rgba(0,0,0,0.35);display:flex;align-items:center;gap:8px;pointer-events:auto;backdrop-filter:blur(8px);';
+        banner.innerHTML = '<span style="color:#00F2FE;">🌐</span> Translating with Open Translate...';
+        document.body.appendChild(banner);
+
+        // 4. Batch translate using open-source endpoints
+        var batchSize = 10;
+        var batches = [];
+        for (var i = 0; i < nodesToTranslate.length; i += batchSize) {
+          batches.push(nodesToTranslate.slice(i, i + batchSize));
+        }
+
+        var completed = 0;
+        function translateBatch(batch) {
+          var texts = batch.map(function(item) { return item.text; });
+          var combined = texts.join('\n---\n');
+
+          // Try LibreTranslate open-source endpoint
+          function tryLibreTranslate() {
+            var endpoints = [
+              'https://translate.terraprint.co/translate',
+              'https://translate.argosopentech.com/translate',
+              'https://libretranslate.de/translate'
+            ];
+            var currentEndpoint = 0;
+
+            function attemptNext() {
+              if (currentEndpoint >= endpoints.length) {
+                tryMyMemory();
                 return;
               }
+              var ep = endpoints[currentEndpoint++];
+              var xhr = new XMLHttpRequest();
+              xhr.open('POST', ep, true);
+              xhr.setRequestHeader('Content-Type', 'application/json');
+              xhr.timeout = 5000;
+              xhr.onload = function() {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                  try {
+                    var data = JSON.parse(xhr.responseText);
+                    var trans = data.translatedText || '';
+                    if (trans) {
+                      applyTranslation(trans);
+                      return;
+                    }
+                  } catch(e) {}
+                }
+                attemptNext();
+              };
+              xhr.onerror = attemptNext;
+              xhr.ontimeout = attemptNext;
+              xhr.send(JSON.stringify({
+                q: combined,
+                source: 'auto',
+                target: targetLang,
+                format: 'text'
+              }));
             }
+            attemptNext();
+          }
 
-            window.googleTranslateElementInit = function() {
-              try {
-                new google.translate.TranslateElement({
-                  pageLanguage: 'auto',
-                  includedLanguages: targetLang,
-                  autoDisplay: false
-                }, 'kai_trans_elem');
-              } catch(e) {}
-            };
-
-            var elem = document.getElementById('kai_trans_elem');
-            if (!elem) {
-              elem = document.createElement('div');
-              elem.id = 'kai_trans_elem';
-              elem.style.display = 'none';
-              document.body.appendChild(elem);
-            }
-
-            var script = document.createElement('script');
-            script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
-            script.onerror = function() {
-              window.__kai_trans_failed = true;
-            };
-            document.body.appendChild(script);
-
-            setTimeout(function() {
-              if (!window.google || !window.google.translate) {
-                window.__kai_trans_failed = true;
+          // Fallback open-source translation via MyMemory API
+          function tryMyMemory() {
+            var encoded = encodeURIComponent(combined.substring(0, 500));
+            var url = 'https://api.mymemory.translated.net/get?q=' + encoded + '&langpair=autodetect|' + targetLang;
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', url, true);
+            xhr.timeout = 5000;
+            xhr.onload = function() {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                  var data = JSON.parse(xhr.responseText);
+                  var trans = data.responseData && data.responseData.translatedText;
+                  if (trans) {
+                    applyTranslation(trans);
+                    return;
+                  }
+                } catch(e) {}
               }
-            }, 1800);
-          } catch(e) {
-            window.__kai_trans_failed = true;
+              finishBatch();
+            };
+            xhr.onerror = finishBatch;
+            xhr.ontimeout = finishBatch;
+            xhr.send();
           }
-        })();
-      """.trimIndent()
 
-      webView.evaluateJavascript(inPageJs) { _ ->
-        mainHandler.postDelayed({
-          val checkJs = "window.__kai_trans_failed === true"
-          webView.evaluateJavascript(checkJs) { failedResult ->
-            if (failedResult == "true") {
-              navigateToTranslateProxy(url, targetLang)
+          function applyTranslation(translatedCombined) {
+            var parts = translatedCombined.split('\n---\n');
+            for (var k = 0; k < batch.length; k++) {
+              if (parts[k] && parts[k].trim()) {
+                batch[k].node.nodeValue = parts[k].trim();
+              }
+            }
+            finishBatch();
+          }
+
+          function finishBatch() {
+            completed++;
+            if (completed >= batches.length) {
+              window.__kai_is_translated = true;
+              banner.innerHTML = '<span style="color:#00F2FE;">🌐</span> Translated to $targetLangName (Open Translate) <button id="kai-restore-btn" style="background:rgba(255,255,255,0.15);border:none;color:#FFF;padding:2px 8px;border-radius:12px;cursor:pointer;margin-left:6px;font-size:11px;">Restore</button>';
+              var btn = document.getElementById('kai-restore-btn');
+              if (btn) {
+                btn.onclick = function() {
+                  for (var m = 0; m < window.__kai_orig_text_nodes.length; m++) {
+                    var it = window.__kai_orig_text_nodes[m];
+                    if (it.node && it.text != null) it.node.nodeValue = it.text;
+                  }
+                  window.__kai_is_translated = false;
+                  banner.remove();
+                };
+              }
             }
           }
-        }, 1900)
-      }
-    } else {
-      navigateToTranslateProxy(url, targetLang)
-    }
-  }
 
-  private fun navigateToTranslateProxy(url: String, targetLang: String) {
-    try {
-      val uri = Uri.parse(url)
-      val host = uri.host ?: ""
-      val scheme = uri.scheme ?: "https"
-      if (host.isNotEmpty()) {
-        val dashedHost = host.replace("-", "--").replace(".", "-") + ".translate.goog"
-        val pathAndQuery = buildString {
-          append((uri.path ?: "").ifEmpty { "/" })
-          val existingQuery = uri.query
-          append("?_x_tr_sl=auto&_x_tr_tl=").append(targetLang).append("&_x_tr_hl=").append(targetLang)
-          if (!existingQuery.isNullOrBlank()) {
-            append("&").append(existingQuery)
-          }
+          tryLibreTranslate();
         }
-        val targetUrl = "$scheme://$dashedHost$pathAndQuery"
-        navigateActiveTab(targetUrl)
-        return
-      }
-    } catch (_: Throwable) {
-    }
-    val encoded = URLEncoder.encode(url, StandardCharsets.UTF_8.name())
-    navigateActiveTab("https://translate.google.com/translate?sl=auto&tl=$targetLang&u=$encoded")
-  }
 
-  private fun restoreOriginalPage(currentUrl: String) {
-    showToast("Restoring original page...")
-    try {
-      val uri = Uri.parse(currentUrl)
-      val queryU = uri.getQueryParameter("u")
-      if (!queryU.isNullOrBlank() && UrlValidator.isSafeWebUrl(queryU)) {
-        navigateActiveTab(queryU)
-        return
-      }
-      val host = uri.host ?: ""
-      if (host.endsWith(".translate.goog")) {
-        val origDashedHost = host.removeSuffix(".translate.goog")
-        val restoredHost = origDashedHost.replace("-", ".").replace("..", "-")
-        val scheme = uri.scheme ?: "https"
-        val path = uri.path ?: "/"
-        val cleanQuery = uri.queryParameterNames
-          ?.filterNot { it.startsWith("_x_tr_") }
-          ?.joinToString("&") { "$it=${uri.getQueryParameter(it)}" }
-        val finalUrl = buildString {
-          append(scheme).append("://").append(restoredHost).append(path)
-          if (!cleanQuery.isNullOrBlank()) append("?").append(cleanQuery)
+        for (var b = 0; b < batches.length; b++) {
+          translateBatch(batches[b]);
         }
-        navigateActiveTab(finalUrl)
-        return
+        return 'started';
+      })();
+    """.trimIndent()
+
+    webView.evaluateJavascript(openTranslateJs) { result ->
+      when (result?.trim('"')) {
+        "restored" -> showToast("Original page restored")
+        "no_content" -> showToast("No translatable text found on this page")
+        "started" -> showToast("Translating page to $targetLangName (Open Source)...")
+        else -> showToast("Translating page to $targetLangName (Open Source)...")
       }
-    } catch (_: Throwable) {
     }
-    val webView = webViewPool.getLiveWebView(activeTab().id)
-    webView?.evaluateJavascript(
-      "(function() { document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'; location.reload(); })()",
-      null
-    )
   }
 
   fun ensureMediaServiceRunningSynchronously() {

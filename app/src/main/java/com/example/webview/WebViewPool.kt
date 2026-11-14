@@ -38,7 +38,6 @@ import com.example.model.SniffedResource
 import com.example.model.ThemeMode
 import com.example.model.UserAgentMode
 import com.example.model.WebPermissionKind
-import com.example.model.YouTubeVideoScaleMode
 import com.example.security.TrackerBlocker
 import com.example.security.UrlValidator
 import com.example.ui.ai.KaiAiApp
@@ -321,7 +320,6 @@ class WebViewPool(
       applyThemeMode(wv, isDark, settingsState.nightWebMode)
       applyAdBlocker(wv, settingsState.trackerBlockingEnabled)
       applyBackgroundPlay(wv, settingsState.backgroundPlayEnabled)
-      applyYouTubeScaleMode(wv, settingsState.youtubeScaleMode)
       applyDataSaver(wv, settingsState.dataSaverEnabled)
     }
   }
@@ -754,29 +752,6 @@ class WebViewPool(
           };
         } catch(e) {}
 
-        try {
-          var autoResume = function(e) {
-            var target = e.target;
-            if (target && (target.nodeName === 'VIDEO' || target.nodeName === 'AUDIO')) {
-              if (target.__kai_was_playing && !target.__kai_user_paused) {
-                setTimeout(function() {
-                  if (target.paused && !target.__kai_user_paused) {
-                    target.play().catch(function() {});
-                  }
-                }, 150);
-              }
-            }
-          };
-          document.addEventListener('play', function(e) {
-            var target = e.target;
-            if (target && (target.nodeName === 'VIDEO' || target.nodeName === 'AUDIO')) {
-              target.__kai_was_playing = true;
-              target.__kai_user_paused = false;
-            }
-          }, true);
-          document.addEventListener('pause', autoResume, true);
-        } catch(e) {}
-
         setInterval(spoofVisibility, 2000);
       })();
       """.trimIndent()
@@ -787,122 +762,6 @@ class WebViewPool(
       })();
       """.trimIndent()
     }
-    try {
-      webView.evaluateJavascript(js, null)
-    } catch (_: Throwable) {
-    }
-  }
-
-  fun applyYouTubeScaleMode(webView: WebView, mode: YouTubeVideoScaleMode) {
-    if (!settingsProvider().javascriptEnabled || destroyedViews.contains(webView)) return
-    val js = """
-      (function() {
-        var mode = '${mode.id}';
-        window.__kai_yt_scale_mode = mode;
-
-        var id = 'kai-youtube-scale-style';
-        var s = document.getElementById(id);
-        if (!s) {
-          s = document.createElement('style');
-          s.id = id;
-          (document.head || document.documentElement).appendChild(s);
-        }
-        s.textContent = '.html5-video-container, #movie_player, .html5-video-player, #player-container-id { overflow: hidden !important; } video.html5-main-video { transform-origin: center center !important; -webkit-transform-origin: center center !important; }';
-
-        function updateVideoScale() {
-          try {
-            var currentMode = window.__kai_yt_scale_mode || 'original';
-            var player = document.getElementById('movie_player') ||
-                         document.querySelector('.html5-video-player') ||
-                         document.getElementById('player-container-id') ||
-                         document.querySelector('.player-container');
-            var videos = document.querySelectorAll('video.html5-main-video, #movie_player video, .html5-video-player video, video');
-            if (!videos || videos.length === 0) return;
-
-            for (var i = 0; i < videos.length; i++) {
-              var v = videos[i];
-              if (currentMode === 'original') {
-                v.style.setProperty('transform', 'translateZ(0)', 'important');
-                v.style.setProperty('-webkit-transform', 'translateZ(0)', 'important');
-                v.style.setProperty('transform-origin', 'center center', 'important');
-                v.style.removeProperty('object-fit');
-                continue;
-              }
-
-              var pw = (player ? (player.clientWidth || player.offsetWidth) : 0) || window.innerWidth;
-              var ph = (player ? (player.clientHeight || player.offsetHeight) : 0) || Math.round(window.innerWidth * 9 / 16);
-              var vw = v.offsetWidth || v.videoWidth || pw;
-              var vh = v.offsetHeight || v.videoHeight || ph;
-
-              if (vw <= 0 || vh <= 0 || pw <= 0 || ph <= 0) continue;
-
-              var sx = pw / vw;
-              var sy = ph / vh;
-
-              if (currentMode === 'fit') {
-                var scale = Math.max(sx, sy);
-                if (scale < 0.98 || scale > 1.01) {
-                  v.style.setProperty('transform', 'scale(' + scale.toFixed(4) + ') translateZ(0)', 'important');
-                  v.style.setProperty('-webkit-transform', 'scale(' + scale.toFixed(4) + ') translateZ(0)', 'important');
-                } else {
-                  v.style.setProperty('transform', 'translateZ(0)', 'important');
-                  v.style.setProperty('-webkit-transform', 'translateZ(0)', 'important');
-                }
-                v.style.setProperty('transform-origin', 'center center', 'important');
-              } else if (currentMode === 'stretched') {
-                v.style.setProperty('transform', 'scale(' + sx.toFixed(4) + ', ' + sy.toFixed(4) + ') translateZ(0)', 'important');
-                v.style.setProperty('-webkit-transform', 'scale(' + sx.toFixed(4) + ', ' + sy.toFixed(4) + ') translateZ(0)', 'important');
-                v.style.setProperty('transform-origin', 'center center', 'important');
-              }
-
-              var parent = v.parentElement;
-              if (parent) {
-                parent.style.setProperty('overflow', 'hidden', 'important');
-              }
-            }
-          } catch(e) {}
-        }
-
-        updateVideoScale();
-
-        if (!window.__kai_yt_scale_initialized) {
-          window.__kai_yt_scale_initialized = true;
-          window.addEventListener('resize', updateVideoScale);
-          window.addEventListener('orientationchange', function() {
-            setTimeout(updateVideoScale, 200);
-            setTimeout(updateVideoScale, 600);
-          });
-          document.addEventListener('fullscreenchange', function() {
-            setTimeout(updateVideoScale, 150);
-            setTimeout(updateVideoScale, 500);
-          });
-          document.addEventListener('webkitfullscreenchange', function() {
-            setTimeout(updateVideoScale, 150);
-            setTimeout(updateVideoScale, 500);
-          });
-          document.addEventListener('playing', function(e) {
-            if (e.target && e.target.tagName === 'VIDEO') {
-              setTimeout(updateVideoScale, 50);
-            }
-          }, true);
-          document.addEventListener('loadedmetadata', function(e) {
-            if (e.target && e.target.tagName === 'VIDEO') {
-              setTimeout(updateVideoScale, 50);
-            }
-          }, true);
-
-          if (window.ResizeObserver) {
-            try {
-              var ro = new ResizeObserver(function() {
-                updateVideoScale();
-              });
-              var pTarget = document.getElementById('movie_player') || document.getElementById('player-container-id') || document.body;
-              if (pTarget) ro.observe(pTarget);
-            } catch(e) {}
-          }
-        }
-      })();
-    """.trimIndent()
     try {
       webView.evaluateJavascript(js, null)
     } catch (_: Throwable) {
@@ -1327,10 +1186,6 @@ class WebViewPool(
             if (s.backgroundPlayEnabled) {
               applyBackgroundPlay(view, true)
             }
-            val isYt = url.contains("youtube.com") || url.contains("youtu.be")
-            if (isYt) {
-              applyYouTubeScaleMode(view, s.youtubeScaleMode)
-            }
             if (s.dataSaverEnabled) {
               applyDataSaver(view, true)
             }
@@ -1351,10 +1206,6 @@ class WebViewPool(
           }
           if (s.backgroundPlayEnabled) {
             applyBackgroundPlay(view, true)
-          }
-          val isYt = url.contains("youtube.com") || url.contains("youtu.be")
-          if (isYt) {
-            applyYouTubeScaleMode(view, s.youtubeScaleMode)
           }
           if (s.dataSaverEnabled) {
             applyDataSaver(view, true)

@@ -74,7 +74,6 @@ import com.example.model.SearchEngine
 import com.example.model.SettingsState
 import com.example.model.SitePermissionRule
 import com.example.model.ThemeMode
-import com.example.model.YouTubeVideoScaleMode
 import com.example.security.UrlValidator
 import com.example.ui.components.FeatherIcons
 import com.example.ui.theme.FeatherSecureGreen
@@ -294,27 +293,6 @@ fun SettingsScreen(
             tag = "setting_background_play",
             onCheckedChange = { v -> onUpdateSettings { it.copy(backgroundPlayEnabled = v) } }
           )
-          HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-          Text("YouTube video display", style = MaterialTheme.typography.titleMedium)
-          Text(
-            text = "Play YouTube videos in original aspect ratio, fit-to-screen, or stretched",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-          )
-          Spacer(modifier = Modifier.height(8.dp))
-          FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-          ) {
-            YouTubeVideoScaleMode.entries.forEach { mode ->
-              FilterChip(
-                selected = settings.youtubeScaleMode == mode,
-                onClick = { onUpdateSettings { it.copy(youtubeScaleMode = mode) } },
-                label = { Text(mode.label) },
-                modifier = Modifier.testTag("setting_youtube_scale_${mode.id}")
-              )
-            }
-          }
         }
 
       SettingsSectionCard("Tabs & Session", Modifier.widthIn(max = 720.dp)) {
