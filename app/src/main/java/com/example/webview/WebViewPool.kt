@@ -40,8 +40,10 @@ import com.example.model.UserAgentMode
 import com.example.model.WebPermissionKind
 import com.example.security.TrackerBlocker
 import com.example.security.UrlValidator
+import com.example.ui.ai.KaiAiApp
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
+import java.nio.charset.StandardCharsets
 import java.util.Collections
 import java.util.LinkedHashMap
 import java.util.WeakHashMap
@@ -889,6 +891,18 @@ class WebViewPool(
           val reqUrl = request?.url?.toString() ?: return null
           if (!UrlValidator.isSafeWebUrl(reqUrl)) {
             return emptyBlockedResponse()
+          }
+          val reqHost = request.url?.host?.lowercase() ?: ""
+          if (reqHost == "kai.ai" || reqHost.endsWith(".kai.ai")) {
+            val path = request.url?.path ?: ""
+            if (path.endsWith(".ico") || path.endsWith(".png")) {
+              return WebResourceResponse("image/x-icon", "UTF-8", ByteArrayInputStream(ByteArray(0)))
+            }
+            return WebResourceResponse(
+              "text/html",
+              "UTF-8",
+              ByteArrayInputStream(KaiAiApp.HTML.toByteArray(StandardCharsets.UTF_8))
+            )
           }
           val currentSettings = settingsProvider()
           val pageHost = currentPageHosts[tabId].orEmpty()

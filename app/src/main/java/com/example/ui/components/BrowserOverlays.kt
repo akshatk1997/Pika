@@ -326,9 +326,9 @@ fun NewTabHomeView(
                 if (isAiMode) {
                   val target = if (homeSearch.isNotBlank()) {
                     val encoded = URLEncoder.encode(homeSearch.trim(), "UTF-8")
-                    "https://duckduckgo.com/?ia=chat&duckchat=1&q=$encoded"
+                    "https://kai.ai/?q=$encoded"
                   } else {
-                    "https://duck.ai"
+                    "https://kai.ai"
                   }
                   onSubmitQuery(target)
                 } else if (homeSearch.isNotBlank()) {
@@ -346,9 +346,9 @@ fun NewTabHomeView(
                 if (isAiMode) {
                   val target = if (homeSearch.isNotBlank()) {
                     val encoded = URLEncoder.encode(homeSearch.trim(), "UTF-8")
-                    "https://duckduckgo.com/?ia=chat&duckchat=1&q=$encoded"
+                    "https://kai.ai/?q=$encoded"
                   } else {
-                    "https://duck.ai"
+                    "https://kai.ai"
                   }
                   onSubmitQuery(target)
                 } else if (homeSearch.isNotBlank()) {
@@ -359,7 +359,7 @@ fun NewTabHomeView(
             ) {
               Icon(
                 imageVector = if (isAiMode && homeSearch.isBlank()) FeatherIcons.Sparkle else Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = if (isAiMode) "Ask Duck.ai" else "Go",
+                contentDescription = if (isAiMode) "Ask Kai AI" else "Go",
                 tint = activeAccent,
                 modifier = Modifier.size(20.dp)
               )
@@ -380,8 +380,8 @@ fun NewTabHomeView(
             color = surfaceColor.copy(alpha = 0.85f),
             border = BorderStroke(0.8.dp, aiAccent.copy(alpha = 0.35f)),
             modifier = Modifier
-              .clickable { onSubmitQuery("https://duck.ai") }
-              .testTag("duck_ai_direct_button")
+              .clickable { onSubmitQuery("https://kai.ai") }
+              .testTag("kai_ai_direct_button")
           ) {
             Row(
               modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -395,7 +395,7 @@ fun NewTabHomeView(
               )
               Spacer(modifier = Modifier.width(6.dp))
               Text(
-                text = stringResource(R.string.home_open_duck_ai),
+                text = stringResource(R.string.home_open_kai_ai),
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = aiAccent

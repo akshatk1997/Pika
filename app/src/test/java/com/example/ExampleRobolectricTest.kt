@@ -38,8 +38,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.4.3", BuildConfig.VERSION_NAME)
-    assertEquals(16, BuildConfig.VERSION_CODE)
+    assertEquals("1.4.4", BuildConfig.VERSION_NAME)
+    assertEquals(17, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -157,7 +157,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.4.3").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.4.4").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_retain_tabs").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -287,7 +287,7 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun homepageAiModeSwitchAndDuckAiIntegrationWorks() {
+  fun homepageAiModeSwitchAndKaiAiIntegrationWorks() {
     composeTestRule.waitForIdle()
     try {
       composeTestRule.onNodeWithTag("intro_get_started").performClick()
@@ -302,24 +302,35 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithTag("home_mode_ai").performClick()
     composeTestRule.waitForIdle()
 
-    // Verify Duck.ai direct button is displayed
-    composeTestRule.onNodeWithTag("duck_ai_direct_button").assertIsDisplayed()
+    // Verify Kai AI direct button is displayed
+    composeTestRule.onNodeWithTag("kai_ai_direct_button").assertIsDisplayed()
 
     // Switch back to Standard mode
     composeTestRule.onNodeWithTag("home_mode_standard").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("duck_ai_direct_button").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("kai_ai_direct_button").assertDoesNotExist()
   }
 
   @Test
-  fun duckAiSearchEngineQueryResolutionWorks() {
-    val res = com.example.security.UrlValidator.resolveInputToTarget("what is quantum computing", SearchEngine.DUCK_AI, "", false)
+  fun kaiAiSearchEngineQueryResolutionAndTrackerExemptionWorks() {
+    val res = com.example.security.UrlValidator.resolveInputToTarget("what is quantum computing", SearchEngine.KAI_AI, "", false)
     assertTrue(res is com.example.security.ResolvedNavigation.LoadUrl)
     val url = (res as com.example.security.ResolvedNavigation.LoadUrl).url
-    assertTrue(url.startsWith("https://duckduckgo.com/?ia=chat&duckchat=1&q="))
+    assertTrue(url.startsWith("https://kai.ai/?q="))
     assertTrue(url.contains("quantum"))
 
-    val trackerBlocked = com.example.security.TrackerBlocker.shouldBlockRequest("https://duck.ai/status", "duck.ai", true)
-    assertFalse(trackerBlocked)
+    // Test backward compatibility mapping
+    assertEquals(SearchEngine.KAI_AI, SearchEngine.fromId("duck_ai"))
+    assertEquals(SearchEngine.KAI_AI, SearchEngine.fromId("kai_ai"))
+
+    // Tracker exemption checks
+    assertFalse(com.example.security.TrackerBlocker.shouldBlockRequest("https://kai.ai/chat", "kai.ai", true))
+    assertFalse(com.example.security.TrackerBlocker.shouldBlockRequest("https://text.pollinations.ai/prompt", "kai.ai", true))
+
+    // Built-in KaiAiApp verification
+    val html = com.example.ui.ai.KaiAiApp.HTML
+    assertTrue(html.contains("Kai AI"))
+    assertTrue(html.contains("Anonymous AI Workspace"))
+    assertTrue(html.contains("100% Anonymous"))
   }
 }

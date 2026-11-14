@@ -10,6 +10,7 @@
 
 | Version | Version Code | Target Platforms & OS | Key Highlights |
 |---|---:|---|---|
+| **v1.4.4** | `17` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Anonymous Kai AI Integration: replaced duck.ai with native built-in Kai AI (`https://kai.ai`); zero login, zero tracking, zero telemetry; top-ranked open intelligence personas (Auto Intelligence, Deep Reasoning, Code & Logic, Creative Mind) with undisclosed model identities; instant in-memory app serving, interactive copy & stop generation; SearchEngine.KAI_AI setting; strictly under 2 MB |
 | **v1.4.3** | `16` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Homepage AI Mode & Duck.ai integration: added intuitive mode switcher between Standard Search and AI Mode; Duck.ai default AI mode with pre-filled prompt queries, 1-tap direct launch chip, complete multi-model AI features (Claude, GPT-4o mini, Llama, Mistral), unrestricted DOM storage, and SearchEngine.DUCK_AI setting; strictly under 2 MB |
 | **v1.4.2** | `15` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Rebranded to **Kai**, aesthetic animated concentric logo (circle inside circle inside dot) with kinetic orbital sweep gradient, celestial satellite pip, precision counter-rotating dual arcs, and harmonic luminous breathing core dot; vector adaptive and monochrome icons; strictly under 2 MB |
 | **v1.4.1** | `14` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Clean tablet header without top tab bar: removed the extra tab bar from the tablet header to deliver a clean, distraction-free single-row toolbar layout matching phone simplicity with full-width browsing, while retaining 1-tap tablet toolbar shortcuts (Desktop UA toggle, Bookmarks, Downloads, New Tab); hardened background stream play with native Chromium `BackgroundMediaWebView` visibility intercept; strictly under 2 MB |
@@ -39,7 +40,7 @@ Because no platform overrides were supplied prior to implementation, Kai targets
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Kai-v1.4.3.apk`](releases/Kai-v1.4.3.apk) and attached to GitHub Releases (`v1.4.3`).
+Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Kai-v1.4.4.apk`](releases/Kai-v1.4.4.apk) and attached to GitHub Releases (`v1.4.4`).
 
 ---
 

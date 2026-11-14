@@ -263,8 +263,10 @@ object TrackerBlocker {
   ): Boolean {
     val reqHost = UrlValidator.extractHost(requestUrl)
     if (reqHost.isEmpty()) return false
-    // Ensure Duck.ai and DuckDuckGo search & AI chat resources are never blocked
-    if (reqHost == "duck.ai" || reqHost.endsWith(".duck.ai") || reqHost == "duckduckgo.com" || reqHost.endsWith(".duckduckgo.com")) {
+    // Ensure Kai AI and inference endpoints as well as DuckDuckGo search are never blocked
+    if (reqHost == "kai.ai" || reqHost.endsWith(".kai.ai") ||
+        reqHost == "text.pollinations.ai" || reqHost.endsWith(".pollinations.ai") ||
+        reqHost == "duckduckgo.com" || reqHost.endsWith(".duckduckgo.com")) {
       return false
     }
     if (customBlockedHosts.isNotEmpty() && isHostMatchingSet(reqHost, customBlockedHosts)) {
