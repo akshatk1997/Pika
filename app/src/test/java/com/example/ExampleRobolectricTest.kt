@@ -374,32 +374,33 @@ class ExampleRobolectricTest {
     assertEquals(com.example.model.YouTubeVideoScaleMode.ORIGINAL, defaultState.youtubeScaleMode)
     assertFalse(defaultState.dataSaverEnabled)
 
-    val callbacks = object : com.example.webview.WebViewPoolCallbacks {
+    val callbacks = object : com.example.webview.WebViewCallbacks {
       override fun onPageStarted(tabId: String, url: String) {}
       override fun onPageFinished(tabId: String, url: String, title: String?, canGoBack: Boolean, canGoForward: Boolean) {}
       override fun onProgressChanged(tabId: String, progress: Int) {}
-      override fun onSecurityStateChanged(tabId: String, state: com.example.model.SecurityState) {}
+      override fun onTitleReceived(tabId: String, title: String) {}
       override fun onTrackerBlocked(tabId: String) {}
       override fun onResourceSniffed(tabId: String, count: Int) {}
+      override fun onHttpBlockedByHttpsOnly(tabId: String, url: String) {}
+      override fun onBlockedScheme(tabId: String, url: String, scheme: String) {}
+      override fun onExternalSchemePrompt(tabId: String, url: String, scheme: String) {}
       override fun onPageError(tabId: String, error: com.example.model.PageError) {}
-      override fun onHttpWarning(tabId: String, warning: com.example.model.HttpWarningState) {}
-      override fun onExternalLinkPrompt(tabId: String, prompt: com.example.model.ExternalLinkPrompt) {}
-      override fun onDownloadConsentPrompt(tabId: String, consent: com.example.model.PendingDownloadConsent) {}
+      override fun onRenderProcessCrashed(tabId: String) {}
+      override fun onDownloadRequested(tabId: String, url: String, contentDisposition: String?, mimeType: String?, contentLength: Long) {}
       override fun onPermissionPrompt(tabId: String, origin: String, kind: com.example.model.WebPermissionKind, detail: String, onDecision: (Boolean) -> Unit) {}
-      override fun onShowFileChooser(tabId: String, params: android.webkit.WebChromeClient.FileChooserParams?, callback: android.webkit.ValueCallback<Array<android.net.Uri>>): Boolean = false
-      override fun onCreateWindow(tabId: String, dialog: Boolean, userGesture: Boolean, resultMsg: android.os.Message?): Boolean = false
-      override fun onShowCustomView(tabId: String, view: android.view.View, callback: android.webkit.WebChromeClient.CustomViewCallback) {}
-      override fun onHideCustomView(tabId: String) {}
-      override fun onRequestFullscreen(tabId: String, fullscreen: Boolean) {}
+      override fun onFileChooserRequested(callback: android.webkit.ValueCallback<Array<android.net.Uri>>?, acceptTypes: Array<String>?) {}
+      override fun onFindMatches(tabId: String, activeOrdinal: Int, numberOfMatches: Int) {}
+      override fun onFullscreenChanged(tabId: String, customView: android.view.View?, callback: android.webkit.WebChromeClient.CustomViewCallback?) {}
+      override fun onLongPressLink(tabId: String, url: String, isImage: Boolean) {}
     }
 
     val pool = com.example.webview.WebViewPool(context, { defaultState.copy(dataSaverEnabled = true, youtubeScaleMode = com.example.model.YouTubeVideoScaleMode.FIT) }, callbacks)
-    val wv = pool.acquireWebView("tab_yt_test", false, UserAgentMode.MOBILE)
+    val wv = pool.getOrCreateWebView("tab_yt_test", false, UserAgentMode.MOBILE, emptySet())!!
     pool.applyYouTubeScaleMode(wv, com.example.model.YouTubeVideoScaleMode.FIT)
     pool.applyYouTubeScaleMode(wv, com.example.model.YouTubeVideoScaleMode.STRETCHED)
     pool.applyYouTubeScaleMode(wv, com.example.model.YouTubeVideoScaleMode.ORIGINAL)
     pool.applyDataSaver(wv, true)
     pool.applyDataSaver(wv, false)
-    pool.releaseWebView("tab_yt_test")
+    pool.destroyTab("tab_yt_test")
   }
 }
