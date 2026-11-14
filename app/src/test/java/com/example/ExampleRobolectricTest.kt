@@ -38,8 +38,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.4.5", BuildConfig.VERSION_NAME)
-    assertEquals(18, BuildConfig.VERSION_CODE)
+    assertEquals("1.4.6", BuildConfig.VERSION_NAME)
+    assertEquals(19, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -340,5 +340,7 @@ class ExampleRobolectricTest {
     assertTrue(html.contains("shutter-btn"))
     assertTrue(html.contains("image_url"))
     assertTrue(html.contains("SpeechRecognition"))
+    assertTrue(html.contains("openai/chat/completions"))
+    assertTrue(html.contains("thought-process"))
   }
 }

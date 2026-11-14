@@ -10,6 +10,7 @@
 
 | Version | Version Code | Target Platforms & OS | Key Highlights |
 |---|---:|---|---|
+| **v1.4.6** | `19` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Kai AI Stuck Fix, OpenAI-Compatible Chat Completions & Multimodal Reasoning: fixed stuck state by routing to OpenAI-compatible endpoint with structured multi-turn conversation memory; visual reasoning breakdown with expandable `🧠 View Reasoning Process`; ephemeral in-memory attachments (visual inspection reference & document text extraction up to 30 KB); live camera viewfinder & speech-to-text recognition; 25s watchdog timeout with 1-tap retry; strictly under 2 MB |
 | **v1.4.5** | `18` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Kai AI Multimodal Attachments, Voice & Camera Access: added anonymous file attachments (photos, code, text, documents), built-in live camera viewfinder modal with snapshot capture, and hands-free voice speech-to-text recognition; optimized multimodal personas (Auto, Deep Reasoning, Code & Logic, Creative Mind); ephemeral in-memory privacy; strictly under 2 MB |
 | **v1.4.4** | `17` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Anonymous Kai AI Integration: replaced duck.ai with native built-in Kai AI (`https://kai.ai`); zero login, zero tracking, zero telemetry; top-ranked open intelligence personas (Auto Intelligence, Deep Reasoning, Code & Logic, Creative Mind) with undisclosed model identities; instant in-memory app serving, interactive copy & stop generation; SearchEngine.KAI_AI setting; strictly under 2 MB |
 | **v1.4.3** | `16` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Homepage AI Mode & Duck.ai integration: added intuitive mode switcher between Standard Search and AI Mode; Duck.ai default AI mode with pre-filled prompt queries, 1-tap direct launch chip, complete multi-model AI features (Claude, GPT-4o mini, Llama, Mistral), unrestricted DOM storage, and SearchEngine.DUCK_AI setting; strictly under 2 MB |
@@ -41,7 +42,7 @@ Because no platform overrides were supplied prior to implementation, Kai targets
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Kai-v1.4.5.apk`](releases/Kai-v1.4.5.apk) and attached to GitHub Releases (`v1.4.5`).
+Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Kai-v1.4.6.apk`](releases/Kai-v1.4.6.apk) and attached to GitHub Releases (`v1.4.6`).
 
 ---
 

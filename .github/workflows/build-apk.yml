@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kai-v1.4.5.apk
+          cp "$APK_PATH" releases/Kai-v1.4.6.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kai-v1.4.5.apk
+          git add releases/Kai-v1.4.6.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kai-v1.4.5.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kai-v1.4.6.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.4.5
+      - name: Create or update GitHub Release v1.4.6
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kai-v1.4.5.apk)
-          NOTES="Kai Browser v1.4.5 (Build 18) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Kai AI Multimodal Attachments, Voice & Camera Access:** Added full anonymous attachment support (photos, code, text, documents), built-in camera viewfinder modal with instant snapshot analysis, and hands-free voice speech-to-text recognition with zero external accounts or server logging.\n- **Optimized Multimodal Personas:** Fine-tuned all AI intelligence personas (Auto, Deep Reasoning, Code & Logic, Creative Mind) for visual inspection, image understanding, document summarization, and audio/voice queries.\n- **Hardened Permissions & Privacy:** Ephemeral in-memory file/photo processing only, with automatic WebChromeClient permission grants for \`https://kai.ai\` and Android runtime camera/mic handlers.\n- **Signed Release APK size:** ${SIZE_BYTES} bytes (strictly < 2 MB / 2,097,152 bytes).\n- **Checks:** \`:app:testDebugUnitTest\` (API 26 & 36, Phone & Tablet), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\` passed."
-          if gh release view v1.4.5 >/dev/null 2>&1; then
-            gh release upload v1.4.5 releases/Kai-v1.4.5.apk --clobber
-            gh release edit v1.4.5 --title "Kai v1.4.5 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kai-v1.4.6.apk)
+          NOTES="Kai Browser v1.4.6 (Build 19) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Fixed Kai AI Stuck State & Upgraded to OpenAI Chat Completions:** Resolved stuck state by routing requests to the OpenAI-compatible chat completions endpoint with structured multimodal and multi-turn message handling.\n- **Deep Reasoning Process Visualization:** Integrated expandable \`🧠 View Reasoning Process\` thought breakdown collapsible cards for deep analytical queries.\n- **Full Multimodal Context & Ephemeral In-Memory Privacy:** Added clean image thumbnail preview, document text extraction (up to 30 KB), live camera viewfinder with snapshot capture, and hands-free voice speech-to-text recognition with 0 accounts and 0 server logs.\n- **Watchdog Timeout & 1-Tap Retry:** Implemented a 25-second watchdog timer preventing UI hangs on spotty connections, with an instant 1-tap \`🔄 Retry\` button to re-submit seamlessly.\n- **Signed Release APK size:** ${SIZE_BYTES} bytes (strictly < 2 MB / 2,097,152 bytes).\n- **Checks:** \`:app:testDebugUnitTest\` (API 26 & 36, Phone & Tablet), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\` passed."
+          if gh release view v1.4.6 >/dev/null 2>&1; then
+            gh release upload v1.4.6 releases/Kai-v1.4.6.apk --clobber
+            gh release edit v1.4.6 --title "Kai v1.4.6 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.4.5 releases/Kai-v1.4.5.apk \
-              --title "Kai v1.4.5 (< 2 MB)" \
+            gh release create v1.4.6 releases/Kai-v1.4.6.apk \
+              --title "Kai v1.4.6 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

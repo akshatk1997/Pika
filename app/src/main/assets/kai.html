@@ -14,11 +14,13 @@
     --accent: #00F2FE;
     --accent-subtle: rgba(0, 242, 254, 0.15);
     --accent-glow: rgba(0, 242, 254, 0.35);
+    --indigo: #6366F1;
     --text: #F1F5F9;
     --text-muted: #94A3B8;
     --bubble-user: #13233D;
     --bubble-ai: #0B1322;
     --danger: #EF4444;
+    --success: #10B981;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body {
@@ -32,15 +34,16 @@
     overflow: hidden;
   }
   header {
-    background: rgba(14, 22, 38, 0.92);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: rgba(14, 22, 38, 0.94);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
     border-bottom: 1px solid var(--border);
-    padding: 10px 16px;
+    padding: 10px 14px;
     display: flex;
     flex-direction: column;
     gap: 8px;
     flex-shrink: 0;
+    z-index: 10;
   }
   .header-top {
     display: flex;
@@ -56,6 +59,7 @@
     width: 28px;
     height: 28px;
     flex-shrink: 0;
+    filter: drop-shadow(0 0 6px var(--accent-glow));
   }
   .brand-title {
     font-size: 1.1rem;
@@ -65,6 +69,11 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
   .badge-anonymous {
     font-size: 0.68rem;
     font-weight: 600;
@@ -73,6 +82,25 @@
     padding: 3px 8px;
     border-radius: 20px;
     border: 1px solid rgba(0, 242, 254, 0.35);
+  }
+  .new-chat-btn {
+    background: var(--surface-variant);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .new-chat-btn:hover, .new-chat-btn:active {
+    background: var(--surface-hover);
+    color: var(--text);
+    border-color: var(--accent);
   }
   .personas {
     display: flex;
@@ -87,7 +115,7 @@
     background: var(--surface-variant);
     border: 1px solid var(--border);
     color: var(--text-muted);
-    font-size: 0.76rem;
+    font-size: 0.75rem;
     font-weight: 600;
     padding: 5px 12px;
     border-radius: 16px;
@@ -98,141 +126,23 @@
   .persona-btn.active {
     background: var(--accent-subtle);
     color: var(--accent);
-    border-color: rgba(0, 242, 254, 0.6);
+    border-color: var(--accent);
+    box-shadow: 0 0 10px rgba(0, 242, 254, 0.25);
   }
-  #chat-feed {
+
+  main#chat-feed {
     flex: 1;
     overflow-y: auto;
-    padding: 16px;
+    padding: 14px 14px 20px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    scroll-behavior: smooth;
-  }
-  .msg-row {
-    display: flex;
-    flex-direction: column;
-    max-width: 88%;
-    animation: fadeIn 0.22s ease-out;
-  }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-  .msg-row.user {
-    align-self: flex-end;
-    align-items: flex-end;
-  }
-  .msg-row.ai {
-    align-self: flex-start;
-    align-items: flex-start;
-    max-width: 92%;
-  }
-  .msg-bubble {
-    padding: 12px 16px;
-    border-radius: 18px;
-    font-size: 0.94rem;
-    line-height: 1.55;
-    word-break: break-word;
-  }
-  .user .msg-bubble {
-    background: var(--bubble-user);
-    color: #FFFFFF;
-    border: 1px solid rgba(0, 242, 254, 0.35);
-    border-bottom-right-radius: 4px;
-  }
-  .ai .msg-bubble {
-    background: var(--bubble-ai);
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-bottom-left-radius: 4px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-  }
-  .ai-meta {
-    font-size: 0.72rem;
-    color: var(--text-muted);
-    margin-bottom: 4px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .ai-meta .dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--accent);
-  }
-  .msg-img-preview {
-    max-width: 220px;
-    max-height: 180px;
-    border-radius: 12px;
-    margin-bottom: 8px;
-    display: block;
-    object-fit: cover;
-    border: 1px solid rgba(0, 242, 254, 0.3);
-  }
-  .msg-doc-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(0, 242, 254, 0.1);
-    border: 1px solid rgba(0, 242, 254, 0.3);
-    color: var(--accent);
-    font-size: 0.76rem;
-    padding: 4px 10px;
-    border-radius: 12px;
-    margin-bottom: 6px;
-    word-break: break-all;
-  }
-  pre {
-    background: #050810;
-    border: 1px solid #1E293B;
-    border-radius: 10px;
-    padding: 12px;
-    margin: 8px 0;
-    overflow-x: auto;
-    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-    font-size: 0.85rem;
-    position: relative;
-  }
-  code {
-    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-    font-size: 0.86rem;
-    color: #38BDF8;
-  }
-  pre code { color: #E2E8F0; }
-  .copy-code-btn {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    background: rgba(30, 41, 59, 0.8);
-    border: 1px solid #334155;
-    color: #94A3B8;
-    padding: 2px 8px;
-    border-radius: 6px;
-    font-size: 0.7rem;
-    cursor: pointer;
-  }
-  .typing-indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 6px 12px;
-  }
-  .typing-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--accent);
-    animation: typingPulse 1.2s infinite ease-in-out;
-  }
-  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes typingPulse {
-    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-    40% { transform: scale(1.1); opacity: 1; }
+    gap: 14px;
+    -webkit-overflow-scrolling: touch;
   }
   .empty-state {
     margin: auto;
+    max-width: 480px;
     text-align: center;
-    max-width: 380px;
     padding: 24px 16px;
     display: flex;
     flex-direction: column;
@@ -240,148 +150,357 @@
     gap: 12px;
   }
   .empty-logo {
-    width: 56px;
-    height: 56px;
+    width: 68px;
+    height: 68px;
+    margin-bottom: 4px;
+    filter: drop-shadow(0 0 16px var(--accent-glow));
+    animation: pulseLogo 3s infinite ease-in-out;
+  }
+  @keyframes pulseLogo {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 14px var(--accent-glow)); }
+    50% { transform: scale(1.05); filter: drop-shadow(0 0 24px rgba(99, 102, 241, 0.6)); }
   }
   .empty-title {
     font-size: 1.25rem;
     font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #FFFFFF;
   }
   .empty-subtitle {
-    font-size: 0.86rem;
+    font-size: 0.84rem;
     color: var(--text-muted);
-    line-height: 1.5;
+    line-height: 1.45;
   }
   .suggestions {
     display: flex;
     flex-direction: column;
     gap: 8px;
     width: 100%;
-    margin-top: 12px;
+    margin-top: 10px;
   }
   .suggestion-pill {
     background: var(--surface);
     border: 1px solid var(--border);
+    color: var(--text);
     padding: 10px 14px;
     border-radius: 12px;
-    font-size: 0.84rem;
-    color: var(--text);
-    cursor: pointer;
+    font-size: 0.82rem;
     text-align: left;
-    transition: background 0.15s ease;
+    cursor: pointer;
+    transition: all 0.2s ease;
   }
   .suggestion-pill:active {
     background: var(--surface-hover);
+    border-color: var(--accent);
+    transform: scale(0.99);
   }
-  footer {
-    background: rgba(14, 22, 38, 0.96);
-    border-top: 1px solid var(--border);
+
+  .msg-row {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    animation: fadeInMsg 0.25s ease-out;
+  }
+  @keyframes fadeInMsg {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .msg-row.user {
+    align-items: flex-end;
+  }
+  .msg-row.ai {
+    align-items: flex-start;
+  }
+  .ai-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    padding-left: 2px;
+  }
+  .ai-meta .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent-glow);
+  }
+  .msg-bubble {
+    max-width: 90%;
+    padding: 12px 15px;
+    border-radius: 16px;
+    font-size: 0.88rem;
+    line-height: 1.55;
+    word-break: break-word;
+    position: relative;
+  }
+  .msg-row.user .msg-bubble {
+    background: var(--bubble-user);
+    color: #FFFFFF;
+    border: 1px solid rgba(0, 242, 254, 0.2);
+    border-bottom-right-radius: 4px;
+  }
+  .msg-row.ai .msg-bubble {
+    background: var(--bubble-ai);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+  }
+  .msg-img-preview {
+    max-width: 100%;
+    max-height: 220px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    display: block;
+    object-fit: cover;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .msg-doc-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 0.76rem;
+    color: #E2E8F0;
+    margin-bottom: 8px;
+  }
+
+  /* Deep Reasoning Thought Process Collapsible */
+  .thought-process {
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    border-radius: 12px;
+    margin-bottom: 12px;
     padding: 8px 12px;
+    font-size: 0.82rem;
+  }
+  .thought-process summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: #A5B4FC;
+    outline: none;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .thought-process .reasoning-text {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(99, 102, 241, 0.25);
+    color: #CBD5E1;
+    line-height: 1.5;
+    font-size: 0.8rem;
+  }
+
+  /* Code block formatting with copy button */
+  pre {
+    background: #050810;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    margin: 10px 0;
+    overflow-x: auto;
+    position: relative;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+  pre code {
+    color: #E2E8F0;
+    background: transparent;
+    padding: 0;
+  }
+  code {
+    background: rgba(255,255,255,0.08);
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.84em;
+    color: var(--accent);
+  }
+  .copy-code-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #FFFFFF;
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .copy-code-btn:active {
+    background: var(--accent);
+    color: #070B14;
+  }
+
+  /* Message action buttons */
+  .ai-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding-left: 2px;
+  }
+  .action-pill-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    padding: 3px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .action-pill-btn:active {
+    background: var(--surface-hover);
+    color: var(--text);
+  }
+
+  /* Typing indicator */
+  .typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 2px;
+  }
+  .typing-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: typingPulse 1.4s infinite ease-in-out;
+  }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typingPulse {
+    0%, 60%, 100% { transform: scale(0.7); opacity: 0.4; }
+    30% { transform: scale(1.15); opacity: 1; }
+  }
+
+  /* Error state with retry */
+  .error-card {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    color: #FCA5A5;
+    font-size: 0.82rem;
+  }
+  .retry-btn {
+    align-self: flex-start;
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    color: #FCA5A5;
+    font-size: 0.74rem;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+  }
+  .retry-btn:active {
+    background: rgba(239, 68, 68, 0.3);
+  }
+
+  /* Footer and inputs */
+  footer {
+    background: rgba(14, 22, 38, 0.94);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-top: 1px solid var(--border);
+    padding: 8px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
     flex-shrink: 0;
   }
   .attach-tray {
     display: none;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     background: var(--surface-variant);
     border: 1px solid var(--border);
-    padding: 6px 12px;
-    border-radius: 12px;
-    animation: fadeIn 0.18s ease-out;
+    border-radius: 10px;
+    padding: 6px 10px;
   }
   .attach-thumb {
     width: 36px;
     height: 36px;
-    border-radius: 8px;
+    border-radius: 6px;
     object-fit: cover;
-    border: 1px solid var(--border);
   }
   .attach-info {
     flex: 1;
-    font-size: 0.8rem;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
   .attach-info .name {
-    color: var(--text);
+    font-size: 0.78rem;
     font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .attach-info .size {
+    font-size: 0.68rem;
     color: var(--text-muted);
-    font-size: 0.72rem;
   }
   .attach-remove-btn {
     background: transparent;
     border: none;
     color: var(--text-muted);
-    font-size: 1.1rem;
-    cursor: pointer;
-    padding: 4px;
+    font-size: 1.2rem;
     line-height: 1;
+    cursor: pointer;
+    padding: 2px 6px;
   }
+
   .voice-banner {
     display: none;
     align-items: center;
     justify-content: space-between;
-    background: rgba(0, 242, 254, 0.15);
-    border: 1px solid rgba(0, 242, 254, 0.4);
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    border-radius: 10px;
     padding: 6px 12px;
-    border-radius: 12px;
-    color: var(--accent);
-    font-size: 0.82rem;
-    font-weight: 600;
-    animation: fadeIn 0.2s ease-out;
+    font-size: 0.8rem;
+    color: #A5B4FC;
   }
   .voice-pulse {
     display: inline-block;
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: var(--accent);
+    background: #EF4444;
     margin-right: 6px;
-    animation: typingPulse 0.9s infinite ease-in-out;
+    animation: voicePing 1.2s infinite;
   }
+  @keyframes voicePing {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(1.3); }
+  }
+
   .footer-row {
     display: flex;
     align-items: flex-end;
     gap: 6px;
   }
-  .input-wrapper {
-    flex: 1;
-    background: var(--bg);
-    border: 1.2px solid var(--border);
-    border-radius: 20px;
-    padding: 8px 12px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    transition: border-color 0.2s ease;
-  }
-  .input-wrapper:focus-within {
-    border-color: rgba(0, 242, 254, 0.6);
-  }
-  textarea {
-    width: 100%;
-    background: transparent;
-    border: none;
-    color: var(--text);
-    font-size: 0.92rem;
-    resize: none;
-    outline: none;
-    max-height: 110px;
-    line-height: 1.4;
-    font-family: inherit;
-  }
-  textarea::placeholder {
-    color: var(--text-muted);
-  }
   .action-btn {
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     background: var(--surface-variant);
     border: 1px solid var(--border);
@@ -394,7 +513,9 @@
     transition: all 0.2s ease;
   }
   .action-btn:active {
-    transform: scale(0.92);
+    background: var(--surface-hover);
+    color: var(--text);
+    transform: scale(0.95);
   }
   .action-btn svg {
     width: 18px;
@@ -407,6 +528,37 @@
     color: var(--accent);
     box-shadow: 0 0 10px var(--accent-glow);
   }
+
+  .input-wrapper {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    transition: border-color 0.2s ease;
+  }
+  .input-wrapper:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 8px rgba(0, 242, 254, 0.2);
+  }
+  #prompt-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #FFFFFF;
+    font-size: 0.9rem;
+    font-family: inherit;
+    resize: none;
+    max-height: 110px;
+    line-height: 1.35;
+  }
+  #prompt-input::placeholder {
+    color: var(--text-muted);
+  }
+
   .send-btn {
     width: 38px;
     height: 38px;
@@ -419,10 +571,14 @@
     justify-content: center;
     cursor: pointer;
     flex-shrink: 0;
-    transition: opacity 0.2s ease, transform 0.1s ease;
+    transition: all 0.2s ease;
+  }
+  .send-btn.stop {
+    background: var(--danger);
+    color: #FFFFFF;
   }
   .send-btn:active {
-    transform: scale(0.94);
+    transform: scale(0.92);
   }
   .send-btn svg {
     width: 18px;
@@ -528,12 +684,17 @@
       </svg>
       <span class="brand-title">Kai AI</span>
     </div>
-    <span class="badge-anonymous">100% Anonymous</span>
+    <div class="header-actions">
+      <span class="badge-anonymous">100% Anonymous</span>
+      <button class="new-chat-btn" id="new-chat-btn" title="Start new conversation">
+        <span>+</span> New
+      </button>
+    </div>
   </div>
   <div class="personas">
     <button class="persona-btn active" data-persona="auto">&#9889; Auto Intelligence</button>
     <button class="persona-btn" data-persona="reasoning">&#129504; Deep Reasoning</button>
-    <button class="persona-btn" data-persona="code">&#128187; Code & Logic</button>
+    <button class="persona-btn" data-persona="code">&#128187; Code &amp; Logic</button>
     <button class="persona-btn" data-persona="creative">&#9997;&#65039; Creative Mind</button>
   </div>
 </header>
@@ -547,12 +708,13 @@
     </svg>
     <div class="empty-title">Anonymous AI Workspace</div>
     <div class="empty-subtitle">
-      Powered by top-ranked open multimodal intelligence. Ask questions, attach files, snap photos, or speak freely &mdash; zero accounts, zero tracking, and zero logs stored.
+      Powered by top-ranked open intelligence. Ask questions, attach files, snap photos, or speak freely &mdash; zero accounts, zero tracking, and zero logs stored.
     </div>
     <div class="suggestions">
-      <div class="suggestion-pill" onclick="sendQuickPrompt('Analyze the latest developments in quantum computing.')">&#9889; Summarize quantum computing advances</div>
-      <div class="suggestion-pill" onclick="sendQuickPrompt('Write a clean Kotlin algorithm for LRU cache eviction.')">&#128187; Write clean Kotlin algorithm for LRU cache</div>
-      <div class="suggestion-pill" onclick="sendQuickPrompt('Explain relativity simply with an intuitive analogy.')">&#129504; Explain relativity simply with an analogy</div>
+      <div class="suggestion-pill" onclick="sendQuickPrompt('Explain quantum computing breakthroughs simply with an intuitive analogy.')">&#9889; Quantum computing explained simply</div>
+      <div class="suggestion-pill" onclick="sendQuickPrompt('What are the key mathematical differences between general relativity and quantum mechanics?')">&#129504; Deep reasoning: Relativity vs Quantum</div>
+      <div class="suggestion-pill" onclick="sendQuickPrompt('Write a clean, thread-safe LRU cache in Kotlin with algorithmic complexity analysis.')">&#128187; Thread-safe LRU cache in Kotlin</div>
+      <div class="suggestion-pill" onclick="sendQuickPrompt('Draft a visionary narrative exploring humanity discovering ancient computational relics in deep space.')">&#9997;&#65039; Sci-fi deep space discovery narrative</div>
     </div>
   </div>
 </main>
@@ -577,7 +739,7 @@
 
   <div class="footer-row">
     <!-- File Attachment Button -->
-    <input type="file" id="file-input" style="display:none;" accept="image/*,text/*,.pdf,.txt,.md,.py,.js,.kt,.java,.json,.csv,.xml,.html">
+    <input type="file" id="file-input" style="display:none;" accept="image/*,text/*,.pdf,.txt,.md,.py,.js,.ts,.kt,.java,.json,.csv,.xml,.html">
     <button class="action-btn" id="attach-btn" title="Attach file or photo">
       <svg viewBox="0 0 24 24">
         <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5a2.5 2.5 0 0 1 5 0v10.5c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5V6H9v9.5a3 3 0 0 0 6 0V5a4 4 0 0 0-8 0v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/>
@@ -588,7 +750,6 @@
     <input type="file" id="camera-fallback-input" style="display:none;" accept="image/*" capture="environment">
     <button class="action-btn" id="camera-btn" title="Snap photo">
       <svg viewBox="0 0 24 24">
-        <path d="M12 12c1.65 0 3-1.35 3-3s-1.35-3-3-3-3 1.35-3 3 1.35 3 3 3zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" style="display:none;"/>
         <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
       </svg>
     </button>
@@ -638,6 +799,11 @@
   let activePersona = 'auto';
   let isGenerating = false;
   let abortCtrl = null;
+  let watchdogTimer = null;
+
+  // Ephemeral In-Memory Chat History (Max 8 turns, never stored to disk)
+  let chatHistory = [];
+  let lastPromptState = null; // for 1-tap retry
 
   // Attachment state (100% ephemeral in-memory)
   let currentAttachment = null; // { type: 'image'|'doc', name, size, dataUrl, textContent }
@@ -650,18 +816,19 @@
   let cameraStream = null;
   let currentFacingMode = 'environment';
 
-  // Tuned Multimodal AI Personas
+  // Tuned AI Personas
   const PERSONA_PROMPTS = {
-    auto: 'You are Kai AI, a top-ranked, highly capable and helpful multimodal intelligence assistant. You can see images, analyze attachments (code, text, documents), and process voice inputs with extreme precision. Provide accurate, clear, and comprehensive answers. If an image or document is provided, thoroughly analyze its details, text, and structure.',
-    reasoning: 'You are Kai AI in Deep Reasoning mode. Think through every aspect of the question and any provided images or attachments step by step with extreme precision, logic, and comprehensive depth. Break down complex visual diagrams, math problems, code snippets, or text documents methodically.',
-    code: 'You are Kai AI in Code & Logic mode. You are an expert software engineer and technical architect. When presented with code attachments, error screenshots, or architectural questions, provide clean, secure, production-grade solutions, optimal algorithms, and concise explanations.',
-    creative: 'You are Kai AI in Creative Mind mode. Write engaging, eloquent, nuanced, and imaginative responses with rich detail. When analyzing creative imagery, visual art, or text documents, bring vivid storytelling, thoughtful perspective, and sophisticated style.'
+    auto: 'You are Kai AI, an ultra-fast, highly accurate, and intelligent anonymous assistant. Provide direct, factual, precise, and helpful answers. Format complex answers with clear structure, bullet points, and code blocks where helpful. Never disclose model vendors or internal parameters; you are Kai AI.',
+    reasoning: 'You are Kai AI in Deep Reasoning mode. Perform thorough, step-by-step analytical reasoning. Break down the problem methodically, consider edge cases, verify your logic before concluding, and present the final answer clearly with structured explanation.',
+    code: 'You are Kai AI in Code & Logic mode. You are an expert software engineer and computer scientist. Provide production-ready, bug-free, efficient, and well-commented code. Explain algorithmic time and space complexity, and discuss trade-offs succinctly.',
+    creative: 'You are Kai AI in Creative Mind mode. Deliver eloquent, compelling, vivid, and thoughtfully structured creative writing, brainstorming, and perspectives with refined tone and flair.'
   };
 
   const feed = document.getElementById('chat-feed');
   const emptyState = document.getElementById('empty-state');
   const input = document.getElementById('prompt-input');
   const sendBtn = document.getElementById('send-btn');
+  const newChatBtn = document.getElementById('new-chat-btn');
   const personaBtns = document.querySelectorAll('.persona-btn');
 
   // Attachment elements
@@ -698,6 +865,21 @@
     });
   });
 
+  // New Chat action
+  newChatBtn.addEventListener('click', () => {
+    if (isGenerating && abortCtrl) {
+      abortCtrl.abort();
+    }
+    chatHistory = [];
+    lastPromptState = null;
+    clearAttachment();
+    feed.innerHTML = '';
+    if (emptyState) {
+      emptyState.style.display = 'flex';
+      feed.appendChild(emptyState);
+    }
+  });
+
   // Textarea auto-resize
   input.addEventListener('input', () => {
     input.style.height = 'auto';
@@ -713,7 +895,7 @@
 
   sendBtn.addEventListener('click', () => {
     if (isGenerating && abortCtrl) {
-      abortCtrl.abort();
+      abortCtrl.abort('User stopped generation');
       return;
     }
     handleSend();
@@ -742,6 +924,7 @@
     const reader = new FileReader();
 
     if (isImage) {
+      // Ephemeral image_url processing and visual reference preview
       reader.onload = (evt) => {
         currentAttachment = {
           type: 'image',
@@ -754,11 +937,12 @@
       reader.readAsDataURL(file);
     } else {
       reader.onload = (evt) => {
+        const text = typeof evt.target.result === 'string' ? evt.target.result : '';
         currentAttachment = {
           type: 'doc',
           name: file.name,
           size: formatBytes(file.size),
-          textContent: evt.target.result.slice(0, 120000) // 120 KB limit for context
+          textContent: text.slice(0, 30000) // 30 KB text context window
         };
         showAttachmentTray();
       };
@@ -796,13 +980,12 @@
       try {
         await startCamera(currentFacingMode);
         cameraModal.style.display = 'flex';
+        return;
       } catch (err) {
         // Fallback to native capture input
-        cameraFallbackInput.click();
       }
-    } else {
-      cameraFallbackInput.click();
     }
+    cameraFallbackInput.click();
   });
 
   cameraFallbackInput.addEventListener('change', (e) => {
@@ -824,7 +1007,9 @@
 
   function stopCamera() {
     if (cameraStream) {
-      cameraStream.getTracks().forEach(t => t.stop());
+      try {
+        cameraStream.getTracks().forEach(t => t.stop());
+      } catch (e) {}
       cameraStream = null;
     }
   }
@@ -838,8 +1023,7 @@
     currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
     try {
       await startCamera(currentFacingMode);
-    } catch (_: Throwable) {
-    }
+    } catch (e) {}
   });
 
   shutterBtn.addEventListener('click', () => {
@@ -897,7 +1081,7 @@
       }
     };
 
-    recognition.onerror = (e) => {
+    recognition.onerror = () => {
       stopVoice();
     };
 
@@ -917,7 +1101,7 @@
 
   micBtn.addEventListener('click', () => {
     if (!SpeechRec) {
-      alert('Voice input is not supported on this device version.');
+      alert('Speech recognition is not supported by your WebView version.');
       return;
     }
     if (isListening) {
@@ -940,13 +1124,14 @@
   }
 
   function escapeHtml(str) {
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   function formatMarkdown(text) {
+    if (!text) return '';
     let out = escapeHtml(text);
     // Code blocks with copy button
-    out = out.replace(/```([a-zA-Z0-9]*)\n([\s\S]*?)```/g, function(match, lang, code) {
+    out = out.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, function(match, lang, code) {
       return '<pre><button class="copy-code-btn" onclick="copySnippet(this)">Copy</button><code>' + code + '</code></pre>';
     });
     // Inline code
@@ -964,11 +1149,22 @@
 
   function copySnippet(btn) {
     const code = btn.nextElementSibling.innerText;
-    navigator.clipboard.writeText(code).then(() => {
-      btn.innerText = 'Copied!';
-      setTimeout(() => btn.innerText = 'Copy', 1800);
+    copyToClipboard(code, btn, 'Copied!');
+  }
+
+  function copyBubbleText(btn) {
+    const bubble = btn.closest('.msg-row').querySelector('.ai-content');
+    if (!bubble) return;
+    copyToClipboard(bubble.innerText, btn, 'Copied Answer');
+  }
+
+  function copyToClipboard(text, btn, successMsg) {
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.innerText;
+      btn.innerText = successMsg;
+      setTimeout(() => { btn.innerText = orig; }, 1800);
     }).catch(() => {
-      btn.innerText = 'Copied';
+      btn.innerText = successMsg;
     });
   }
 
@@ -1012,7 +1208,7 @@
 
     const meta = document.createElement('div');
     meta.className = 'ai-meta';
-    meta.innerHTML = '<span class="dot"></span><span>Kai AI</span>';
+    meta.innerHTML = '<span class="dot"></span><span>Kai AI &bull; ' + activePersona.toUpperCase() + '</span>';
     row.appendChild(meta);
 
     const bubble = document.createElement('div');
@@ -1025,6 +1221,14 @@
     return bubble;
   }
 
+  function retryLastPrompt() {
+    if (!lastPromptState || isGenerating) return;
+    input.value = lastPromptState.text || '';
+    currentAttachment = lastPromptState.attachment || null;
+    if (currentAttachment) showAttachmentTray();
+    handleSend();
+  }
+
   async function handleSend() {
     const text = input.value.trim();
     const attachment = currentAttachment;
@@ -1034,6 +1238,9 @@
 
     if (isListening) stopVoice();
 
+    // Cache state for 1-tap retry
+    lastPromptState = { text: text, attachment: attachment };
+
     input.value = '';
     input.style.height = 'auto';
     clearAttachment();
@@ -1041,70 +1248,122 @@
     appendUserMessage(text, attachment);
 
     isGenerating = true;
+    sendBtn.classList.add('stop');
     sendBtn.innerHTML = '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
     sendBtn.title = 'Stop';
 
     const aiBubble = appendAiLoading();
     abortCtrl = new AbortController();
 
+    // 25s watchdog to guarantee UI never gets stuck
+    watchdogTimer = setTimeout(() => {
+      if (abortCtrl) abortCtrl.abort('timeout');
+    }, 25000);
+
     try {
       const sys = PERSONA_PROMPTS[activePersona] || PERSONA_PROMPTS.auto;
-      let userContent;
+      let promptContent = '';
 
       if (attachment && attachment.type === 'image') {
-        const questionText = text || 'Please inspect and analyze this image in detail.';
-        userContent = [
-          { type: 'text', text: questionText },
-          { type: 'image_url', image_url: { url: attachment.dataUrl } }
-        ];
+        promptContent = '[Visual Reference Attached: "' + attachment.name + '" (' + attachment.size + ')]\n' +
+          (text ? text : 'Please inspect, analyze, and provide insights on this visual reference.');
       } else if (attachment && attachment.type === 'doc') {
-        const docText = '[Attached Document: ' + attachment.name + ']\n```\n' + attachment.textContent + '\n```\n\n' +
-                        (text || 'Please review and summarize the attached document.');
-        userContent = docText;
+        promptContent = '[Attached Document: "' + attachment.name + '" (' + attachment.size + ')]\n```\n' +
+          (attachment.textContent || '') + '\n```\n\n' +
+          (text ? text : 'Please review and summarize the attached document.');
       } else {
-        userContent = text;
+        promptContent = text;
       }
 
-      let responseText = '';
+      // Build multi-turn messages array
+      const messages = [
+        { role: 'system', content: sys }
+      ];
 
+      // Append up to last 8 turns of conversational context
+      chatHistory.forEach(item => {
+        messages.push({ role: item.role, content: item.content });
+      });
+
+      // Append current user message
+      messages.push({ role: 'user', content: promptContent });
+
+      let responseText = '';
+      let reasoningText = '';
+
+      // Primary: OpenAI-compatible chat completions endpoint
       try {
-        const postResp = await fetch('https://text.pollinations.ai/', {
+        const postResp = await fetch('https://text.pollinations.ai/openai/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            messages: [
-              { role: 'system', content: sys },
-              { role: 'user', content: userContent }
-            ]
+            model: 'openai-fast',
+            messages: messages
           }),
           signal: abortCtrl.signal
         });
+
         if (postResp.ok) {
-          responseText = await postResp.text();
+          const json = await postResp.json();
+          const choice = json.choices && json.choices[0];
+          if (choice && choice.message) {
+            responseText = choice.message.content || '';
+            reasoningText = choice.message.reasoning || '';
+          }
         } else {
-          throw new Error('POST failed: ' + postResp.status);
+          throw new Error('Endpoint status ' + postResp.status);
         }
       } catch (postErr) {
         if (postErr.name === 'AbortError') throw postErr;
 
-        // Fallback for text queries
-        const queryText = (typeof userContent === 'string') ? userContent : text;
+        // Fallback: direct GET endpoint for lightweight queries
+        const queryText = (promptContent.length < 800) ? promptContent : text;
         const getUrl = 'https://text.pollinations.ai/' + encodeURIComponent(queryText) +
                        '?system=' + encodeURIComponent(sys);
         const getResp = await fetch(getUrl, { signal: abortCtrl.signal });
-        if (!getResp.ok) throw new Error('GET failed: ' + getResp.status);
+        if (!getResp.ok) throw new Error('Fallback failed with status ' + getResp.status);
         responseText = await getResp.text();
       }
 
-      aiBubble.innerHTML = formatMarkdown(responseText.trim());
+      // Clear watchdog timer
+      if (watchdogTimer) clearTimeout(watchdogTimer);
+
+      // Render response
+      let bubbleHtml = '';
+      if (reasoningText && reasoningText.trim()) {
+        bubbleHtml += '<details class="thought-process"><summary>&#129504; View Reasoning Process</summary><div class="reasoning-text">' +
+          formatMarkdown(reasoningText.trim()) + '</div></details>';
+      }
+
+      const formattedAnswer = formatMarkdown(responseText.trim() || 'No answer generated.');
+      bubbleHtml += '<div class="ai-content">' + formattedAnswer + '</div>';
+      bubbleHtml += '<div class="ai-actions"><button class="action-pill-btn" onclick="copyBubbleText(this)">Copy Answer</button></div>';
+
+      aiBubble.innerHTML = bubbleHtml;
+
+      // Update conversational history (keep last 8 turns)
+      chatHistory.push({ role: 'user', content: promptContent });
+      chatHistory.push({ role: 'assistant', content: responseText.trim() });
+      if (chatHistory.length > 8) {
+        chatHistory = chatHistory.slice(chatHistory.length - 8);
+      }
+
     } catch (err) {
+      if (watchdogTimer) clearTimeout(watchdogTimer);
+
       if (err.name === 'AbortError') {
         aiBubble.innerHTML = '<em>Generation stopped.</em>';
       } else {
-        aiBubble.innerHTML = '<span style="color:var(--danger);">Unable to connect to AI engine. Please verify internet connection.</span>';
+        aiBubble.innerHTML =
+          '<div class="error-card">' +
+            '<span>Connection issue with AI engine. Please verify your internet connection.</span>' +
+            '<button class="retry-btn" onclick="retryLastPrompt()">&#128260; Retry</button>' +
+          '</div>';
       }
     } finally {
+      if (watchdogTimer) clearTimeout(watchdogTimer);
       isGenerating = false;
+      sendBtn.classList.remove('stop');
       sendBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>';
       sendBtn.title = 'Send';
       feed.scrollTop = feed.scrollHeight;
