@@ -43,6 +43,7 @@ import com.example.model.WebPermissionPrompt
 import com.example.security.ResolvedNavigation
 import com.example.security.TrackerBlocker
 import com.example.security.UrlValidator
+import com.example.service.PageTranslationService
 import com.example.webview.WebViewCallbacks
 import com.example.webview.WebViewPool
 import kotlinx.coroutines.Dispatchers
@@ -53,6 +54,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import org.json.JSONTokener
 import java.net.URLEncoder
@@ -979,41 +981,36 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       return
     }
 
-    val targetLang = Locale.getDefault().language.ifEmpty { "en" }
-    val targetLangName = Locale.getDefault().displayLanguage.ifBlank { targetLang }
+    val targetLangCode = Locale.getDefault().language.ifEmpty { "en" }
+    val targetLangName = Locale.getDefault().displayLanguage.ifBlank { targetLangCode }
 
-    val openTranslateJs = """
+    val extractJs = """
       (function() {
-        // 1. If currently on a translated page, restore original DOM text nodes
+        // 1. If currently on a translated page, restore original DOM text nodes immediately
         if (window.__kai_is_translated) {
           try {
             if (window.__kai_orig_text_nodes) {
               for (var i = 0; i < window.__kai_orig_text_nodes.length; i++) {
-                var item = window.__kai_orig_text_nodes[i];
-                if (item.node && item.text != null) {
-                  item.node.nodeValue = item.text;
-                }
+                var it = window.__kai_orig_text_nodes[i];
+                if (it.node && it.text != null) it.node.nodeValue = it.text;
               }
             }
             window.__kai_is_translated = false;
             var banner = document.getElementById('kai-translate-banner');
             if (banner) banner.remove();
-            return 'restored';
+            return JSON.stringify({ action: 'restored' });
           } catch(e) {
-            return 'error_restore';
+            return JSON.stringify({ action: 'error_restore' });
           }
         }
 
-        // 2. Collect visible, translatable text nodes from the live DOM
-        var targetLang = '$targetLang';
+        // 2. Collect visible, non-script/style DOM text nodes from the live page
         var walker = document.createTreeWalker(
           document.body || document.documentElement,
           NodeFilter.SHOW_TEXT,
           {
             acceptNode: function(node) {
-              if (!node || !node.nodeValue || !node.nodeValue.trim()) {
-                return NodeFilter.FILTER_REJECT;
-              }
+              if (!node || !node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
               var parent = node.parentElement;
               if (!parent) return NodeFilter.FILTER_REJECT;
               var tag = parent.tagName;
@@ -1032,19 +1029,19 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
           }
         );
 
-        var nodesToTranslate = [];
         var origNodes = [];
+        var texts = [];
         var currentNode;
-        while ((currentNode = walker.nextNode()) && nodesToTranslate.length < 250) {
+        while ((currentNode = walker.nextNode()) && texts.length < 300) {
           var val = currentNode.nodeValue.trim();
           if (val.length > 1) {
-            nodesToTranslate.push({ node: currentNode, text: val });
             origNodes.push({ node: currentNode, text: currentNode.nodeValue });
+            texts.push(val);
           }
         }
 
-        if (nodesToTranslate.length === 0) {
-          return 'no_content';
+        if (texts.length === 0) {
+          return JSON.stringify({ action: 'no_content' });
         }
 
         window.__kai_orig_text_nodes = origNodes;
@@ -1054,136 +1051,105 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         if (oldBanner) oldBanner.remove();
         var banner = document.createElement('div');
         banner.id = 'kai-translate-banner';
-        banner.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:999999;background:rgba(15,23,42,0.92);color:#F1F5F9;font-family:system-ui,-apple-system,sans-serif;font-size:12px;padding:8px 16px;border-radius:24px;border:1px solid rgba(0,242,254,0.3);box-shadow:0 4px 16px rgba(0,0,0,0.35);display:flex;align-items:center;gap:8px;pointer-events:auto;backdrop-filter:blur(8px);';
-        banner.innerHTML = '<span style="color:#00F2FE;">🌐</span> Translating with Open Translate...';
+        banner.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:999999;background:rgba(15,23,42,0.94);color:#F1F5F9;font-family:system-ui,-apple-system,sans-serif;font-size:12px;padding:8px 18px;border-radius:24px;border:1px solid rgba(0,242,254,0.35);box-shadow:0 6px 20px rgba(0,0,0,0.4);display:flex;align-items:center;gap:10px;pointer-events:auto;backdrop-filter:blur(10px);';
+        banner.innerHTML = '<span style="color:#00F2FE;">🌐</span> Translating page in real time...';
         document.body.appendChild(banner);
 
-        // 4. Batch translate using open-source endpoints
-        var batchSize = 10;
-        var batches = [];
-        for (var i = 0; i < nodesToTranslate.length; i += batchSize) {
-          batches.push(nodesToTranslate.slice(i, i + batchSize));
-        }
-
-        var completed = 0;
-        function translateBatch(batch) {
-          var texts = batch.map(function(item) { return item.text; });
-          var combined = texts.join('\n---\n');
-
-          // Try LibreTranslate open-source endpoint
-          function tryLibreTranslate() {
-            var endpoints = [
-              'https://translate.terraprint.co/translate',
-              'https://translate.argosopentech.com/translate',
-              'https://libretranslate.de/translate'
-            ];
-            var currentEndpoint = 0;
-
-            function attemptNext() {
-              if (currentEndpoint >= endpoints.length) {
-                tryMyMemory();
-                return;
-              }
-              var ep = endpoints[currentEndpoint++];
-              var xhr = new XMLHttpRequest();
-              xhr.open('POST', ep, true);
-              xhr.setRequestHeader('Content-Type', 'application/json');
-              xhr.timeout = 5000;
-              xhr.onload = function() {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                  try {
-                    var data = JSON.parse(xhr.responseText);
-                    var trans = data.translatedText || '';
-                    if (trans) {
-                      applyTranslation(trans);
-                      return;
-                    }
-                  } catch(e) {}
-                }
-                attemptNext();
-              };
-              xhr.onerror = attemptNext;
-              xhr.ontimeout = attemptNext;
-              xhr.send(JSON.stringify({
-                q: combined,
-                source: 'auto',
-                target: targetLang,
-                format: 'text'
-              }));
-            }
-            attemptNext();
-          }
-
-          // Fallback open-source translation via MyMemory API
-          function tryMyMemory() {
-            var encoded = encodeURIComponent(combined.substring(0, 500));
-            var url = 'https://api.mymemory.translated.net/get?q=' + encoded + '&langpair=autodetect|' + targetLang;
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', url, true);
-            xhr.timeout = 5000;
-            xhr.onload = function() {
-              if (xhr.status >= 200 && xhr.status < 300) {
-                try {
-                  var data = JSON.parse(xhr.responseText);
-                  var trans = data.responseData && data.responseData.translatedText;
-                  if (trans) {
-                    applyTranslation(trans);
-                    return;
-                  }
-                } catch(e) {}
-              }
-              finishBatch();
-            };
-            xhr.onerror = finishBatch;
-            xhr.ontimeout = finishBatch;
-            xhr.send();
-          }
-
-          function applyTranslation(translatedCombined) {
-            var parts = translatedCombined.split('\n---\n');
-            for (var k = 0; k < batch.length; k++) {
-              if (parts[k] && parts[k].trim()) {
-                batch[k].node.nodeValue = parts[k].trim();
-              }
-            }
-            finishBatch();
-          }
-
-          function finishBatch() {
-            completed++;
-            if (completed >= batches.length) {
-              window.__kai_is_translated = true;
-              banner.innerHTML = '<span style="color:#00F2FE;">🌐</span> Translated to $targetLangName (Open Translate) <button id="kai-restore-btn" style="background:rgba(255,255,255,0.15);border:none;color:#FFF;padding:2px 8px;border-radius:12px;cursor:pointer;margin-left:6px;font-size:11px;">Restore</button>';
-              var btn = document.getElementById('kai-restore-btn');
-              if (btn) {
-                btn.onclick = function() {
-                  for (var m = 0; m < window.__kai_orig_text_nodes.length; m++) {
-                    var it = window.__kai_orig_text_nodes[m];
-                    if (it.node && it.text != null) it.node.nodeValue = it.text;
-                  }
-                  window.__kai_is_translated = false;
-                  banner.remove();
-                };
-              }
-            }
-          }
-
-          tryLibreTranslate();
-        }
-
-        for (var b = 0; b < batches.length; b++) {
-          translateBatch(batches[b]);
-        }
-        return 'started';
+        return JSON.stringify({ action: 'translate', texts: texts });
       })();
     """.trimIndent()
 
-    webView.evaluateJavascript(openTranslateJs) { result ->
-      when (result?.trim('"')) {
-        "restored" -> showToast("Original page restored")
-        "no_content" -> showToast("No translatable text found on this page")
-        "started" -> showToast("Translating page to $targetLangName (Open Source)...")
-        else -> showToast("Translating page to $targetLangName (Open Source)...")
+    webView.evaluateJavascript(extractJs) { rawResult ->
+      if (rawResult.isNullOrBlank() || rawResult == "null") return@evaluateJavascript
+      try {
+        val unescaped = JSONObject("{\"res\":$rawResult}").getString("res")
+        val json = JSONObject(unescaped)
+        val action = json.optString("action")
+        when (action) {
+          "restored" -> {
+            showToast("Original page restored")
+            return@evaluateJavascript
+          }
+          "no_content" -> {
+            showToast("No translatable text found on this page")
+            return@evaluateJavascript
+          }
+          "translate" -> {
+            val textsArray = json.optJSONArray("texts") ?: return@evaluateJavascript
+            val textList = mutableListOf<String>()
+            for (i in 0 until textsArray.length()) {
+              textList.add(textsArray.getString(i))
+            }
+            showToast("Translating page to $targetLangName...")
+
+            viewModelScope.launch(Dispatchers.IO) {
+              val batchSize = 35
+              val chunks = textList.chunked(batchSize)
+              var currentOffset = 0
+
+              for (chunk in chunks) {
+                val translatedChunk = PageTranslationService.translateBatch(chunk, targetLangCode, targetLangName)
+                val chunkJsonArray = JSONArray()
+                for (t in translatedChunk) {
+                  chunkJsonArray.put(t)
+                }
+
+                withContext(Dispatchers.Main) {
+                  val liveWv = webViewPool.getLiveWebView(tab.id)
+                  val applyChunkJs = """
+                    (function() {
+                      var offset = $currentOffset;
+                      var translations = $chunkJsonArray;
+                      if (window.__kai_orig_text_nodes) {
+                        for (var k = 0; k < translations.length; k++) {
+                          var targetIndex = offset + k;
+                          if (targetIndex < window.__kai_orig_text_nodes.length) {
+                            var item = window.__kai_orig_text_nodes[targetIndex];
+                            if (item && item.node && translations[k]) {
+                              item.node.nodeValue = translations[k];
+                            }
+                          }
+                        }
+                      }
+                    })();
+                  """.trimIndent()
+                  liveWv?.evaluateJavascript(applyChunkJs, null)
+                }
+                currentOffset += chunk.size
+              }
+
+              // Finalize floating status badge with 1-tap restore toggle
+              withContext(Dispatchers.Main) {
+                val liveWv = webViewPool.getLiveWebView(tab.id)
+                val finalizeJs = """
+                  (function() {
+                    window.__kai_is_translated = true;
+                    var banner = document.getElementById('kai-translate-banner');
+                    if (banner) {
+                      banner.innerHTML = '<span style="color:#00F2FE;">🌐</span> Translated to $targetLangName (Real-Time Translate) <button id="kai-restore-btn" style="background:rgba(255,255,255,0.18);border:none;color:#FFF;padding:3px 10px;border-radius:12px;cursor:pointer;margin-left:8px;font-size:11px;font-weight:600;">Restore</button>';
+                      var btn = document.getElementById('kai-restore-btn');
+                      if (btn) {
+                        btn.onclick = function() {
+                          if (window.__kai_orig_text_nodes) {
+                            for (var m = 0; m < window.__kai_orig_text_nodes.length; m++) {
+                              var it = window.__kai_orig_text_nodes[m];
+                              if (it.node && it.text != null) it.node.nodeValue = it.text;
+                            }
+                          }
+                          window.__kai_is_translated = false;
+                          banner.remove();
+                        };
+                      }
+                    }
+                  })();
+                """.trimIndent()
+                liveWv?.evaluateJavascript(finalizeJs, null)
+                showToast("Page translated to $targetLangName")
+              }
+            }
+          }
+        }
+      } catch (_: Throwable) {
       }
     }
   }

@@ -38,8 +38,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.5.6", BuildConfig.VERSION_NAME)
-    assertEquals(29, BuildConfig.VERSION_CODE)
+    assertEquals("1.5.7", BuildConfig.VERSION_NAME)
+    assertEquals(30, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -159,7 +159,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.5.6").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.5.7").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -266,21 +266,16 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun openSourceTranslationEndpointsAndDomRestorationWorkReliably() {
-    // 1. Verify open-source translation endpoints are privacy-first LibreTranslate & MyMemory APIs
-    val openEndpoints = listOf(
-      "https://translate.terraprint.co/translate",
-      "https://translate.argosopentech.com/translate",
-      "https://libretranslate.de/translate",
-      "https://api.mymemory.translated.net/get"
-    )
-    for (ep in openEndpoints) {
-      assertTrue("Endpoint must use secure HTTPS", ep.startsWith("https://"))
-      assertFalse("Must not use Google Translate proxy", ep.contains("google.com"))
-      assertFalse("Must not use Google Translate redirect", ep.contains("translate.goog"))
-    }
+  fun pageTranslationServiceSafelyTranslatesOrFallbacksWithoutThrowing() = kotlinx.coroutines.runBlocking {
+    val inputs = listOf("Welcome to Kai", "Privacy first browser")
+    val result = com.example.service.PageTranslationService.translateBatch(inputs, "es", "Spanish")
+    assertNotNull(result)
+    assertEquals(inputs.size, result.size)
+  }
 
-    // 2. Verify in-page DOM text replacement and 1-tap restore state mechanics
+  @Test
+  fun openSourceTranslationEndpointsAndDomRestorationWorkReliably() {
+    // 1. Verify in-page DOM text replacement and 1-tap restore state mechanics
     var pageUrl = "https://example.org/article"
     val originalTextNodes = mapOf("node1" to "Hello world", "node2" to "Privacy first browser")
     val translatedTextNodes = mutableMapOf<String, String>()
