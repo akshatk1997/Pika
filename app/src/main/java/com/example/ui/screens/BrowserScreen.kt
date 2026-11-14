@@ -742,7 +742,7 @@ fun BrowserScreen(
             Column(modifier = Modifier.padding(10.dp)) {
               Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                  FeatherIcons.PlayCircle,
+                  FeatherIcons.MediaSniff,
                   contentDescription = null,
                   tint = MaterialTheme.colorScheme.primary,
                   modifier = Modifier.size(16.dp)
