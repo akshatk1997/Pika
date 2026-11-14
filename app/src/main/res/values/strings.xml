@@ -6,6 +6,7 @@
     <string name="home_search_hint">Search with %1$s</string>
     <string name="home_mode_standard">Search</string>
     <string name="home_mode_ai">Kai AI</string>
+    <string name="home_entering_ai">Entering Kai AI…</string>
     <string name="home_ai_search_hint">Ask Kai AI anything…</string>
     <string name="home_open_kai_ai">Open Kai AI</string>
     <string name="home_ai_badge">Anonymous • Top Ranked AI • Zero Tracking</string>

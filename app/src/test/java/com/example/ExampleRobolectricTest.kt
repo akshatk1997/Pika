@@ -38,8 +38,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.4.8", BuildConfig.VERSION_NAME)
-    assertEquals(21, BuildConfig.VERSION_CODE)
+    assertEquals("1.4.9", BuildConfig.VERSION_NAME)
+    assertEquals(22, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -157,7 +157,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.4.8").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.4.9").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_retain_tabs").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -347,5 +347,9 @@ class ExampleRobolectricTest {
     assertTrue(html.contains("gemini-3.5-flash-lite"))
     assertTrue(html.contains("thought-process"))
     assertTrue(html.contains("Söhne"))
+    assertTrue(html.contains("Söhne Mono"))
+    assertTrue(html.contains("#070B14"))
+    assertTrue(html.contains("#0E1626"))
+    assertTrue(html.contains("#00F2FE"))
   }
 }

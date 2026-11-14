@@ -1,6 +1,14 @@
 package com.example.ui.components
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -23,9 +31,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -56,6 +61,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,6 +70,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.scale
+import kotlinx.coroutines.delay
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -105,12 +113,28 @@ fun NewTabHomeView(
   modifier: Modifier = Modifier
 ) {
   var homeSearch by remember { mutableStateOf("") }
+  var isEnteringAi by remember { mutableStateOf(false) }
+
+  if (isEnteringAi) {
+    LaunchedEffect(Unit) {
+      delay(260)
+      onSubmitQuery("https://kai.ai")
+      isEnteringAi = false
+    }
+  }
+
   val primaryAccent = if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.primary
   val aiAccent = if (isPrivate) FeatherPrivateAccent else Color(0xFF00E5FF)
   val auraAccent = if (isPrivate) FeatherPrivateAccent else BatSignalGold
   val secondaryAccent = if (isPrivate) Color(0xFF6366F1) else FeatherMintDark
   val surfaceColor = MaterialTheme.colorScheme.surface
   val outlineColor = MaterialTheme.colorScheme.outline
+
+  val heroScale by animateFloatAsState(
+    targetValue = if (isEnteringAi) 1.12f else 1f,
+    animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+    label = "heroScale"
+  )
 
   BoxWithConstraints(
     modifier = modifier
@@ -121,8 +145,8 @@ fun NewTabHomeView(
         drawCircle(
           brush = Brush.radialGradient(
             colors = listOf(
-              auraAccent.copy(alpha = 0.15f),
-              secondaryAccent.copy(alpha = 0.05f),
+              auraAccent.copy(alpha = if (isEnteringAi) 0.35f else 0.15f),
+              if (isEnteringAi) Color(0xFF00F2FE).copy(alpha = 0.20f) else secondaryAccent.copy(alpha = 0.05f),
               Color.Transparent
             ),
             center = center,
@@ -132,7 +156,7 @@ fun NewTabHomeView(
           center = center
         )
         drawCircle(
-          color = auraAccent.copy(alpha = 0.08f),
+          color = (if (isEnteringAi) Color(0xFF00F2FE) else auraAccent).copy(alpha = 0.08f),
           radius = size.minDimension * 0.34f,
           center = center,
           style = Stroke(width = 1.dp.toPx())
@@ -160,7 +184,9 @@ fun NewTabHomeView(
       // Hero Emblem (Aesthetic Animated Kai Emblem: Concentric Circle in Circle in Dot)
       val crestSize = if (isCompactHeight) 56.dp else 78.dp
       KaiLogo(
-        modifier = Modifier.testTag("kai_home_logo"),
+        modifier = Modifier
+          .scale(heroScale)
+          .testTag("kai_home_logo"),
         size = crestSize,
         isPrivate = isPrivate,
         animated = true,
@@ -205,7 +231,7 @@ fun NewTabHomeView(
 
       Spacer(modifier = Modifier.height(18.dp))
 
-      // Search Mode Switcher (Standard Search vs AI Mode / Duck.ai)
+      // Search Mode Switcher: Standard Search (Default) vs Kai AI Mode
       Surface(
         shape = RoundedCornerShape(50),
         color = surfaceColor.copy(alpha = 0.90f),
@@ -213,15 +239,17 @@ fun NewTabHomeView(
         shadowElevation = 2.dp
       ) {
         Row(
-          modifier = Modifier.padding(3.dp),
+          modifier = Modifier.padding(4.dp),
           verticalAlignment = Alignment.CenterVertically
         ) {
-          // Standard Search Tab
+          // Standard Search Tab (Active by Default)
           Surface(
             shape = RoundedCornerShape(50),
-            color = primaryAccent.copy(alpha = 0.16f),
-            border = BorderStroke(1.dp, primaryAccent.copy(alpha = 0.5f)),
-            modifier = Modifier.testTag("home_mode_standard")
+            color = if (!isEnteringAi) primaryAccent.copy(alpha = 0.16f) else Color.Transparent,
+            border = BorderStroke(1.dp, if (!isEnteringAi) primaryAccent.copy(alpha = 0.5f) else Color.Transparent),
+            modifier = Modifier
+              .clickable { isEnteringAi = false }
+              .testTag("home_mode_standard")
           ) {
             Row(
               modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
@@ -230,26 +258,26 @@ fun NewTabHomeView(
               Icon(
                 imageVector = Icons.Filled.Search,
                 contentDescription = null,
-                tint = primaryAccent,
+                tint = if (!isEnteringAi) primaryAccent else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(15.dp)
               )
               Spacer(modifier = Modifier.width(6.dp))
               Text(
                 text = stringResource(R.string.home_mode_standard),
                 style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = primaryAccent
+                fontWeight = if (!isEnteringAi) FontWeight.Bold else FontWeight.Medium,
+                color = if (!isEnteringAi) primaryAccent else MaterialTheme.colorScheme.onSurfaceVariant
               )
             }
           }
 
-          // AI Mode (Kai AI) Tab - Instant 1-tap entry into full Kai AI mode
+          // Kai AI Mode Tab - Instant 1-tap animated portal launch into full Kai AI
           Surface(
             shape = RoundedCornerShape(50),
-            color = aiAccent.copy(alpha = 0.18f),
-            border = BorderStroke(1.dp, aiAccent.copy(alpha = 0.6f)),
+            color = if (isEnteringAi) aiAccent.copy(alpha = 0.25f) else Color.Transparent,
+            border = BorderStroke(1.dp, if (isEnteringAi) aiAccent.copy(alpha = 0.8f) else Color.Transparent),
             modifier = Modifier
-              .clickable { onSubmitQuery("https://kai.ai") }
+              .clickable { isEnteringAi = true }
               .testTag("home_mode_ai")
           ) {
             Row(
@@ -274,9 +302,38 @@ fun NewTabHomeView(
         }
       }
 
+      // Animated Kai AI entering transition indicator
+      AnimatedVisibility(
+        visible = isEnteringAi,
+        enter = fadeIn(animationSpec = tween(150)) + expandVertically(animationSpec = tween(200)),
+        exit = fadeOut(animationSpec = tween(150)) + shrinkVertically(animationSpec = tween(200))
+      ) {
+        Surface(
+          shape = RoundedCornerShape(20.dp),
+          color = Color(0xFF070B14).copy(alpha = 0.95f),
+          border = BorderStroke(1.dp, Color(0xFF00F2FE).copy(alpha = 0.7f)),
+          shadowElevation = 8.dp,
+          modifier = Modifier.padding(top = 10.dp)
+        ) {
+          Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            KaiLogo(size = 18.dp, animated = true)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+              text = stringResource(R.string.home_entering_ai),
+              style = MaterialTheme.typography.labelMedium,
+              fontWeight = FontWeight.SemiBold,
+              color = Color(0xFF00F2FE)
+            )
+          }
+        }
+      }
+
       Spacer(modifier = Modifier.height(14.dp))
 
-      // Home Search Box (Standard Engine)
+      // Clean Standard Search Box
       Surface(
         shape = RoundedCornerShape(28.dp),
         color = surfaceColor,
@@ -343,50 +400,9 @@ fun NewTabHomeView(
         }
       }
 
-      Spacer(modifier = Modifier.height(10.dp))
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Surface(
-          shape = RoundedCornerShape(14.dp),
-          color = surfaceColor.copy(alpha = 0.85f),
-          border = BorderStroke(0.8.dp, aiAccent.copy(alpha = 0.35f)),
-          modifier = Modifier
-            .clickable { onSubmitQuery("https://kai.ai") }
-            .testTag("kai_ai_direct_button")
-        ) {
-          Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Icon(
-              FeatherIcons.Sparkle,
-              contentDescription = null,
-              tint = aiAccent,
-              modifier = Modifier.size(13.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-              text = stringResource(R.string.home_open_kai_ai),
-              style = MaterialTheme.typography.labelSmall,
-              fontWeight = FontWeight.SemiBold,
-              color = aiAccent
-            )
-          }
-        }
-
-        Text(
-          text = stringResource(R.string.home_ai_badge),
-          style = MaterialTheme.typography.labelSmall,
-          color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
-          maxLines = 1
-        )
-      }
-
       Spacer(modifier = Modifier.height(24.dp))
 
+      // Bookmarks Section Header
       Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -442,63 +458,70 @@ fun NewTabHomeView(
           }
         }
       } else {
-        LazyVerticalGrid(
-          columns = GridCells.Adaptive(minSize = 152.dp),
-          contentPadding = PaddingValues(bottom = 16.dp),
-          horizontalArrangement = Arrangement.spacedBy(10.dp),
-          verticalArrangement = Arrangement.spacedBy(10.dp),
-          modifier = Modifier.weight(1f).fillMaxWidth()
+        val bookmarkRows = bookmarks.take(8).chunked(2)
+        Column(
+          modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+          verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-          items(bookmarks.take(12), key = { it.id }) { bm ->
-            val host = UrlValidator.extractHost(bm.url)
-            val initial = host.firstOrNull()?.uppercase() ?: "B"
-            Surface(
-              shape = RoundedCornerShape(16.dp),
-              color = surfaceColor,
-              tonalElevation = 1.dp,
-              border = BorderStroke(0.8.dp, outlineColor.copy(alpha = 0.65f)),
-              modifier = Modifier
-                .fillMaxWidth()
-                .minimumInteractiveComponentSize()
-                .clip(RoundedCornerShape(16.dp))
-                .clickable { onOpenBookmark(bm.url) }
-                .testTag("home_bookmark_${bm.id}")
+          bookmarkRows.forEach { rowItems ->
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-              Row(
-                modifier = Modifier.padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-              ) {
+              rowItems.forEach { bm ->
+                val host = UrlValidator.extractHost(bm.url)
+                val initial = host.firstOrNull()?.uppercase() ?: "B"
                 Surface(
-                  shape = RoundedCornerShape(11.dp),
-                  color = primaryAccent.copy(alpha = 0.13f),
-                  modifier = Modifier.size(36.dp)
+                  shape = RoundedCornerShape(16.dp),
+                  color = surfaceColor,
+                  tonalElevation = 1.dp,
+                  border = BorderStroke(0.8.dp, outlineColor.copy(alpha = 0.45f)),
+                  modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .clickable { onOpenBookmark(bm.url) }
+                    .testTag("home_bookmark_${bm.id}")
                 ) {
-                  Box(contentAlignment = Alignment.Center) {
-                    Text(
-                      text = initial,
-                      style = MaterialTheme.typography.titleMedium,
-                      fontWeight = FontWeight.Bold,
-                      color = primaryAccent
-                    )
+                  Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                  ) {
+                    Surface(
+                      shape = RoundedCornerShape(11.dp),
+                      color = primaryAccent.copy(alpha = 0.13f),
+                      modifier = Modifier.size(36.dp)
+                    ) {
+                      Box(contentAlignment = Alignment.Center) {
+                        Text(
+                          text = initial,
+                          style = MaterialTheme.typography.titleMedium,
+                          fontWeight = FontWeight.Bold,
+                          color = primaryAccent
+                        )
+                      }
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                      Text(
+                        text = bm.title,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                      )
+                      Text(
+                        text = host,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                      )
+                    }
                   }
                 }
-                Spacer(modifier = Modifier.width(10.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                  Text(
-                    text = bm.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                  )
-                  Text(
-                    text = host,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                  )
-                }
+              }
+              if (rowItems.size == 1) {
+                Spacer(modifier = Modifier.weight(1f))
               }
             }
           }
