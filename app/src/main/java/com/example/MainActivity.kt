@@ -27,7 +27,7 @@ import com.example.ui.theme.FeatherTheme
 
 class MainActivity : ComponentActivity() {
 
-  private val viewModel: BrowserViewModel by viewModels()
+  internal val viewModel: BrowserViewModel by viewModels()
 
   private val exportBookmarksLauncher = registerForActivityResult(
     ActivityResultContracts.CreateDocument("text/html")
