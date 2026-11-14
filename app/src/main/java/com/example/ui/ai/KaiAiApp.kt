@@ -8,7 +8,7 @@ import java.nio.charset.StandardCharsets
 /**
  * Built-in, privacy-first, zero-telemetry anonymous Kai AI application provider.
  * Loads the web application from assets/kai.html and serves it directly in WebView
- * via shouldInterceptRequest for https://kai.ai/*.
+ * via shouldInterceptRequest for kai.ai domain queries.
  * Contains top-ranked open intelligence personas with undisclosed internal model names.
  */
 object KaiAiApp {
