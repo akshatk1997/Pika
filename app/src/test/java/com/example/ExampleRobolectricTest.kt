@@ -38,8 +38,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.4.9", BuildConfig.VERSION_NAME)
-    assertEquals(22, BuildConfig.VERSION_CODE)
+    assertEquals("1.5.0", BuildConfig.VERSION_NAME)
+    assertEquals(23, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -51,7 +51,9 @@ class ExampleRobolectricTest {
       homepageUrl = "https://example.org",
       retainOpenTabs = true,
       nightWebMode = true,
-      backgroundPlayEnabled = true
+      backgroundPlayEnabled = true,
+      youtubeScaleMode = com.example.model.YouTubeVideoScaleMode.FIT,
+      dataSaverEnabled = true
     )
     repo1.saveSettings(customSettings)
 
@@ -72,6 +74,8 @@ class ExampleRobolectricTest {
     assertTrue(loadedSettings.retainOpenTabs)
     assertTrue(loadedSettings.nightWebMode)
     assertTrue(loadedSettings.backgroundPlayEnabled)
+    assertEquals(com.example.model.YouTubeVideoScaleMode.FIT, loadedSettings.youtubeScaleMode)
+    assertTrue(loadedSettings.dataSaverEnabled)
 
     val restored = repo2.loadRetainedTabs()
     assertNotNull(restored)
@@ -157,10 +161,12 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.4.9").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.5.0").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_retain_tabs").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("setting_youtube_scale_fit").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("settings_back_button").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("Private browsing is active").assertDoesNotExist()
@@ -351,5 +357,49 @@ class ExampleRobolectricTest {
     assertTrue(html.contains("#070B14"))
     assertTrue(html.contains("#0E1626"))
     assertTrue(html.contains("#00F2FE"))
+  }
+
+  @Test
+  fun youtubeScaleModeAndDataSaverFunctionalityWorks() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    
+    // Test YouTubeVideoScaleMode enum mappings
+    assertEquals(com.example.model.YouTubeVideoScaleMode.ORIGINAL, com.example.model.YouTubeVideoScaleMode.fromId("original"))
+    assertEquals(com.example.model.YouTubeVideoScaleMode.FIT, com.example.model.YouTubeVideoScaleMode.fromId("fit"))
+    assertEquals(com.example.model.YouTubeVideoScaleMode.STRETCHED, com.example.model.YouTubeVideoScaleMode.fromId("stretched"))
+    assertEquals(com.example.model.YouTubeVideoScaleMode.ORIGINAL, com.example.model.YouTubeVideoScaleMode.fromId("unknown_fallback"))
+
+    // Test default settings state
+    val defaultState = SettingsState()
+    assertEquals(com.example.model.YouTubeVideoScaleMode.ORIGINAL, defaultState.youtubeScaleMode)
+    assertFalse(defaultState.dataSaverEnabled)
+
+    val callbacks = object : com.example.webview.WebViewPoolCallbacks {
+      override fun onPageStarted(tabId: String, url: String) {}
+      override fun onPageFinished(tabId: String, url: String, title: String?, canGoBack: Boolean, canGoForward: Boolean) {}
+      override fun onProgressChanged(tabId: String, progress: Int) {}
+      override fun onSecurityStateChanged(tabId: String, state: com.example.model.SecurityState) {}
+      override fun onTrackerBlocked(tabId: String) {}
+      override fun onResourceSniffed(tabId: String, count: Int) {}
+      override fun onPageError(tabId: String, error: com.example.model.PageError) {}
+      override fun onHttpWarning(tabId: String, warning: com.example.model.HttpWarningState) {}
+      override fun onExternalLinkPrompt(tabId: String, prompt: com.example.model.ExternalLinkPrompt) {}
+      override fun onDownloadConsentPrompt(tabId: String, consent: com.example.model.PendingDownloadConsent) {}
+      override fun onPermissionPrompt(tabId: String, origin: String, kind: com.example.model.WebPermissionKind, detail: String, onDecision: (Boolean) -> Unit) {}
+      override fun onShowFileChooser(tabId: String, params: android.webkit.WebChromeClient.FileChooserParams?, callback: android.webkit.ValueCallback<Array<android.net.Uri>>): Boolean = false
+      override fun onCreateWindow(tabId: String, dialog: Boolean, userGesture: Boolean, resultMsg: android.os.Message?): Boolean = false
+      override fun onShowCustomView(tabId: String, view: android.view.View, callback: android.webkit.WebChromeClient.CustomViewCallback) {}
+      override fun onHideCustomView(tabId: String) {}
+      override fun onRequestFullscreen(tabId: String, fullscreen: Boolean) {}
+    }
+
+    val pool = com.example.webview.WebViewPool(context, { defaultState.copy(dataSaverEnabled = true, youtubeScaleMode = com.example.model.YouTubeVideoScaleMode.FIT) }, callbacks)
+    val wv = pool.acquireWebView("tab_yt_test", false, UserAgentMode.MOBILE)
+    pool.applyYouTubeScaleMode(wv, com.example.model.YouTubeVideoScaleMode.FIT)
+    pool.applyYouTubeScaleMode(wv, com.example.model.YouTubeVideoScaleMode.STRETCHED)
+    pool.applyYouTubeScaleMode(wv, com.example.model.YouTubeVideoScaleMode.ORIGINAL)
+    pool.applyDataSaver(wv, true)
+    pool.applyDataSaver(wv, false)
+    pool.releaseWebView("tab_yt_test")
   }
 }

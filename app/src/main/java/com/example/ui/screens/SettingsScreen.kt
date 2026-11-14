@@ -73,6 +73,7 @@ import com.example.model.SearchEngine
 import com.example.model.SettingsState
 import com.example.model.SitePermissionRule
 import com.example.model.ThemeMode
+import com.example.model.YouTubeVideoScaleMode
 import com.example.security.UrlValidator
 import com.example.ui.components.FeatherIcons
 import com.example.ui.theme.FeatherSecureGreen
@@ -167,7 +168,7 @@ fun SettingsScreen(
       }
 
       item {
-        SettingsSectionCard("General", Modifier.widthIn(max = 720.dp)) {
+        SettingsSectionCard("General & Search", Modifier.widthIn(max = 720.dp)) {
           Text("Search engine", style = MaterialTheme.typography.titleMedium)
           Spacer(modifier = Modifier.height(4.dp))
           SearchEngine.entries.forEach { engine ->
@@ -262,15 +263,31 @@ fun SettingsScreen(
               ) { Text("Reset") }
             }
           }
-          HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+        }
+      }
+
+      item {
+        SettingsSectionCard("Data Saver & Bandwidth", Modifier.widthIn(max = 720.dp)) {
           SettingSwitchRow(
-            title = "Retain open web pages",
-            subtitle = "Keep open tabs and pages across restarts",
-            checked = settings.retainOpenTabs,
-            tag = "setting_retain_tabs",
-            onCheckedChange = { v -> onUpdateSettings { it.copy(retainOpenTabs = v) } }
+            title = "Data saver mode",
+            subtitle = "Compress web traffic, send Save-Data header, and avoid background data usage",
+            checked = settings.dataSaverEnabled,
+            tag = "setting_data_saver",
+            onCheckedChange = { v -> onUpdateSettings { it.copy(dataSaverEnabled = v) } }
           )
-          HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+          HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+          SettingSwitchRow(
+            title = "Block images",
+            subtitle = "Save data on slow connections",
+            checked = settings.noImageMode,
+            tag = "setting_no_image",
+            onCheckedChange = { v -> onUpdateSettings { it.copy(noImageMode = v) } }
+          )
+        }
+      }
+
+      item {
+        SettingsSectionCard("Media & YouTube Playback", Modifier.widthIn(max = 720.dp)) {
           SettingSwitchRow(
             title = "Background stream playback",
             subtitle = "Keep video and audio playing when browser is in background",
@@ -278,11 +295,44 @@ fun SettingsScreen(
             tag = "setting_background_play",
             onCheckedChange = { v -> onUpdateSettings { it.copy(backgroundPlayEnabled = v) } }
           )
+          HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+          Text("YouTube video display", style = MaterialTheme.typography.titleMedium)
+          Text(
+            text = "Play YouTube videos in original aspect ratio, fit-to-screen, or stretched",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+          )
+          Spacer(modifier = Modifier.height(8.dp))
+          FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+          ) {
+            YouTubeVideoScaleMode.entries.forEach { mode ->
+              FilterChip(
+                selected = settings.youtubeScaleMode == mode,
+                onClick = { onUpdateSettings { it.copy(youtubeScaleMode = mode) } },
+                label = { Text(mode.label) },
+                modifier = Modifier.testTag("setting_youtube_scale_${mode.id}")
+              )
+            }
+          }
         }
       }
 
       item {
-        SettingsSectionCard("Appearance", Modifier.widthIn(max = 720.dp)) {
+        SettingsSectionCard("Tabs & Session", Modifier.widthIn(max = 720.dp)) {
+          SettingSwitchRow(
+            title = "Retain open web pages",
+            subtitle = "Keep open tabs and pages across restarts",
+            checked = settings.retainOpenTabs,
+            tag = "setting_retain_tabs",
+            onCheckedChange = { v -> onUpdateSettings { it.copy(retainOpenTabs = v) } }
+          )
+        }
+      }
+
+      item {
+        SettingsSectionCard("Appearance & Display", Modifier.widthIn(max = 720.dp)) {
           Text("Theme", style = MaterialTheme.typography.titleMedium)
           Spacer(modifier = Modifier.height(6.dp))
           FlowRow(
@@ -314,14 +364,6 @@ fun SettingsScreen(
             checked = settings.nightWebMode,
             tag = "setting_night_web",
             onCheckedChange = { v -> onUpdateSettings { it.copy(nightWebMode = v) } }
-          )
-          HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-          SettingSwitchRow(
-            title = "Block images",
-            subtitle = "Save data on slow connections",
-            checked = settings.noImageMode,
-            tag = "setting_no_image",
-            onCheckedChange = { v -> onUpdateSettings { it.copy(noImageMode = v) } }
           )
           Spacer(modifier = Modifier.height(10.dp))
           Text("Text zoom: ${settings.textZoomPercent}%", style = MaterialTheme.typography.titleMedium)
@@ -468,7 +510,7 @@ fun SettingsScreen(
       }
 
       item {
-        SettingsSectionCard("Data", Modifier.widthIn(max = 720.dp)) {
+        SettingsSectionCard("Data & Storage", Modifier.widthIn(max = 720.dp)) {
           Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
             OutlinedButton(
               onClick = onImportBookmarks,

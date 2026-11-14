@@ -38,6 +38,7 @@ import com.example.model.SniffedResource
 import com.example.model.ThemeMode
 import com.example.model.UserAgentMode
 import com.example.model.WebPermissionKind
+import com.example.model.YouTubeVideoScaleMode
 import com.example.security.TrackerBlocker
 import com.example.security.UrlValidator
 import com.example.ui.ai.KaiAiApp
@@ -222,11 +223,15 @@ class WebViewPool(
     val webView = getLiveWebView(tabId) ?: return
     sniffedResourcesByTab.remove(tabId)
     currentPageHosts[tabId] = UrlValidator.extractHost(url)
+    val s = settingsProvider()
     val headers = mutableMapOf(
       "Sec-GPC" to "1",
       "DNT" to "1",
       "Referrer-Policy" to "strict-origin-when-cross-origin"
     )
+    if (s.dataSaverEnabled) {
+      headers["Save-Data"] = "on"
+    }
     try {
       webView.loadUrl(url, headers)
     } catch (_: Throwable) {
@@ -264,6 +269,8 @@ class WebViewPool(
       applyNightWebCss(wv, settingsState.nightWebMode)
       applyAdBlocker(wv, settingsState.trackerBlockingEnabled)
       applyBackgroundPlay(wv, settingsState.backgroundPlayEnabled)
+      applyYouTubeScaleMode(wv, settingsState.youtubeScaleMode)
+      applyDataSaver(wv, settingsState.dataSaverEnabled)
     }
   }
 
@@ -720,6 +727,108 @@ class WebViewPool(
     }
   }
 
+  fun applyYouTubeScaleMode(webView: WebView, mode: YouTubeVideoScaleMode) {
+    if (!settingsProvider().javascriptEnabled || destroyedViews.contains(webView)) return
+    val styleContent = when (mode) {
+      YouTubeVideoScaleMode.ORIGINAL -> """
+        video, .html5-main-video, .video-stream {
+          object-fit: contain !important;
+          transform: none !important;
+        }
+      """.trimIndent()
+      YouTubeVideoScaleMode.FIT -> """
+        video, .html5-main-video, .video-stream {
+          object-fit: cover !important;
+          transform: scale(1.0) !important;
+        }
+        #movie_player, .html5-video-player, .html5-video-container, #player-container-id, .player-container {
+          overflow: hidden !important;
+        }
+      """.trimIndent()
+      YouTubeVideoScaleMode.STRETCHED -> """
+        video, .html5-main-video, .video-stream {
+          object-fit: fill !important;
+          width: 100% !important;
+          height: 100% !important;
+          transform: none !important;
+        }
+      """.trimIndent()
+    }
+    val js = """
+      (function() {
+        var id = 'kai-youtube-scale-style';
+        var s = document.getElementById(id);
+        if (!s) {
+          s = document.createElement('style');
+          s.id = id;
+          (document.head || document.documentElement).appendChild(s);
+        }
+        s.textContent = ${JSONObject.quote(styleContent)};
+        try {
+          var vids = document.querySelectorAll('video, .html5-main-video, .video-stream');
+          for (var i = 0; i < vids.length; i++) {
+            var v = vids[i];
+            if ('${mode.id}' === 'fit') {
+              v.style.setProperty('object-fit', 'cover', 'important');
+            } else if ('${mode.id}' === 'stretched') {
+              v.style.setProperty('object-fit', 'fill', 'important');
+              v.style.setProperty('width', '100%', 'important');
+              v.style.setProperty('height', '100%', 'important');
+            } else {
+              v.style.setProperty('object-fit', 'contain', 'important');
+            }
+          }
+        } catch(e) {}
+      })();
+    """.trimIndent()
+    try {
+      webView.evaluateJavascript(js, null)
+    } catch (_: Throwable) {
+    }
+  }
+
+  fun applyDataSaver(webView: WebView, enabled: Boolean) {
+    if (!settingsProvider().javascriptEnabled || destroyedViews.contains(webView)) return
+    if (!enabled) {
+      val cleanupJs = "(function(){var s=document.getElementById('kai-data-saver-style');if(s)s.remove();window.__kai_data_saver_active=false;})();"
+      try { webView.evaluateJavascript(cleanupJs, null) } catch (_: Throwable) {}
+      return
+    }
+    val js = """
+      (function() {
+        window.__kai_data_saver_active = true;
+        var id = 'kai-data-saver-style';
+        var s = document.getElementById(id);
+        if (!s) {
+          s = document.createElement('style');
+          s.id = id;
+          s.textContent = 'video[preload="auto"], audio[preload="auto"] { preload: none !important; }';
+          (document.head || document.documentElement).appendChild(s);
+        }
+        try {
+          var media = document.querySelectorAll('video, audio');
+          for (var i = 0; i < media.length; i++) {
+            if (media[i].paused) {
+              media[i].preload = 'none';
+            }
+          }
+          if (navigator.connection && !('saveData' in navigator.connection)) {
+            try {
+              Object.defineProperty(navigator.connection, 'saveData', {
+                get: function() { return true; },
+                configurable: true
+              });
+            } catch(e) {}
+          }
+        } catch(e) {}
+      })();
+    """.trimIndent()
+    try {
+      webView.evaluateJavascript(js, null)
+    } catch (_: Throwable) {
+    }
+  }
+
   /**
    * Industry-leading anti-tracking & anti-fingerprinting shield injected into web pages.
    * Protects against Canvas, WebGL, AudioContext, Battery, Hardware, and WebRTC fingerprinting.
@@ -883,7 +992,13 @@ class WebViewPool(
           userAgentString = targetUa
         }
         textZoom = if (userAgentMode == UserAgentMode.DESKTOP) 90 else settingsState.textZoomPercent
-        cacheMode = if (isPrivate) WebSettings.LOAD_NO_CACHE else WebSettings.LOAD_DEFAULT
+        cacheMode = if (isPrivate) {
+          WebSettings.LOAD_NO_CACHE
+        } else if (settingsState.dataSaverEnabled) {
+          WebSettings.LOAD_CACHE_ELSE_NETWORK
+        } else {
+          WebSettings.LOAD_DEFAULT
+        }
         try {
           safeBrowsingEnabled = true
         } catch (_: Throwable) {
@@ -1055,6 +1170,13 @@ class WebViewPool(
             if (s.backgroundPlayEnabled) {
               applyBackgroundPlay(view, true)
             }
+            val isYt = url.contains("youtube.com") || url.contains("youtu.be")
+            if (isYt) {
+              applyYouTubeScaleMode(view, s.youtubeScaleMode)
+            }
+            if (s.dataSaverEnabled) {
+              applyDataSaver(view, true)
+            }
           }
           callbacks.onPageStarted(tabId, url)
         }
@@ -1073,6 +1195,13 @@ class WebViewPool(
           }
           if (s.backgroundPlayEnabled) {
             applyBackgroundPlay(view, true)
+          }
+          val isYt = url.contains("youtube.com") || url.contains("youtu.be")
+          if (isYt) {
+            applyYouTubeScaleMode(view, s.youtubeScaleMode)
+          }
+          if (s.dataSaverEnabled) {
+            applyDataSaver(view, true)
           }
           val safeTitle = try { view.title } catch (_: Throwable) { null }
           val canBack = try { view.canGoBack() } catch (_: Throwable) { false }

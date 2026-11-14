@@ -114,6 +114,7 @@ import com.example.model.SettingsState
 import com.example.model.TabInfo
 import com.example.model.UserAgentMode
 import com.example.model.WebPermissionKind
+import com.example.model.YouTubeVideoScaleMode
 import com.example.security.UrlValidator
 import com.example.ui.ActiveOverlay
 import com.example.ui.BrowserViewModel
@@ -727,6 +728,51 @@ fun BrowserScreen(
             leadingIcon = { Icon(FeatherIcons.Fullscreen, contentDescription = null, modifier = Modifier.size(16.dp)) },
             label = { Text("Fullscreen") }
           )
+        }
+
+        val isYouTube = activeTab.url.contains("youtube.com") || activeTab.url.contains("youtu.be")
+        if (isYouTube) {
+          Spacer(modifier = Modifier.height(10.dp))
+          Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+            border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+            modifier = Modifier.fillMaxWidth()
+          ) {
+            Column(modifier = Modifier.padding(10.dp)) {
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                  FeatherIcons.PlayCircle,
+                  contentDescription = null,
+                  tint = MaterialTheme.colorScheme.primary,
+                  modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                  text = "YouTube Video Display",
+                  style = MaterialTheme.typography.labelMedium,
+                  fontWeight = FontWeight.SemiBold,
+                  color = MaterialTheme.colorScheme.primary
+                )
+              }
+              Spacer(modifier = Modifier.height(6.dp))
+              Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+              ) {
+                YouTubeVideoScaleMode.entries.forEach { mode ->
+                  FilterChip(
+                    selected = settings.youtubeScaleMode == mode,
+                    onClick = {
+                      viewModel.updateSettings { it.copy(youtubeScaleMode = mode) }
+                    },
+                    label = { Text(mode.label) },
+                    modifier = Modifier.weight(1f).testTag("quick_yt_scale_${mode.id}")
+                  )
+                }
+              }
+            }
+          }
         }
 
         Spacer(modifier = Modifier.height(12.dp))

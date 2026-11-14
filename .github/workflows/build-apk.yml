@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kai-v1.4.9.apk
+          cp "$APK_PATH" releases/Kai-v1.5.0.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kai-v1.4.9.apk
+          git add releases/Kai-v1.5.0.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kai-v1.4.9.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kai-v1.5.0.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.4.9
+      - name: Create or update GitHub Release v1.5.0
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kai-v1.4.9.apk)
-          NOTES="Kai Browser v1.4.9 (Build 22) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Clean, Organised Standard Homepage:** Default mode on launch is clean Standard Search without visual clutter, providing instant, hitch-free navigation.\n- **Zero-Lag Fluid Scrolling:** Eliminated nested scroll conflicts on the homepage by rendering bookmarks in smooth non-lazy grid rows, removing touch event freezes and stutter.\n- **Luxurious Kai AI Entering Animation:** Tapping the Kai AI tab triggers a smooth, aesthetic portal transition with radiant concentric aura scaling before seamlessly entering the AI workspace.\n- **Restored Cosmic Midnight Kai AI Background:** Restored signature deep cosmic dark palette (#070B14, #0E1626, #00F2FE) while preserving high-legibility ChatGPT fonts (Söhne & Söhne Mono).\n- **Frontier Multimodal Vision & Keyframes:** Gemini 3.5 Flash Lite with high-resolution image analysis, sequential video keyframe comprehension, and real-time voice dictation.\n- **Strictly Under 2 MB Footprint:** Signed release APK is ${SIZE_BYTES} bytes (< 2 MB / 2,097,152 bytes limit).\n- **Checks Passed:** \`:app:testDebugUnitTest\` (API 26 & 36), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\`."
-          if gh release view v1.4.9 >/dev/null 2>&1; then
-            gh release upload v1.4.9 releases/Kai-v1.4.9.apk --clobber
-            gh release edit v1.4.9 --title "Kai v1.4.9 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kai-v1.5.0.apk)
+          NOTES="Kai Browser v1.5.0 (Build 23) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Structured Settings Categories:** Reorganized all browser settings into dedicated, purposeful categories (General & Search, Data Saver & Bandwidth, Media & YouTube Playback, Tabs & Session, Appearance & Display, Privacy & Security, and Data & Storage).\n- **YouTube Video Display Options (Fit, Stretched, Original):** Seamlessly scale YouTube videos to fit the screen (cover black bars), stretch to 100% container dimensions, or keep the original native aspect ratio (contain), accessible both in Settings and via the Quick Menu on YouTube.\n- **Data Saver Mode:** Added comprehensive Data Saver feature that transmits the \`Save-Data: on\` request header, prioritizes cached resources (\`LOAD_CACHE_ELSE_NETWORK\`), sets media preloading to none, and disables background video bandwidth drain.\n- **Strictly Under 2 MB Footprint:** Signed release APK is ${SIZE_BYTES} bytes (< 2 MB / 2,097,152 bytes limit).\n- **Checks Passed:** \`:app:testDebugUnitTest\` (API 26 & 36), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\`."
+          if gh release view v1.5.0 >/dev/null 2>&1; then
+            gh release upload v1.5.0 releases/Kai-v1.5.0.apk --clobber
+            gh release edit v1.5.0 --title "Kai v1.5.0 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.4.9 releases/Kai-v1.4.9.apk \
-              --title "Kai v1.4.9 (< 2 MB)" \
+            gh release create v1.5.0 releases/Kai-v1.5.0.apk \
+              --title "Kai v1.5.0 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

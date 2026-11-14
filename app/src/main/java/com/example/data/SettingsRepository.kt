@@ -9,6 +9,7 @@ import com.example.model.TabInfo
 import com.example.model.ThemeMode
 import com.example.model.UserAgentMode
 import com.example.model.WebPermissionKind
+import com.example.model.YouTubeVideoScaleMode
 import com.example.security.SecureKeystoreStorage
 import com.example.security.TrackerBlocker
 import com.example.security.UrlValidator
@@ -117,7 +118,9 @@ class SettingsRepository(context: Context) {
         customBlockedHosts = customHosts,
         readerFontSizeSp = obj.optInt("readerFontSizeSp", 18).coerceIn(14, 28),
         readerDarkMode = obj.optBoolean("readerDarkMode", false),
-        backgroundPlayEnabled = obj.optBoolean("backgroundPlayEnabled", true)
+        backgroundPlayEnabled = obj.optBoolean("backgroundPlayEnabled", true),
+        youtubeScaleMode = YouTubeVideoScaleMode.fromId(obj.optString("youtubeScaleMode", YouTubeVideoScaleMode.ORIGINAL.id)),
+        dataSaverEnabled = obj.optBoolean("dataSaverEnabled", false)
       )
     } catch (_: Throwable) {
       SettingsState()
@@ -145,6 +148,8 @@ class SettingsRepository(context: Context) {
       put("readerFontSizeSp", state.readerFontSizeSp)
       put("readerDarkMode", state.readerDarkMode)
       put("backgroundPlayEnabled", state.backgroundPlayEnabled)
+      put("youtubeScaleMode", state.youtubeScaleMode.id)
+      put("dataSaverEnabled", state.dataSaverEnabled)
     }
     writePayload(SETTINGS_FILE, obj.toString())
   }
