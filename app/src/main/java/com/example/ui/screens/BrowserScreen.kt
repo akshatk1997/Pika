@@ -513,6 +513,33 @@ fun BrowserScreen(
           }
           activeFullscreen != null -> {
             val (customView, _) = activeFullscreen
+            val currentView = androidx.compose.ui.platform.LocalView.current
+            androidx.compose.runtime.DisposableEffect(customView) {
+              val activity = currentView.context as? android.app.Activity
+              val window = activity?.window
+              if (window != null) {
+                try {
+                  val insetsController = androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
+                  insetsController.systemBarsBehavior =
+                    androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                  insetsController.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                  window.addFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN)
+                  window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                } catch (_: Throwable) {
+                }
+              }
+              onDispose {
+                if (window != null && viewModel.fullscreenView.value == null && !viewModel.isBrowserFullscreen.value) {
+                  try {
+                    val insetsController = androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
+                    insetsController.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                    window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN)
+                    window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                  } catch (_: Throwable) {
+                  }
+                }
+              }
+            }
             Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
               AndroidView(
                 factory = { ctx -> FrameLayout(ctx) },
@@ -545,8 +572,7 @@ fun BrowserScreen(
                 shadowElevation = 4.dp,
                 modifier = Modifier
                   .align(Alignment.TopEnd)
-                  .statusBarsPadding()
-                  .padding(10.dp)
+                  .padding(top = 16.dp, end = 16.dp)
                   .clickable { viewModel.exitFullscreen() }
               ) {
                 Row(

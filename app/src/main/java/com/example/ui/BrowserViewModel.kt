@@ -705,6 +705,9 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   }
 
   fun closeTab(tabId: String) {
+    if (_fullscreenView.value != null && _activeTabId.value == tabId) {
+      exitFullscreen()
+    }
     val closing = tabById(tabId) ?: return
     if (!closing.isPrivate && closing.url.isNotBlank()) {
       _closedTabs.update { (listOf(ClosedTabRecord(closing.title, closing.url)) + it).take(15) }
@@ -1618,6 +1621,10 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       cb?.onReceiveValue(uris)
     } catch (_: Throwable) {
     }
+  }
+
+  internal fun setCustomFullscreen(view: View?, callback: WebChromeClient.CustomViewCallback?) {
+    _fullscreenView.value = if (view != null) view to callback else null
   }
 
   fun exitFullscreen() {

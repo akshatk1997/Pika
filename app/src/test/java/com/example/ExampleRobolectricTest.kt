@@ -1,6 +1,8 @@
 package com.example
 
 import android.content.Context
+import android.view.WindowManager
+import android.webkit.WebChromeClient
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -38,8 +40,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.5.8", BuildConfig.VERSION_NAME)
-    assertEquals(31, BuildConfig.VERSION_CODE)
+    assertEquals("1.5.9", BuildConfig.VERSION_NAME)
+    assertEquals(32, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -159,7 +161,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.5.8").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.5.9").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -617,5 +619,50 @@ class ExampleRobolectricTest {
     assertTrue(manifestContent.contains("<queries>"))
     assertTrue(manifestContent.contains("android.speech.RecognitionService"))
     assertTrue(manifestContent.contains("android.speech.action.RECOGNIZE_SPEECH"))
+  }
+
+  @Test
+  fun fullscreenVideoHidesSystemNotificationBarAndRestoresOnExit() {
+    val activity = composeTestRule.activity
+    val viewModel = activity.viewModel
+    composeTestRule.waitForIdle()
+
+    // Initially not in fullscreen
+    assertNull(viewModel.fullscreenView.value)
+    val initialFlags = activity.window.attributes.flags
+    assertFalse("FLAG_FULLSCREEN should not be initially set", (initialFlags and WindowManager.LayoutParams.FLAG_FULLSCREEN) != 0)
+
+    // Simulate entering custom fullscreen (e.g. HTML5 video playback)
+    val dummyView = android.view.View(activity)
+    var viewHiddenCalled = false
+    val dummyCallback = object : WebChromeClient.CustomViewCallback {
+      override fun onCustomViewHidden() {
+        viewHiddenCalled = true
+      }
+    }
+
+    composeTestRule.runOnUiThread {
+      viewModel.setCustomFullscreen(dummyView, dummyCallback)
+    }
+    composeTestRule.waitForIdle()
+
+    // Fullscreen is active: notification bar hidden via window flags
+    assertNotNull(viewModel.fullscreenView.value)
+    val fullscreenFlags = activity.window.attributes.flags
+    assertTrue("FLAG_FULLSCREEN must be set during fullscreen video playback", (fullscreenFlags and WindowManager.LayoutParams.FLAG_FULLSCREEN) != 0)
+    assertTrue("FLAG_KEEP_SCREEN_ON must be set during fullscreen video playback", (fullscreenFlags and WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) != 0)
+
+    // Exit fullscreen
+    composeTestRule.runOnUiThread {
+      viewModel.exitFullscreen()
+    }
+    composeTestRule.waitForIdle()
+
+    // Fullscreen is exited: notification bar restored and flags cleared
+    assertNull(viewModel.fullscreenView.value)
+    assertTrue("CustomViewCallback.onCustomViewHidden() should be called", viewHiddenCalled)
+    val restoredFlags = activity.window.attributes.flags
+    assertFalse("FLAG_FULLSCREEN must be cleared after exiting fullscreen", (restoredFlags and WindowManager.LayoutParams.FLAG_FULLSCREEN) != 0)
+    assertFalse("FLAG_KEEP_SCREEN_ON must be cleared after exiting fullscreen", (restoredFlags and WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) != 0)
   }
 }

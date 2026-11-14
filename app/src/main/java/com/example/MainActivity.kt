@@ -7,8 +7,11 @@ import android.content.pm.ShortcutManager
 import android.graphics.Color
 import android.graphics.drawable.Icon
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
+import android.view.View
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -18,6 +21,9 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.model.ThemeMode
 import com.example.security.UrlValidator
@@ -155,23 +161,77 @@ class MainActivity : ComponentActivity() {
         ThemeMode.DARK -> true
         ThemeMode.LIGHT -> false
       }
-      DisposableEffect(darkTheme) {
-        try {
-          enableEdgeToEdge(
-            statusBarStyle = if (darkTheme) {
-              SystemBarStyle.dark(Color.TRANSPARENT)
-            } else {
-              SystemBarStyle.light(Color.TRANSPARENT, Color.argb(0x66, 0x11, 0x18, 0x27))
-            },
-            navigationBarStyle = if (darkTheme) {
-              SystemBarStyle.dark(Color.TRANSPARENT)
-            } else {
-              SystemBarStyle.light(Color.TRANSPARENT, Color.argb(0x66, 0x11, 0x18, 0x27))
+      val fullscreenView by viewModel.fullscreenView.collectAsStateWithLifecycle()
+      val isBrowserFullscreen by viewModel.isBrowserFullscreen.collectAsStateWithLifecycle()
+      val isImmersiveFullscreen = fullscreenView != null || isBrowserFullscreen
+
+      DisposableEffect(darkTheme, isImmersiveFullscreen) {
+        val window = this@MainActivity.window
+        val insetsController = WindowCompat.getInsetsController(window, window.decorView)
+
+        if (isImmersiveFullscreen) {
+          try {
+            insetsController.systemBarsBehavior =
+              WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            insetsController.hide(WindowInsetsCompat.Type.systemBars())
+            window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+              window.attributes.layoutInDisplayCutoutMode =
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             }
-          )
-        } catch (_: Throwable) {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = (
+              View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                or View.SYSTEM_UI_FLAG_FULLSCREEN
+                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+            )
+          } catch (_: Throwable) {
+          }
+        } else {
+          try {
+            insetsController.show(WindowInsetsCompat.Type.systemBars())
+            window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+              window.attributes.layoutInDisplayCutoutMode =
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
+            }
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
+            enableEdgeToEdge(
+              statusBarStyle = if (darkTheme) {
+                SystemBarStyle.dark(Color.TRANSPARENT)
+              } else {
+                SystemBarStyle.light(Color.TRANSPARENT, Color.argb(0x66, 0x11, 0x18, 0x27))
+              },
+              navigationBarStyle = if (darkTheme) {
+                SystemBarStyle.dark(Color.TRANSPARENT)
+              } else {
+                SystemBarStyle.light(Color.TRANSPARENT, Color.argb(0x66, 0x11, 0x18, 0x27))
+              }
+            )
+          } catch (_: Throwable) {
+          }
         }
-        onDispose {}
+
+        onDispose {
+          try {
+            insetsController.show(WindowInsetsCompat.Type.systemBars())
+            window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+              window.attributes.layoutInDisplayCutoutMode =
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
+            }
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
+          } catch (_: Throwable) {
+          }
+        }
       }
       FeatherTheme(themeMode = settings.themeMode, dynamicColor = settings.dynamicColor) {
         BrowserScreen(
@@ -231,6 +291,37 @@ class MainActivity : ComponentActivity() {
     try {
       viewModel.flushRetainedTabs()
     } catch (_: Throwable) {
+    }
+  }
+
+  override fun onWindowFocusChanged(hasFocus: Boolean) {
+    super.onWindowFocusChanged(hasFocus)
+    if (hasFocus) {
+      val isImmersive = viewModel.fullscreenView.value != null || viewModel.isBrowserFullscreen.value
+      if (isImmersive) {
+        try {
+          val insetsController = WindowCompat.getInsetsController(window, window.decorView)
+          insetsController.systemBarsBehavior =
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+          insetsController.hide(WindowInsetsCompat.Type.systemBars())
+          window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+          window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            window.attributes.layoutInDisplayCutoutMode =
+              WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+          }
+          @Suppress("DEPRECATION")
+          window.decorView.systemUiVisibility = (
+            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+              or View.SYSTEM_UI_FLAG_FULLSCREEN
+              or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+              or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+              or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+              or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+          )
+        } catch (_: Throwable) {
+        }
+      }
     }
   }
 

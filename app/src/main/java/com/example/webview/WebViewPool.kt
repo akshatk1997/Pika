@@ -1411,6 +1411,15 @@ class WebViewPool(
         callbacks.onFullscreenChanged(tabId, view, callback)
       }
 
+      @Deprecated("Deprecated in Java")
+      override fun onShowCustomView(
+        view: View?,
+        requestedOrientation: Int,
+        callback: WebChromeClient.CustomViewCallback?
+      ) {
+        callbacks.onFullscreenChanged(tabId, view, callback)
+      }
+
       override fun onHideCustomView() {
         callbacks.onFullscreenChanged(tabId, null, null)
       }
