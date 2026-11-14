@@ -328,7 +328,8 @@ class ExampleRobolectricTest {
     assertFalse(com.example.security.TrackerBlocker.shouldBlockRequest("https://text.pollinations.ai/prompt", "kai.ai", true))
 
     // Built-in KaiAiApp verification
-    val html = com.example.ui.ai.KaiAiApp.HTML
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val html = com.example.ui.ai.KaiAiApp.getHtmlText(context)
     assertTrue(html.contains("Kai AI"))
     assertTrue(html.contains("Anonymous AI Workspace"))
     assertTrue(html.contains("100% Anonymous"))

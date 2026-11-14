@@ -901,7 +901,7 @@ class WebViewPool(
             return WebResourceResponse(
               "text/html",
               "UTF-8",
-              ByteArrayInputStream(KaiAiApp.HTML.toByteArray(StandardCharsets.UTF_8))
+              KaiAiApp.openHtmlStream(context)
             )
           }
           val currentSettings = settingsProvider()
