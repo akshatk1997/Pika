@@ -38,8 +38,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.5.0", BuildConfig.VERSION_NAME)
-    assertEquals(23, BuildConfig.VERSION_CODE)
+    assertEquals("1.5.1", BuildConfig.VERSION_NAME)
+    assertEquals(24, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -402,5 +402,66 @@ class ExampleRobolectricTest {
     pool.applyDataSaver(wv, true)
     pool.applyDataSaver(wv, false)
     pool.destroyTab("tab_yt_test")
+  }
+
+  @Test
+  fun kaiVoiceBridgeAndMultimodalAttachmentsTest() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+
+    // 1. Verify KaiVoiceBridge constants and instance behavior
+    assertEquals("KaiVoice", com.example.ui.ai.KaiVoiceBridge.JS_INTERFACE_NAME)
+    val testWv = android.webkit.WebView(context)
+    val bridge = com.example.ui.ai.KaiVoiceBridge(java.lang.ref.WeakReference(testWv))
+    // Under Robolectric, audio permission is not granted by default
+    assertFalse(bridge.hasPermission())
+    // Methods can be called safely without exceptions
+    bridge.requestPermission()
+    bridge.stopListening()
+    bridge.cancel()
+    bridge.cleanup()
+
+    // 2. Verify kai.html includes all required multimodal and voice elements
+    val html = com.example.ui.ai.KaiAiApp.getHtmlText(context)
+    // Voice mic integration
+    assertTrue(html.contains("KaiVoice"))
+    assertTrue(html.contains("__kaiVoiceOnStart"))
+    assertTrue(html.contains("__kaiVoiceOnResult"))
+    assertTrue(html.contains("__kaiVoiceOnError"))
+    assertTrue(html.contains("__kaiVoiceOnEnd"))
+
+    // PPT & PPTX presentation analysis
+    assertTrue(html.contains("parsePresentationFile"))
+    assertTrue(html.contains("extractPptxSlides"))
+    assertTrue(html.contains("extractBinaryPptText"))
+    assertTrue(html.contains("PRESENTATION DECK"))
+    assertTrue(html.contains(".pptx"))
+    assertTrue(html.contains(".ppt"))
+    assertTrue(html.contains("msg-doc-chip ppt"))
+
+    // PDF document analysis
+    assertTrue(html.contains("parsePdfFile"))
+    assertTrue(html.contains("decompressPdfFlate"))
+    assertTrue(html.contains("extractPdfTextFromOperators"))
+    assertTrue(html.contains("PDF DOCUMENT"))
+    assertTrue(html.contains(".pdf"))
+    assertTrue(html.contains("msg-doc-chip pdf"))
+
+    // Audio file analysis & player
+    assertTrue(html.contains("parseAudioFile"))
+    assertTrue(html.contains("extractAudioMetadata"))
+    assertTrue(html.contains("AUDIO FILE"))
+    assertTrue(html.contains("msg-audio-player"))
+    assertTrue(html.contains("msg-doc-chip audio"))
+    assertTrue(html.contains(".mp3"))
+    assertTrue(html.contains(".wav"))
+    assertTrue(html.contains(".m4a"))
+
+    // Persona prompt training for PPT, PDF, Audio
+    assertTrue(html.contains("PowerPoint Presentations (.ppt, .pptx)"))
+    assertTrue(html.contains("PDF Documents (.pdf)"))
+    assertTrue(html.contains("Audio Files (.mp3, .wav, .m4a, .ogg, .aac)"))
+
+    // File input accept attribute includes all requested formats
+    assertTrue(html.contains("accept=\"image/*,video/*,audio/*,.pdf,.ppt,.pptx,.mp3,.wav,.m4a,.ogg,.aac,.flac"))
   }
 }

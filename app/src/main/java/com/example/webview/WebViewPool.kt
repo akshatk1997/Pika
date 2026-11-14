@@ -42,6 +42,7 @@ import com.example.model.YouTubeVideoScaleMode
 import com.example.security.TrackerBlocker
 import com.example.security.UrlValidator
 import com.example.ui.ai.KaiAiApp
+import com.example.ui.ai.KaiVoiceBridge
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
@@ -286,6 +287,10 @@ class WebViewPool(
   private fun safelyDestroyWebView(wv: WebView) {
     destroyedViews.add(wv)
     detachFromHost(wv)
+    try {
+      wv.removeJavascriptInterface(KaiVoiceBridge.JS_INTERFACE_NAME)
+    } catch (_: Throwable) {
+    }
     try {
       wv.setOnTouchListener(null)
       wv.setOnLongClickListener(null)
@@ -1048,6 +1053,12 @@ class WebViewPool(
     }
 
     applySettings(webView, isPrivate, userAgentMode, settingsProvider())
+
+    try {
+      val voiceBridge = KaiVoiceBridge(java.lang.ref.WeakReference(webView))
+      webView.addJavascriptInterface(voiceBridge, KaiVoiceBridge.JS_INTERFACE_NAME)
+    } catch (_: Throwable) {
+    }
 
     webView.setOnLongClickListener { v ->
       try {

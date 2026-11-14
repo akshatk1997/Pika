@@ -97,8 +97,28 @@ class MainActivity : ComponentActivity() {
 
     viewModel.onLaunchFileChooser = { acceptTypes ->
       try {
-        val mimeTypes = acceptTypes?.filter { it.isNotBlank() }?.toTypedArray()
-        webFileChooserLauncher.launch(if (mimeTypes.isNullOrEmpty()) arrayOf("*/*") else mimeTypes)
+        val parsedTypes = acceptTypes
+          ?.flatMap { it.split(",") }
+          ?.map { it.trim().lowercase() }
+          ?.filter { it.isNotBlank() }
+          ?.map { token ->
+            when {
+              token == "*/*" -> "*/*"
+              token.startsWith(".") -> {
+                android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(token.removePrefix(".")) ?: "*/*"
+              }
+              token.contains("/") -> token
+              else -> "*/*"
+            }
+          }
+          ?.distinct()
+          ?.toTypedArray()
+        val targetTypes = if (parsedTypes.isNullOrEmpty() || parsedTypes.contains("*/*")) {
+          arrayOf("*/*")
+        } else {
+          parsedTypes
+        }
+        webFileChooserLauncher.launch(targetTypes)
       } catch (_: Throwable) {
         viewModel.deliverChosenFiles(null)
         viewModel.showToast("No file picker available")
