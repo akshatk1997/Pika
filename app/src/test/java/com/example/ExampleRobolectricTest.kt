@@ -38,8 +38,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.4.6", BuildConfig.VERSION_NAME)
-    assertEquals(19, BuildConfig.VERSION_CODE)
+    assertEquals("1.4.7", BuildConfig.VERSION_NAME)
+    assertEquals(20, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -157,7 +157,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.4.6").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.4.7").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_retain_tabs").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -298,17 +298,12 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithTag("home_mode_standard").assertIsDisplayed()
     composeTestRule.onNodeWithTag("home_mode_ai").assertIsDisplayed()
 
-    // Switch to AI mode
+    // Tap on Kai AI mode -> immediately navigates to full Kai AI mode
     composeTestRule.onNodeWithTag("home_mode_ai").performClick()
     composeTestRule.waitForIdle()
 
-    // Verify Kai AI direct button is displayed
-    composeTestRule.onNodeWithTag("kai_ai_direct_button").assertIsDisplayed()
-
-    // Switch back to Standard mode
-    composeTestRule.onNodeWithTag("home_mode_standard").performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("kai_ai_direct_button").assertDoesNotExist()
+    // Verify active tab URL is loaded with https://kai.ai
+    assertEquals("https://kai.ai", composeTestRule.activity.viewModel.activeTab().url)
   }
 
   @Test
@@ -327,7 +322,14 @@ class ExampleRobolectricTest {
     assertFalse(com.example.security.TrackerBlocker.shouldBlockRequest("https://kai.ai/chat", "kai.ai", true))
     assertFalse(com.example.security.TrackerBlocker.shouldBlockRequest("https://text.pollinations.ai/prompt", "kai.ai", true))
 
-    // Built-in KaiAiApp verification with attachments, voice and camera access
+    // Anti-tracking & fingerprinting protection verification
+    assertTrue(com.example.security.TrackerBlocker.isTrackerHost("fingerprint.com"))
+    assertTrue(com.example.security.TrackerBlocker.isTrackerHost("clarity.ms"))
+    assertTrue(com.example.security.TrackerBlocker.isTrackerHost("datadoghq.com"))
+    val cleanedUrl = com.example.security.UrlValidator.stripTrackingParams("https://example.com/shop?fbclid=123&gbraid=456&item=shoes")
+    assertEquals("https://example.com/shop?item=shoes", cleanedUrl)
+
+    // Built-in KaiAiApp verification with attachments, voice, camera access and ChatGPT fonts
     val context = ApplicationProvider.getApplicationContext<Context>()
     val html = com.example.ui.ai.KaiAiApp.getHtmlText(context)
     assertTrue(html.contains("Kai AI"))
@@ -342,5 +344,6 @@ class ExampleRobolectricTest {
     assertTrue(html.contains("SpeechRecognition"))
     assertTrue(html.contains("openai/chat/completions"))
     assertTrue(html.contains("thought-process"))
+    assertTrue(html.contains("Söhne"))
   }
 }

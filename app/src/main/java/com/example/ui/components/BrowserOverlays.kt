@@ -105,10 +105,8 @@ fun NewTabHomeView(
   modifier: Modifier = Modifier
 ) {
   var homeSearch by remember { mutableStateOf("") }
-  var isAiMode by remember { mutableStateOf(false) }
   val primaryAccent = if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.primary
   val aiAccent = if (isPrivate) FeatherPrivateAccent else Color(0xFF00E5FF)
-  val activeAccent = if (isAiMode) aiAccent else primaryAccent
   val auraAccent = if (isPrivate) FeatherPrivateAccent else BatSignalGold
   val secondaryAccent = if (isPrivate) Color(0xFF6366F1) else FeatherMintDark
   val surfaceColor = MaterialTheme.colorScheme.surface
@@ -221,11 +219,9 @@ fun NewTabHomeView(
           // Standard Search Tab
           Surface(
             shape = RoundedCornerShape(50),
-            color = if (!isAiMode) primaryAccent.copy(alpha = 0.16f) else Color.Transparent,
-            border = if (!isAiMode) BorderStroke(1.dp, primaryAccent.copy(alpha = 0.5f)) else null,
-            modifier = Modifier
-              .clickable { isAiMode = false }
-              .testTag("home_mode_standard")
+            color = primaryAccent.copy(alpha = 0.16f),
+            border = BorderStroke(1.dp, primaryAccent.copy(alpha = 0.5f)),
+            modifier = Modifier.testTag("home_mode_standard")
           ) {
             Row(
               modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
@@ -234,26 +230,26 @@ fun NewTabHomeView(
               Icon(
                 imageVector = Icons.Filled.Search,
                 contentDescription = null,
-                tint = if (!isAiMode) primaryAccent else MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = primaryAccent,
                 modifier = Modifier.size(15.dp)
               )
               Spacer(modifier = Modifier.width(6.dp))
               Text(
                 text = stringResource(R.string.home_mode_standard),
                 style = MaterialTheme.typography.labelMedium,
-                fontWeight = if (!isAiMode) FontWeight.Bold else FontWeight.Normal,
-                color = if (!isAiMode) primaryAccent else MaterialTheme.colorScheme.onSurfaceVariant
+                fontWeight = FontWeight.Bold,
+                color = primaryAccent
               )
             }
           }
 
-          // AI Mode (Duck.ai) Tab
+          // AI Mode (Kai AI) Tab - Instant 1-tap entry into full Kai AI mode
           Surface(
             shape = RoundedCornerShape(50),
-            color = if (isAiMode) aiAccent.copy(alpha = 0.18f) else Color.Transparent,
-            border = if (isAiMode) BorderStroke(1.dp, aiAccent.copy(alpha = 0.6f)) else null,
+            color = aiAccent.copy(alpha = 0.18f),
+            border = BorderStroke(1.dp, aiAccent.copy(alpha = 0.6f)),
             modifier = Modifier
-              .clickable { isAiMode = true }
+              .clickable { onSubmitQuery("https://kai.ai") }
               .testTag("home_mode_ai")
           ) {
             Row(
@@ -263,15 +259,15 @@ fun NewTabHomeView(
               Icon(
                 imageVector = FeatherIcons.Sparkle,
                 contentDescription = null,
-                tint = if (isAiMode) aiAccent else MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = aiAccent,
                 modifier = Modifier.size(15.dp)
               )
               Spacer(modifier = Modifier.width(6.dp))
               Text(
                 text = stringResource(R.string.home_mode_ai),
                 style = MaterialTheme.typography.labelMedium,
-                fontWeight = if (isAiMode) FontWeight.Bold else FontWeight.Normal,
-                color = if (isAiMode) aiAccent else MaterialTheme.colorScheme.onSurfaceVariant
+                fontWeight = FontWeight.Bold,
+                color = aiAccent
               )
             }
           }
@@ -280,14 +276,13 @@ fun NewTabHomeView(
 
       Spacer(modifier = Modifier.height(14.dp))
 
-      // Home Search Box (Adapts dynamically to Standard or Duck.ai Mode)
-      val searchBorderColor = if (isAiMode) aiAccent.copy(alpha = 0.55f) else primaryAccent.copy(alpha = 0.28f)
+      // Home Search Box (Standard Engine)
       Surface(
         shape = RoundedCornerShape(28.dp),
         color = surfaceColor,
-        tonalElevation = if (isAiMode) 6.dp else 4.dp,
-        shadowElevation = if (isAiMode) 8.dp else 6.dp,
-        border = BorderStroke(if (isAiMode) 1.4.dp else 1.dp, searchBorderColor),
+        tonalElevation = 4.dp,
+        shadowElevation = 6.dp,
+        border = BorderStroke(1.dp, primaryAccent.copy(alpha = 0.28f)),
         modifier = Modifier.fillMaxWidth().height(54.dp)
       ) {
         Row(
@@ -295,20 +290,16 @@ fun NewTabHomeView(
           verticalAlignment = Alignment.CenterVertically
         ) {
           Icon(
-            imageVector = if (isAiMode) FeatherIcons.Sparkle else Icons.Filled.Search,
+            imageVector = Icons.Filled.Search,
             contentDescription = null,
-            tint = activeAccent,
+            tint = primaryAccent,
             modifier = Modifier.size(20.dp)
           )
           Spacer(modifier = Modifier.width(12.dp))
           Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
             if (homeSearch.isEmpty()) {
               Text(
-                text = if (isAiMode) {
-                  stringResource(R.string.home_ai_search_hint)
-                } else {
-                  stringResource(R.string.home_search_hint, searchEngineName)
-                },
+                text = stringResource(R.string.home_search_hint, searchEngineName),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
               )
@@ -320,18 +311,10 @@ fun NewTabHomeView(
               textStyle = MaterialTheme.typography.bodyLarge.copy(
                 color = MaterialTheme.colorScheme.onSurface
               ),
-              cursorBrush = SolidColor(activeAccent),
+              cursorBrush = SolidColor(primaryAccent),
               keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
               keyboardActions = KeyboardActions(onGo = {
-                if (isAiMode) {
-                  val target = if (homeSearch.isNotBlank()) {
-                    val encoded = URLEncoder.encode(homeSearch.trim(), "UTF-8")
-                    "https://kai.ai/?q=$encoded"
-                  } else {
-                    "https://kai.ai"
-                  }
-                  onSubmitQuery(target)
-                } else if (homeSearch.isNotBlank()) {
+                if (homeSearch.isNotBlank()) {
                   onSubmitQuery(homeSearch)
                 }
               }),
@@ -340,27 +323,19 @@ fun NewTabHomeView(
                 .testTag("home_search_input")
             )
           }
-          if (homeSearch.isNotBlank() || isAiMode) {
+          if (homeSearch.isNotBlank()) {
             IconButton(
               onClick = {
-                if (isAiMode) {
-                  val target = if (homeSearch.isNotBlank()) {
-                    val encoded = URLEncoder.encode(homeSearch.trim(), "UTF-8")
-                    "https://kai.ai/?q=$encoded"
-                  } else {
-                    "https://kai.ai"
-                  }
-                  onSubmitQuery(target)
-                } else if (homeSearch.isNotBlank()) {
+                if (homeSearch.isNotBlank()) {
                   onSubmitQuery(homeSearch)
                 }
               },
               modifier = Modifier.minimumInteractiveComponentSize().testTag("home_search_go")
             ) {
               Icon(
-                imageVector = if (isAiMode && homeSearch.isBlank()) FeatherIcons.Sparkle else Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = if (isAiMode) "Ask Kai AI" else "Go",
-                tint = activeAccent,
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = "Go",
+                tint = primaryAccent,
                 modifier = Modifier.size(20.dp)
               )
             }
@@ -368,48 +343,46 @@ fun NewTabHomeView(
         }
       }
 
-      if (isAiMode) {
-        Spacer(modifier = Modifier.height(10.dp))
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
+      Spacer(modifier = Modifier.height(10.dp))
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Surface(
+          shape = RoundedCornerShape(14.dp),
+          color = surfaceColor.copy(alpha = 0.85f),
+          border = BorderStroke(0.8.dp, aiAccent.copy(alpha = 0.35f)),
+          modifier = Modifier
+            .clickable { onSubmitQuery("https://kai.ai") }
+            .testTag("kai_ai_direct_button")
         ) {
-          Surface(
-            shape = RoundedCornerShape(14.dp),
-            color = surfaceColor.copy(alpha = 0.85f),
-            border = BorderStroke(0.8.dp, aiAccent.copy(alpha = 0.35f)),
-            modifier = Modifier
-              .clickable { onSubmitQuery("https://kai.ai") }
-              .testTag("kai_ai_direct_button")
+          Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
           ) {
-            Row(
-              modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Icon(
-                FeatherIcons.Sparkle,
-                contentDescription = null,
-                tint = aiAccent,
-                modifier = Modifier.size(13.dp)
-              )
-              Spacer(modifier = Modifier.width(6.dp))
-              Text(
-                text = stringResource(R.string.home_open_kai_ai),
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = aiAccent
-              )
-            }
+            Icon(
+              FeatherIcons.Sparkle,
+              contentDescription = null,
+              tint = aiAccent,
+              modifier = Modifier.size(13.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+              text = stringResource(R.string.home_open_kai_ai),
+              style = MaterialTheme.typography.labelSmall,
+              fontWeight = FontWeight.SemiBold,
+              color = aiAccent
+            )
           }
-
-          Text(
-            text = stringResource(R.string.home_ai_badge),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
-            maxLines = 1
-          )
         }
+
+        Text(
+          text = stringResource(R.string.home_ai_badge),
+          style = MaterialTheme.typography.labelSmall,
+          color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+          maxLines = 1
+        )
       }
 
       Spacer(modifier = Modifier.height(24.dp))

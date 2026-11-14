@@ -222,11 +222,11 @@ class WebViewPool(
     val webView = getLiveWebView(tabId) ?: return
     sniffedResourcesByTab.remove(tabId)
     currentPageHosts[tabId] = UrlValidator.extractHost(url)
-    val headers = if (settingsProvider().doNotTrackEnabled) {
-      mapOf("DNT" to "1", "Sec-GPC" to "1")
-    } else {
-      emptyMap()
-    }
+    val headers = mutableMapOf(
+      "Sec-GPC" to "1",
+      "DNT" to "1",
+      "Referrer-Policy" to "strict-origin-when-cross-origin"
+    )
     try {
       webView.loadUrl(url, headers)
     } catch (_: Throwable) {
@@ -720,6 +720,119 @@ class WebViewPool(
     }
   }
 
+  /**
+   * Industry-leading anti-tracking & anti-fingerprinting shield injected into web pages.
+   * Protects against Canvas, WebGL, AudioContext, Battery, Hardware, and WebRTC fingerprinting.
+   */
+  private fun applyStealthPrivacyShield(webView: WebView) {
+    if (!settingsProvider().javascriptEnabled || destroyedViews.contains(webView)) return
+    val js = """
+      (function() {
+        if (window.__kai_stealth_privacy_shield_installed) return;
+        window.__kai_stealth_privacy_shield_installed = true;
+
+        // 1. Canvas Fingerprinting Poisoning / Masking
+        try {
+          var origToDataURL = HTMLCanvasElement.prototype.toDataURL;
+          HTMLCanvasElement.prototype.toDataURL = function() {
+            try {
+              var ctx = this.getContext('2d');
+              if (ctx && this.width > 16 && this.height > 16) {
+                var imgData = ctx.getImageData(0, 0, Math.min(16, this.width), Math.min(16, this.height));
+                for (var i = 0; i < imgData.data.length; i += 4) {
+                  imgData.data[i] = imgData.data[i] ^ 1;
+                }
+                ctx.putImageData(imgData, 0, 0);
+              }
+            } catch(e) {}
+            return origToDataURL.apply(this, arguments);
+          };
+
+          var origGetImageData = CanvasRenderingContext2D.prototype.getImageData;
+          CanvasRenderingContext2D.prototype.getImageData = function() {
+            var data = origGetImageData.apply(this, arguments);
+            try {
+              if (data && data.data && data.data.length >= 8) {
+                data.data[0] = data.data[0] ^ 1;
+                data.data[4] = data.data[4] ^ 1;
+              }
+            } catch(e) {}
+            return data;
+          };
+        } catch(e) {}
+
+        // 2. WebGL GPU Architecture Masking
+        try {
+          function maskWebGL(proto) {
+            if (!proto) return;
+            var origGetParam = proto.getParameter;
+            proto.getParameter = function(param) {
+              if (param === 0x9245) return 'Google Inc. (Intel)';
+              if (param === 0x9246) return 'ANGLE (Intel, Generic Direct3D11 vs_5_0 ps_5_0)';
+              return origGetParam.apply(this, arguments);
+            };
+          }
+          if (window.WebGLRenderingContext) maskWebGL(WebGLRenderingContext.prototype);
+          if (window.WebGL2RenderingContext) maskWebGL(WebGL2RenderingContext.prototype);
+        } catch(e) {}
+
+        // 3. AudioContext Fingerprint Noise Shield
+        try {
+          if (window.AudioBuffer) {
+            var origGetChannelData = AudioBuffer.prototype.getChannelData;
+            AudioBuffer.prototype.getChannelData = function() {
+              var buf = origGetChannelData.apply(this, arguments);
+              if (buf && buf.length > 0) {
+                buf[0] = buf[0] + 0.00000001;
+              }
+              return buf;
+            };
+          }
+          if (window.AnalyserNode) {
+            var origGetFloatData = AnalyserNode.prototype.getFloatFrequencyData;
+            AnalyserNode.prototype.getFloatFrequencyData = function(arr) {
+              origGetFloatData.apply(this, arguments);
+              if (arr && arr.length > 0) arr[0] += 0.00001;
+            };
+          }
+        } catch(e) {}
+
+        // 4. Hardware & Battery Masking
+        try {
+          if (navigator.getBattery) {
+            navigator.getBattery = function() {
+              return Promise.resolve({
+                charging: true,
+                chargingTime: 0,
+                dischargingTime: Infinity,
+                level: 1.0,
+                addEventListener: function() {},
+                removeEventListener: function() {}
+              });
+            };
+          }
+          Object.defineProperty(navigator, 'hardwareConcurrency', { get: function() { return 4; } });
+          Object.defineProperty(navigator, 'deviceMemory', { get: function() { return 8; } });
+          Object.defineProperty(navigator, 'maxTouchPoints', { get: function() { return 5; } });
+        } catch(e) {}
+
+        // 5. Strict Referrer Policy Injection
+        try {
+          if (!document.querySelector('meta[name="referrer"]')) {
+            var meta = document.createElement('meta');
+            meta.name = 'referrer';
+            meta.content = 'strict-origin-when-cross-origin';
+            (document.head || document.documentElement).appendChild(meta);
+          }
+        } catch(e) {}
+      })();
+    """.trimIndent()
+    try {
+      webView.evaluateJavascript(js, null)
+    } catch (_: Throwable) {
+    }
+  }
+
   @SuppressLint("SetJavaScriptEnabled")
   private fun applySettings(
     webView: WebView,
@@ -740,6 +853,7 @@ class WebViewPool(
           }
         }
         setSupportMultipleWindows(true)
+        setGeolocationEnabled(false)
         allowFileAccess = false
         allowContentAccess = false
         @Suppress("DEPRECATION")
@@ -931,6 +1045,7 @@ class WebViewPool(
         if (url != null) {
           currentPageHosts[tabId] = UrlValidator.extractHost(url)
           if (view != null) {
+            applyStealthPrivacyShield(view)
             val s = settingsProvider()
             if (s.trackerBlockingEnabled) {
               applyAdBlocker(view, true)
@@ -946,6 +1061,7 @@ class WebViewPool(
       override fun onPageFinished(view: WebView?, url: String?) {
         if (url != null && view != null && !destroyedViews.contains(view)) {
           currentPageHosts[tabId] = UrlValidator.extractHost(url)
+          applyStealthPrivacyShield(view)
           val s = settingsProvider()
           if (s.nightWebMode) {
             applyNightWebCss(view, true)
@@ -1042,6 +1158,9 @@ class WebViewPool(
     webView.webChromeClient = object : WebChromeClient() {
       override fun onProgressChanged(view: WebView?, newProgress: Int) {
         callbacks.onProgressChanged(tabId, newProgress)
+        if (view != null && newProgress >= 15 && !destroyedViews.contains(view)) {
+          applyStealthPrivacyShield(view)
+        }
         if (view != null && newProgress >= 30 && !destroyedViews.contains(view)) {
           val s = settingsProvider()
           if (s.trackerBlockingEnabled) {

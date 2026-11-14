@@ -23,8 +23,10 @@ object UrlValidator {
 
   private val trackingQueryKeys = setOf(
     "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
-    "utm_id", "fbclid", "gclid", "dclid", "msclkid", "mc_eid", "mc_cid",
-    "igshid", "yclid", "_hsenc", "_hsmi", "spm"
+    "utm_id", "utm_source_platform", "utm_creative_format", "utm_marketing_tactic",
+    "fbclid", "fbc", "fbp", "gclid", "gbraid", "wbraid", "dclid", "gad_source", "gclsrc",
+    "_ga", "_gl", "msclkid", "twclid", "ttclid", "_tiktok", "mc_eid", "mc_cid",
+    "igshid", "yclid", "ym_debug", "_hsenc", "_hsmi", "spm", "si", "s", "ref_src", "ref_url"
   )
 
   private val domainRegex = Regex(
