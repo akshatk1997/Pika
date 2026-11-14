@@ -493,7 +493,26 @@ class ExampleRobolectricTest {
   @Test
   fun youtubeScaleFixAndDataSaverVerified() {
     val context = ApplicationProvider.getApplicationContext<Context>()
-    val pool = com.example.webview.WebViewPool(context) { SettingsState() }
+    val callbacks = object : com.example.webview.WebViewCallbacks {
+      override fun onPageStarted(tabId: String, url: String) {}
+      override fun onPageFinished(tabId: String, url: String, title: String?, canGoBack: Boolean, canGoForward: Boolean) {}
+      override fun onProgressChanged(tabId: String, progress: Int) {}
+      override fun onTitleReceived(tabId: String, title: String) {}
+      override fun onTrackerBlocked(tabId: String) {}
+      override fun onResourceSniffed(tabId: String, count: Int) {}
+      override fun onHttpBlockedByHttpsOnly(tabId: String, url: String) {}
+      override fun onBlockedScheme(tabId: String, url: String, scheme: String) {}
+      override fun onExternalSchemePrompt(tabId: String, url: String, scheme: String) {}
+      override fun onPageError(tabId: String, error: com.example.model.PageError) {}
+      override fun onRenderProcessCrashed(tabId: String) {}
+      override fun onDownloadRequested(tabId: String, url: String, contentDisposition: String?, mimeType: String?, contentLength: Long) {}
+      override fun onPermissionPrompt(tabId: String, origin: String, kind: com.example.model.WebPermissionKind, detail: String, onDecision: (Boolean) -> Unit) {}
+      override fun onFileChooserRequested(callback: android.webkit.ValueCallback<Array<android.net.Uri>>?, acceptTypes: Array<String>?) {}
+      override fun onFindMatches(tabId: String, activeOrdinal: Int, numberOfMatches: Int) {}
+      override fun onFullscreenChanged(tabId: String, customView: android.view.View?, callback: android.webkit.WebChromeClient.CustomViewCallback?) {}
+      override fun onLongPressLink(tabId: String, url: String, isImage: Boolean) {}
+    }
+    val pool = com.example.webview.WebViewPool(context, { SettingsState() }, callbacks)
 
     // Settings verification
     val darkSettings = SettingsState(
