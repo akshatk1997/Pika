@@ -21,10 +21,11 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -119,13 +120,17 @@ fun SettingsScreen(
       )
     }
   ) { padding ->
-    LazyColumn(
-      contentPadding = PaddingValues(16.dp),
+    val scrollState = rememberScrollState()
+    Column(
       verticalArrangement = Arrangement.spacedBy(12.dp),
       horizontalAlignment = Alignment.CenterHorizontally,
-      modifier = Modifier.fillMaxSize().padding(padding).testTag("settings_list")
+      modifier = Modifier
+        .fillMaxSize()
+        .padding(padding)
+        .verticalScroll(scrollState)
+        .padding(16.dp)
+        .testTag("settings_list")
     ) {
-      item {
         Card(
           shape = RoundedCornerShape(18.dp),
           border = BorderStroke(0.9.dp, FeatherSecureGreen.copy(alpha = 0.35f)),
@@ -167,8 +172,7 @@ fun SettingsScreen(
         }
       }
 
-      item {
-        SettingsSectionCard("General & Search", Modifier.widthIn(max = 720.dp)) {
+      SettingsSectionCard("General & Search", Modifier.widthIn(max = 720.dp)) {
           Text("Search engine", style = MaterialTheme.typography.titleMedium)
           Spacer(modifier = Modifier.height(4.dp))
           SearchEngine.entries.forEach { engine ->
@@ -266,8 +270,7 @@ fun SettingsScreen(
         }
       }
 
-      item {
-        SettingsSectionCard("Data Saver & Bandwidth", Modifier.widthIn(max = 720.dp)) {
+      SettingsSectionCard("Data Saver & Bandwidth", Modifier.widthIn(max = 720.dp)) {
           SettingSwitchRow(
             title = "Data saver mode",
             subtitle = "Compress web traffic, send Save-Data header, and avoid background data usage",
@@ -286,8 +289,7 @@ fun SettingsScreen(
         }
       }
 
-      item {
-        SettingsSectionCard("Media & YouTube Playback", Modifier.widthIn(max = 720.dp)) {
+      SettingsSectionCard("Media & YouTube Playback", Modifier.widthIn(max = 720.dp)) {
           SettingSwitchRow(
             title = "Background stream playback",
             subtitle = "Keep video and audio playing when browser is in background",
@@ -319,8 +321,7 @@ fun SettingsScreen(
         }
       }
 
-      item {
-        SettingsSectionCard("Tabs & Session", Modifier.widthIn(max = 720.dp)) {
+      SettingsSectionCard("Tabs & Session", Modifier.widthIn(max = 720.dp)) {
           SettingSwitchRow(
             title = "Retain open web pages",
             subtitle = "Keep open tabs and pages across restarts",
@@ -331,8 +332,7 @@ fun SettingsScreen(
         }
       }
 
-      item {
-        SettingsSectionCard("Appearance & Display", Modifier.widthIn(max = 720.dp)) {
+      SettingsSectionCard("Appearance & Display", Modifier.widthIn(max = 720.dp)) {
           Text("Theme", style = MaterialTheme.typography.titleMedium)
           Spacer(modifier = Modifier.height(6.dp))
           FlowRow(
@@ -378,8 +378,7 @@ fun SettingsScreen(
         }
       }
 
-      item {
-        SettingsSectionCard("Privacy & Security", Modifier.widthIn(max = 720.dp)) {
+      SettingsSectionCard("Privacy & Security", Modifier.widthIn(max = 720.dp)) {
           SettingSwitchRow(
             title = "HTTPS-Only mode",
             subtitle = "Warn before unencrypted connections",
@@ -482,58 +481,54 @@ fun SettingsScreen(
       }
 
       if (sitePermissions.isNotEmpty()) {
-        item {
-          SettingsSectionCard("Site permissions", Modifier.widthIn(max = 720.dp)) {
-            sitePermissions.forEach { rule ->
-              Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+        SettingsSectionCard("Site permissions", Modifier.widthIn(max = 720.dp)) {
+          sitePermissions.forEach { rule ->
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Column(modifier = Modifier.weight(1f)) {
+                Text(rule.origin, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                Text(
+                  "${rule.kind.name.lowercase().replace('_', ' ')}: ${if (rule.allowed) "Allowed" else "Blocked"}",
+                  style = MaterialTheme.typography.labelSmall,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+              }
+              IconButton(
+                onClick = { onRemovePermissionRule(rule) },
+                modifier = Modifier.minimumInteractiveComponentSize()
               ) {
-                Column(modifier = Modifier.weight(1f)) {
-                  Text(rule.origin, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                  Text(
-                    "${rule.kind.name.lowercase().replace('_', ' ')}: ${if (rule.allowed) "Allowed" else "Blocked"}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                  )
-                }
-                IconButton(
-                  onClick = { onRemovePermissionRule(rule) },
-                  modifier = Modifier.minimumInteractiveComponentSize()
-                ) {
-                  Icon(Icons.Filled.Delete, contentDescription = "Remove ${rule.origin}")
-                }
+                Icon(Icons.Filled.Delete, contentDescription = "Remove ${rule.origin}")
               }
             }
           }
         }
       }
 
-      item {
-        SettingsSectionCard("Data & Storage", Modifier.widthIn(max = 720.dp)) {
-          Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-            OutlinedButton(
-              onClick = onImportBookmarks,
-              shape = RoundedCornerShape(14.dp),
-              modifier = Modifier.weight(1f).minimumInteractiveComponentSize()
-            ) { Text(stringResource(R.string.bookmarks_import)) }
-            OutlinedButton(
-              onClick = onExportBookmarks,
-              shape = RoundedCornerShape(14.dp),
-              modifier = Modifier.weight(1f).minimumInteractiveComponentSize()
-            ) { Text(stringResource(R.string.bookmarks_export)) }
-          }
-          Spacer(modifier = Modifier.height(10.dp))
-          Button(
-            onClick = { showClearDialog = true },
+      SettingsSectionCard("Data & Storage", Modifier.widthIn(max = 720.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+          OutlinedButton(
+            onClick = onImportBookmarks,
             shape = RoundedCornerShape(14.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-            modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("settings_clear_data_button")
-          ) {
-            Icon(Icons.Filled.Delete, contentDescription = null)
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(stringResource(R.string.settings_clear_data))
-          }
+            modifier = Modifier.weight(1f).minimumInteractiveComponentSize()
+          ) { Text(stringResource(R.string.bookmarks_import)) }
+          OutlinedButton(
+            onClick = onExportBookmarks,
+            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier.weight(1f).minimumInteractiveComponentSize()
+          ) { Text(stringResource(R.string.bookmarks_export)) }
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        Button(
+          onClick = { showClearDialog = true },
+          shape = RoundedCornerShape(14.dp),
+          colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+          modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("settings_clear_data_button")
+        ) {
+          Icon(Icons.Filled.Delete, contentDescription = null)
+          Spacer(modifier = Modifier.width(6.dp))
+          Text(stringResource(R.string.settings_clear_data))
         }
       }
     }
