@@ -337,7 +337,15 @@ fun SettingsScreen(
             ThemeMode.entries.forEach { mode ->
               FilterChip(
                 selected = settings.themeMode == mode,
-                onClick = { onUpdateSettings { it.copy(themeMode = mode) } },
+                onClick = {
+                  onUpdateSettings {
+                    when (mode) {
+                      ThemeMode.LIGHT -> it.copy(themeMode = ThemeMode.LIGHT, nightWebMode = false)
+                      ThemeMode.DARK -> it.copy(themeMode = ThemeMode.DARK, nightWebMode = true)
+                      ThemeMode.SYSTEM -> it.copy(themeMode = ThemeMode.SYSTEM)
+                    }
+                  }
+                },
                 label = { Text(mode.name.lowercase().replaceFirstChar { it.uppercase() }) }
               )
             }

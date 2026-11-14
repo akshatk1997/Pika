@@ -16,6 +16,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -112,6 +113,7 @@ import com.example.R
 import com.example.model.SecurityState
 import com.example.model.SettingsState
 import com.example.model.TabInfo
+import com.example.model.ThemeMode
 import com.example.model.UserAgentMode
 import com.example.model.WebPermissionKind
 import com.example.model.YouTubeVideoScaleMode
@@ -707,11 +709,36 @@ fun BrowserScreen(
             },
             label = { Text("iPhone") }
           )
+          val isDarkActive = when (settings.themeMode) {
+            ThemeMode.SYSTEM -> isSystemInDarkTheme()
+            ThemeMode.DARK -> true
+            ThemeMode.LIGHT -> false
+          }
           FilterChip(
-            selected = settings.nightWebMode,
-            onClick = { viewModel.updateSettings { it.copy(nightWebMode = !it.nightWebMode) } },
-            leadingIcon = { Icon(FeatherIcons.NightMoon, contentDescription = null, modifier = Modifier.size(16.dp)) },
-            label = { Text("Night mode") }
+            selected = isDarkActive,
+            onClick = {
+              val nextDark = !isDarkActive
+              viewModel.updateSettings {
+                it.copy(
+                  themeMode = if (nextDark) ThemeMode.DARK else ThemeMode.LIGHT,
+                  nightWebMode = nextDark
+                )
+              }
+            },
+            leadingIcon = {
+              Icon(
+                if (isDarkActive) FeatherIcons.NightMoon else FeatherIcons.SunLight,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp)
+              )
+            },
+            label = { Text(if (isDarkActive) "Dark mode" else "Light mode") }
+          )
+          FilterChip(
+            selected = settings.dataSaverEnabled,
+            onClick = { viewModel.updateSettings { it.copy(dataSaverEnabled = !it.dataSaverEnabled) } },
+            leadingIcon = { Icon(FeatherIcons.DataSaver, contentDescription = null, modifier = Modifier.size(16.dp)) },
+            label = { Text("Data Saver") }
           )
           FilterChip(
             selected = settings.noImageMode,

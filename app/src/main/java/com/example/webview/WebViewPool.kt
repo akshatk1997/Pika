@@ -259,15 +259,65 @@ class WebViewPool(
     }
   }
 
+  fun resolveIsDark(settingsState: SettingsState): Boolean {
+    return when (settingsState.themeMode) {
+      ThemeMode.SYSTEM -> {
+        val uiMode = appContext.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+        uiMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
+      }
+      ThemeMode.DARK -> true
+      ThemeMode.LIGHT -> false
+    }
+  }
+
+  fun applyThemeMode(webView: WebView, isDark: Boolean, nightWebMode: Boolean) {
+    if (!settingsProvider().javascriptEnabled || destroyedViews.contains(webView)) return
+    val modeStr = if (isDark) "dark" else "light"
+    val js = """
+      (function() {
+        var isDark = $isDark;
+        var mode = '$modeStr';
+        if (window.__kaiSetTheme) {
+          window.__kaiSetTheme(mode);
+        }
+        var id = 'kai-theme-mode-style';
+        var s = document.getElementById(id);
+        if (!s) {
+          s = document.createElement('style');
+          s.id = id;
+          (document.head || document.documentElement).appendChild(s);
+        }
+        s.textContent = ':root, html { color-scheme: ' + mode + ' !important; }';
+        var meta = document.querySelector('meta[name="color-scheme"]');
+        if (!meta) {
+          meta = document.createElement('meta');
+          meta.name = 'color-scheme';
+          (document.head || document.documentElement).appendChild(meta);
+        }
+        meta.content = mode;
+        if (!isDark) {
+          var nightStyle = document.getElementById('kai-night-style');
+          if (nightStyle) nightStyle.remove();
+        }
+      })();
+    """.trimIndent()
+    try {
+      webView.evaluateJavascript(js, null)
+    } catch (_: Throwable) {
+    }
+    applyNightWebCss(webView, isDark && nightWebMode)
+  }
+
   fun applySettingsToAll(
     settingsState: SettingsState,
     tabStateLookup: (String) -> Pair<Boolean, UserAgentMode>
   ) {
+    val isDark = resolveIsDark(settingsState)
     for ((id, wv) in liveViews.toMap()) {
       if (destroyedViews.contains(wv)) continue
       val (isPriv, uaMode) = tabStateLookup(id)
       applySettings(wv, isPriv, uaMode, settingsState)
-      applyNightWebCss(wv, settingsState.nightWebMode)
+      applyThemeMode(wv, isDark, settingsState.nightWebMode)
       applyAdBlocker(wv, settingsState.trackerBlockingEnabled)
       applyBackgroundPlay(wv, settingsState.backgroundPlayEnabled)
       applyYouTubeScaleMode(wv, settingsState.youtubeScaleMode)
@@ -734,33 +784,9 @@ class WebViewPool(
 
   fun applyYouTubeScaleMode(webView: WebView, mode: YouTubeVideoScaleMode) {
     if (!settingsProvider().javascriptEnabled || destroyedViews.contains(webView)) return
-    val styleContent = when (mode) {
-      YouTubeVideoScaleMode.ORIGINAL -> """
-        video, .html5-main-video, .video-stream {
-          object-fit: contain !important;
-          transform: none !important;
-        }
-      """.trimIndent()
-      YouTubeVideoScaleMode.FIT -> """
-        video, .html5-main-video, .video-stream {
-          object-fit: cover !important;
-          transform: scale(1.0) !important;
-        }
-        #movie_player, .html5-video-player, .html5-video-container, #player-container-id, .player-container {
-          overflow: hidden !important;
-        }
-      """.trimIndent()
-      YouTubeVideoScaleMode.STRETCHED -> """
-        video, .html5-main-video, .video-stream {
-          object-fit: fill !important;
-          width: 100% !important;
-          height: 100% !important;
-          transform: none !important;
-        }
-      """.trimIndent()
-    }
     val js = """
       (function() {
+        var mode = '${mode.id}';
         var id = 'kai-youtube-scale-style';
         var s = document.getElementById(id);
         if (!s) {
@@ -768,22 +794,62 @@ class WebViewPool(
           s.id = id;
           (document.head || document.documentElement).appendChild(s);
         }
-        s.textContent = ${JSONObject.quote(styleContent)};
-        try {
-          var vids = document.querySelectorAll('video, .html5-main-video, .video-stream');
-          for (var i = 0; i < vids.length; i++) {
-            var v = vids[i];
-            if ('${mode.id}' === 'fit') {
-              v.style.setProperty('object-fit', 'cover', 'important');
-            } else if ('${mode.id}' === 'stretched') {
-              v.style.setProperty('object-fit', 'fill', 'important');
-              v.style.setProperty('width', '100%', 'important');
-              v.style.setProperty('height', '100%', 'important');
-            } else {
-              v.style.setProperty('object-fit', 'contain', 'important');
+        
+        var css = '';
+        if (mode === 'fit') {
+          css = 'video, .html5-main-video, .video-stream { object-fit: cover !important; width: 100% !important; height: 100% !important; transform: none !important; position: absolute !important; top: 0px !important; left: 0px !important; margin: 0px !important; }';
+        } else if (mode === 'stretched') {
+          css = 'video, .html5-main-video, .video-stream { object-fit: fill !important; width: 100% !important; height: 100% !important; transform: none !important; position: absolute !important; top: 0px !important; left: 0px !important; margin: 0px !important; }';
+        } else {
+          css = 'video, .html5-main-video, .video-stream { object-fit: contain !important; transform: none !important; }';
+        }
+        s.textContent = css;
+
+        function updateVideos() {
+          try {
+            var vids = document.querySelectorAll('video');
+            for (var i = 0; i < vids.length; i++) {
+              var v = vids[i];
+              if (mode === 'fit') {
+                v.style.setProperty('object-fit', 'cover', 'important');
+                v.style.setProperty('width', '100%', 'important');
+                v.style.setProperty('height', '100%', 'important');
+                v.style.setProperty('top', '0px', 'important');
+                v.style.setProperty('left', '0px', 'important');
+                v.style.setProperty('margin', '0px', 'important');
+                v.style.setProperty('transform', 'none', 'important');
+              } else if (mode === 'stretched') {
+                v.style.setProperty('object-fit', 'fill', 'important');
+                v.style.setProperty('width', '100%', 'important');
+                v.style.setProperty('height', '100%', 'important');
+                v.style.setProperty('top', '0px', 'important');
+                v.style.setProperty('left', '0px', 'important');
+                v.style.setProperty('margin', '0px', 'important');
+                v.style.setProperty('transform', 'none', 'important');
+              } else {
+                v.style.setProperty('object-fit', 'contain', 'important');
+                v.style.removeProperty('width');
+                v.style.removeProperty('height');
+                v.style.removeProperty('top');
+                v.style.removeProperty('left');
+                v.style.removeProperty('margin');
+                v.style.removeProperty('transform');
+              }
             }
-          }
-        } catch(e) {}
+          } catch(e) {}
+        }
+        updateVideos();
+        if (!window.__kai_yt_scale_observer) {
+          try {
+            window.__kai_yt_scale_observer = new MutationObserver(function() {
+              updateVideos();
+            });
+            var target = document.getElementById('movie_player') || document.body;
+            if (target) {
+              window.__kai_yt_scale_observer.observe(target, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+            }
+          } catch(e) {}
+        }
       })();
     """.trimIndent()
     try {
@@ -795,7 +861,13 @@ class WebViewPool(
   fun applyDataSaver(webView: WebView, enabled: Boolean) {
     if (!settingsProvider().javascriptEnabled || destroyedViews.contains(webView)) return
     if (!enabled) {
-      val cleanupJs = "(function(){var s=document.getElementById('kai-data-saver-style');if(s)s.remove();window.__kai_data_saver_active=false;})();"
+      val cleanupJs = """
+        (function(){
+          var s = document.getElementById('kai-data-saver-style');
+          if (s) s.remove();
+          window.__kai_data_saver_active = false;
+        })();
+      """.trimIndent()
       try { webView.evaluateJavascript(cleanupJs, null) } catch (_: Throwable) {}
       return
     }
@@ -807,23 +879,30 @@ class WebViewPool(
         if (!s) {
           s = document.createElement('style');
           s.id = id;
-          s.textContent = 'video[preload="auto"], audio[preload="auto"] { preload: none !important; }';
           (document.head || document.documentElement).appendChild(s);
         }
+        s.textContent = [
+          'video[autoplay], audio[autoplay] { autoplay: false !important; }',
+          'video, audio { preload: none !important; }',
+          '@media (prefers-reduced-data: reduce) { * { background-image: none !important; } }'
+        ].join('\n');
         try {
           var media = document.querySelectorAll('video, audio');
           for (var i = 0; i < media.length; i++) {
-            if (media[i].paused) {
-              media[i].preload = 'none';
-            }
+            media[i].autoplay = false;
+            media[i].preload = 'none';
           }
-          if (navigator.connection && !('saveData' in navigator.connection)) {
+          if (navigator.connection) {
             try {
               Object.defineProperty(navigator.connection, 'saveData', {
                 get: function() { return true; },
                 configurable: true
               });
             } catch(e) {}
+          }
+          var player = document.getElementById('movie_player');
+          if (player && typeof player.setPlaybackQualityRange === 'function') {
+            player.setPlaybackQualityRange('small', 'medium');
           }
         } catch(e) {}
       })();
@@ -1010,7 +1089,8 @@ class WebViewPool(
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
           try {
-            isAlgorithmicDarkeningAllowed = settingsState.nightWebMode || settingsState.themeMode == ThemeMode.DARK
+            val isDark = resolveIsDark(settingsState)
+            isAlgorithmicDarkeningAllowed = isDark || settingsState.nightWebMode
           } catch (_: Throwable) {
           }
         }
@@ -1147,6 +1227,16 @@ class WebViewPool(
             )
           }
           val currentSettings = settingsProvider()
+          if (currentSettings.dataSaverEnabled) {
+            val purpose = request?.requestHeaders?.get("Purpose") ?: request?.requestHeaders?.get("Sec-Purpose") ?: ""
+            if (purpose.contains("prefetch", ignoreCase = true) || purpose.contains("prerender", ignoreCase = true)) {
+              return emptyBlockedResponse()
+            }
+            val path = request?.url?.path.orEmpty()
+            if (path.contains("/beacon") || path.contains("/collect") || path.contains("/telemetry") || path.contains("/analytics")) {
+              return emptyBlockedResponse()
+            }
+          }
           val pageHost = currentPageHosts[tabId].orEmpty()
           val customSet = currentSettings.customBlockedHosts.toSet()
           if (TrackerBlocker.shouldBlockRequest(reqUrl, pageHost, currentSettings.trackerBlockingEnabled, customSet)) {
@@ -1175,6 +1265,8 @@ class WebViewPool(
           if (view != null) {
             applyStealthPrivacyShield(view)
             val s = settingsProvider()
+            val isDark = resolveIsDark(s)
+            applyThemeMode(view, isDark, s.nightWebMode)
             if (s.trackerBlockingEnabled) {
               applyAdBlocker(view, true)
             }
@@ -1198,9 +1290,8 @@ class WebViewPool(
           currentPageHosts[tabId] = UrlValidator.extractHost(url)
           applyStealthPrivacyShield(view)
           val s = settingsProvider()
-          if (s.nightWebMode) {
-            applyNightWebCss(view, true)
-          }
+          val isDark = resolveIsDark(s)
+          applyThemeMode(view, isDark, s.nightWebMode)
           if (s.trackerBlockingEnabled) {
             applyAdBlocker(view, true)
           }

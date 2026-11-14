@@ -27,7 +27,7 @@
   }
 
   /* Original Signature Cosmic Dark Background & Palette */
-  :root {
+  :root, [data-theme="dark"] {
     --bg: #070B14;
     --surface: #0E1626;
     --surface-hover: #152238;
@@ -48,6 +48,95 @@
     --success: #10B981;
     --font-sans: 'Söhne', 'Sohne', ui-sans-serif, -apple-system, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     --font-mono: 'Söhne Mono', 'Sohne Mono', ui-monospace, SFMono-Regular, Consolas, 'Roboto Mono', monospace;
+    color-scheme: dark;
+  }
+
+  /* Pristine Modern Light Mode Palette */
+  [data-theme="light"] {
+    --bg: #F8FAFC;
+    --surface: #FFFFFF;
+    --surface-hover: #F1F5F9;
+    --surface-variant: #F1F5F9;
+    --border: #E2E8F0;
+    --border-subtle: rgba(0, 0, 0, 0.06);
+    --accent: #0284C7;
+    --accent-subtle: rgba(2, 132, 199, 0.12);
+    --accent-glow: rgba(2, 132, 199, 0.25);
+    --indigo: #4F46E5;
+    --text: #0F172A;
+    --text-muted: #64748B;
+    --bubble-user: #E0F2FE;
+    --bubble-ai: #FFFFFF;
+    --code-bg: #F8FAFC;
+    --code-header: #E2E8F0;
+    --danger: #DC2626;
+    --success: #059669;
+    color-scheme: light;
+  }
+
+  [data-theme="light"] header {
+    background: rgba(255, 255, 255, 0.94);
+    border-bottom: 1px solid var(--border);
+  }
+  [data-theme="light"] .brand-title {
+    background: linear-gradient(135deg, #0F172A 30%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  [data-theme="light"] footer {
+    background: rgba(255, 255, 255, 0.96);
+    border-top: 1px solid var(--border);
+  }
+  [data-theme="light"] .input-wrapper {
+    background: #F1F5F9;
+    border-color: #E2E8F0;
+  }
+  [data-theme="light"] .input-wrapper:focus-within {
+    border-color: var(--accent);
+    background: #FFFFFF;
+    box-shadow: 0 0 0 2px var(--accent-subtle);
+  }
+  [data-theme="light"] .msg-bubble {
+    color: var(--text);
+  }
+  [data-theme="light"] .msg-row.ai .msg-bubble {
+    background: #FFFFFF;
+    border-color: #E2E8F0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  }
+  [data-theme="light"] .msg-row.user .msg-bubble {
+    background: #E0F2FE;
+    border-color: rgba(2, 132, 199, 0.25);
+    color: #0369A1;
+  }
+  [data-theme="light"] .suggestion-pill {
+    background: #FFFFFF;
+    border-color: #E2E8F0;
+    color: #334155;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  [data-theme="light"] .suggestion-pill:hover {
+    background: #F8FAFC;
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  [data-theme="light"] pre {
+    background: #F1F5F9;
+    border-color: #E2E8F0;
+    color: #0F172A;
+  }
+  [data-theme="light"] .code-header {
+    background: #E2E8F0;
+    color: #475569;
+  }
+  [data-theme="light"] .code-header button {
+    background: #FFFFFF;
+    border-color: #CBD5E1;
+    color: #475569;
+  }
+  [data-theme="light"] .code-header button:hover {
+    background: #F8FAFC;
+    color: var(--text);
   }
 
   * {
@@ -119,20 +208,43 @@
     gap: 8px;
   }
 
-  .badge-anonymous {
+  .theme-toggle-btn {
+    background: var(--surface-variant);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    padding: 6px 10px;
+    border-radius: 18px;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    font-size: 0.68rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--accent);
-    background: var(--accent-subtle);
-    border: 1px solid rgba(0, 242, 254, 0.35);
-    padding: 3px 8px;
-    border-radius: 20px;
-    font-family: var(--font-sans);
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .theme-toggle-btn:hover {
+    color: var(--text);
+    border-color: var(--accent);
+  }
+  [data-theme="light"] .theme-toggle-btn .sun-icon {
+    display: none;
+  }
+  [data-theme="light"] .theme-toggle-btn .moon-icon {
+    display: block;
+    color: #0F172A;
+  }
+  [data-theme="dark"] .theme-toggle-btn .sun-icon {
+    display: block;
+    color: #FCD34D;
+  }
+  [data-theme="dark"] .theme-toggle-btn .moon-icon {
+    display: none;
+  }
+  :root:not([data-theme]) .theme-toggle-btn .sun-icon {
+    display: block;
+    color: #FCD34D;
+  }
+  :root:not([data-theme]) .theme-toggle-btn .moon-icon {
+    display: none;
   }
 
   .new-chat-btn {
@@ -737,7 +849,15 @@
       <span class="brand-title">Kai AI</span>
     </div>
     <div class="header-actions">
-      <span class="badge-anonymous">100% Anonymous</span>
+      <button class="theme-toggle-btn" id="theme-toggle-btn" title="Toggle Light / Dark mode">
+        <svg class="sun-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+          <circle cx="12" cy="12" r="5"></circle>
+          <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <svg class="moon-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
       <button class="new-chat-btn" id="new-chat-btn" title="Start new conversation">
         <span>+</span> New
       </button>
@@ -820,6 +940,35 @@
 </footer>
 
 <script>
+  // --- THEME TOGGLE (DARK / LIGHT / DYNAMIC) ---
+  const themeToggleBtn = document.getElementById('theme-toggle-btn');
+  let currentTheme = localStorage.getItem('kai_theme') || 'dark';
+
+  function applyTheme(theme) {
+    currentTheme = theme;
+    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.style.colorScheme = theme;
+    try {
+      localStorage.setItem('kai_theme', theme);
+    } catch (_) {}
+  }
+
+  // Exposed function for host WebView to synchronize theme in 1 tap
+  window.__kaiSetTheme = function(theme) {
+    if (theme === 'light' || theme === 'dark') {
+      applyTheme(theme);
+    }
+  };
+
+  applyTheme(currentTheme);
+
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', () => {
+      const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      applyTheme(nextTheme);
+    });
+  }
+
   let activePersona = 'auto';
   let isGenerating = false;
   let abortCtrl = null;

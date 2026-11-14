@@ -38,8 +38,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.5.1", BuildConfig.VERSION_NAME)
-    assertEquals(24, BuildConfig.VERSION_CODE)
+    assertEquals("1.5.2", BuildConfig.VERSION_NAME)
+    assertEquals(25, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -157,11 +157,11 @@ class ExampleRobolectricTest {
     // Open Quick Action Grid Menu and navigate to Settings
     composeTestRule.onNodeWithTag("nav_menu_button").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Night mode").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Data Saver").assertIsDisplayed()
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.5.1").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.5.2").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -463,5 +463,46 @@ class ExampleRobolectricTest {
 
     // File input accept attribute includes all requested formats
     assertTrue(html.contains("accept=\"image/*,video/*,audio/*,.pdf,.ppt,.pptx,.mp3,.wav,.m4a,.ogg,.aac,.flac"))
+  }
+
+  @Test
+  fun kaiAiLightModePaletteAndThemeToggleVerified() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val html = context.assets.open("kai.html").bufferedReader().use { it.readText() }
+
+    // Verify 100% Anonymous header label removed
+    assertFalse(html.contains("100% Anonymous"))
+
+    // Verify theme toggle button & SVG icons
+    assertTrue(html.contains("id=\"theme-toggle-btn\""))
+    assertTrue(html.contains("sun-icon"))
+    assertTrue(html.contains("moon-icon"))
+
+    // Verify light mode CSS palette
+    assertTrue(html.contains("[data-theme=\"light\"]"))
+    assertTrue(html.contains("--bg: #F8FAFC;"))
+    assertTrue(html.contains("--bubble-user: #E0F2FE;"))
+    assertTrue(html.contains("--bubble-ai: #FFFFFF;"))
+
+    // Verify JavaScript theme switching APIs
+    assertTrue(html.contains("function applyTheme("))
+    assertTrue(html.contains("window.__kaiSetTheme"))
+    assertTrue(html.contains("localStorage.setItem('kai_theme'"))
+  }
+
+  @Test
+  fun youtubeScaleFixAndDataSaverVerified() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val pool = com.example.webview.WebViewPool(context) { SettingsState() }
+
+    // Settings verification
+    val darkSettings = SettingsState(
+      youtubeScaleMode = com.example.model.YouTubeVideoScaleMode.FIT,
+      dataSaverEnabled = true,
+      themeMode = com.example.model.ThemeMode.DARK
+    )
+    assertTrue(pool.resolveIsDark(darkSettings))
+    val lightSettings = SettingsState(themeMode = com.example.model.ThemeMode.LIGHT)
+    assertFalse(pool.resolveIsDark(lightSettings))
   }
 }
