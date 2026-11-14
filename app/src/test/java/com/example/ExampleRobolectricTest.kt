@@ -40,8 +40,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.6.0", BuildConfig.VERSION_NAME)
-    assertEquals(33, BuildConfig.VERSION_CODE)
+    assertEquals("1.6.1", BuildConfig.VERSION_NAME)
+    assertEquals(34, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -161,7 +161,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.6.0").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.6.1").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -668,5 +668,26 @@ class ExampleRobolectricTest {
     val restoredFlags = activity.window.attributes.flags
     assertFalse("FLAG_FULLSCREEN must be cleared after exiting fullscreen", (restoredFlags and WindowManager.LayoutParams.FLAG_FULLSCREEN) != 0)
     assertFalse("FLAG_KEEP_SCREEN_ON must be cleared after exiting fullscreen", (restoredFlags and WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) != 0)
+  }
+
+  @Test
+  fun streamingVideoScriptAndCorsResponsesPreventBlackScreens() {
+    val webViewPoolFile = File("../app/src/main/java/com/example/webview/WebViewPool.kt")
+      .takeIf { it.exists() } ?: File("src/main/java/com/example/webview/WebViewPool.kt")
+    val content = webViewPoolFile.readText()
+
+    // Assert that destructive currentTime seeks are eliminated
+    assertFalse("Should not force currentTime to duration as it causes black screens", content.contains("v.currentTime = v.duration"))
+    // Assert safe playbackRate fast-forward and mute during ads
+    assertTrue(content.contains("v.playbackRate = 16.0"))
+    assertTrue(content.contains("v.__kai_ad_muted = true"))
+    // Assert native player skipAd call is attempted
+    assertTrue(content.contains("player.skipAd()"))
+    // Assert CORS headers are present on blocked responses
+    assertTrue(content.contains("Access-Control-Allow-Origin"))
+    // Assert JSON blocked response returns empty object
+    assertTrue(content.contains("emptyBlockedJsonResponse"))
+    // Assert .ytp-ad-module is not hidden via CSS to prevent player breakages
+    assertFalse(content.contains("'.ytp-ad-module'"))
   }
 }

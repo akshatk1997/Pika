@@ -589,7 +589,6 @@ class WebViewPool(
               'ytd-banner-promo-renderer',
               'ytd-statement-banner-renderer',
               'ytm-paid-content-overlay-renderer',
-              '.ytp-ad-module',
               '.ytp-ad-overlay-container',
               '.ytp-ad-image-overlay',
               '.ytp-ad-message-container',
@@ -619,29 +618,40 @@ class WebViewPool(
             var isAdActive = Boolean(player && (player.classList.contains('ad-showing') || player.classList.contains('ad-interrupting')));
 
             if (isAdActive) {
+              if (typeof player.skipAd === 'function') {
+                try { player.skipAd(); } catch(e) {}
+              }
+
               var skipButtons = document.querySelectorAll(
-                '.ytp-ad-skip-button, .ytp-ad-skip-button-modern, button.ytp-ad-skip-button, .ytp-ad-overlay-close-button, .videoAdUiSkipButton, [class*="skip-button"]'
+                '.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, button.ytp-ad-skip-button, .ytp-ad-overlay-close-button, .videoAdUiSkipButton, [class*="skip-button"], [class*="ad-skip"]'
               );
               for (var j = 0; j < skipButtons.length; j++) {
                 if (typeof skipButtons[j].click === 'function') {
-                  skipButtons[j].click();
+                  try { skipButtons[j].click(); } catch(e) {}
                 }
               }
 
-              // Fast-forward ONLY if active ad is playing and duration is short (< 120s)
+              // Fast-forward ad safely: 16x playback rate and mute without corrupting video duration or buffer
               var videos = player.querySelectorAll('video');
               for (var i = 0; i < videos.length; i++) {
                 var v = videos[i];
-                if (isFinite(v.duration) && v.duration > 0 && v.duration < 120) {
-                  v.currentTime = v.duration;
+                if (!v.muted) {
+                  v.__kai_ad_muted = true;
+                  v.muted = true;
                 }
+                v.playbackRate = 16.0;
               }
             } else if (player) {
-              // Ensure normal content video playback rate is 1.0
+              // Ensure normal content video playback rate is 1.0 and restore audio
               var contentVideos = player.querySelectorAll('video');
               for (var k = 0; k < contentVideos.length; k++) {
-                if (contentVideos[k].playbackRate > 2.0) {
-                  contentVideos[k].playbackRate = 1.0;
+                var cv = contentVideos[k];
+                if (cv.playbackRate > 2.0) {
+                  cv.playbackRate = 1.0;
+                }
+                if (cv.__kai_ad_muted) {
+                  cv.muted = false;
+                  delete cv.__kai_ad_muted;
                 }
               }
             }
@@ -783,6 +793,13 @@ class WebViewPool(
     val js = """
       (function() {
         window.__kai_data_saver_active = true;
+        var host = (window.location && window.location.hostname) || '';
+        var isStreamingSite = host.indexOf('youtube.com') !== -1 ||
+                              host.indexOf('youtu.be') !== -1 ||
+                              host.indexOf('vimeo.com') !== -1 ||
+                              host.indexOf('twitch.tv') !== -1 ||
+                              host.indexOf('dailymotion.com') !== -1;
+
         var id = 'kai-data-saver-style';
         var s = document.getElementById(id);
         if (!s) {
@@ -790,30 +807,35 @@ class WebViewPool(
           s.id = id;
           (document.head || document.documentElement).appendChild(s);
         }
-        s.textContent = [
-          'video[autoplay], audio[autoplay] { autoplay: false !important; }',
-          'video, audio { preload: none !important; }',
-          '@media (prefers-reduced-data: reduce) { * { background-image: none !important; } }'
-        ].join('\n');
-        try {
-          var media = document.querySelectorAll('video, audio');
-          for (var i = 0; i < media.length; i++) {
-            media[i].autoplay = false;
-            media[i].preload = 'none';
-          }
-          if (navigator.connection) {
-            try {
-              Object.defineProperty(navigator.connection, 'saveData', {
-                get: function() { return true; },
-                configurable: true
-              });
-            } catch(e) {}
-          }
-          var player = document.getElementById('movie_player');
-          if (player && typeof player.setPlaybackQualityRange === 'function') {
-            player.setPlaybackQualityRange('small', 'medium');
-          }
-        } catch(e) {}
+        if (!isStreamingSite) {
+          s.textContent = [
+            'video[autoplay], audio[autoplay] { autoplay: false !important; }',
+            'video, audio { preload: none !important; }',
+            '@media (prefers-reduced-data: reduce) { * { background-image: none !important; } }'
+          ].join('\n');
+          try {
+            var media = document.querySelectorAll('video, audio');
+            for (var i = 0; i < media.length; i++) {
+              media[i].autoplay = false;
+              media[i].preload = 'none';
+            }
+          } catch(e) {}
+        } else {
+          s.textContent = '@media (prefers-reduced-data: reduce) { * { background-image: none !important; } }';
+        }
+
+        if (navigator.connection) {
+          try {
+            Object.defineProperty(navigator.connection, 'saveData', {
+              get: function() { return true; },
+              configurable: true
+            });
+          } catch(e) {}
+        }
+        var player = document.getElementById('movie_player');
+        if (player && typeof player.setPlaybackQualityRange === 'function') {
+          try { player.setPlaybackQualityRange('small', 'medium'); } catch(e) {}
+        }
       })();
     """.trimIndent()
     try {
@@ -1044,7 +1066,7 @@ class WebViewPool(
     applySettings(webView, isPrivate, userAgentMode, settingsProvider())
 
     try {
-      webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+      webView.setLayerType(View.LAYER_TYPE_NONE, null)
     } catch (_: Throwable) {
     }
 
@@ -1158,7 +1180,12 @@ class WebViewPool(
           val customSet = currentSettings.customBlockedHosts.toSet()
           if (TrackerBlocker.shouldBlockRequest(reqUrl, pageHost, currentSettings.trackerBlockingEnabled, customSet)) {
             callbacks.onTrackerBlocked(tabId)
-            return emptyBlockedResponse()
+            val acceptHeader = request?.requestHeaders?.get("Accept")?.lowercase() ?: ""
+            val isJson = reqUrl.contains("/youtubei/") ||
+              reqUrl.contains("/api/") ||
+              reqUrl.contains(".json") ||
+              acceptHeader.contains("application/json")
+            return if (isJson) emptyBlockedJsonResponse() else emptyBlockedResponse()
           }
           TrackerBlocker.inferSniffedResource(reqUrl)?.let { res ->
             val map = sniffedResourcesByTab.getOrPut(tabId) { LinkedHashMap() }
@@ -1428,15 +1455,34 @@ class WebViewPool(
     return webView
   }
 
+  private val corsBlockedHeaders = mapOf(
+    "Access-Control-Allow-Origin" to "*",
+    "Access-Control-Allow-Methods" to "GET, POST, OPTIONS, HEAD",
+    "Access-Control-Allow-Headers" to "*",
+    "Access-Control-Max-Age" to "86400"
+  )
+
   private fun emptyBlockedResponse(): WebResourceResponse =
     WebResourceResponse(
       "text/plain",
       "utf-8",
-      204,
-      "Blocked",
-      emptyMap(),
+      200,
+      "OK",
+      corsBlockedHeaders,
       ByteArrayInputStream(ByteArray(0))
     )
+
+  private fun emptyBlockedJsonResponse(): WebResourceResponse {
+    val emptyJsonBytes = "{}".toByteArray(StandardCharsets.UTF_8)
+    return WebResourceResponse(
+      "application/json",
+      "utf-8",
+      200,
+      "OK",
+      corsBlockedHeaders,
+      ByteArrayInputStream(emptyJsonBytes)
+    )
+  }
 
   private fun isNetworkConnected(): Boolean {
     return try {
