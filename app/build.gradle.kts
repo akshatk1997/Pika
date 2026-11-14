@@ -16,8 +16,8 @@ android {
     applicationId = "com.aistudio.featherbrowser.fwkmpz"
     minSdk = 26
     targetSdk = 36
-    versionCode = 28
-    versionName = "1.5.5"
+    versionCode = 29
+    versionName = "1.5.6"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }

@@ -2114,7 +2114,6 @@
   attachRemoveBtn.addEventListener('click', clearAttachment);
 
   // --- NATIVE & WEB SPEECH RECOGNITION + DUAL-ENGINE AUDIO RECORDING ---
-  let isListening = false;
   let voiceMediaStream = null;
   let voiceMediaRecorder = null;
   let voiceAudioChunks = [];
@@ -2125,7 +2124,6 @@
   const voiceDoneBtn = document.getElementById('voice-done-btn');
   const voiceWave = document.getElementById('voice-wave');
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let recognition = null;
 
   async function startAudioRecording() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
@@ -2833,15 +2831,28 @@
     }
   }
 
+  // Globally bind functions invoked by inline HTML attributes
+  window.sendQuickPrompt = sendQuickPrompt;
+  window.copySnippet = copySnippet;
+  window.copyBubbleText = copyBubbleText;
+  window.retryLastPrompt = retryLastPrompt;
+
   // Handle URL query parameters (e.g., https://kai.ai/?q=my+prompt)
-  window.addEventListener('DOMContentLoaded', () => {
-    const params = new URLSearchParams(window.location.search);
-    const q = params.get('q') || params.get('prompt');
-    if (q && q.trim()) {
-      input.value = q.trim();
-      handleSend();
-    }
-  });
+  function checkUrlQuery() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get('q') || params.get('prompt');
+      if (q && q.trim()) {
+        input.value = q.trim();
+        handleSend();
+      }
+    } catch (_) {}
+  }
+  if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', checkUrlQuery);
+  } else {
+    checkUrlQuery();
+  }
 </script>
 </body>
 </html>

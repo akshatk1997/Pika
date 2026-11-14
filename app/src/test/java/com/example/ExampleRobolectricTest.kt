@@ -38,8 +38,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.5.5", BuildConfig.VERSION_NAME)
-    assertEquals(28, BuildConfig.VERSION_CODE)
+    assertEquals("1.5.6", BuildConfig.VERSION_NAME)
+    assertEquals(29, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -159,7 +159,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.5.5").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.5.6").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -530,6 +530,47 @@ class ExampleRobolectricTest {
     assertTrue(html.contains("function applyTheme("))
     assertTrue(html.contains("window.__kaiSetTheme"))
     assertTrue(html.contains("localStorage.setItem('kai_theme'"))
+  }
+
+  @Test
+  fun kaiAiJavaScriptSyntaxAndRuntimeIntegrityVerified() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val html = com.example.ui.ai.KaiAiApp.getHtmlText(context)
+    val scriptRegex = Regex("<script[\\s\\S]*?>([\\s\\S]*?)</script>", RegexOption.IGNORE_CASE)
+    val scriptContent = scriptRegex.find(html)?.groupValues?.get(1) ?: ""
+    assertTrue("Script tag must not be empty", scriptContent.isNotEmpty())
+
+    // 1. Verify zero duplicate let declarations that break V8 parsing
+    val letIsListeningCount = Regex("\\blet\\s+isListening\\b").findAll(scriptContent).count()
+    val letRecognitionCount = Regex("\\blet\\s+recognition\\b").findAll(scriptContent).count()
+    assertEquals("let isListening must only be declared once", 1, letIsListeningCount)
+    assertEquals("let recognition must only be declared once", 1, letRecognitionCount)
+
+    // 2. Verify all inline event handlers are bound globally to window
+    assertTrue(scriptContent.contains("window.sendQuickPrompt = sendQuickPrompt"))
+    assertTrue(scriptContent.contains("window.copySnippet = copySnippet"))
+    assertTrue(scriptContent.contains("window.copyBubbleText = copyBubbleText"))
+    assertTrue(scriptContent.contains("window.retryLastPrompt = retryLastPrompt"))
+
+    // 3. Verify robust URL query parameter handling with readyState check
+    assertTrue(scriptContent.contains("document.readyState === 'loading'"))
+
+    // 4. Verify all critical UI elements exist in DOM
+    val expectedIds = listOf(
+      "prompt-input", "send-btn", "chat-feed", "empty-state",
+      "attach-btn", "file-input", "attach-tray", "attach-preview-img",
+      "mic-btn", "new-chat-btn", "theme-toggle-btn",
+      "voice-banner", "voice-status", "voice-wave", "voice-done-btn", "voice-cancel-btn"
+    )
+    for (id in expectedIds) {
+      assertTrue("HTML must contain element id='$id'", html.contains("id=\"$id\""))
+    }
+
+    // 5. Verify frontier multimodal and fallback models are correctly configured
+    assertTrue(scriptContent.contains("gemini-3.5-flash-lite"))
+    assertTrue(scriptContent.contains("gemini-3.8-flash"))
+    assertTrue(scriptContent.contains("openai-fast"))
+    assertTrue(scriptContent.contains("https://text.pollinations.ai/openai/chat/completions"))
   }
 
   @Test

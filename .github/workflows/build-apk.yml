@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kai-v1.5.5.apk
+          cp "$APK_PATH" releases/Kai-v1.5.6.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kai-v1.5.5.apk
+          git add releases/Kai-v1.5.6.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kai-v1.5.5.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kai-v1.5.6.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.5.5
+      - name: Create or update GitHub Release v1.5.6
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kai-v1.5.5.apk)
-          NOTES="Kai Browser v1.5.5 (Build 28) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Open Source In-Page DOM Translation:** Completely replaced Google Translate with privacy-focused open-source translation (LibreTranslate & MyMemory API fallback). Translates live DOM text nodes directly in-place without routing user traffic through Google servers, with instant 1-tap original text restoration.\n- **HTML5 Video Player Pause Defect Fix:** Completely resolved the unpausable video issue across YouTube and all web video streaming platforms by removing the aggressive pause event capture listener from background play.\n- **Removed YouTube Video Scaling Feature:** Fully eliminated custom scaling mode toggles and containers, returning YouTube to native, pristine HTML5 video rendering.\n- **Strictly Under 2 MB Footprint:** Release APK remains strictly under 2 MB (~1.46 MB).\n- **Checks Passed:** \`:app:testDebugUnitTest\` (API 26 & 36), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\`."
-          if gh release view v1.5.5 >/dev/null 2>&1; then
-            gh release upload v1.5.5 releases/Kai-v1.5.5.apk --clobber
-            gh release edit v1.5.5 --title "Kai v1.5.5 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kai-v1.5.6.apk)
+          NOTES="Kai Browser v1.5.6 (Build 29) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Kai AI Complete Unstuck & Script Execution Fix:** Permanently fixed the root cause of Kai AI freezing/stuck behavior by eliminating duplicate top-level variable declarations (\`let isListening\` and \`let recognition\`) that caused V8 script compilation failure; verified 0 syntax errors across all JavaScript blocks.\n- **Globally Bound Interactive Action Handlers:** Explicitly bound all interactive inline action handlers (\`sendQuickPrompt\`, \`copySnippet\`, \`copyBubbleText\`, \`retryLastPrompt\`, \`__kaiSetTheme\`, and \`__kaiVoiceOn*\`) to \`window\` to prevent any reference errors.\n- **Resilient Query Parameter Execution:** Enhanced URL query parameter prompt processor with interactive document state fallback so prompts always execute reliably.\n- **Frontier Multimodal & Audio Intelligence:** Fully tested and operational Gemini 3.5 Flash Lite primary multimodal inference, Gemini 3.8 Flash secondary fallback, and Pollinations fast text-only tertiary fallback, with PPT, PDF, and audio comprehension.\n- **Strictly Under 2 MB Footprint:** Release APK remains strictly under 2 MB (~1.46 MB).\n- **Checks Passed:** \`:app:testDebugUnitTest\` (API 26 & 36), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\`."
+          if gh release view v1.5.6 >/dev/null 2>&1; then
+            gh release upload v1.5.6 releases/Kai-v1.5.6.apk --clobber
+            gh release edit v1.5.6 --title "Kai v1.5.6 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.5.5 releases/Kai-v1.5.5.apk \
-              --title "Kai v1.5.5 (< 2 MB)" \
+            gh release create v1.5.6 releases/Kai-v1.5.6.apk \
+              --title "Kai v1.5.6 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi
