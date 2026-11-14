@@ -726,6 +726,8 @@ class WebViewPool(
    */
   private fun applyStealthPrivacyShield(webView: WebView) {
     if (!settingsProvider().javascriptEnabled || destroyedViews.contains(webView)) return
+    val currentUrl = webView.url ?: ""
+    if (currentUrl.startsWith("https://kai.ai") || currentUrl == "https://kai.ai") return
     val js = """
       (function() {
         if (window.__kai_stealth_privacy_shield_installed) return;

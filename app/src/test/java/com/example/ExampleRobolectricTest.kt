@@ -38,8 +38,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.4.7", BuildConfig.VERSION_NAME)
-    assertEquals(20, BuildConfig.VERSION_CODE)
+    assertEquals("1.4.8", BuildConfig.VERSION_NAME)
+    assertEquals(21, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -157,7 +157,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.4.7").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.4.8").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_retain_tabs").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -321,6 +321,7 @@ class ExampleRobolectricTest {
     // Tracker exemption checks
     assertFalse(com.example.security.TrackerBlocker.shouldBlockRequest("https://kai.ai/chat", "kai.ai", true))
     assertFalse(com.example.security.TrackerBlocker.shouldBlockRequest("https://text.pollinations.ai/prompt", "kai.ai", true))
+    assertFalse(com.example.security.TrackerBlocker.shouldBlockRequest("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", "kai.ai", true))
 
     // Anti-tracking & fingerprinting protection verification
     assertTrue(com.example.security.TrackerBlocker.isTrackerHost("fingerprint.com"))
@@ -329,20 +330,21 @@ class ExampleRobolectricTest {
     val cleanedUrl = com.example.security.UrlValidator.stripTrackingParams("https://example.com/shop?fbclid=123&gbraid=456&item=shoes")
     assertEquals("https://example.com/shop?item=shoes", cleanedUrl)
 
-    // Built-in KaiAiApp verification with attachments, voice, camera access and ChatGPT fonts
+    // Built-in KaiAiApp verification with attachments, voice, camera removed, video keyframes, multimodal and ChatGPT fonts
     val context = ApplicationProvider.getApplicationContext<Context>()
     val html = com.example.ui.ai.KaiAiApp.getHtmlText(context)
     assertTrue(html.contains("Kai AI"))
     assertTrue(html.contains("Anonymous AI Workspace"))
     assertTrue(html.contains("100% Anonymous"))
     assertTrue(html.contains("attach-btn"))
-    assertTrue(html.contains("camera-btn"))
+    assertFalse(html.contains("camera-btn"))
+    assertFalse(html.contains("camera-modal"))
+    assertFalse(html.contains("shutter-btn"))
     assertTrue(html.contains("mic-btn"))
-    assertTrue(html.contains("camera-modal"))
-    assertTrue(html.contains("shutter-btn"))
     assertTrue(html.contains("image_url"))
+    assertTrue(html.contains("extractVideoKeyframes"))
     assertTrue(html.contains("SpeechRecognition"))
-    assertTrue(html.contains("openai/chat/completions"))
+    assertTrue(html.contains("gemini-3.5-flash-lite"))
     assertTrue(html.contains("thought-process"))
     assertTrue(html.contains("Söhne"))
   }

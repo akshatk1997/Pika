@@ -10,6 +10,7 @@
 
 | Version | Version Code | Target Platforms & OS | Key Highlights |
 |---|---:|---|---|
+| **v1.4.8** | `21` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Frontier Multimodal Vision, Video Keyframe Comprehension & Enhanced Voice in Kai AI: upgraded Kai AI with state-of-the-art multimodal vision via Gemini 3.5 Flash Lite OpenAI completions; full understanding of images (high-precision OCR, handwriting, math diagrams, UI layout analysis) with automated canvas resolution optimization (max 1600px); sequential video keyframe extraction for multi-timestamp video comprehension; enhanced real-time speech-to-text dictation; completely removed camera mode and viewfinder modal for a distraction-free ChatGPT attachment flow; 100% ephemeral in-memory privacy with 0 data storage; strictly under 2 MB |
 | **v1.4.7** | `20` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Instant 1-Tap Kai AI Mode Entry, Signature ChatGPT Typography & Top-Level Stealth Anti-Tracking Engine: 1-tap direct launch into full Kai AI mode from homepage; authentic ChatGPT typography (Söhne & Söhne Mono fonts, code block headers with copy buttons); full-browser stealth anti-tracking shield (Canvas fingerprint poisoning, WebGL GPU cloaking, AudioContext jitter shield, Battery/Hardware normalization, WebRTC local LAN IP disclosure protection, strict referrer trimming, and over 35 stripped tracking parameters); strictly under 2 MB |
 | **v1.4.6** | `19` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Kai AI Stuck Fix, OpenAI-Compatible Chat Completions & Multimodal Reasoning: fixed stuck state by routing to OpenAI-compatible endpoint with structured multi-turn conversation memory; visual reasoning breakdown with expandable `🧠 View Reasoning Process`; ephemeral in-memory attachments (visual inspection reference & document text extraction up to 30 KB); live camera viewfinder & speech-to-text recognition; 25s watchdog timeout with 1-tap retry; strictly under 2 MB |
 | **v1.4.5** | `18` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Kai AI Multimodal Attachments, Voice & Camera Access: added anonymous file attachments (photos, code, text, documents), built-in live camera viewfinder modal with snapshot capture, and hands-free voice speech-to-text recognition; optimized multimodal personas (Auto, Deep Reasoning, Code & Logic, Creative Mind); ephemeral in-memory privacy; strictly under 2 MB |
@@ -43,7 +44,7 @@ Because no platform overrides were supplied prior to implementation, Kai targets
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Kai-v1.4.7.apk`](releases/Kai-v1.4.7.apk) and attached to GitHub Releases (`v1.4.7`).
+Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Kai-v1.4.8.apk`](releases/Kai-v1.4.8.apk) and attached to GitHub Releases (`v1.4.8`).
 
 ---
 

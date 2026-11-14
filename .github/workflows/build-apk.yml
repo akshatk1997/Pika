@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kai-v1.4.7.apk
+          cp "$APK_PATH" releases/Kai-v1.4.8.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kai-v1.4.7.apk
+          git add releases/Kai-v1.4.8.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kai-v1.4.7.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kai-v1.4.8.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.4.7
+      - name: Create or update GitHub Release v1.4.8
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kai-v1.4.7.apk)
-          NOTES="Kai Browser v1.4.7 (Build 20) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Instant 1-Tap Entry into Kai AI Mode:** Tapping on Kai AI on the homepage immediately and automatically opens full Kai AI mode with zero extra typing or steps.\n- **Signature ChatGPT Typography (Söhne & Söhne Mono):** Integrated ChatGPT font stack and typography in Kai AI mode with Söhne sans and mono fonts, clean ChatGPT message bubbles, code block headers with copy buttons, and refined markdown hierarchy.\n- **Top-Level Stealth Anti-Tracking & Anti-Breach Shield:** Built-in defenses protecting against Canvas poisoning/fingerprinting, WebGL GPU cloaking, AudioContext jitter protection, Battery status masking, Hardware concurrency & memory normalization, WebRTC local LAN IP disclosure protection, and strict cross-origin referrer policy.\n- **Supercharged Tracker & Telemetry Blocking:** Added detection for fingerprinting networks (fingerprint.com, clarity.ms, datadoghq.com, etc.) and expanded query parameter stripping to over 35 tracker parameters (gbraid, wbraid, gad_source, fbclid, si, etc.).\n- **Signed Release APK size:** ${SIZE_BYTES} bytes (strictly < 2 MB / 2,097,152 bytes).\n- **Checks:** \`:app:testDebugUnitTest\` (API 26 & 36, Phone & Tablet), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\` passed."
-          if gh release view v1.4.7 >/dev/null 2>&1; then
-            gh release upload v1.4.7 releases/Kai-v1.4.7.apk --clobber
-            gh release edit v1.4.7 --title "Kai v1.4.7 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kai-v1.4.8.apk)
+          NOTES="Kai Browser v1.4.8 (Build 21) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Frontier Multimodal Vision & Video Intelligence in Kai AI:** Upgraded Kai AI to Gemini 3.5 Flash Lite via OpenAI-compatible chat completions with native high-precision image analysis (OCR, handwritten formulas, diagrams, UI layouts) and multi-frame video keyframe comprehension.\n- **Optimized High-Res Image Ingestion:** Automatically scales large images on-the-fly to optimal resolution (max 1600px) with canvas compression, ensuring instant upload and deep visual accuracy without high latency.\n- **Sequential Video Keyframe Extraction:** Extract and analyze keyframes from video files (MP4, WebM, MOV) in-memory, giving Kai AI multi-timestamp visual understanding.\n- **Enhanced Voice Speech-to-Text Recognition:** Real-time interim voice dictation, continuous stream updates, and clean mic button interaction with zero server-side voice storage.\n- **Removed Redundant Camera Mode:** Removed camera modal viewfinder and buttons, streamlining the UI to a clean, minimal ChatGPT-style attachment experience.\n- **100% Anonymous & Zero Data Storage:** Ephemeral in-memory handling for all visuals and audio with 0 user accounts and 0 telemetry.\n- **Signed Release APK size:** ${SIZE_BYTES} bytes (strictly < 2 MB / 2,097,152 bytes).\n- **Checks:** \`:app:testDebugUnitTest\` (API 26 & 36, Phone & Tablet), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\` passed."
+          if gh release view v1.4.8 >/dev/null 2>&1; then
+            gh release upload v1.4.8 releases/Kai-v1.4.8.apk --clobber
+            gh release edit v1.4.8 --title "Kai v1.4.8 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.4.7 releases/Kai-v1.4.7.apk \
-              --title "Kai v1.4.7 (< 2 MB)" \
+            gh release create v1.4.8 releases/Kai-v1.4.8.apk \
+              --title "Kai v1.4.8 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

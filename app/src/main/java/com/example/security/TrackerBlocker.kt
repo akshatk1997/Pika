@@ -288,6 +288,7 @@ object TrackerBlocker {
     if (reqHost.isEmpty()) return false
     // Ensure Kai AI and inference endpoints as well as DuckDuckGo search are never blocked
     if (reqHost == "kai.ai" || reqHost.endsWith(".kai.ai") ||
+        reqHost == "generativelanguage.googleapis.com" ||
         reqHost == "text.pollinations.ai" || reqHost.endsWith(".pollinations.ai") ||
         reqHost == "duckduckgo.com" || reqHost.endsWith(".duckduckgo.com")) {
       return false
