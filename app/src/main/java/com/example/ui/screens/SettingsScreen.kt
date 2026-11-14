@@ -123,7 +123,7 @@ fun SettingsScreen(
       contentPadding = PaddingValues(16.dp),
       verticalArrangement = Arrangement.spacedBy(12.dp),
       horizontalAlignment = Alignment.CenterHorizontally,
-      modifier = Modifier.fillMaxSize().padding(padding)
+      modifier = Modifier.fillMaxSize().padding(padding).testTag("settings_list")
     ) {
       item {
         Card(

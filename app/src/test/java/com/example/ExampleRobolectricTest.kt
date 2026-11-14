@@ -2,11 +2,13 @@ package com.example
 
 import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.LocalBrowserDatabase
@@ -163,10 +165,14 @@ class ExampleRobolectricTest {
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("Version 1.5.0").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
-    composeTestRule.onNodeWithTag("setting_retain_tabs").performScrollTo().assertIsDisplayed()
-    composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
-    composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
-    composeTestRule.onNodeWithTag("setting_youtube_scale_fit").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("settings_list").performScrollToNode(hasTestTag("setting_data_saver"))
+    composeTestRule.onNodeWithTag("setting_data_saver").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("settings_list").performScrollToNode(hasTestTag("setting_background_play"))
+    composeTestRule.onNodeWithTag("setting_background_play").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("settings_list").performScrollToNode(hasTestTag("setting_youtube_scale_fit"))
+    composeTestRule.onNodeWithTag("setting_youtube_scale_fit").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("settings_list").performScrollToNode(hasTestTag("setting_retain_tabs"))
+    composeTestRule.onNodeWithTag("setting_retain_tabs").assertIsDisplayed()
     composeTestRule.onNodeWithTag("settings_back_button").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("Private browsing is active").assertDoesNotExist()
