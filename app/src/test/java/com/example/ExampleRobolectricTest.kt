@@ -38,8 +38,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.4.4", BuildConfig.VERSION_NAME)
-    assertEquals(17, BuildConfig.VERSION_CODE)
+    assertEquals("1.4.5", BuildConfig.VERSION_NAME)
+    assertEquals(18, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -157,7 +157,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.4.4").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.4.5").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_retain_tabs").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -327,11 +327,18 @@ class ExampleRobolectricTest {
     assertFalse(com.example.security.TrackerBlocker.shouldBlockRequest("https://kai.ai/chat", "kai.ai", true))
     assertFalse(com.example.security.TrackerBlocker.shouldBlockRequest("https://text.pollinations.ai/prompt", "kai.ai", true))
 
-    // Built-in KaiAiApp verification
+    // Built-in KaiAiApp verification with attachments, voice and camera access
     val context = ApplicationProvider.getApplicationContext<Context>()
     val html = com.example.ui.ai.KaiAiApp.getHtmlText(context)
     assertTrue(html.contains("Kai AI"))
     assertTrue(html.contains("Anonymous AI Workspace"))
     assertTrue(html.contains("100% Anonymous"))
+    assertTrue(html.contains("attach-btn"))
+    assertTrue(html.contains("camera-btn"))
+    assertTrue(html.contains("mic-btn"))
+    assertTrue(html.contains("camera-modal"))
+    assertTrue(html.contains("shutter-btn"))
+    assertTrue(html.contains("image_url"))
+    assertTrue(html.contains("SpeechRecognition"))
   }
 }

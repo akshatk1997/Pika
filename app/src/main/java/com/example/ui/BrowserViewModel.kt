@@ -150,6 +150,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   private var pendingFileChooserCallback: ValueCallback<Array<Uri>>? = null
   var onLaunchFileChooser: ((Array<String>?) -> Unit)? = null
+  var onRequestMediaPermissions: (() -> Unit)? = null
 
   private val approvedHttpHosts: MutableSet<String> = ConcurrentHashMap.newKeySet()
   private var bookmarkQuery = ""
@@ -1524,6 +1525,9 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     val cb = pendingPermissionCallback
     pendingPermissionCallback = null
     cb?.invoke(allowed)
+    if (allowed && prompt?.kind == WebPermissionKind.CAMERA_MIC) {
+      onRequestMediaPermissions?.invoke()
+    }
     if (prompt != null && rememberSite && !activeTab().isPrivate) {
       _sitePermissions.update { current ->
         val filtered = current.filterNot { it.origin == prompt.origin && it.kind == prompt.kind }

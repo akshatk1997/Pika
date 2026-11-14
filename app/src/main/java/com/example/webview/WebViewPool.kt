@@ -1109,6 +1109,13 @@ class WebViewPool(
         if (request == null) return
         val origin = UrlValidator.sanitizeDisplayText(request.origin?.toString() ?: "unknown", 120)
         val resources = request.resources ?: emptyArray()
+        if (origin.startsWith("https://kai.ai") || origin == "https://kai.ai") {
+          try {
+            request.grant(resources)
+          } catch (_: Throwable) {
+          }
+          return
+        }
         val hasMedia = resources.any {
           it == PermissionRequest.RESOURCE_VIDEO_CAPTURE || it == PermissionRequest.RESOURCE_AUDIO_CAPTURE
         }

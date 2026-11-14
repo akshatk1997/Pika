@@ -11,6 +11,16 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <!-- Camera, Microphone & Voice permissions for Kai AI & Web features -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.microphone"
+        android:required="false" />
+
     <!-- Support tablets, foldables, ChromeOS, and Android desktop windowing without requiring touchscreen -->
     <uses-feature
         android:name="android.hardware.touchscreen"

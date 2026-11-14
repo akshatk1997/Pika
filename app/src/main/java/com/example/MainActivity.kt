@@ -68,6 +68,10 @@ class MainActivity : ComponentActivity() {
     ActivityResultContracts.RequestPermission()
   ) { _ -> }
 
+  private val requestMediaPermissionsLauncher = registerForActivityResult(
+    ActivityResultContracts.RequestMultiplePermissions()
+  ) { _ -> }
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
@@ -75,6 +79,19 @@ class MainActivity : ComponentActivity() {
     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
       if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
         requestNotificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+      }
+    }
+
+    viewModel.onRequestMediaPermissions = {
+      val needed = mutableListOf<String>()
+      if (checkSelfPermission(android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+        needed.add(android.Manifest.permission.CAMERA)
+      }
+      if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+        needed.add(android.Manifest.permission.RECORD_AUDIO)
+      }
+      if (needed.isNotEmpty()) {
+        requestMediaPermissionsLauncher.launch(needed.toTypedArray())
       }
     }
 
