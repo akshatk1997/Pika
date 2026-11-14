@@ -170,7 +170,6 @@ fun SettingsScreen(
             }
           }
         }
-      }
 
       SettingsSectionCard("General & Search", Modifier.widthIn(max = 720.dp)) {
           Text("Search engine", style = MaterialTheme.typography.titleMedium)
@@ -268,7 +267,6 @@ fun SettingsScreen(
             }
           }
         }
-      }
 
       SettingsSectionCard("Data Saver & Bandwidth", Modifier.widthIn(max = 720.dp)) {
           SettingSwitchRow(
@@ -287,7 +285,6 @@ fun SettingsScreen(
             onCheckedChange = { v -> onUpdateSettings { it.copy(noImageMode = v) } }
           )
         }
-      }
 
       SettingsSectionCard("Media & YouTube Playback", Modifier.widthIn(max = 720.dp)) {
           SettingSwitchRow(
@@ -319,7 +316,6 @@ fun SettingsScreen(
             }
           }
         }
-      }
 
       SettingsSectionCard("Tabs & Session", Modifier.widthIn(max = 720.dp)) {
           SettingSwitchRow(
@@ -330,7 +326,6 @@ fun SettingsScreen(
             onCheckedChange = { v -> onUpdateSettings { it.copy(retainOpenTabs = v) } }
           )
         }
-      }
 
       SettingsSectionCard("Appearance & Display", Modifier.widthIn(max = 720.dp)) {
           Text("Theme", style = MaterialTheme.typography.titleMedium)
@@ -376,7 +371,6 @@ fun SettingsScreen(
             valueRange = 75f..200f
           )
         }
-      }
 
       SettingsSectionCard("Privacy & Security", Modifier.widthIn(max = 720.dp)) {
           SettingSwitchRow(
@@ -478,7 +472,6 @@ fun SettingsScreen(
             }
           }
         }
-      }
 
       if (sitePermissions.isNotEmpty()) {
         SettingsSectionCard("Site permissions", Modifier.widthIn(max = 720.dp)) {
