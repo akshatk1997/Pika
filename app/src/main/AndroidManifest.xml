@@ -26,6 +26,16 @@
         android:name="android.hardware.touchscreen"
         android:required="false" />
 
+    <!-- Speech recognition queries for Android 11+ (API 30+) package visibility -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"

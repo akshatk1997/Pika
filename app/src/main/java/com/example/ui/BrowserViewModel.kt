@@ -151,6 +151,11 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   private var pendingFileChooserCallback: ValueCallback<Array<Uri>>? = null
   var onLaunchFileChooser: ((Array<String>?) -> Unit)? = null
   var onRequestMediaPermissions: (() -> Unit)? = null
+  var onAudioPermissionRequested: (() -> Unit)? = null
+
+  fun onAudioPermissionGranted() {
+    webViewPool.notifyAudioPermissionGranted()
+  }
 
   private val approvedHttpHosts: MutableSet<String> = ConcurrentHashMap.newKeySet()
   private var bookmarkQuery = ""
@@ -438,6 +443,12 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     override fun onLongPressLink(tabId: String, url: String, isImage: Boolean) {
       runOnMain {
         _linkContextTarget.value = LinkContextTarget(url = url, isImage = isImage)
+      }
+    }
+
+    override fun onAudioPermissionNeeded() {
+      runOnMain {
+        onAudioPermissionRequested?.invoke()
       }
     }
   }

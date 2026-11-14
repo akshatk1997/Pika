@@ -6,6 +6,7 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.content.MutableContextWrapper
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -93,9 +94,8 @@ class KaiVoiceBridge(
           arrayOf(android.Manifest.permission.RECORD_AUDIO),
           REQUEST_CODE_RECORD_AUDIO
         )
-      } else {
-        onPermissionNeeded?.invoke()
       }
+      onPermissionNeeded?.invoke()
     }
   }
 
@@ -103,89 +103,112 @@ class KaiVoiceBridge(
   fun startListening() {
     if (!isAuthorizedCaller()) return
     mainHandler.post {
-      val ctx = getContext() ?: return@post
+      val ctx = getActivity() ?: getContext() ?: return@post
 
       if (!hasPermission()) {
         requestPermission()
-        notifyError("Microphone permission required. Please grant permission.")
+        evaluateJs("if(window.__kaiVoiceOnPermissionNeeded){window.__kaiVoiceOnPermissionNeeded();}")
         return@post
       }
 
-      if (!SpeechRecognizer.isRecognitionAvailable(ctx)) {
-        notifyError("Speech recognition is not available on this device.")
+      var recognizer: SpeechRecognizer? = null
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        try {
+          if (SpeechRecognizer.isOnDeviceRecognitionAvailable(ctx)) {
+            recognizer = SpeechRecognizer.createOnDeviceSpeechRecognizer(ctx)
+          }
+        } catch (_: Throwable) {
+        }
+      }
+
+      if (recognizer == null) {
+        try {
+          recognizer = SpeechRecognizer.createSpeechRecognizer(ctx)
+        } catch (_: Throwable) {
+        }
+      }
+
+      if (recognizer == null) {
+        val safeMsg = JSONObject.quote("Speech recognition service not initialized on this device.")
+        evaluateJs("if(window.__kaiVoiceOnError){window.__kaiVoiceOnError($safeMsg, 99);}")
         return@post
+      }
+
+      destroyRecognizerInternal()
+      speechRecognizer = recognizer
+
+      recognizer.setRecognitionListener(object : RecognitionListener {
+        override fun onReadyForSpeech(params: Bundle?) {
+          isListening = true
+          notifyStart()
+        }
+
+        override fun onBeginningOfSpeech() {}
+
+        override fun onRmsChanged(rmsdB: Float) {
+          evaluateJs("if(window.__kaiVoiceOnRmsChanged){window.__kaiVoiceOnRmsChanged($rmsdB);}")
+        }
+
+        override fun onBufferReceived(buffer: ByteArray?) {}
+
+        override fun onEndOfSpeech() {}
+
+        override fun onError(error: Int) {
+          isListening = false
+          val message = when (error) {
+            SpeechRecognizer.ERROR_AUDIO -> "Audio recording error"
+            SpeechRecognizer.ERROR_CLIENT -> "Client speech recognition error"
+            SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Microphone permission required"
+            SpeechRecognizer.ERROR_NETWORK -> "Network error during speech recognition"
+            SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Network timeout"
+            SpeechRecognizer.ERROR_NO_MATCH -> "No speech detected"
+            SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Recognition service busy"
+            SpeechRecognizer.ERROR_SERVER -> "Recognition server error"
+            SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "No speech input received"
+            else -> "Speech recognition error ($error)"
+          }
+          val safeMsg = JSONObject.quote(message)
+          evaluateJs("if(window.__kaiVoiceOnError){window.__kaiVoiceOnError($safeMsg, $error);}")
+          destroyRecognizerInternal()
+          notifyEnd()
+        }
+
+        override fun onResults(results: Bundle?) {
+          isListening = false
+          val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+          val transcript = matches?.firstOrNull() ?: ""
+          notifyResult(transcript, isFinal = true)
+          destroyRecognizerInternal()
+          notifyEnd()
+        }
+
+        override fun onPartialResults(partialResults: Bundle?) {
+          val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+          val transcript = matches?.firstOrNull() ?: ""
+          if (transcript.isNotEmpty()) {
+            notifyResult(transcript, isFinal = false)
+          }
+        }
+
+        override fun onEvent(eventType: Int, params: Bundle?) {}
+      })
+
+      val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+        putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+        putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+        putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toLanguageTag())
+        putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, ctx.packageName)
+        putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
+        putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1200L)
       }
 
       try {
-        destroyRecognizerInternal()
-        val recognizer = SpeechRecognizer.createSpeechRecognizer(ctx)
-        speechRecognizer = recognizer
-
-        recognizer.setRecognitionListener(object : RecognitionListener {
-          override fun onReadyForSpeech(params: Bundle?) {
-            isListening = true
-            notifyStart()
-          }
-
-          override fun onBeginningOfSpeech() {}
-
-          override fun onRmsChanged(rmsdB: Float) {}
-
-          override fun onBufferReceived(buffer: ByteArray?) {}
-
-          override fun onEndOfSpeech() {}
-
-          override fun onError(error: Int) {
-            isListening = false
-            val message = when (error) {
-              SpeechRecognizer.ERROR_AUDIO -> "Audio recording error"
-              SpeechRecognizer.ERROR_CLIENT -> "Client speech error"
-              SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Microphone permission required"
-              SpeechRecognizer.ERROR_NETWORK -> "Network error during speech recognition"
-              SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Network timeout"
-              SpeechRecognizer.ERROR_NO_MATCH -> "No speech detected"
-              SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Recognition service busy"
-              SpeechRecognizer.ERROR_SERVER -> "Recognition server error"
-              SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "No speech input received"
-              else -> "Speech error ($error)"
-            }
-            notifyError(message)
-            destroyRecognizerInternal()
-            notifyEnd()
-          }
-
-          override fun onResults(results: Bundle?) {
-            isListening = false
-            val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-            val transcript = matches?.firstOrNull() ?: ""
-            notifyResult(transcript, isFinal = true)
-            destroyRecognizerInternal()
-            notifyEnd()
-          }
-
-          override fun onPartialResults(partialResults: Bundle?) {
-            val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-            val transcript = matches?.firstOrNull() ?: ""
-            if (transcript.isNotEmpty()) {
-              notifyResult(transcript, isFinal = false)
-            }
-          }
-
-          override fun onEvent(eventType: Int, params: Bundle?) {}
-        })
-
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-          putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-          putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-          putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
-          putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toLanguageTag())
-          putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, ctx.packageName)
-        }
-
         recognizer.startListening(intent)
       } catch (t: Throwable) {
         isListening = false
-        notifyError("Failed to start voice recognition: ${t.message ?: "unknown"}")
+        val safeMsg = JSONObject.quote("Failed to start voice recognition: ${t.message ?: "unknown"}")
+        evaluateJs("if(window.__kaiVoiceOnError){window.__kaiVoiceOnError($safeMsg, 0);}")
         destroyRecognizerInternal()
         notifyEnd()
       }

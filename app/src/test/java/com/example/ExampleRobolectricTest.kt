@@ -38,8 +38,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.5.2", BuildConfig.VERSION_NAME)
-    assertEquals(25, BuildConfig.VERSION_CODE)
+    assertEquals("1.5.3", BuildConfig.VERSION_NAME)
+    assertEquals(26, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -161,7 +161,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.5.2").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.5.3").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -410,24 +410,36 @@ class ExampleRobolectricTest {
 
     // 1. Verify KaiVoiceBridge constants and instance behavior
     assertEquals("KaiVoice", com.example.ui.ai.KaiVoiceBridge.JS_INTERFACE_NAME)
+    var permNeededCalled = false
     val testWv = android.webkit.WebView(context)
-    val bridge = com.example.ui.ai.KaiVoiceBridge(java.lang.ref.WeakReference(testWv))
+    val bridge = com.example.ui.ai.KaiVoiceBridge(
+      java.lang.ref.WeakReference(testWv),
+      onPermissionNeeded = { permNeededCalled = true }
+    )
     // Under Robolectric, audio permission is not granted by default
     assertFalse(bridge.hasPermission())
-    // Methods can be called safely without exceptions
     bridge.requestPermission()
+    assertTrue(permNeededCalled)
+    // Methods can be called safely without exceptions
     bridge.stopListening()
     bridge.cancel()
     bridge.cleanup()
 
-    // 2. Verify kai.html includes all required multimodal and voice elements
+    // 2. Verify kai.html includes all required multimodal, dual-engine voice, and UI elements
     val html = com.example.ui.ai.KaiAiApp.getHtmlText(context)
-    // Voice mic integration
+    // Voice mic integration & dual-engine audio capture
     assertTrue(html.contains("KaiVoice"))
     assertTrue(html.contains("__kaiVoiceOnStart"))
     assertTrue(html.contains("__kaiVoiceOnResult"))
     assertTrue(html.contains("__kaiVoiceOnError"))
     assertTrue(html.contains("__kaiVoiceOnEnd"))
+    assertTrue(html.contains("__kaiVoiceOnRmsChanged"))
+    assertTrue(html.contains("__kaiVoiceOnPermissionGranted"))
+    assertTrue(html.contains("__kaiVoiceOnPermissionNeeded"))
+    assertTrue(html.contains("startAudioRecording"))
+    assertTrue(html.contains("stopAudioRecording"))
+    assertTrue(html.contains("voice-done-btn"))
+    assertTrue(html.contains("voice-wave"))
 
     // PPT & PPTX presentation analysis
     assertTrue(html.contains("parsePresentationFile"))
@@ -523,5 +535,19 @@ class ExampleRobolectricTest {
     assertTrue(pool.resolveIsDark(darkSettings))
     val lightSettings = SettingsState(themeMode = com.example.model.ThemeMode.LIGHT)
     assertFalse(pool.resolveIsDark(lightSettings))
+  }
+
+  @Test
+  fun manifestSpeechRecognitionQueriesVerified() {
+    val manifestFile = listOf(
+      java.io.File("src/main/AndroidManifest.xml"),
+      java.io.File("app/src/main/AndroidManifest.xml")
+    ).firstOrNull { it.exists() }
+    assertNotNull("AndroidManifest.xml should exist", manifestFile)
+    val manifestContent = manifestFile!!.readText()
+    assertTrue(manifestContent.contains("android.permission.RECORD_AUDIO"))
+    assertTrue(manifestContent.contains("<queries>"))
+    assertTrue(manifestContent.contains("android.speech.RecognitionService"))
+    assertTrue(manifestContent.contains("android.speech.action.RECOGNIZE_SPEECH"))
   }
 }

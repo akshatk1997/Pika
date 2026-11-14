@@ -69,6 +69,7 @@ interface WebViewCallbacks {
   fun onFindMatches(tabId: String, activeOrdinal: Int, numberOfMatches: Int)
   fun onFullscreenChanged(tabId: String, customView: View?, callback: WebChromeClient.CustomViewCallback?)
   fun onLongPressLink(tabId: String, url: String, isImage: Boolean)
+  fun onAudioPermissionNeeded() {}
 }
 
 /**
@@ -322,6 +323,16 @@ class WebViewPool(
       applyBackgroundPlay(wv, settingsState.backgroundPlayEnabled)
       applyYouTubeScaleMode(wv, settingsState.youtubeScaleMode)
       applyDataSaver(wv, settingsState.dataSaverEnabled)
+    }
+  }
+
+  fun notifyAudioPermissionGranted() {
+    for ((_, wv) in liveViews) {
+      if (destroyedViews.contains(wv)) continue
+      try {
+        wv.evaluateJavascript("if(window.__kaiVoiceOnPermissionGranted){window.__kaiVoiceOnPermissionGranted();}", null)
+      } catch (_: Throwable) {
+      }
     }
   }
 
@@ -1135,7 +1146,10 @@ class WebViewPool(
     applySettings(webView, isPrivate, userAgentMode, settingsProvider())
 
     try {
-      val voiceBridge = KaiVoiceBridge(java.lang.ref.WeakReference(webView))
+      val voiceBridge = KaiVoiceBridge(
+        java.lang.ref.WeakReference(webView),
+        onPermissionNeeded = { callbacks.onAudioPermissionNeeded() }
+      )
       webView.addJavascriptInterface(voiceBridge, KaiVoiceBridge.JS_INTERFACE_NAME)
     } catch (_: Throwable) {
     }

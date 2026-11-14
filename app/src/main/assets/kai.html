@@ -723,11 +723,57 @@
     justify-content: space-between;
     background: rgba(99, 102, 241, 0.15);
     border: 1px solid rgba(99, 102, 241, 0.35);
-    border-radius: 10px;
-    padding: 6px 12px;
-    font-size: 0.8rem;
+    border-radius: 12px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
     color: #A5B4FC;
     font-family: var(--font-sans);
+  }
+  [data-theme="light"] .voice-banner {
+    background: rgba(2, 132, 199, 0.10);
+    border-color: rgba(2, 132, 199, 0.3);
+    color: #0369A1;
+  }
+  .voice-wave {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    height: 14px;
+    margin-right: 6px;
+  }
+  .voice-wave .bar {
+    width: 3px;
+    height: 6px;
+    background: #EF4444;
+    border-radius: 2px;
+    transition: height 0.08s ease;
+  }
+  .voice-banner.recording .voice-wave .bar:nth-child(1) { animation: wavePulse 0.6s infinite ease-in-out alternate; }
+  .voice-banner.recording .voice-wave .bar:nth-child(2) { animation: wavePulse 0.8s infinite ease-in-out alternate 0.15s; }
+  .voice-banner.recording .voice-wave .bar:nth-child(3) { animation: wavePulse 0.5s infinite ease-in-out alternate 0.3s; }
+  .voice-banner.recording .voice-wave .bar:nth-child(4) { animation: wavePulse 0.7s infinite ease-in-out alternate 0.45s; }
+  @keyframes wavePulse {
+    0% { height: 4px; }
+    100% { height: 14px; }
+  }
+  .voice-done-btn {
+    background: var(--accent);
+    color: #070B14;
+    border: none;
+    border-radius: 14px;
+    padding: 3px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: transform 0.15s ease;
+  }
+  .voice-done-btn:hover {
+    transform: scale(1.05);
   }
   .voice-pulse {
     display: inline-block;
@@ -903,10 +949,21 @@
     <button class="attach-remove-btn" id="attach-remove-btn" title="Remove attachment">&times;</button>
   </div>
 
-  <!-- Voice Input Banner -->
+  <!-- Voice Input & Recording Banner -->
   <div class="voice-banner" id="voice-banner">
-    <div><span class="voice-pulse"></span><span id="voice-status">Listening... Speak now</span></div>
-    <button class="attach-remove-btn" id="voice-cancel-btn" style="color:#A5B4FC; font-size:1rem;">&times;</button>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span class="voice-wave" id="voice-wave">
+        <span class="bar"></span>
+        <span class="bar"></span>
+        <span class="bar"></span>
+        <span class="bar"></span>
+      </span>
+      <span id="voice-status">Listening & Recording... Speak now</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <button class="voice-done-btn" id="voice-done-btn" title="Finish and Send to Kai AI">&#10003; Send</button>
+      <button class="attach-remove-btn" id="voice-cancel-btn" title="Cancel">&times;</button>
+    </div>
   </div>
 
   <div class="footer-row">
@@ -1903,37 +1960,173 @@
 
   attachRemoveBtn.addEventListener('click', clearAttachment);
 
-  // --- NATIVE & WEB SPEECH RECOGNITION ---
-  const hasNativeVoice = Boolean(window.KaiVoice && typeof window.KaiVoice.startListening === 'function');
+  // --- NATIVE & WEB SPEECH RECOGNITION + DUAL-ENGINE AUDIO RECORDING ---
+  let isListening = false;
+  let voiceMediaStream = null;
+  let voiceMediaRecorder = null;
+  let voiceAudioChunks = [];
+  let voiceRecordStartTime = 0;
+  let voiceSilenceTimer = null;
+  let voiceHasSpokenText = false;
+  let voiceRecognitionActive = false;
+  const voiceDoneBtn = document.getElementById('voice-done-btn');
+  const voiceWave = document.getElementById('voice-wave');
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognition = null;
+
+  async function startAudioRecording() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+    try {
+      voiceAudioChunks = [];
+      voiceRecordStartTime = Date.now();
+      voiceMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      let mimeType = 'audio/webm';
+      if (window.MediaRecorder) {
+        if (!MediaRecorder.isTypeSupported('audio/webm')) {
+          if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
+          else if (MediaRecorder.isTypeSupported('audio/aac')) mimeType = 'audio/aac';
+          else mimeType = '';
+        }
+      }
+      const options = mimeType ? { mimeType } : {};
+      voiceMediaRecorder = new MediaRecorder(voiceMediaStream, options);
+      voiceMediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          voiceAudioChunks.push(e.data);
+        }
+      };
+      voiceMediaRecorder.start(250);
+    } catch (e) {
+      console.warn('Audio capture warning:', e);
+    }
+  }
+
+  async function stopAudioRecording(shouldAttach) {
+    if (voiceMediaRecorder && voiceMediaRecorder.state !== 'inactive') {
+      try { voiceMediaRecorder.stop(); } catch (_) {}
+    }
+    if (voiceMediaStream) {
+      try { voiceMediaStream.getTracks().forEach(t => t.stop()); } catch (_) {}
+      voiceMediaStream = null;
+    }
+    if (!shouldAttach || voiceAudioChunks.length === 0) {
+      voiceAudioChunks = [];
+      return null;
+    }
+    const durationSec = Math.max(1, (Date.now() - voiceRecordStartTime) / 1000);
+    const mimeType = (voiceMediaRecorder && voiceMediaRecorder.mimeType) || 'audio/webm';
+    const audioBlob = new Blob(voiceAudioChunks, { type: mimeType });
+    voiceAudioChunks = [];
+    if (audioBlob.size < 400) return null;
+
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const dataUrl = reader.result;
+        let analysisSummary = 'Recorded Spoken Voice Audio: ~' + durationSec.toFixed(1) + 's duration.';
+        try {
+          const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          const ab = await audioBlob.arrayBuffer();
+          const decoded = await audioCtx.decodeAudioData(ab.slice(0));
+          const channelData = decoded.getChannelData(0);
+          let sumSquares = 0;
+          let peak = 0;
+          for (let i = 0; i < channelData.length; i++) {
+            const val = Math.abs(channelData[i]);
+            if (val > peak) peak = val;
+            sumSquares += val * val;
+          }
+          const rms = Math.sqrt(sumSquares / channelData.length);
+          analysisSummary = [
+            'Acoustic Spoken Voice Profile:',
+            '- Duration: ~' + decoded.duration.toFixed(1) + 's',
+            '- Sampling Rate: ' + decoded.sampleRate + ' Hz',
+            '- Peak Amplitude: ' + peak.toFixed(2),
+            '- Spoken RMS Energy: ' + rms.toFixed(4)
+          ].join('\n');
+          try { audioCtx.close(); } catch(_) {}
+        } catch (_) {}
+
+        resolve({
+          type: 'audio',
+          name: 'Voice Query (' + Math.round(durationSec) + 's)',
+          size: formatSize(audioBlob.size),
+          duration: durationSec,
+          audioAnalysis: analysisSummary,
+          dataUrl: dataUrl,
+          blob: audioBlob
+        });
+      };
+      reader.readAsDataURL(audioBlob);
+    });
+  }
 
   // Hook Native Android SpeechRecognizer Callbacks
   window.__kaiVoiceOnStart = () => {
     isListening = true;
+    voiceRecognitionActive = true;
     micBtn.classList.add('active');
     voiceBanner.style.display = 'flex';
-    voiceStatus.textContent = 'Listening... Speak now';
+    voiceBanner.classList.add('recording');
+    voiceStatus.textContent = 'Listening & Recording... Speak now';
   };
 
   window.__kaiVoiceOnResult = (spoken, isFinal) => {
     if (spoken) {
+      voiceHasSpokenText = true;
       input.value = spoken;
       input.style.height = 'auto';
       input.style.height = Math.min(input.scrollHeight, 110) + 'px';
-      voiceStatus.textContent = (isFinal ? 'Heard: "' : 'Listening: "') + spoken.slice(-30) + '"';
+      voiceStatus.textContent = (isFinal ? 'Understood: "' : 'Listening: "') + spoken.slice(-30) + '"';
       if (isFinal) {
-        setTimeout(stopVoice, 500);
+        if (voiceSilenceTimer) clearTimeout(voiceSilenceTimer);
+        voiceSilenceTimer = setTimeout(() => {
+          stopVoice(true);
+        }, 1200);
       }
     }
   };
 
-  window.__kaiVoiceOnError = (errorMsg) => {
-    voiceStatus.textContent = errorMsg || 'Speech recognition stopped';
-    setTimeout(stopVoice, 2000);
+  window.__kaiVoiceOnRmsChanged = (rmsdB) => {
+    if (voiceWave) {
+      const bars = voiceWave.querySelectorAll('.bar');
+      const normalized = Math.max(4, Math.min(16, (rmsdB + 2) * 2));
+      bars.forEach((bar, idx) => {
+        bar.style.height = Math.max(4, normalized * (0.6 + idx * 0.2)) + 'px';
+      });
+    }
+  };
+
+  window.__kaiVoiceOnPermissionNeeded = () => {
+    voiceStatus.textContent = 'Please allow microphone access in system prompt...';
+  };
+
+  window.__kaiVoiceOnPermissionGranted = () => {
+    startVoice();
+  };
+
+  window.__kaiVoiceOnError = (errorMsg, errorCode) => {
+    if (errorCode === 7 || errorCode === 6) { // NO_MATCH or SPEECH_TIMEOUT
+      if (voiceHasSpokenText) {
+        stopVoice(true);
+        return;
+      }
+    }
+    voiceRecognitionActive = false;
+    if (voiceMediaRecorder && voiceMediaRecorder.state === 'recording') {
+      voiceStatus.textContent = 'Recording voice note... Tap Send when done';
+    } else {
+      voiceStatus.textContent = errorMsg || 'Speech recognition stopped';
+      setTimeout(() => stopVoice(false), 2000);
+    }
   };
 
   window.__kaiVoiceOnEnd = () => {
-    stopVoice();
+    if (!isListening) return;
+    if (voiceSilenceTimer) clearTimeout(voiceSilenceTimer);
+    voiceSilenceTimer = setTimeout(() => {
+      stopVoice(voiceHasSpokenText);
+    }, 600);
   };
 
   if (SpeechRec) {
@@ -1945,9 +2138,11 @@
 
       recognition.onstart = () => {
         isListening = true;
+        voiceRecognitionActive = true;
         micBtn.classList.add('active');
         voiceBanner.style.display = 'flex';
-        voiceStatus.textContent = 'Listening... Speak now';
+        voiceBanner.classList.add('recording');
+        voiceStatus.textContent = 'Listening & Recording... Speak now';
       };
 
       recognition.onresult = (event) => {
@@ -1962,63 +2157,121 @@
         }
         const spoken = finalTranscript || interim;
         if (spoken) {
+          voiceHasSpokenText = true;
           input.value = spoken;
           input.style.height = 'auto';
           input.style.height = Math.min(input.scrollHeight, 110) + 'px';
           voiceStatus.textContent = 'Heard: "' + spoken.slice(-30) + '"';
+          if (finalTranscript) {
+            if (voiceSilenceTimer) clearTimeout(voiceSilenceTimer);
+            voiceSilenceTimer = setTimeout(() => {
+              stopVoice(true);
+            }, 1200);
+          }
         }
       };
 
       recognition.onerror = () => {
-        stopVoice();
+        voiceRecognitionActive = false;
+        if (!voiceMediaRecorder || voiceMediaRecorder.state === 'inactive') {
+          stopVoice(false);
+        }
       };
 
       recognition.onend = () => {
-        stopVoice();
+        if (voiceSilenceTimer) clearTimeout(voiceSilenceTimer);
+        voiceSilenceTimer = setTimeout(() => {
+          stopVoice(voiceHasSpokenText);
+        }, 600);
       };
     } catch (_) {}
   }
 
-  function stopVoice() {
-    isListening = false;
-    micBtn.classList.remove('active');
-    voiceBanner.style.display = 'none';
-    if (window.KaiVoice && typeof window.KaiVoice.stopListening === 'function') {
-      try { window.KaiVoice.stopListening(); } catch (_) {}
-    }
-    if (recognition) {
-      try { recognition.stop(); } catch(e) {}
-    }
-  }
+  async function startVoice() {
+    if (isListening) return;
+    isListening = true;
+    voiceHasSpokenText = false;
+    micBtn.classList.add('active');
+    voiceBanner.style.display = 'flex';
+    voiceBanner.classList.add('recording');
+    voiceStatus.textContent = 'Listening & Recording... Speak now';
 
-  micBtn.addEventListener('click', () => {
-    if (isListening) {
-      stopVoice();
-      return;
-    }
-    // Prefer native Android SpeechRecognizer bridge
-    if (window.KaiVoice && typeof window.KaiVoice.startListening === 'function') {
+    // Start background audio capture
+    startAudioRecording();
+
+    // Check permission with native bridge
+    if (window.KaiVoice && typeof window.KaiVoice.hasPermission === 'function') {
+      if (!window.KaiVoice.hasPermission()) {
+        window.KaiVoice.requestPermission();
+        voiceStatus.textContent = 'Please allow microphone access...';
+        return;
+      }
       try {
         window.KaiVoice.startListening();
         return;
       } catch (_) {}
     }
+
     // Fallback to web SpeechRecognition
     if (recognition) {
       try {
         recognition.start();
         return;
       } catch (err) {
-        stopVoice();
-        return;
+        if (!voiceMediaRecorder || voiceMediaRecorder.state === 'inactive') {
+          stopVoice(false);
+        }
       }
     }
-    voiceBanner.style.display = 'flex';
-    voiceStatus.textContent = 'Microphone permission or speech recognition required';
-    setTimeout(stopVoice, 2500);
+  }
+
+  async function stopVoice(shouldSend = false) {
+    if (voiceSilenceTimer) clearTimeout(voiceSilenceTimer);
+    isListening = false;
+    micBtn.classList.remove('active');
+    voiceBanner.style.display = 'none';
+    voiceBanner.classList.remove('recording');
+
+    if (window.KaiVoice && typeof window.KaiVoice.stopListening === 'function') {
+      try { window.KaiVoice.stopListening(); } catch (_) {}
+    }
+    if (recognition) {
+      try { recognition.stop(); } catch (_) {}
+    }
+
+    const recordedAudio = await stopAudioRecording(true);
+    if (recordedAudio) {
+      currentAttachment = recordedAudio;
+      showAttachmentTray();
+      if (!input.value.trim()) {
+        input.value = 'Please listen to, understand, and answer my recorded voice question.';
+      }
+    }
+
+    if (shouldSend && input.value.trim() && !isGenerating) {
+      handleSend();
+    }
+  }
+
+  micBtn.addEventListener('click', () => {
+    if (isListening) {
+      stopVoice(true);
+    } else {
+      startVoice();
+    }
   });
 
-  voiceCancelBtn.addEventListener('click', stopVoice);
+  if (voiceDoneBtn) {
+    voiceDoneBtn.addEventListener('click', () => {
+      stopVoice(true);
+    });
+  }
+
+  if (voiceCancelBtn) {
+    voiceCancelBtn.addEventListener('click', () => {
+      stopVoice(false);
+    });
+  }
 
   // Quick suggestions
   function sendQuickPrompt(txt) {
@@ -2129,11 +2382,12 @@
       chip.className = 'msg-doc-chip audio';
       chip.innerHTML = '&#127911; [AUDIO] ' + escapeHtml(attachment.name) + ' (' + attachment.size + (attachment.duration ? ', ~' + Math.round(attachment.duration) + 's' : '') + ')';
       bubble.appendChild(chip);
-      if (attachment.audioUrl) {
+      const audioSrc = attachment.audioUrl || attachment.dataUrl;
+      if (audioSrc) {
         const audioEl = document.createElement('audio');
         audioEl.className = 'msg-audio-player';
         audioEl.controls = true;
-        audioEl.src = attachment.audioUrl;
+        audioEl.src = audioSrc;
         bubble.appendChild(audioEl);
       }
     } else if (attachment && attachment.type === 'doc') {
@@ -2251,9 +2505,13 @@
         textOnlySummary = pptPrompt;
         userPayloadContent = pptPrompt;
       } else if (attachment && attachment.type === 'audio') {
-        const audioPrompt = '[Attached Audio File: "' + attachment.name + '" (' + attachment.size + (attachment.duration ? ', ~' + Math.round(attachment.duration) + 's' : '') + ')]\n' +
+        const isVoice = attachment.name && attachment.name.startsWith('Voice Query');
+        const defaultPrompt = isVoice
+          ? 'Please listen to, understand, and answer the question asked in this recorded voice message with full accuracy.'
+          : 'Please analyze this audio file, its acoustic structure, tempo, speech dynamics, and provide a comprehensive explanation.';
+        const audioPrompt = '[' + (isVoice ? 'Recorded Spoken Voice Query' : 'Attached Audio File') + ': "' + attachment.name + '" (' + attachment.size + (attachment.duration ? ', ~' + Math.round(attachment.duration) + 's' : '') + ')]\n' +
                             (attachment.audioAnalysis || '') + '\n\n' +
-                            (text || 'Please analyze this audio file, its acoustic structure, tempo, speech dynamics, and provide a comprehensive explanation.');
+                            (text || defaultPrompt);
         textOnlySummary = audioPrompt;
         userPayloadContent = audioPrompt;
       } else if (attachment && attachment.type === 'doc') {

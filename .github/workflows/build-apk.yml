@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kai-v1.5.2.apk
+          cp "$APK_PATH" releases/Kai-v1.5.3.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kai-v1.5.2.apk
+          git add releases/Kai-v1.5.3.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kai-v1.5.2.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kai-v1.5.3.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.5.2
+      - name: Create or update GitHub Release v1.5.3
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kai-v1.5.2.apk)
-          NOTES="Kai Browser v1.5.2 (Build 25) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **YouTube Video Display Fix:** Fixed black screen on switching YouTube scale modes (\`fit\`, \`stretched\`, \`original\`) by removing hardware layer clip constraints, normalizing positioning transforms, and adding MutationObserver to maintain video rendering continuously.\n- **Truly Functional Data Saver Mode:** Bandwidth-saving engine injecting \`Save-Data: on\`, blocking speculatively fetched \`prefetch\`/\`prerender\` requests and telemetry beacons, enforcing \`LOAD_CACHE_ELSE_NETWORK\`, disabling media preload & autoplay, and optimizing video quality.\n- **Removed Header Badge:** Removed \`100% Anonymous\` label from the Kai AI top header for a cleaner, modern look.\n- **Kai AI Dark & Light Mode:** Added ChatGPT-grade light mode theme alongside signature cosmic dark mode, with an interactive in-app theme toggle button and persistence.\n- **1-Tap Unified Dark & Light Mode:** Seamless 1-tap switching between Light, Dark, and Dynamic themes across the app UI, search engines (Google, DuckDuckGo, Startpage), all websites, and Kai AI simultaneously.\n- **Strictly Under 2 MB Footprint:** Release APK remains strictly under 2 MB (~1.46 MB).\n- **Checks Passed:** \`:app:testDebugUnitTest\` (API 26 & 36), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\`."
-          if gh release view v1.5.2 >/dev/null 2>&1; then
-            gh release upload v1.5.2 releases/Kai-v1.5.2.apk --clobber
-            gh release edit v1.5.2 --title "Kai v1.5.2 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kai-v1.5.3.apk)
+          NOTES="Kai Browser v1.5.3 (Build 26) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Voice Mic Recording & Recognition Overhaul:** Fixed voice input by adding Android 11+ package visibility queries for \`SpeechRecognizer\` services, resilient Activity/Context resolution, and automatic permission grant callbacks.\n- **Dual-Engine Voice Architecture:** Simultaneously runs real-time speech-to-text and live \`MediaRecorder\` audio capture, ensuring that spoken queries are never lost even if speech recognition is unavailable or offline.\n- **Acoustic Voice Understanding:** Analyzes recorded voice duration, sampling rate, peak amplitude, and spoken RMS energy, attaching voice clips seamlessly with in-line audio playback and prompting Kai AI to listen and answer.\n- **Live Audio Waveform & Done/Send Controls:** Visual audio waveform pulses with speech loudness, with 1-tap finish & send or auto-send on silence.\n- **Strictly Under 2 MB Footprint:** Release APK remains strictly under 2 MB (~1.46 MB).\n- **Checks Passed:** \`:app:testDebugUnitTest\` (API 26 & 36), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\`."
+          if gh release view v1.5.3 >/dev/null 2>&1; then
+            gh release upload v1.5.3 releases/Kai-v1.5.3.apk --clobber
+            gh release edit v1.5.3 --title "Kai v1.5.3 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.5.2 releases/Kai-v1.5.2.apk \
-              --title "Kai v1.5.2 (< 2 MB)" \
+            gh release create v1.5.3 releases/Kai-v1.5.3.apk \
+              --title "Kai v1.5.3 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

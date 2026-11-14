@@ -70,7 +70,19 @@ class MainActivity : ComponentActivity() {
 
   private val requestMediaPermissionsLauncher = registerForActivityResult(
     ActivityResultContracts.RequestMultiplePermissions()
-  ) { _ -> }
+  ) { results ->
+    if (results[android.Manifest.permission.RECORD_AUDIO] == true) {
+      viewModel.onAudioPermissionGranted()
+    }
+  }
+
+  private val requestAudioPermissionLauncher = registerForActivityResult(
+    ActivityResultContracts.RequestPermission()
+  ) { isGranted ->
+    if (isGranted) {
+      viewModel.onAudioPermissionGranted()
+    }
+  }
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -92,6 +104,14 @@ class MainActivity : ComponentActivity() {
       }
       if (needed.isNotEmpty()) {
         requestMediaPermissionsLauncher.launch(needed.toTypedArray())
+      }
+    }
+
+    viewModel.onAudioPermissionRequested = {
+      if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+        requestAudioPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+      } else {
+        viewModel.onAudioPermissionGranted()
       }
     }
 

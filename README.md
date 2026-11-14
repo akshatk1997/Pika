@@ -10,6 +10,7 @@
 
 | Version | Version Code | Target Platforms & OS | Key Highlights |
 |---|---:|---|---|
+| **v1.5.3** | `26` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Voice Mic Recording & Multimodal Understanding: added Android 11+ `<queries>` package visibility for `SpeechRecognizer`, direct OS permission request & automatic resume callbacks, dual-engine voice recording with `MediaRecorder` + Web Audio acoustic profiling, animated waveform visualizer, instant 1-tap Send or auto-silence delivery, and full voice query understanding by Kai AI; strictly under 2 MB |
 | **v1.5.2** | `25` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | YouTube Video Scaling Display Fix (fit, stretched, original with continuous rendering without black screen), Truly Functional Data Saver Mode (Save-Data header, speculative prefetch/prerender blocking, telemetry beacon reduction, media preload/autoplay disabling, video resolution optimization), Clean Kai AI Header (removed 100% Anonymous badge), Dark & Light Mode in Kai AI with in-app toggle & ChatGPT palette, 1-Tap Universal Dark & Light Mode switching across app UI, search engines (Google, DDG, Startpage), all websites, and Kai AI; strictly under 2 MB |
 | **v1.5.1** | `24` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Native Voice Mic (`KaiVoice` Android SpeechRecognizer bridge), Deep PPT & PPTX Presentation Comprehension (pure in-memory OpenXML ZIP decompressor, slide breakdown, speaker notes), Deep PDF Document Multi-Page Analysis & Operators, Deep Audio (.mp3, .wav, .m4a, .ogg, .aac) Acoustic Profiling, ID3/RIFF Metadata & In-App Audio Playback, Frontier Trained AI Personas, strictly under 2 MB |
 | **v1.5.0** | `23` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Settings Categorization, YouTube Video Aspect Scaling (Fit, Stretched, Original) & Data Saver Mode: structured all browser settings into clean, dedicated categories (General & Search, Data Saver & Bandwidth, Media & YouTube Playback, Tabs & Session, Appearance & Display, Privacy & Security, Data & Storage); added YouTube video display scaling (Original aspect ratio with letterbox bars, Fit to Screen zoom-to-fill, Stretched across 100% container) accessible in Settings and Quick Menu on YouTube; implemented Data Saver Mode with \`Save-Data: on\` request header, aggressive asset caching (\`LOAD_CACHE_ELSE_NETWORK\`), media preload disabling, and low-data connection flags; strictly under 2 MB |
@@ -48,7 +49,7 @@ Because no platform overrides were supplied prior to implementation, Kai targets
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Kai-v1.5.2.apk`](releases/Kai-v1.5.2.apk) and attached to GitHub Releases (`v1.5.2`).
+Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Kai-v1.5.3.apk`](releases/Kai-v1.5.3.apk) and attached to GitHub Releases (`v1.5.3`).
 
 ---
 
