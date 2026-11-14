@@ -747,7 +747,7 @@ class WebViewPool(
         @Suppress("DEPRECATION")
         saveFormData = false
         mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-        domStorageEnabled = !isPrivate
+        domStorageEnabled = true
         @Suppress("DEPRECATION")
         databaseEnabled = false
         builtInZoomControls = true

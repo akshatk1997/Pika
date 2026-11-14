@@ -4,6 +4,11 @@
     <!-- Navigation & Omnibox -->
     <string name="omnibox_hint">Search or enter URL</string>
     <string name="home_search_hint">Search with %1$s</string>
+    <string name="home_mode_standard">Search</string>
+    <string name="home_mode_ai">Duck.ai</string>
+    <string name="home_ai_search_hint">Ask Duck.ai anything…</string>
+    <string name="home_open_duck_ai">Open Duck.ai</string>
+    <string name="home_ai_badge">Anonymous • Claude, GPT-4o, Llama</string>
     <string name="cd_back">Back</string>
     <string name="cd_forward">Forward</string>
     <string name="cd_reload">Reload</string>

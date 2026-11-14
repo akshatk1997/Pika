@@ -93,6 +93,7 @@ import com.example.ui.theme.FeatherDangerRed
 import com.example.ui.theme.FeatherMintDark
 import com.example.ui.theme.FeatherPrivateAccent
 import com.example.ui.theme.FeatherWarningAmber
+import java.net.URLEncoder
 
 @Composable
 fun NewTabHomeView(
@@ -104,7 +105,10 @@ fun NewTabHomeView(
   modifier: Modifier = Modifier
 ) {
   var homeSearch by remember { mutableStateOf("") }
+  var isAiMode by remember { mutableStateOf(false) }
   val primaryAccent = if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.primary
+  val aiAccent = if (isPrivate) FeatherPrivateAccent else Color(0xFF00E5FF)
+  val activeAccent = if (isAiMode) aiAccent else primaryAccent
   val auraAccent = if (isPrivate) FeatherPrivateAccent else BatSignalGold
   val secondaryAccent = if (isPrivate) Color(0xFF6366F1) else FeatherMintDark
   val surfaceColor = MaterialTheme.colorScheme.surface
@@ -201,15 +205,89 @@ fun NewTabHomeView(
         }
       }
 
-      Spacer(modifier = Modifier.height(20.dp))
+      Spacer(modifier = Modifier.height(18.dp))
 
-      // Home Search Box
+      // Search Mode Switcher (Standard Search vs AI Mode / Duck.ai)
+      Surface(
+        shape = RoundedCornerShape(50),
+        color = surfaceColor.copy(alpha = 0.90f),
+        border = BorderStroke(0.8.dp, outlineColor.copy(alpha = 0.35f)),
+        shadowElevation = 2.dp
+      ) {
+        Row(
+          modifier = Modifier.padding(3.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          // Standard Search Tab
+          Surface(
+            shape = RoundedCornerShape(50),
+            color = if (!isAiMode) primaryAccent.copy(alpha = 0.16f) else Color.Transparent,
+            border = if (!isAiMode) BorderStroke(1.dp, primaryAccent.copy(alpha = 0.5f)) else null,
+            modifier = Modifier
+              .clickable { isAiMode = false }
+              .testTag("home_mode_standard")
+          ) {
+            Row(
+              modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Icon(
+                imageVector = Icons.Filled.Search,
+                contentDescription = null,
+                tint = if (!isAiMode) primaryAccent else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(15.dp)
+              )
+              Spacer(modifier = Modifier.width(6.dp))
+              Text(
+                text = stringResource(R.string.home_mode_standard),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (!isAiMode) FontWeight.Bold else FontWeight.Normal,
+                color = if (!isAiMode) primaryAccent else MaterialTheme.colorScheme.onSurfaceVariant
+              )
+            }
+          }
+
+          // AI Mode (Duck.ai) Tab
+          Surface(
+            shape = RoundedCornerShape(50),
+            color = if (isAiMode) aiAccent.copy(alpha = 0.18f) else Color.Transparent,
+            border = if (isAiMode) BorderStroke(1.dp, aiAccent.copy(alpha = 0.6f)) else null,
+            modifier = Modifier
+              .clickable { isAiMode = true }
+              .testTag("home_mode_ai")
+          ) {
+            Row(
+              modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Icon(
+                imageVector = FeatherIcons.Sparkle,
+                contentDescription = null,
+                tint = if (isAiMode) aiAccent else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(15.dp)
+              )
+              Spacer(modifier = Modifier.width(6.dp))
+              Text(
+                text = stringResource(R.string.home_mode_ai),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (isAiMode) FontWeight.Bold else FontWeight.Normal,
+                color = if (isAiMode) aiAccent else MaterialTheme.colorScheme.onSurfaceVariant
+              )
+            }
+          }
+        }
+      }
+
+      Spacer(modifier = Modifier.height(14.dp))
+
+      // Home Search Box (Adapts dynamically to Standard or Duck.ai Mode)
+      val searchBorderColor = if (isAiMode) aiAccent.copy(alpha = 0.55f) else primaryAccent.copy(alpha = 0.28f)
       Surface(
         shape = RoundedCornerShape(28.dp),
         color = surfaceColor,
-        tonalElevation = 4.dp,
-        shadowElevation = 6.dp,
-        border = BorderStroke(1.dp, primaryAccent.copy(alpha = 0.28f)),
+        tonalElevation = if (isAiMode) 6.dp else 4.dp,
+        shadowElevation = if (isAiMode) 8.dp else 6.dp,
+        border = BorderStroke(if (isAiMode) 1.4.dp else 1.dp, searchBorderColor),
         modifier = Modifier.fillMaxWidth().height(54.dp)
       ) {
         Row(
@@ -217,16 +295,20 @@ fun NewTabHomeView(
           verticalAlignment = Alignment.CenterVertically
         ) {
           Icon(
-            imageVector = Icons.Filled.Search,
+            imageVector = if (isAiMode) FeatherIcons.Sparkle else Icons.Filled.Search,
             contentDescription = null,
-            tint = primaryAccent,
+            tint = activeAccent,
             modifier = Modifier.size(20.dp)
           )
           Spacer(modifier = Modifier.width(12.dp))
           Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
             if (homeSearch.isEmpty()) {
               Text(
-                text = stringResource(R.string.home_search_hint, searchEngineName),
+                text = if (isAiMode) {
+                  stringResource(R.string.home_ai_search_hint)
+                } else {
+                  stringResource(R.string.home_search_hint, searchEngineName)
+                },
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
               )
@@ -238,10 +320,18 @@ fun NewTabHomeView(
               textStyle = MaterialTheme.typography.bodyLarge.copy(
                 color = MaterialTheme.colorScheme.onSurface
               ),
-              cursorBrush = SolidColor(primaryAccent),
+              cursorBrush = SolidColor(activeAccent),
               keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
               keyboardActions = KeyboardActions(onGo = {
-                if (homeSearch.isNotBlank()) {
+                if (isAiMode) {
+                  val target = if (homeSearch.isNotBlank()) {
+                    val encoded = URLEncoder.encode(homeSearch.trim(), "UTF-8")
+                    "https://duckduckgo.com/?ia=chat&duckchat=1&q=$encoded"
+                  } else {
+                    "https://duck.ai"
+                  }
+                  onSubmitQuery(target)
+                } else if (homeSearch.isNotBlank()) {
                   onSubmitQuery(homeSearch)
                 }
               }),
@@ -250,15 +340,27 @@ fun NewTabHomeView(
                 .testTag("home_search_input")
             )
           }
-          if (homeSearch.isNotBlank()) {
+          if (homeSearch.isNotBlank() || isAiMode) {
             IconButton(
-              onClick = { onSubmitQuery(homeSearch) },
+              onClick = {
+                if (isAiMode) {
+                  val target = if (homeSearch.isNotBlank()) {
+                    val encoded = URLEncoder.encode(homeSearch.trim(), "UTF-8")
+                    "https://duckduckgo.com/?ia=chat&duckchat=1&q=$encoded"
+                  } else {
+                    "https://duck.ai"
+                  }
+                  onSubmitQuery(target)
+                } else if (homeSearch.isNotBlank()) {
+                  onSubmitQuery(homeSearch)
+                }
+              },
               modifier = Modifier.minimumInteractiveComponentSize().testTag("home_search_go")
             ) {
               Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = "Go",
-                tint = primaryAccent,
+                imageVector = if (isAiMode && homeSearch.isBlank()) FeatherIcons.Sparkle else Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = if (isAiMode) "Ask Duck.ai" else "Go",
+                tint = activeAccent,
                 modifier = Modifier.size(20.dp)
               )
             }
@@ -266,7 +368,51 @@ fun NewTabHomeView(
         }
       }
 
-      Spacer(modifier = Modifier.height(26.dp))
+      if (isAiMode) {
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = surfaceColor.copy(alpha = 0.85f),
+            border = BorderStroke(0.8.dp, aiAccent.copy(alpha = 0.35f)),
+            modifier = Modifier
+              .clickable { onSubmitQuery("https://duck.ai") }
+              .testTag("duck_ai_direct_button")
+          ) {
+            Row(
+              modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Icon(
+                FeatherIcons.Sparkle,
+                contentDescription = null,
+                tint = aiAccent,
+                modifier = Modifier.size(13.dp)
+              )
+              Spacer(modifier = Modifier.width(6.dp))
+              Text(
+                text = stringResource(R.string.home_open_duck_ai),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = aiAccent
+              )
+            }
+          }
+
+          Text(
+            text = stringResource(R.string.home_ai_badge),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+            maxLines = 1
+          )
+        }
+      }
+
+      Spacer(modifier = Modifier.height(24.dp))
 
       Row(
         modifier = Modifier.fillMaxWidth(),

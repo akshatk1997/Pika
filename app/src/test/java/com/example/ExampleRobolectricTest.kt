@@ -38,8 +38,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.4.2", BuildConfig.VERSION_NAME)
-    assertEquals(15, BuildConfig.VERSION_CODE)
+    assertEquals("1.4.3", BuildConfig.VERSION_NAME)
+    assertEquals(16, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -157,7 +157,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.4.2").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.4.3").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_retain_tabs").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -284,5 +284,42 @@ class ExampleRobolectricTest {
     val origDashed = dashedHost.removeSuffix(".translate.goog")
     val restoredHost = origDashed.replace("-", ".").replace("..", "-")
     assertEquals(host, restoredHost)
+  }
+
+  @Test
+  fun homepageAiModeSwitchAndDuckAiIntegrationWorks() {
+    composeTestRule.waitForIdle()
+    try {
+      composeTestRule.onNodeWithTag("intro_get_started").performClick()
+      composeTestRule.waitForIdle()
+    } catch (_: Throwable) {
+    }
+
+    composeTestRule.onNodeWithTag("home_mode_standard").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("home_mode_ai").assertIsDisplayed()
+
+    // Switch to AI mode
+    composeTestRule.onNodeWithTag("home_mode_ai").performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify Duck.ai direct button is displayed
+    composeTestRule.onNodeWithTag("duck_ai_direct_button").assertIsDisplayed()
+
+    // Switch back to Standard mode
+    composeTestRule.onNodeWithTag("home_mode_standard").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("duck_ai_direct_button").assertDoesNotExist()
+  }
+
+  @Test
+  fun duckAiSearchEngineQueryResolutionWorks() {
+    val res = com.example.security.UrlValidator.resolveInputToTarget("what is quantum computing", SearchEngine.DUCK_AI, "", false)
+    assertTrue(res is com.example.model.ResolvedNavigation.LoadUrl)
+    val url = (res as com.example.model.ResolvedNavigation.LoadUrl).url
+    assertTrue(url.startsWith("https://duckduckgo.com/?ia=chat&duckchat=1&q="))
+    assertTrue(url.contains("quantum"))
+
+    val trackerBlocked = com.example.security.TrackerBlocker.shouldBlockRequest("https://duck.ai/status", "duck.ai", true)
+    assertFalse(trackerBlocked)
   }
 }

@@ -172,6 +172,7 @@ enum class SearchEngine(
   val queryTemplate: String
 ) {
   DUCKDUCKGO("ddg", "DuckDuckGo", "https://duckduckgo.com/?q=%s"),
+  DUCK_AI("duck_ai", "Duck.ai (AI Mode)", "https://duckduckgo.com/?ia=chat&duckchat=1&q=%s"),
   STARTPAGE("startpage", "Startpage", "https://www.startpage.com/do/dsearch?query=%s"),
   QWANT("qwant", "Qwant", "https://www.qwant.com/?q=%s"),
   BRAVE("brave", "Brave Search", "https://search.brave.com/search?q=%s"),

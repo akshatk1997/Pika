@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kai-v1.4.2.apk
+          cp "$APK_PATH" releases/Kai-v1.4.3.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kai-v1.4.2.apk
+          git add releases/Kai-v1.4.3.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kai-v1.4.2.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kai-v1.4.3.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.4.2
+      - name: Create or update GitHub Release v1.4.3
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kai-v1.4.2.apk)
-          NOTES="Kai Browser v1.4.2 (Build 15) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Rebranded to Kai:** Complete rebrand from Shiz to Kai across all strings, themes, storage, media services, and tests.\n- **Aesthetic Animated Concentric Kai Logo:** Hand-crafted concentric aesthetic logo featuring outer orbital ring with sweep gradient and celestial satellite pip, inner precision modernist counter-rotating ring, and central luminous quantum core dot with harmonic breathing glow halo.\n- **Vector Adaptive Icons & Drawables:** Replaced legacy bitmap icons with ultra-crisp vector drawables for foreground, monochrome (Material You themed icon support), and notification icon, trimming APK size even further.\n- **Signed Release APK size:** ${SIZE_BYTES} bytes (strictly < 2 MB / 2,097,152 bytes).\n- **Checks:** \`:app:testDebugUnitTest\` (API 26 & 36, Phone & Tablet), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\` passed."
-          if gh release view v1.4.2 >/dev/null 2>&1; then
-            gh release upload v1.4.2 releases/Kai-v1.4.2.apk --clobber
-            gh release edit v1.4.2 --title "Kai v1.4.2 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kai-v1.4.3.apk)
+          NOTES="Kai Browser v1.4.3 (Build 16) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Homepage AI Mode & Duck.ai Integration:** Added an intuitive, accessible mode switcher on the Start page allowing users to toggle seamlessly between Standard Search and AI Mode. Integrated Duck.ai (DuckDuckGo AI Chat) as the default AI mode with pre-filled prompt submission (\`https://duckduckgo.com/?ia=chat&duckchat=1&q=...\`), instant 1-tap direct access (\`https://duck.ai\`), and complete AI multi-model features (Claude, GPT-4o mini, Llama, Mistral) with zero login required.\n- **Full Unrestricted Duck.ai Compatibility:** Whitelisted Duck.ai in TrackerBlocker and ensured persistent WebStorage (DOM storage) is enabled for reliable state and chat streaming across all sessions.\n- **SearchEngine.DUCK_AI:** Added Duck.ai as a native search engine option in browser settings for omnibox query routing.\n- **Signed Release APK size:** ${SIZE_BYTES} bytes (strictly < 2 MB / 2,097,152 bytes).\n- **Checks:** \`:app:testDebugUnitTest\` (API 26 & 36, Phone & Tablet), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\` passed."
+          if gh release view v1.4.3 >/dev/null 2>&1; then
+            gh release upload v1.4.3 releases/Kai-v1.4.3.apk --clobber
+            gh release edit v1.4.3 --title "Kai v1.4.3 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.4.2 releases/Kai-v1.4.2.apk \
-              --title "Kai v1.4.2 (< 2 MB)" \
+            gh release create v1.4.3 releases/Kai-v1.4.3.apk \
+              --title "Kai v1.4.3 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

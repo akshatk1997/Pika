@@ -532,4 +532,23 @@ object FeatherIcons {
       }
     }.build()
   }
+
+  val Sparkle: ImageVector by lazy {
+    ImageVector.Builder("Sparkle", 24.dp, 24.dp, 24f, 24f).apply {
+      path(fill = SolidColor(Color.Black)) {
+        moveTo(12f, 2f)
+        curveTo(12f, 7.52f, 16.48f, 12f, 22f, 12f)
+        curveTo(16.48f, 12f, 12f, 16.48f, 12f, 22f)
+        curveTo(12f, 16.48f, 7.52f, 12f, 2f, 12f)
+        curveTo(7.52f, 12f, 12f, 7.52f, 12f, 2f)
+        close()
+        moveTo(19f, 2f)
+        curveTo(19f, 3.66f, 20.34f, 5f, 22f, 5f)
+        curveTo(20.34f, 5f, 19f, 6.34f, 19f, 8f)
+        curveTo(19f, 6.34f, 17.66f, 5f, 16f, 5f)
+        curveTo(17.66f, 5f, 19f, 3.66f, 19f, 2f)
+        close()
+      }
+    }.build()
+  }
 }

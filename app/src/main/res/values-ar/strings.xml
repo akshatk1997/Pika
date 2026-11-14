@@ -3,6 +3,11 @@
 
     <string name="omnibox_hint">ابحث أو أدخل رابطاً</string>
     <string name="home_search_hint">البحث عبر %1$s</string>
+    <string name="home_mode_standard">بحث</string>
+    <string name="home_mode_ai">Duck.ai</string>
+    <string name="home_ai_search_hint">اسأل Duck.ai أي شيء…</string>
+    <string name="home_open_duck_ai">فتح Duck.ai</string>
+    <string name="home_ai_badge">مجهول الهوية • Claude, GPT-4o, Llama</string>
     <string name="cd_back">رجوع</string>
     <string name="cd_forward">إلى الأمام</string>
     <string name="cd_reload">إعادة التحميل</string>
