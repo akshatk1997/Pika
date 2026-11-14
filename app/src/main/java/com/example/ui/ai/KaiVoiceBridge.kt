@@ -86,7 +86,7 @@ class KaiVoiceBridge(
   @JavascriptInterface
   fun requestPermission() {
     if (!isAuthorizedCaller()) return
-    mainHandler.post {
+    val action = Runnable {
       val activity = getActivity()
       if (activity != null) {
         ActivityCompat.requestPermissions(
@@ -96,6 +96,11 @@ class KaiVoiceBridge(
         )
       }
       onPermissionNeeded?.invoke()
+    }
+    if (Looper.myLooper() == Looper.getMainLooper()) {
+      action.run()
+    } else {
+      mainHandler.post(action)
     }
   }
 
