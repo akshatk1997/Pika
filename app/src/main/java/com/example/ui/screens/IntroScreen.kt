@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.ui.components.FeatherIcons
+import com.example.ui.components.KaiLogo
 import com.example.ui.theme.BatMidnight
 
 @Composable
@@ -75,23 +76,15 @@ fun IntroScreen(
       ) {
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Hero Mascot Emblem
-        Surface(
-          shape = RoundedCornerShape(26.dp),
-          color = BatMidnight,
-          border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)),
-          shadowElevation = 8.dp,
-          modifier = Modifier.size(88.dp)
-        ) {
-          Box(contentAlignment = Alignment.Center) {
-            Image(
-              painter = painterResource(id = R.drawable.bat_icon_fg),
-              contentDescription = stringResource(R.string.app_name),
-              contentScale = ContentScale.Fit,
-              modifier = Modifier.fillMaxSize().padding(6.dp)
-            )
-          }
-        }
+        // Hero Emblem (Aesthetic Animated Kai Emblem)
+        KaiLogo(
+          modifier = Modifier
+            .size(92.dp)
+            .testTag("kai_intro_logo"),
+          isPrivate = false,
+          animated = true,
+          contentDescription = stringResource(R.string.app_name)
+        )
 
         Spacer(modifier = Modifier.height(20.dp))
 
@@ -104,7 +97,7 @@ fun IntroScreen(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // One-liner thought process behind the name "Shiz"
+        // One-liner thought process behind the name "Kai"
         Surface(
           shape = RoundedCornerShape(16.dp),
           color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
@@ -112,7 +105,7 @@ fun IntroScreen(
           modifier = Modifier.fillMaxWidth().testTag("intro_thought_process")
         ) {
           Text(
-            text = "Shiz: Pure speed, stealth privacy, and zero nonsense — simply the real deal.",
+            text = "Kai: Pure speed, stealth privacy, and zero nonsense — simply the real deal.",
             style = MaterialTheme.typography.bodyMedium,
             fontStyle = FontStyle.Italic,
             fontWeight = FontWeight.Medium,

@@ -28,17 +28,19 @@ class SettingsRepository(context: Context) {
   }
 
   companion object {
-    private const val SETTINGS_FILE = "shiz_settings.enc"
-    private const val PERMISSIONS_FILE = "shiz_site_perms.enc"
-    private const val RETAINED_TABS_FILE = "shiz_retained_tabs.enc"
-    private const val FALLBACK_PREFS = "shiz_local_state_fallback"
-    private const val PREF_INTRO_SEEN = "shiz_intro_seen"
+    private const val SETTINGS_FILE = "kai_settings.enc"
+    private const val PERMISSIONS_FILE = "kai_site_perms.enc"
+    private const val RETAINED_TABS_FILE = "kai_retained_tabs.enc"
+    private const val FALLBACK_PREFS = "kai_local_state_fallback"
+    private const val PREF_INTRO_SEEN = "kai_intro_seen"
     private const val MAX_RETAINED_TABS = 24
   }
 
   fun hasSeenIntro(): Boolean {
     return try {
-      fallbackPrefs.getBoolean(PREF_INTRO_SEEN, false)
+      fallbackPrefs.getBoolean(PREF_INTRO_SEEN, false) ||
+        appContext.getSharedPreferences("shiz_local_state_fallback", Context.MODE_PRIVATE)
+          .getBoolean("shiz_intro_seen", false)
     } catch (_: Throwable) {
       false
     }
@@ -83,7 +85,7 @@ class SettingsRepository(context: Context) {
   }
 
   fun loadSettings(): SettingsState {
-    val jsonStr = readPayload(SETTINGS_FILE) ?: readPayload("feather_settings.enc") ?: return SettingsState()
+    val jsonStr = readPayload(SETTINGS_FILE) ?: readPayload("shiz_settings.enc") ?: readPayload("feather_settings.enc") ?: return SettingsState()
     return try {
       val obj = JSONObject(jsonStr)
       val customArr = obj.optJSONArray("customBlockedHosts")
@@ -173,7 +175,7 @@ class SettingsRepository(context: Context) {
   }
 
   fun loadRetainedTabs(): Pair<List<TabInfo>, String>? {
-    val raw = readPayload(RETAINED_TABS_FILE) ?: readPayload("bat_retained_tabs.enc") ?: return null
+    val raw = readPayload(RETAINED_TABS_FILE) ?: readPayload("shiz_retained_tabs.enc") ?: readPayload("bat_retained_tabs.enc") ?: return null
     return try {
       val root = JSONObject(raw)
       val arr = root.optJSONArray("tabs") ?: return null
@@ -219,7 +221,7 @@ class SettingsRepository(context: Context) {
   }
 
   fun loadSitePermissions(): List<SitePermissionRule> {
-    val raw = readPayload(PERMISSIONS_FILE) ?: return emptyList()
+    val raw = readPayload(PERMISSIONS_FILE) ?: readPayload("shiz_site_perms.enc") ?: return emptyList()
     return try {
       val arr = JSONArray(raw)
       val out = mutableListOf<SitePermissionRule>()

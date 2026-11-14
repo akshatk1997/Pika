@@ -155,7 +155,7 @@ class FeatherSecurityAndDataTest {
       com.example.media.MediaPlaybackService.ACTION_UPDATE_STATE
     )
     assertEquals(6, actions.size)
-    assertEquals("shiz_media_stream", com.example.media.MediaPlaybackService.CHANNEL_ID)
+    assertEquals("kai_media_stream", com.example.media.MediaPlaybackService.CHANNEL_ID)
   }
 
   @Test

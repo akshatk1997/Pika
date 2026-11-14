@@ -1001,14 +1001,14 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                   pageLanguage: 'auto',
                   includedLanguages: targetLang,
                   autoDisplay: false
-                }, 'shiz_trans_elem');
+                }, 'kai_trans_elem');
               } catch(e) {}
             };
 
-            var elem = document.getElementById('shiz_trans_elem');
+            var elem = document.getElementById('kai_trans_elem');
             if (!elem) {
               elem = document.createElement('div');
-              elem.id = 'shiz_trans_elem';
+              elem.id = 'kai_trans_elem';
               elem.style.display = 'none';
               document.body.appendChild(elem);
             }
@@ -1016,24 +1016,24 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             var script = document.createElement('script');
             script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
             script.onerror = function() {
-              window.__shiz_trans_failed = true;
+              window.__kai_trans_failed = true;
             };
             document.body.appendChild(script);
 
             setTimeout(function() {
               if (!window.google || !window.google.translate) {
-                window.__shiz_trans_failed = true;
+                window.__kai_trans_failed = true;
               }
             }, 1800);
           } catch(e) {
-            window.__shiz_trans_failed = true;
+            window.__kai_trans_failed = true;
           }
         })();
       """.trimIndent()
 
       webView.evaluateJavascript(inPageJs) { _ ->
         mainHandler.postDelayed({
-          val checkJs = "window.__shiz_trans_failed === true"
+          val checkJs = "window.__kai_trans_failed === true"
           webView.evaluateJavascript(checkJs) { failedResult ->
             if (failedResult == "true") {
               navigateToTranslateProxy(url, targetLang)
@@ -1131,7 +1131,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
           }
           var media = document.querySelectorAll('video, audio');
           for (var i = 0; i < media.length; i++) {
-            media[i].__shiz_user_paused = false;
+            media[i].__kai_user_paused = false;
             if (media[i].paused) {
               media[i].play().catch(function() {});
             }
@@ -1146,7 +1146,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
           }
           var media = document.querySelectorAll('video, audio');
           for (var i = 0; i < media.length; i++) {
-            media[i].__shiz_user_paused = true;
+            media[i].__kai_user_paused = true;
             if (!media[i].paused) {
               media[i].pause();
             }
@@ -1196,7 +1196,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
           }
           var media = document.querySelectorAll('video, audio');
           for (var i = 0; i < media.length; i++) {
-            media[i].__shiz_user_paused = true;
+            media[i].__kai_user_paused = true;
             media[i].pause();
           }
         })();

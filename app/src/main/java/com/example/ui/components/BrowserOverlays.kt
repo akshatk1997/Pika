@@ -155,33 +155,15 @@ fun NewTabHomeView(
     ) {
       Spacer(modifier = Modifier.height(if (isCompactHeight) 4.dp else 18.dp))
 
-      // Hero Emblem (3D Bat Mascot Crest or Private Mask)
-      val crestSize = if (isCompactHeight) 52.dp else 74.dp
-      Surface(
-        shape = RoundedCornerShape(if (isCompactHeight) 16.dp else 22.dp),
-        color = if (isPrivate) primaryAccent.copy(alpha = 0.12f) else BatMidnight,
-        border = BorderStroke(1.2.dp, auraAccent.copy(alpha = 0.55f)),
-        shadowElevation = 6.dp,
-        modifier = Modifier.size(crestSize)
-      ) {
-        Box(contentAlignment = Alignment.Center) {
-          if (isPrivate) {
-            Icon(
-              imageVector = FeatherIcons.PrivateMask,
-              contentDescription = stringResource(R.string.app_name),
-              tint = primaryAccent,
-              modifier = Modifier.size(if (isCompactHeight) 24.dp else 34.dp)
-            )
-          } else {
-            Image(
-              painter = painterResource(id = R.drawable.bat_icon_fg),
-              contentDescription = stringResource(R.string.app_name),
-              contentScale = ContentScale.Fit,
-              modifier = Modifier.fillMaxSize().padding(3.dp)
-            )
-          }
-        }
-      }
+      // Hero Emblem (Aesthetic Animated Kai Emblem: Concentric Circle in Circle in Dot)
+      val crestSize = if (isCompactHeight) 56.dp else 78.dp
+      KaiLogo(
+        modifier = Modifier.testTag("kai_home_logo"),
+        size = crestSize,
+        isPrivate = isPrivate,
+        animated = true,
+        contentDescription = stringResource(R.string.app_name)
+      )
 
       Spacer(modifier = Modifier.height(14.dp))
 

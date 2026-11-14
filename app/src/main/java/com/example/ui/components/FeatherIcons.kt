@@ -495,29 +495,39 @@ object FeatherIcons {
   }
 
   val FeatherLogo: ImageVector by lazy {
-    ImageVector.Builder("BatCrest", 24.dp, 24.dp, 24f, 24f).apply {
+    ImageVector.Builder("KaiLogo", 24.dp, 24.dp, 24f, 24f).apply {
       path(
-        fill = SolidColor(Color.Black),
-        pathFillType = PathFillType.NonZero,
-        strokeLineCap = StrokeCap.Round,
-        strokeLineJoin = StrokeJoin.Round
+        stroke = SolidColor(Color.Black),
+        strokeLineWidth = 1.6f,
+        strokeLineCap = StrokeCap.Round
       ) {
-        moveTo(12f, 9.5f)
-        horizontalLineTo(10.4f)
-        lineTo(9.4f, 5.5f)
-        lineTo(8.1f, 9.8f)
-        curveTo(6.4f, 10.3f, 4.4f, 9.2f, 1.5f, 6.8f)
-        curveTo(2.4f, 10.4f, 3.8f, 13.0f, 5.7f, 14.3f)
-        curveTo(6.8f, 15.1f, 7.6f, 16.8f, 8.2f, 17.8f)
-        curveTo(9.2f, 16.5f, 10.2f, 16.4f, 11.1f, 17.5f)
-        lineTo(12f, 19.6f)
-        lineTo(12.9f, 17.5f)
-        curveTo(13.8f, 16.4f, 14.8f, 16.5f, 15.8f, 17.8f)
-        curveTo(16.4f, 16.8f, 17.2f, 15.1f, 18.3f, 14.3f)
-        curveTo(20.2f, 13.0f, 21.6f, 10.4f, 22.5f, 6.8f)
-        curveTo(19.6f, 9.2f, 17.6f, 10.3f, 15.9f, 9.8f)
-        lineTo(14.6f, 5.5f)
-        lineTo(13.6f, 9.5f)
+        moveTo(12f, 2.5f)
+        curveTo(17.25f, 2.5f, 21.5f, 6.75f, 21.5f, 12f)
+        curveTo(21.5f, 17.25f, 17.25f, 21.5f, 12f, 21.5f)
+        curveTo(6.75f, 21.5f, 2.5f, 17.25f, 2.5f, 12f)
+        curveTo(2.5f, 6.75f, 6.75f, 2.5f, 12f, 2.5f)
+        close()
+      }
+      path(
+        stroke = SolidColor(Color.Black),
+        strokeLineWidth = 1.5f,
+        strokeLineCap = StrokeCap.Round
+      ) {
+        moveTo(12f, 6.5f)
+        curveTo(15.04f, 6.5f, 17.5f, 8.96f, 17.5f, 12f)
+        curveTo(17.5f, 15.04f, 15.04f, 17.5f, 12f, 17.5f)
+        curveTo(8.96f, 17.5f, 6.5f, 15.04f, 6.5f, 12f)
+        curveTo(6.5f, 8.96f, 8.96f, 6.5f, 12f, 6.5f)
+        close()
+      }
+      path(
+        fill = SolidColor(Color.Black)
+      ) {
+        moveTo(12f, 9.8f)
+        curveTo(13.22f, 9.8f, 14.2f, 10.78f, 14.2f, 12f)
+        curveTo(14.2f, 13.22f, 13.22f, 14.2f, 12f, 14.2f)
+        curveTo(10.78f, 14.2f, 9.8f, 13.22f, 9.8f, 12f)
+        curveTo(9.8f, 10.78f, 10.78f, 9.8f, 12f, 9.8f)
         close()
       }
     }.build()

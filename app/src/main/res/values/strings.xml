@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Shiz</string>
+    <string name="app_name">Kai</string>
 
     <!-- Navigation & Omnibox -->
     <string name="omnibox_hint">Search or enter URL</string>

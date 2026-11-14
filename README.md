@@ -1,8 +1,8 @@
-# Shiz
+# Kai
 
-**Shiz** is a minimal, privacy-first, security-hardened Android web browser shell built around the operating system's maintained **Android System WebView** (`android.webkit.WebView`) — with **zero bundled rendering engine**, **zero telemetry**, **zero dangerous Android permissions**, and a **signed R8-minified release APK strictly under 2 MB**.
+**Kai** is a minimal, privacy-first, security-hardened Android web browser shell built around the operating system's maintained **Android System WebView** (`android.webkit.WebView`) — with **zero bundled rendering engine**, **zero telemetry**, **zero dangerous Android permissions**, and a **signed R8-minified release APK strictly under 2 MB**.
 
-> **Engine Statement:** Shiz is **not** a standalone browser rendering engine. It does not bundle Chromium, Blink, Gecko, or WebKit. All web rendering, TLS/HTTP transport inside WebView, and sandboxing are delegated to the OS-maintained **Android System WebView**.
+> **Engine Statement:** Kai is **not** a standalone browser rendering engine. It does not bundle Chromium, Blink, Gecko, or WebKit. All web rendering, TLS/HTTP transport inside WebView, and sandboxing are delegated to the OS-maintained **Android System WebView**.
 
 ---
 
@@ -10,6 +10,7 @@
 
 | Version | Version Code | Target Platforms & OS | Key Highlights |
 |---|---:|---|---|
+| **v1.4.2** | `15` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Rebranded to **Kai**, aesthetic animated concentric logo (circle inside circle inside dot) with kinetic orbital sweep gradient, celestial satellite pip, precision counter-rotating dual arcs, and harmonic luminous breathing core dot; vector adaptive and monochrome icons; strictly under 2 MB |
 | **v1.4.1** | `14` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Clean tablet header without top tab bar: removed the extra tab bar from the tablet header to deliver a clean, distraction-free single-row toolbar layout matching phone simplicity with full-width browsing, while retaining 1-tap tablet toolbar shortcuts (Desktop UA toggle, Bookmarks, Downloads, New Tab); hardened background stream play with native Chromium `BackgroundMediaWebView` visibility intercept; strictly under 2 MB |
 | **v1.4.0** | `13` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Hardened background stream play with native Chromium `BackgroundMediaWebView` intercepting `onWindowVisibilityChanged` and `dispatchWindowVisibilityChanged` (prevents C++ AwContents from pausing playback when minimized or screen-off), YouTube player API controls, and auto-resuming media listeners; removed left sidebar `NavigationRail`; fast, snappy browsing; strictly under 2 MB |
 | **v1.3.2** | `12` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Fixed keyboard content jumping & search bar visibility on homepage and all websites (removed duplicate IME insets, enforced exact 1x keyboard height shifting, added scrollable homepage, prevented programmatic scrolls from hiding navbar); hardened background streaming with synchronous foreground service start, WakeLock, and WebView RENDERER_PRIORITY_IMPORTANT; full in-page & edge-proxy translation with original page toggle; strictly under 2 MB |
@@ -17,7 +18,7 @@
 | **v1.3.0** | `10` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Fully functional in-page & portal translation with locale detection and fixed query parameter encoding; continuous background video/audio streaming play when minimized or screen off; auto-hiding scroll navigation bars (slides up on scroll down, reappears on scroll up); strictly under 2 MB |
 | **v1.2.0** | `9` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Rebranded to **Shiz** (*"Shiz: Pure speed, stealth privacy, and zero nonsense — simply the real deal."*), added first-time install onboarding intro page showcasing name thought process and core pillars, total ad & video streaming shield, retained web pages & settings across restarts, tablet navigation rail, and under 2 MB footprint |
 | **v1.1.5** | `8` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Single focused search bar on home page: removed duplicate top omnibox on the Start page while keeping all toolbar actions (Tabs, Quick Menu/Settings, Security badge, Navigation) fully accessible |
-| **v1.1.4** | `7` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Pure ad-free experience & video streaming ad shield: automatic video streaming ad fast-forward & skip, cosmetic CSS element hiding for banners/promoted cards, network blocking of HTML5 video ad SDKs (Google IMA SDK, DoubleClick, FreeWheel, Sizmek) and ad break endpoints (`/api/stats/ads`, `/pagead/`, `/youtubei/v1/player/ad_break`, `/ptracking`, `/get_midroll_info`), and popup/redirect ad suppression |
+| **v1.1.4** | `7` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Pure ad-free experience & video streaming ad shield: automatic video streaming ad fast-forward & skip, cosmetic CSS element hiding for banners/promoted cards, network blocking of HTML5 video ad SDKs and ad break endpoints |
 | **v1.1.3** | `6` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Fixed web page & settings retention: kept live WebViews mounted beneath Settings/overlays without unmount reset, added persistent **Retain open web pages** setting & non-private tab restoration across restarts, improved Homepage save/Done/Use current controls, added Keystore recovery + private fallback, and added empty-bundle reload recovery |
 | **v1.1.2** | `5` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Fixed Android 17 & real-device crash vectors (`shouldInterceptRequest` background-thread host tracking, `MutableContextWrapper` + `AndroidView.onRelease` lifecycle binding, `graphics-path:1.1.0` 16 KB page alignment, Compose BOM `2025.12.01`, `ViewModel`/`WebViewClient` R8 keep rules, throwaway WebView removal, and SQLite/picker/clipboard error guards) |
 | **v1.1.1** | `4` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Removed bottom search bar (top-only omnibox), streamlined clean production UI copy without internal jargon, fixed back navigation from error/HTTP warnings, aborted-load error suppression, density-scaled pull-to-refresh, overlay snackbar feedback, and bookmark/settings validation |
@@ -28,8 +29,8 @@
 
 ## Assumed Target Defaults
 
-Because no platform overrides were supplied prior to implementation, Shiz targets:
-1. **Target Platform:** Android Phone, Tablet, Foldable & Desktop Windowing (`resizeableActivity="true"`, adaptive `NavigationRail` + single-row wide toolbar + multi-column grids).
+Because no platform overrides were supplied prior to implementation, Kai targets:
+1. **Target Platform:** Android Phone, Tablet, Foldable & Desktop Windowing (`resizeableActivity="true"`, single-row wide toolbar + multi-column grids).
 2. **Minimum / Target OS:** Android 8.0 (`minSdk = 26`) through Android 17 forward-compatible edge-to-edge & large-screen behavior (`targetSdk = 36`, `compileSdk = 36.1`).
 3. **Language & UI:** Kotlin + Jetpack Compose (Material 3) with zero bloated UI frameworks or icon packs.
 4. **Browser Profile:** Privacy-first general web browser shell.
@@ -37,13 +38,14 @@ Because no platform overrides were supplied prior to implementation, Shiz target
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Shiz-v1.4.1.apk`](releases/Shiz-v1.4.1.apk) and attached to GitHub Releases (`v1.4.1`).
+Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Kai-v1.4.2.apk`](releases/Kai-v1.4.2.apk) and attached to GitHub Releases (`v1.4.2`).
 
 ---
 
-## Features (v1.4.1)
+## Features (v1.4.2)
 
-- **Clean Tablet Header & Distraction-Free Big-Screen UI:** Removed the top tab bar from tablet headers to provide a clean, distraction-free single-row toolbar layout matching phone simplicity with full-width browsing, while retaining instant 1-tap toolbar shortcuts for Desktop UA toggle, Bookmarks, Downloads, and New Tab.
+- **Aesthetic Animated Concentric Kai Emblem:** Hand-crafted concentric aesthetic logo featuring outer orbital ring with sweep gradient and celestial satellite pip, inner precision modernist counter-rotating ring, and central luminous quantum core dot with harmonic breathing glow halo.
+- **Clean Tablet Header & Distraction-Free Big-Screen UI:** Clean single-row toolbar layout matching phone simplicity with full-width browsing, retaining instant 1-tap toolbar shortcuts for Desktop UA toggle, Bookmarks, Downloads, and New Tab.
 - **Hardened Background Stream Playback & Native Visibility Intercept:** Powered by custom `BackgroundMediaWebView` overriding native Android `onWindowVisibilityChanged` and `dispatchWindowVisibilityChanged` to prevent Chromium's C++ `AwContents` from automatically pausing HTML5 video/audio playback when the app is backgrounded or screen turned off. Enforces synchronous Foreground Media Playback Service (`FOREGROUND_SERVICE_MEDIA_PLAYBACK`) with persistent `PARTIAL_WAKE_LOCK`, low-importance device notification shade controls (Rewind 10s, Play/Pause, Forward 10s, Stop), YouTube player API integration (`#movie_player` / `.html5-video-player`), and auto-resuming media listeners.
 - **Fast, Snappy & Lag-Free Browsing:** Optimized background media synchronization loops and layout measurement trees to eliminate main-thread lag and UI stutter across phones and tablets.
 - **Keyboard-Adaptive Content Shifting & Search Bar Visibility:** Content shifts upward by exactly the keyboard's height, prevents the auto-hiding navbar from vanishing during typing on YouTube, Google, etc., with a scrollable homepage container.
@@ -56,7 +58,7 @@ Pre-built signed release APK (< 2 MB) is tracked directly in this repository at 
 - **Power Tools (Via / X Style):** Compact 4-column Quick Grid Menu with **Media & Resource Sniffer**, **Night Web** page darkening, **No-Image** data-saver mode, **Desktop / iPhone / Mobile** User-Agent switcher, **Immersive Fullscreen**, **Save Page as PDF** (`PrintManager`), **View Page Source**, **Translate**, and **Pin Shortcut to Home Screen**.
 - **Privacy & Ad Shield:** Built-in ad/tracker/popup blocker + user **Custom Block Rules** stored encrypted in Android Keystore, third-party cookie blocking, query-parameter stripping, HTTPS-Only mode, `DNT: 1` / `Sec-GPC: 1`, and isolated **Private Mode** wiped cleanly on exit.
 - **Tabs, Bookmarks, History & Downloads:** 2-WebView LRU RAM saver pool with `onRenderProcessGone` crash recovery, closed tab restore, local SQLite bookmarks (Netscape HTML & JSON import/export), search/clearable history, and consent-first downloads (`MediaStore.Downloads` on Android 10–17 & `FileProvider` on Android 8–9) with editable filenames and retry support.
-- **Reader, Tablet & Keyboard Support:** Desktop-style horizontal Tab Strip on tablets (`TabletTabStrip`) + single-row wide toolbar with 1-tap shortcuts (Desktop UA, Bookmarks, Downloads), hardware keyboard shortcuts (`Ctrl+T`, `Ctrl+Shift+N`, `Ctrl+W`, `Ctrl+F`, `Ctrl+R`/`F5`, `Alt+Left/Right`), native Compose distraction-free Reader View, Find in Page, Material You Dynamic Color (Android 12+), Predictive Back (Android 14–17), reactive light/dark edge-to-edge bars (Android 8–17), RTL + Arabic (`ar`) support, and 48dp touch targets.
+- **Reader, Tablet & Keyboard Support:** Distraction-free single-row wide toolbar with 1-tap shortcuts (Desktop UA, Bookmarks, Downloads), hardware keyboard shortcuts (`Ctrl+T`, `Ctrl+Shift+N`, `Ctrl+W`, `Ctrl+F`, `Ctrl+R`/`F5`, `Alt+Left/Right`), native Compose distraction-free Reader View, Find in Page, Material You Dynamic Color (Android 12+), Predictive Back (Android 14–17), reactive light/dark edge-to-edge bars (Android 8–17), RTL + Arabic (`ar`) support, and 48dp touch targets.
 
 ---
 
@@ -75,7 +77,7 @@ Pre-built signed release APK (< 2 MB) is tracked directly in this repository at 
 
 ## Privacy Policy & Network Transparency
 
-- **Zero Telemetry & Zero Analytics:** Shiz contains no analytics SDKs, crash reporters, ad SDKs, remote-config endpoints, or update checkers.
+- **Zero Telemetry & Zero Analytics:** Kai contains no analytics SDKs, crash reporters, ad SDKs, remote-config endpoints, or update checkers.
 - **Zero Background Network Activity:** No background services, polling, or pre-fetching occur. Network requests happen only when you navigate, search, or explicitly approve a download.
 - **Tracking Protection (Default-On):** Strips common tracking query parameters (`utm_*`, `fbclid`, `gclid`, `mc_eid`, `igshid`, etc.), blocks known third-party tracker/analytics hosts in `shouldInterceptRequest`, blocks third-party cookies by default, and sends `DNT: 1` / `Sec-GPC: 1` headers (with an explicit Settings notice explaining that websites are not forced to honor DNT).
 - **Declared Android Permissions:**
@@ -88,23 +90,14 @@ Pre-built signed release APK (< 2 MB) is tracked directly in this repository at 
 ## Size Budget & Release Verification
 
 | Component | Budget | Measured (Release APK) |
-|---|---:|---:|
-| Application binary (`classes.dex` + `lib/` + builtins) | 900 KB | ~1,111 KB compressed (`classes.dex`: 1,037 KB + `libandroidx.graphics.path.so`: 37 KB + kotlin builtins: 12 KB) |
-| UI assets | 200 KB | ~15 KB (`bat_icon_fg.png` 3D mascot crest) |
-| Icons | 100 KB | ~71 KB across 10 mipmap PNGs (zero `material-icons-extended`) |
+|---|---:|---|
+| Application binary (`classes.dex` + `lib/` + builtins) | 900 KB | ~1,111 KB compressed |
+| UI assets & vectors | 200 KB | < 2 KB (Vector drawables only, 0 bitmap logos) |
+| Icons | 100 KB | ~71 KB across 10 mipmap PNGs |
 | Localized strings & resources (`resources.arsc` + XML) | 200 KB | ~21 KB (`en` + `ar` RTL only via `localeFilters`) |
 | Configuration and metadata | 100 KB | ~8 KB |
 | Safety margin | 500 KB | — |
-| **Total Package** | **2 MB (2,097,152 B) max** | **1.29 MB (`1,286,849` bytes)** |
-
-- **Compressed APK size:** `1,286,849` bytes (~1.23 MiB / 1.29 MB)
-- **Uncompressed archive payload:** `2,359,357` bytes (~2.25 MiB)
-- **Top 5 contributors (compressed inside `app-release.apk`):**
-  1. `classes.dex` — `1,062,266` bytes (`2,128,092` bytes uncompressed)
-  2. `res/o-.png` (`xxxhdpi/ic_launcher.png`) — `25,538` bytes
-  3. `res/Gc.png` (`xxxhdpi/ic_launcher_round.png`) — `24,508` bytes
-  4. `resources.arsc` — `19,544` bytes
-  5. `res/RJ.png` (`xxhdpi/ic_launcher.png`) — `16,678` bytes
+| **Total Package** | **2 MB (2,097,152 B) max** | **~1.44 MB (`1,507,145` bytes)** |
 
 ---
 
@@ -130,10 +123,5 @@ Pre-built signed release APK (< 2 MB) is tracked directly in this repository at 
 ## Known Limitations
 
 - Web rendering features, codec support, and OS-level sandboxing depend on the installed version of **Android System WebView**.
-- Android `WebView` instances share a single process-wide `CookieManager` / `WebStorage` namespace across tabs; therefore, Shiz enforces strict session isolation by disabling persistent cookies/DOM storage in private tabs and performing a full wipe (`removeAllCookies`, `WebStorage.deleteAllData`, cache/history/form-data purge) when private sessions end.
+- Android `WebView` instances share a single process-wide `CookieManager` / `WebStorage` namespace across tabs; therefore, Kai enforces strict session isolation by disabling persistent cookies/DOM storage in private tabs and performing a full wipe (`removeAllCookies`, `WebStorage.deleteAllData`, cache/history/form-data purge) when private sessions end.
 - Hardware permissions (Camera, Microphone, GPS) are intentionally omitted from `AndroidManifest.xml` for minimal privilege; sites requesting them show a consent/policy prompt and cannot access device hardware.
-
-## Roadmap
-
-- Optional user-importable custom tracker blocklists (JSON/hosts format)
-- Tab groups and per-site JavaScript / zoom overrides

@@ -34,12 +34,12 @@ class ExampleRobolectricTest {
   val composeTestRule = createAndroidComposeRule<MainActivity>()
 
   @Test
-  fun appNameMatchesShizAndVersionIsUpdated() {
+  fun appNameMatchesKaiAndVersionIsUpdated() {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
-    assertEquals("Shiz", appName)
-    assertEquals("1.4.1", BuildConfig.VERSION_NAME)
-    assertEquals(14, BuildConfig.VERSION_CODE)
+    assertEquals("Kai", appName)
+    assertEquals("1.4.2", BuildConfig.VERSION_NAME)
+    assertEquals(15, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -125,7 +125,8 @@ class ExampleRobolectricTest {
     } catch (_: Throwable) {
     }
 
-    composeTestRule.onNodeWithText("Shiz").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Kai").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("kai_home_logo").assertIsDisplayed()
     composeTestRule.onNodeWithTag("home_search_input").performTextInput("privacy")
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("home_search_go").assertIsDisplayed()
@@ -175,7 +176,8 @@ class ExampleRobolectricTest {
       composeTestRule.waitForIdle()
     } catch (_: Throwable) {
     }
-    composeTestRule.onNodeWithText("Shiz").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Kai").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("kai_home_logo").assertIsDisplayed()
 
     // Header tab strip is removed from tablet devices
     composeTestRule.onNodeWithTag("tablet_tab_new_button").assertDoesNotExist()

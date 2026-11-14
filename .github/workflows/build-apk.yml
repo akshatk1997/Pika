@@ -1,4 +1,4 @@
-name: Build & Package Shiz APK (< 2 MB)
+name: Build & Package Kai APK (< 2 MB)
 
 on:
   push:
@@ -36,15 +36,15 @@ jobs:
         run: |
           keytool -genkeypair -v -keystore "${{ runner.temp }}/release.jks" \
             -storetype PKCS12 -alias upload -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass shiz-ci-release-pass -keypass shiz-ci-release-pass \
-            -dname "CN=Shiz Browser, OU=Mobile, O=Shiz, L=Unknown, S=Unknown, C=US"
+            -storepass kai-ci-release-pass -keypass kai-ci-release-pass \
+            -dname "CN=Kai Browser, OU=Mobile, O=Kai, L=Unknown, S=Unknown, C=US"
           keytool -genkeypair -v -keystore debug.keystore \
             -storetype PKCS12 -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass android -keypass android \
             -dname "CN=Android Debug,O=Android,C=US"
           echo "KEYSTORE_PATH=${{ runner.temp }}/release.jks" >> "$GITHUB_ENV"
-          echo "STORE_PASSWORD=shiz-ci-release-pass" >> "$GITHUB_ENV"
-          echo "KEY_PASSWORD=shiz-ci-release-pass" >> "$GITHUB_ENV"
+          echo "STORE_PASSWORD=kai-ci-release-pass" >> "$GITHUB_ENV"
+          echo "KEY_PASSWORD=kai-ci-release-pass" >> "$GITHUB_ENV"
 
       - name: Run unit & Robolectric tests
         run: gradle :app:testDebugUnitTest --no-daemon
@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Shiz-v1.4.1.apk
+          cp "$APK_PATH" releases/Kai-v1.4.2.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Shiz-v1.4.1.apk
+          git add releases/Kai-v1.4.2.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Shiz-v1.4.1.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kai-v1.4.2.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.4.1
+      - name: Create or update GitHub Release v1.4.2
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Shiz-v1.4.1.apk)
-          NOTES="Shiz Browser v1.4.1 (Build 14) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Clean Tablet Header:** Removed the top tab bar from the header on tablet devices to provide a clean, distraction-free single-row toolbar layout matching phone simplicity with full-width browsing, while retaining instant 1-tap toolbar shortcuts for desktop site toggle, bookmarks, downloads, and new tabs.\n- **Hardened Background Stream Playback:** Implemented \`BackgroundMediaWebView\` overriding native Android \`onWindowVisibilityChanged\` and \`dispatchWindowVisibilityChanged\` to prevent Chromium's C++ AwContents from pausing media playback when the window is hidden or backgrounded. Added YouTube player API hooks (\`#movie_player\` / \`.html5-video-player\`) for play, pause, prev/next track, and seek commands, and enhanced DOM visibility spoofing with auto-resuming media listeners and blur event interception.\n- **Signed Release APK size:** ${SIZE_BYTES} bytes (strictly < 2 MB / 2,097,152 bytes).\n- **Checks:** \`:app:testDebugUnitTest\` (API 26 & 36, Phone & Tablet), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\` passed."
-          if gh release view v1.4.1 >/dev/null 2>&1; then
-            gh release upload v1.4.1 releases/Shiz-v1.4.1.apk --clobber
-            gh release edit v1.4.1 --title "Shiz v1.4.1 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kai-v1.4.2.apk)
+          NOTES="Kai Browser v1.4.2 (Build 15) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Rebranded to Kai:** Complete rebrand from Shiz to Kai across all strings, themes, storage, media services, and tests.\n- **Aesthetic Animated Concentric Kai Logo:** Hand-crafted concentric aesthetic logo featuring outer orbital ring with sweep gradient and celestial satellite pip, inner precision modernist counter-rotating ring, and central luminous quantum core dot with harmonic breathing glow halo.\n- **Vector Adaptive Icons & Drawables:** Replaced legacy bitmap icons with ultra-crisp vector drawables for foreground, monochrome (Material You themed icon support), and notification icon, trimming APK size even further.\n- **Signed Release APK size:** ${SIZE_BYTES} bytes (strictly < 2 MB / 2,097,152 bytes).\n- **Checks:** \`:app:testDebugUnitTest\` (API 26 & 36, Phone & Tablet), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\` passed."
+          if gh release view v1.4.2 >/dev/null 2>&1; then
+            gh release upload v1.4.2 releases/Kai-v1.4.2.apk --clobber
+            gh release edit v1.4.2 --title "Kai v1.4.2 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.4.1 releases/Shiz-v1.4.1.apk \
-              --title "Shiz v1.4.1 (< 2 MB)" \
+            gh release create v1.4.2 releases/Kai-v1.4.2.apk \
+              --title "Kai v1.4.2 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

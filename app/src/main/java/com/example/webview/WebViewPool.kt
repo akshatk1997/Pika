@@ -361,7 +361,7 @@ class WebViewPool(
     val webView = getLiveWebView(tabId) ?: return false
     return try {
       val printManager = activityContext.getSystemService(Context.PRINT_SERVICE) as? PrintManager ?: return false
-      val jobName = UrlValidator.sanitizeDisplayText(title, 64).ifEmpty { "Shiz_Page" }
+      val jobName = UrlValidator.sanitizeDisplayText(title, 64).ifEmpty { "Kai_Page" }
       val adapter = webView.createPrintDocumentAdapter(jobName)
       printManager.print(jobName, adapter, PrintAttributes.Builder().build())
       true
@@ -477,7 +477,7 @@ class WebViewPool(
     val js = if (enabled) {
       """
       (function(){
-        var id='shiz-night-style';
+        var id='kai-night-style';
         if(document.getElementById(id))return;
         var s=document.createElement('style');
         s.id=id;
@@ -486,7 +486,7 @@ class WebViewPool(
       })();
       """.trimIndent()
     } else {
-      "(function(){var s=document.getElementById('shiz-night-style');if(s)s.remove();})();"
+      "(function(){var s=document.getElementById('kai-night-style');if(s)s.remove();})();"
     }
     try {
       webView.evaluateJavascript(js, null)
@@ -499,11 +499,11 @@ class WebViewPool(
     val js = if (enabled) {
       """
       (function() {
-        if (window.__shiz_adblock_installed) return;
-        window.__shiz_adblock_installed = true;
+        if (window.__kai_adblock_installed) return;
+        window.__kai_adblock_installed = true;
 
         try {
-          var styleId = 'shiz-adblock-shield-style';
+          var styleId = 'kai-adblock-shield-style';
           if (!document.getElementById(styleId)) {
             var s = document.createElement('style');
             s.id = styleId;
@@ -594,8 +594,8 @@ class WebViewPool(
     } else {
       """
       (function() {
-        window.__shiz_adblock_installed = false;
-        var s = document.getElementById('shiz-adblock-shield-style');
+        window.__kai_adblock_installed = false;
+        var s = document.getElementById('kai-adblock-shield-style');
         if (s) s.remove();
       })();
       """.trimIndent()
@@ -611,8 +611,8 @@ class WebViewPool(
     val js = if (enabled) {
       """
       (function() {
-        if (window.__shiz_bg_play_installed) return;
-        window.__shiz_bg_play_installed = true;
+        if (window.__kai_bg_play_installed) return;
+        window.__kai_bg_play_installed = true;
 
         function spoofVisibility() {
           try {
@@ -683,9 +683,9 @@ class WebViewPool(
           var autoResume = function(e) {
             var target = e.target;
             if (target && (target.nodeName === 'VIDEO' || target.nodeName === 'AUDIO')) {
-              if (target.__shiz_was_playing && !target.__shiz_user_paused) {
+              if (target.__kai_was_playing && !target.__kai_user_paused) {
                 setTimeout(function() {
-                  if (target.paused && !target.__shiz_user_paused) {
+                  if (target.paused && !target.__kai_user_paused) {
                     target.play().catch(function() {});
                   }
                 }, 150);
@@ -695,8 +695,8 @@ class WebViewPool(
           document.addEventListener('play', function(e) {
             var target = e.target;
             if (target && (target.nodeName === 'VIDEO' || target.nodeName === 'AUDIO')) {
-              target.__shiz_was_playing = true;
-              target.__shiz_user_paused = false;
+              target.__kai_was_playing = true;
+              target.__kai_user_paused = false;
             }
           }, true);
           document.addEventListener('pause', autoResume, true);
@@ -708,7 +708,7 @@ class WebViewPool(
     } else {
       """
       (function() {
-        window.__shiz_bg_play_installed = false;
+        window.__kai_bg_play_installed = false;
       })();
       """.trimIndent()
     }

@@ -18,7 +18,7 @@ import com.example.R
 class MediaPlaybackService : Service() {
 
   companion object {
-    const val CHANNEL_ID = "shiz_media_stream"
+    const val CHANNEL_ID = "kai_media_stream"
     const val CHANNEL_NAME = "Media Playback"
     const val NOTIFICATION_ID = 4040
 
@@ -82,7 +82,7 @@ class MediaPlaybackService : Service() {
     isServiceRunning = true
     try {
       val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
-      wakeLock = pm?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "shiz:media_playback")
+      wakeLock = pm?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "kai:media_playback")
       wakeLock?.acquire(4 * 60 * 60 * 1000L)
     } catch (_: Throwable) {
     }
