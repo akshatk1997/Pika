@@ -341,7 +341,7 @@ class ExampleRobolectricTest {
     val html = com.example.ui.ai.KaiAiApp.getHtmlText(context)
     assertTrue(html.contains("Kai AI"))
     assertTrue(html.contains("Anonymous AI Workspace"))
-    assertTrue(html.contains("100% Anonymous"))
+    assertFalse(html.contains("100% Anonymous"))
     assertTrue(html.contains("attach-btn"))
     assertFalse(html.contains("camera-btn"))
     assertFalse(html.contains("camera-modal"))
