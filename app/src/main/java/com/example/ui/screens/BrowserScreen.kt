@@ -462,22 +462,32 @@ fun BrowserScreen(
 
               if (isBrowserFullscreen) {
                 Surface(
-                  shape = RoundedCornerShape(24.dp),
-                  color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
-                  border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)),
-                  shadowElevation = 6.dp,
+                  shape = RoundedCornerShape(16.dp),
+                  color = Color.Black.copy(alpha = 0.65f),
+                  border = BorderStroke(0.6.dp, Color.White.copy(alpha = 0.35f)),
+                  contentColor = Color.White,
+                  shadowElevation = 4.dp,
                   modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(14.dp)
+                    .padding(10.dp)
                     .clickable { viewModel.exitBrowserFullscreen() }
                 ) {
                   Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically
                   ) {
-                    Icon(Icons.Filled.Close, contentDescription = "Exit fullscreen", modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Exit fullscreen", style = MaterialTheme.typography.labelMedium)
+                    Icon(
+                      Icons.Filled.Close,
+                      contentDescription = "Exit",
+                      modifier = Modifier.size(13.dp),
+                      tint = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text(
+                      "Exit",
+                      style = MaterialTheme.typography.labelSmall,
+                      color = Color.White
+                    )
                   }
                 }
               }
@@ -528,22 +538,33 @@ fun BrowserScreen(
                 modifier = Modifier.fillMaxSize()
               )
               Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                shape = RoundedCornerShape(16.dp),
+                color = Color.Black.copy(alpha = 0.65f),
+                border = BorderStroke(0.6.dp, Color.White.copy(alpha = 0.35f)),
+                contentColor = Color.White,
+                shadowElevation = 4.dp,
                 modifier = Modifier
                   .align(Alignment.TopEnd)
                   .statusBarsPadding()
-                  .padding(16.dp)
+                  .padding(10.dp)
                   .clickable { viewModel.exitFullscreen() }
               ) {
                 Row(
-                  modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
                   verticalAlignment = Alignment.CenterVertically
                 ) {
-                  Icon(Icons.Filled.Close, contentDescription = "Exit fullscreen", modifier = Modifier.size(18.dp))
-                  Spacer(modifier = Modifier.width(6.dp))
-                  Text("Exit fullscreen", style = MaterialTheme.typography.labelMedium)
+                  Icon(
+                    Icons.Filled.Close,
+                    contentDescription = "Exit",
+                    modifier = Modifier.size(13.dp),
+                    tint = Color.White
+                  )
+                  Spacer(modifier = Modifier.width(3.dp))
+                  Text(
+                    "Exit",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White
+                  )
                 }
               }
             }

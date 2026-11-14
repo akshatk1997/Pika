@@ -38,8 +38,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.5.7", BuildConfig.VERSION_NAME)
-    assertEquals(30, BuildConfig.VERSION_CODE)
+    assertEquals("1.5.8", BuildConfig.VERSION_NAME)
+    assertEquals(31, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -159,7 +159,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.5.7").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.5.8").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -554,7 +554,7 @@ class ExampleRobolectricTest {
     val expectedIds = listOf(
       "prompt-input", "send-btn", "chat-feed", "empty-state",
       "attach-btn", "file-input", "attach-tray", "attach-preview-img",
-      "mic-btn", "new-chat-btn", "theme-toggle-btn",
+      "mic-btn", "new-chat-btn", "theme-toggle-btn", "key-settings-btn",
       "voice-banner", "voice-status", "voice-wave", "voice-done-btn", "voice-cancel-btn"
     )
     for (id in expectedIds) {
@@ -566,6 +566,9 @@ class ExampleRobolectricTest {
     assertTrue(scriptContent.contains("gemini-3.8-flash"))
     assertTrue(scriptContent.contains("openai-fast"))
     assertTrue(scriptContent.contains("https://text.pollinations.ai/openai/chat/completions"))
+    assertTrue(scriptContent.contains("synthesizeNeuralSearch"))
+    assertTrue(scriptContent.contains("checkMathQuery"))
+    assertTrue(scriptContent.contains("checkGreeting"))
   }
 
   @Test

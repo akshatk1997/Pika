@@ -83,7 +83,7 @@ open class BackgroundMediaWebView(
 ) : WebView(context) {
 
   public override fun onWindowVisibilityChanged(visibility: Int) {
-    if (isBackgroundPlayEnabled()) {
+    if (isBackgroundPlayEnabled() && isAttachedToWindow) {
       super.onWindowVisibilityChanged(View.VISIBLE)
     } else {
       super.onWindowVisibilityChanged(visibility)
@@ -91,7 +91,7 @@ open class BackgroundMediaWebView(
   }
 
   override fun dispatchWindowVisibilityChanged(visibility: Int) {
-    if (isBackgroundPlayEnabled()) {
+    if (isBackgroundPlayEnabled() && isAttachedToWindow) {
       super.dispatchWindowVisibilityChanged(View.VISIBLE)
     } else {
       super.dispatchWindowVisibilityChanged(visibility)
@@ -99,7 +99,7 @@ open class BackgroundMediaWebView(
   }
 
   public override fun onVisibilityChanged(changedView: View, visibility: Int) {
-    if (isBackgroundPlayEnabled()) {
+    if (isBackgroundPlayEnabled() && isAttachedToWindow) {
       super.onVisibilityChanged(changedView, View.VISIBLE)
     } else {
       super.onVisibilityChanged(changedView, visibility)
@@ -594,9 +594,7 @@ class WebViewPool(
               '.ytp-ad-image-overlay',
               '.ytp-ad-message-container',
               '.ytp-ad-action-interstitial',
-              '.ytp-ad-player-overlay',
               '.ytp-ad-player-overlay-flyout-cta',
-              '.video-ads',
               '.adsbygoogle',
               '[id^="google_ads_"]',
               '[id^="div-gpt-ad"]',
@@ -618,32 +616,33 @@ class WebViewPool(
         function skipStreamingAds() {
           try {
             var player = document.querySelector('#movie_player') || document.querySelector('.html5-video-player');
-            var isAdActive = false;
-            if (player) {
-              isAdActive = player.classList.contains('ad-showing') ||
-                           player.classList.contains('ad-interrupting') ||
-                           Boolean(player.querySelector('.ytp-ad-player-overlay'));
-            }
+            var isAdActive = Boolean(player && (player.classList.contains('ad-showing') || player.classList.contains('ad-interrupting')));
 
-            var videos = document.querySelectorAll('video');
-            for (var i = 0; i < videos.length; i++) {
-              var v = videos[i];
-              var adContainer = v.closest && v.closest('.ad-showing, .ad-interrupting, .video-ads');
-              if (isAdActive || adContainer) {
-                v.muted = true;
-                if (isFinite(v.duration) && v.duration > 0) {
+            if (isAdActive) {
+              var skipButtons = document.querySelectorAll(
+                '.ytp-ad-skip-button, .ytp-ad-skip-button-modern, button.ytp-ad-skip-button, .ytp-ad-overlay-close-button, .videoAdUiSkipButton, [class*="skip-button"]'
+              );
+              for (var j = 0; j < skipButtons.length; j++) {
+                if (typeof skipButtons[j].click === 'function') {
+                  skipButtons[j].click();
+                }
+              }
+
+              // Fast-forward ONLY if active ad is playing and duration is short (< 120s)
+              var videos = player.querySelectorAll('video');
+              for (var i = 0; i < videos.length; i++) {
+                var v = videos[i];
+                if (isFinite(v.duration) && v.duration > 0 && v.duration < 120) {
                   v.currentTime = v.duration;
                 }
-                v.playbackRate = 16.0;
               }
-            }
-
-            var skipButtons = document.querySelectorAll(
-              '.ytp-ad-skip-button, .ytp-ad-skip-button-modern, button.ytp-ad-skip-button, .ytp-ad-overlay-close-button, .videoAdUiSkipButton, [class*="skip-button"]'
-            );
-            for (var j = 0; j < skipButtons.length; j++) {
-              if (typeof skipButtons[j].click === 'function') {
-                skipButtons[j].click();
+            } else if (player) {
+              // Ensure normal content video playback rate is 1.0
+              var contentVideos = player.querySelectorAll('video');
+              for (var k = 0; k < contentVideos.length; k++) {
+                if (contentVideos[k].playbackRate > 2.0) {
+                  contentVideos[k].playbackRate = 1.0;
+                }
               }
             }
           } catch(e) {}
@@ -1043,6 +1042,11 @@ class WebViewPool(
     }
 
     applySettings(webView, isPrivate, userAgentMode, settingsProvider())
+
+    try {
+      webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+    } catch (_: Throwable) {
+    }
 
     try {
       val voiceBridge = KaiVoiceBridge(
