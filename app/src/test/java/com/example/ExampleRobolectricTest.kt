@@ -161,7 +161,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.5.0").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.5.1").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
