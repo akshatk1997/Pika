@@ -38,8 +38,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.5.3", BuildConfig.VERSION_NAME)
-    assertEquals(26, BuildConfig.VERSION_CODE)
+    assertEquals("1.5.4", BuildConfig.VERSION_NAME)
+    assertEquals(27, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -161,7 +161,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.5.3").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.5.4").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -490,11 +490,17 @@ class ExampleRobolectricTest {
     assertTrue(html.contains("sun-icon"))
     assertTrue(html.contains("moon-icon"))
 
-    // Verify light mode CSS palette
+    // Verify light mode CSS palette and high-contrast visibility rules
     assertTrue(html.contains("[data-theme=\"light\"]"))
     assertTrue(html.contains("--bg: #F8FAFC;"))
     assertTrue(html.contains("--bubble-user: #E0F2FE;"))
     assertTrue(html.contains("--bubble-ai: #FFFFFF;"))
+    assertTrue(html.contains("[data-theme=\"light\"] .empty-title"))
+    assertTrue(html.contains("[data-theme=\"light\"] #prompt-input"))
+    assertTrue(html.contains("[data-theme=\"light\"] .ai-content h1"))
+    assertTrue(html.contains("[data-theme=\"light\"] pre code"))
+    assertTrue(html.contains("[data-theme=\"light\"] .thought-process"))
+    assertTrue(html.contains("[data-theme=\"light\"] .msg-doc-chip"))
 
     // Verify JavaScript theme switching APIs
     assertTrue(html.contains("function applyTheme("))

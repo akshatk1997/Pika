@@ -798,6 +798,8 @@ class WebViewPool(
     val js = """
       (function() {
         var mode = '${mode.id}';
+        window.__kai_yt_scale_mode = mode;
+
         var id = 'kai-youtube-scale-style';
         var s = document.getElementById(id);
         if (!s) {
@@ -805,61 +807,99 @@ class WebViewPool(
           s.id = id;
           (document.head || document.documentElement).appendChild(s);
         }
-        
-        var css = '';
-        if (mode === 'fit') {
-          css = 'video, .html5-main-video, .video-stream { object-fit: cover !important; width: 100% !important; height: 100% !important; transform: none !important; position: absolute !important; top: 0px !important; left: 0px !important; margin: 0px !important; }';
-        } else if (mode === 'stretched') {
-          css = 'video, .html5-main-video, .video-stream { object-fit: fill !important; width: 100% !important; height: 100% !important; transform: none !important; position: absolute !important; top: 0px !important; left: 0px !important; margin: 0px !important; }';
-        } else {
-          css = 'video, .html5-main-video, .video-stream { object-fit: contain !important; transform: none !important; }';
-        }
-        s.textContent = css;
+        s.textContent = '.html5-video-container, #movie_player, .html5-video-player, #player-container-id { overflow: hidden !important; } video.html5-main-video { transform-origin: center center !important; -webkit-transform-origin: center center !important; }';
 
-        function updateVideos() {
+        function updateVideoScale() {
           try {
-            var vids = document.querySelectorAll('video');
-            for (var i = 0; i < vids.length; i++) {
-              var v = vids[i];
-              if (mode === 'fit') {
-                v.style.setProperty('object-fit', 'cover', 'important');
-                v.style.setProperty('width', '100%', 'important');
-                v.style.setProperty('height', '100%', 'important');
-                v.style.setProperty('top', '0px', 'important');
-                v.style.setProperty('left', '0px', 'important');
-                v.style.setProperty('margin', '0px', 'important');
-                v.style.setProperty('transform', 'none', 'important');
-              } else if (mode === 'stretched') {
-                v.style.setProperty('object-fit', 'fill', 'important');
-                v.style.setProperty('width', '100%', 'important');
-                v.style.setProperty('height', '100%', 'important');
-                v.style.setProperty('top', '0px', 'important');
-                v.style.setProperty('left', '0px', 'important');
-                v.style.setProperty('margin', '0px', 'important');
-                v.style.setProperty('transform', 'none', 'important');
-              } else {
-                v.style.setProperty('object-fit', 'contain', 'important');
-                v.style.removeProperty('width');
-                v.style.removeProperty('height');
-                v.style.removeProperty('top');
-                v.style.removeProperty('left');
-                v.style.removeProperty('margin');
-                v.style.removeProperty('transform');
+            var currentMode = window.__kai_yt_scale_mode || 'original';
+            var player = document.getElementById('movie_player') ||
+                         document.querySelector('.html5-video-player') ||
+                         document.getElementById('player-container-id') ||
+                         document.querySelector('.player-container');
+            var videos = document.querySelectorAll('video.html5-main-video, #movie_player video, .html5-video-player video, video');
+            if (!videos || videos.length === 0) return;
+
+            for (var i = 0; i < videos.length; i++) {
+              var v = videos[i];
+              if (currentMode === 'original') {
+                v.style.setProperty('transform', 'translateZ(0)', 'important');
+                v.style.setProperty('-webkit-transform', 'translateZ(0)', 'important');
+                v.style.setProperty('transform-origin', 'center center', 'important');
+                v.style.removeProperty('object-fit');
+                continue;
+              }
+
+              var pw = (player ? (player.clientWidth || player.offsetWidth) : 0) || window.innerWidth;
+              var ph = (player ? (player.clientHeight || player.offsetHeight) : 0) || Math.round(window.innerWidth * 9 / 16);
+              var vw = v.offsetWidth || v.videoWidth || pw;
+              var vh = v.offsetHeight || v.videoHeight || ph;
+
+              if (vw <= 0 || vh <= 0 || pw <= 0 || ph <= 0) continue;
+
+              var sx = pw / vw;
+              var sy = ph / vh;
+
+              if (currentMode === 'fit') {
+                var scale = Math.max(sx, sy);
+                if (scale < 0.98 || scale > 1.01) {
+                  v.style.setProperty('transform', 'scale(' + scale.toFixed(4) + ') translateZ(0)', 'important');
+                  v.style.setProperty('-webkit-transform', 'scale(' + scale.toFixed(4) + ') translateZ(0)', 'important');
+                } else {
+                  v.style.setProperty('transform', 'translateZ(0)', 'important');
+                  v.style.setProperty('-webkit-transform', 'translateZ(0)', 'important');
+                }
+                v.style.setProperty('transform-origin', 'center center', 'important');
+              } else if (currentMode === 'stretched') {
+                v.style.setProperty('transform', 'scale(' + sx.toFixed(4) + ', ' + sy.toFixed(4) + ') translateZ(0)', 'important');
+                v.style.setProperty('-webkit-transform', 'scale(' + sx.toFixed(4) + ', ' + sy.toFixed(4) + ') translateZ(0)', 'important');
+                v.style.setProperty('transform-origin', 'center center', 'important');
+              }
+
+              var parent = v.parentElement;
+              if (parent) {
+                parent.style.setProperty('overflow', 'hidden', 'important');
               }
             }
           } catch(e) {}
         }
-        updateVideos();
-        if (!window.__kai_yt_scale_observer) {
-          try {
-            window.__kai_yt_scale_observer = new MutationObserver(function() {
-              updateVideos();
-            });
-            var target = document.getElementById('movie_player') || document.body;
-            if (target) {
-              window.__kai_yt_scale_observer.observe(target, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+
+        updateVideoScale();
+
+        if (!window.__kai_yt_scale_initialized) {
+          window.__kai_yt_scale_initialized = true;
+          window.addEventListener('resize', updateVideoScale);
+          window.addEventListener('orientationchange', function() {
+            setTimeout(updateVideoScale, 200);
+            setTimeout(updateVideoScale, 600);
+          });
+          document.addEventListener('fullscreenchange', function() {
+            setTimeout(updateVideoScale, 150);
+            setTimeout(updateVideoScale, 500);
+          });
+          document.addEventListener('webkitfullscreenchange', function() {
+            setTimeout(updateVideoScale, 150);
+            setTimeout(updateVideoScale, 500);
+          });
+          document.addEventListener('playing', function(e) {
+            if (e.target && e.target.tagName === 'VIDEO') {
+              setTimeout(updateVideoScale, 50);
             }
-          } catch(e) {}
+          }, true);
+          document.addEventListener('loadedmetadata', function(e) {
+            if (e.target && e.target.tagName === 'VIDEO') {
+              setTimeout(updateVideoScale, 50);
+            }
+          }, true);
+
+          if (window.ResizeObserver) {
+            try {
+              var ro = new ResizeObserver(function() {
+                updateVideoScale();
+              });
+              var pTarget = document.getElementById('movie_player') || document.getElementById('player-container-id') || document.body;
+              if (pTarget) ro.observe(pTarget);
+            } catch(e) {}
+          }
         }
       })();
     """.trimIndent()

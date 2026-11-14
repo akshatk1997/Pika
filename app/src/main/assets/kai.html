@@ -50,6 +50,9 @@
     --font-mono: 'Söhne Mono', 'Sohne Mono', ui-monospace, SFMono-Regular, Consolas, 'Roboto Mono', monospace;
     color-scheme: dark;
   }
+  .logo-core {
+    fill: #FFFFFF;
+  }
 
   /* Pristine Modern Light Mode Palette */
   [data-theme="light"] {
@@ -75,7 +78,7 @@
   }
 
   [data-theme="light"] header {
-    background: rgba(255, 255, 255, 0.94);
+    background: rgba(255, 255, 255, 0.95);
     border-bottom: 1px solid var(--border);
   }
   [data-theme="light"] .brand-title {
@@ -84,35 +87,87 @@
     -webkit-text-fill-color: transparent;
   }
   [data-theme="light"] footer {
-    background: rgba(255, 255, 255, 0.96);
+    background: rgba(255, 255, 255, 0.97);
     border-top: 1px solid var(--border);
+  }
+  [data-theme="light"] .empty-title {
+    color: #0F172A;
+  }
+  [data-theme="light"] .empty-subtitle {
+    color: #475569;
+  }
+  [data-theme="light"] .logo-core {
+    fill: #0F172A;
   }
   [data-theme="light"] .input-wrapper {
     background: #F1F5F9;
-    border-color: #E2E8F0;
+    border-color: #CBD5E1;
   }
   [data-theme="light"] .input-wrapper:focus-within {
     border-color: var(--accent);
     background: #FFFFFF;
     box-shadow: 0 0 0 2px var(--accent-subtle);
   }
+  [data-theme="light"] #prompt-input {
+    color: #0F172A;
+  }
+  [data-theme="light"] #prompt-input::placeholder {
+    color: #64748B;
+  }
+  [data-theme="light"] .send-btn {
+    background: var(--accent);
+    color: #FFFFFF;
+  }
+  [data-theme="light"] .send-btn svg {
+    fill: #FFFFFF;
+  }
+  [data-theme="light"] .action-btn {
+    background: #F1F5F9;
+    border-color: #CBD5E1;
+    color: #475569;
+  }
+  [data-theme="light"] .action-btn:hover, [data-theme="light"] .action-btn:active {
+    background: #E2E8F0;
+    color: #0F172A;
+  }
+  [data-theme="light"] .action-btn.active {
+    background: rgba(2, 132, 199, 0.12);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
   [data-theme="light"] .msg-bubble {
-    color: var(--text);
+    color: #0F172A;
   }
   [data-theme="light"] .msg-row.ai .msg-bubble {
     background: #FFFFFF;
     border-color: #E2E8F0;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    color: #0F172A;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  }
+  [data-theme="light"] .ai-content h1,
+  [data-theme="light"] .ai-content h2,
+  [data-theme="light"] .ai-content h3 {
+    color: #0F172A;
+  }
+  [data-theme="light"] .ai-content strong {
+    color: #0F172A;
+  }
+  [data-theme="light"] .ai-content p,
+  [data-theme="light"] .ai-content li {
+    color: #1E293B;
   }
   [data-theme="light"] .msg-row.user .msg-bubble {
     background: #E0F2FE;
-    border-color: rgba(2, 132, 199, 0.25);
-    color: #0369A1;
+    border-color: rgba(2, 132, 199, 0.35);
+    color: #0C4A6E;
+  }
+  [data-theme="light"] .msg-row.user .msg-bubble strong {
+    color: #082F49;
   }
   [data-theme="light"] .suggestion-pill {
     background: #FFFFFF;
-    border-color: #E2E8F0;
-    color: #334155;
+    border-color: #CBD5E1;
+    color: #1E293B;
     box-shadow: 0 1px 2px rgba(0,0,0,0.04);
   }
   [data-theme="light"] .suggestion-pill:hover {
@@ -121,12 +176,21 @@
     color: var(--accent);
   }
   [data-theme="light"] pre {
-    background: #F1F5F9;
+    background: #F8FAFC;
     border-color: #E2E8F0;
     color: #0F172A;
   }
+  [data-theme="light"] pre code {
+    color: #0F172A;
+  }
+  [data-theme="light"] code {
+    background: #F1F5F9;
+    border: 1px solid #E2E8F0;
+    color: #0284C7;
+  }
   [data-theme="light"] .code-header {
-    background: #E2E8F0;
+    background: #EDF2F7;
+    border-bottom: 1px solid #E2E8F0;
     color: #475569;
   }
   [data-theme="light"] .code-header button {
@@ -136,7 +200,96 @@
   }
   [data-theme="light"] .code-header button:hover {
     background: #F8FAFC;
-    color: var(--text);
+    color: #0F172A;
+  }
+  [data-theme="light"] .thought-process {
+    background: rgba(79, 70, 229, 0.05);
+    border: 1px solid rgba(79, 70, 229, 0.22);
+    border-radius: 12px;
+  }
+  [data-theme="light"] .thought-process summary {
+    color: #4338CA;
+    font-weight: 600;
+  }
+  [data-theme="light"] .thought-process .reasoning-text {
+    color: #334155;
+    border-top: 1px dashed rgba(79, 70, 229, 0.2);
+  }
+  [data-theme="light"] .persona-btn {
+    background: #F1F5F9;
+    border-color: #CBD5E1;
+    color: #475569;
+  }
+  [data-theme="light"] .persona-btn:hover {
+    background: #E2E8F0;
+    color: #0F172A;
+  }
+  [data-theme="light"] .persona-btn.active {
+    background: rgba(2, 132, 199, 0.12);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 8px rgba(2, 132, 199, 0.2);
+  }
+  [data-theme="light"] .new-chat-btn {
+    background: #F1F5F9;
+    border-color: #CBD5E1;
+    color: #475569;
+  }
+  [data-theme="light"] .new-chat-btn:active {
+    background: #E2E8F0;
+    color: #0F172A;
+    border-color: var(--accent);
+  }
+  [data-theme="light"] .theme-toggle-btn {
+    background: #F1F5F9;
+    border-color: #CBD5E1;
+    color: #475569;
+  }
+  [data-theme="light"] .theme-toggle-btn:hover {
+    border-color: var(--accent);
+    color: #0F172A;
+  }
+  [data-theme="light"] .action-pill-btn {
+    background: #F1F5F9;
+    border-color: #CBD5E1;
+    color: #475569;
+  }
+  [data-theme="light"] .action-pill-btn:hover, [data-theme="light"] .action-pill-btn:active {
+    background: #E2E8F0;
+    color: #0F172A;
+  }
+  [data-theme="light"] .attach-tray {
+    background: #F1F5F9;
+    border-color: #E2E8F0;
+  }
+  [data-theme="light"] .attach-info .name {
+    color: #0F172A;
+  }
+  [data-theme="light"] .attach-info .size {
+    color: #64748B;
+  }
+  [data-theme="light"] .attach-remove-btn {
+    color: #64748B;
+  }
+  [data-theme="light"] .msg-doc-chip {
+    background: #F1F5F9;
+    border-color: #E2E8F0;
+    color: #334155;
+  }
+  [data-theme="light"] .msg-doc-chip.pdf {
+    background: #FEF2F2;
+    border-color: #FECACA;
+    color: #B91C1C;
+  }
+  [data-theme="light"] .msg-doc-chip.ppt {
+    background: #FFFBEB;
+    border-color: #FDE68A;
+    color: #B45309;
+  }
+  [data-theme="light"] .msg-doc-chip.audio {
+    background: #F5F3FF;
+    border-color: #DDD6FE;
+    color: #6D28D9;
   }
 
   * {
@@ -329,7 +482,7 @@
     font-size: 1.3rem;
     font-weight: 600;
     letter-spacing: -0.02em;
-    color: #FFFFFF;
+    color: var(--text);
     font-family: var(--font-sans);
   }
   .empty-subtitle {
@@ -407,7 +560,7 @@
   .msg-row.user .msg-bubble {
     max-width: 86%;
     background: var(--bubble-user);
-    color: #FFFFFF;
+    color: var(--text);
     border: 1px solid rgba(0, 242, 254, 0.25);
     border-radius: 20px;
     padding: 10px 16px;
@@ -502,7 +655,7 @@
   /* ChatGPT Typography & Markdown Formatting */
   .ai-content h1, .ai-content h2, .ai-content h3 {
     font-family: var(--font-sans);
-    color: #FFFFFF;
+    color: var(--text);
     font-weight: 600;
     letter-spacing: -0.015em;
     margin-top: 1.1em;
@@ -520,7 +673,7 @@
   }
   .ai-content strong {
     font-weight: 600;
-    color: #FFFFFF;
+    color: var(--text);
   }
   .ai-content ul, .ai-content ol {
     margin-bottom: 0.85em;
@@ -564,7 +717,7 @@
     transition: color 0.15s ease;
   }
   .copy-code-btn:active, .copy-code-btn:hover {
-    color: #FFFFFF;
+    color: var(--text);
   }
   pre {
     background: transparent;
@@ -576,18 +729,18 @@
     line-height: 1.5;
   }
   pre code {
-    color: #ECECEC;
+    color: var(--text);
     background: transparent;
     padding: 0;
     font-family: inherit;
   }
   code {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--border-subtle);
     padding: 2px 6px;
     border-radius: 4px;
     font-family: var(--font-mono);
     font-size: 0.86em;
-    color: #ECECEC;
+    color: var(--text);
   }
 
   /* Message action buttons */
@@ -843,7 +996,7 @@
     background: transparent;
     border: none;
     outline: none;
-    color: #FFFFFF;
+    color: var(--text);
     font-size: 0.94rem;
     font-family: var(--font-sans);
     resize: none;
@@ -890,7 +1043,7 @@
       <svg viewBox="0 0 108 108" fill="none">
         <circle cx="54" cy="54" r="38" stroke="#00F2FE" stroke-width="4.5" />
         <circle cx="54" cy="54" r="22" stroke="#6366F1" stroke-width="3.5" />
-        <circle cx="54" cy="54" r="8" fill="#FFFFFF" />
+        <circle cx="54" cy="54" r="8" fill="#FFFFFF" class="logo-core" />
       </svg>
       <span class="brand-title">Kai AI</span>
     </div>
@@ -922,7 +1075,7 @@
     <svg class="empty-logo" viewBox="0 0 108 108" fill="none">
       <circle cx="54" cy="54" r="38" stroke="#00F2FE" stroke-width="4.5" />
       <circle cx="54" cy="54" r="22" stroke="#6366F1" stroke-width="3.5" />
-      <circle cx="54" cy="54" r="8" fill="#FFFFFF" />
+      <circle cx="54" cy="54" r="8" fill="#FFFFFF" class="logo-core" />
     </svg>
     <div class="empty-title">Anonymous AI Workspace</div>
     <div class="empty-subtitle">
