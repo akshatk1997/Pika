@@ -679,7 +679,7 @@ class WebViewPool(
     }
   }
 
-  private fun applyBackgroundPlay(webView: WebView, enabled: Boolean) {
+  fun applyBackgroundPlay(webView: WebView, enabled: Boolean) {
     if (!settingsProvider().javascriptEnabled || destroyedViews.contains(webView)) return
     val js = if (enabled) {
       """
