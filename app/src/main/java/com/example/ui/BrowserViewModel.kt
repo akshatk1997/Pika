@@ -15,6 +15,13 @@ import android.webkit.WebChromeClient
 import android.webkit.WebView
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.ai.PageAnswerResult
+import com.example.ai.PageAssistantEngine
+import com.example.ai.PageSummaryResult
+import com.example.ai.PhishingRiskAssessment
+import com.example.ai.PhishingRiskLevel
+import com.example.ai.PhishingScamDetector
+import com.example.ai.SummaryMode
 import com.example.data.BookmarkImportExport
 import com.example.data.LocalBrowserDatabase
 import com.example.data.SettingsRepository
@@ -196,6 +203,67 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
   }
 
+  // AI Assistant & Scam Detector
+  private val _phishingAssessment = MutableStateFlow<PhishingRiskAssessment?>(null)
+  val phishingAssessment: StateFlow<PhishingRiskAssessment?> = _phishingAssessment.asStateFlow()
+
+  private val _dismissedPhishingUrls = ConcurrentHashMap.newKeySet<String>()
+
+  private val _pageSummary = MutableStateFlow<PageSummaryResult?>(null)
+  val pageSummary: StateFlow<PageSummaryResult?> = _pageSummary.asStateFlow()
+
+  private val _chatQas = MutableStateFlow<List<PageAnswerResult>>(emptyList())
+  val chatQas: StateFlow<List<PageAnswerResult>> = _chatQas.asStateFlow()
+
+  private val _isAiLoading = MutableStateFlow(false)
+  val isAiLoading: StateFlow<Boolean> = _isAiLoading.asStateFlow()
+
+  private val _showAiAssistantSheet = MutableStateFlow(false)
+  val showAiAssistantSheet: StateFlow<Boolean> = _showAiAssistantSheet.asStateFlow()
+
+  fun openAiAssistant() {
+    _showAiAssistantSheet.value = true
+    if (_pageSummary.value == null) {
+      generatePageSummary(SummaryMode.EXPLAIN_SIMPLY)
+    }
+  }
+
+  fun dismissAiAssistant() {
+    _showAiAssistantSheet.value = false
+  }
+
+  fun generatePageSummary(mode: SummaryMode) {
+    val tab = activeTab()
+    _isAiLoading.value = true
+    webViewPool.extractReaderArticle(tab.id, tab.url) { article ->
+      viewModelScope.launch(Dispatchers.Default) {
+        val text = article?.paragraphs?.joinToString("\n\n") ?: ""
+        val summary = PageAssistantEngine.summarize(text, mode)
+        _pageSummary.value = summary
+        _isAiLoading.value = false
+      }
+    }
+  }
+
+  fun askPageQuestion(question: String) {
+    if (question.isBlank()) return
+    val tab = activeTab()
+    _isAiLoading.value = true
+    webViewPool.extractReaderArticle(tab.id, tab.url) { article ->
+      viewModelScope.launch(Dispatchers.Default) {
+        val text = article?.paragraphs?.joinToString("\n\n") ?: ""
+        val answer = PageAssistantEngine.answerQuestion(text, question)
+        _chatQas.update { it + answer }
+        _isAiLoading.value = false
+      }
+    }
+  }
+
+  fun dismissPhishingWarning(url: String) {
+    _dismissedPhishingUrls.add(url)
+    _phishingAssessment.value = null
+  }
+
   private val webCallbacks = object : WebViewCallbacks {
     override fun onPageStarted(tabId: String, url: String) {
       runOnMain {
@@ -219,6 +287,16 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         }
         if (tabById(tabId)?.isPrivate != true) {
           persistOpenTabs()
+        }
+        if (tabId == _activeTabId.value) {
+          _pageSummary.value = null
+          _chatQas.value = emptyList()
+          if (url.isNotBlank() && !_dismissedPhishingUrls.contains(url)) {
+            val assessment = PhishingScamDetector.analyzeUrl(url)
+            _phishingAssessment.value = if (assessment.level != PhishingRiskLevel.LOW) assessment else null
+          } else {
+            _phishingAssessment.value = null
+          }
         }
       }
     }
@@ -262,6 +340,10 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
           }
         }
         persistOpenTabs()
+        if (tabId == _activeTabId.value && url.isNotBlank() && !_dismissedPhishingUrls.contains(url)) {
+          val assessment = PhishingScamDetector.analyzeUrl(url)
+          _phishingAssessment.value = if (assessment.level != PhishingRiskLevel.LOW) assessment else null
+        }
       }
     }
 

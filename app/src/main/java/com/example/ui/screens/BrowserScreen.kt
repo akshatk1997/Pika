@@ -119,6 +119,7 @@ import com.example.model.WebPermissionKind
 import com.example.security.UrlValidator
 import com.example.ui.ActiveOverlay
 import com.example.ui.BrowserViewModel
+import com.example.ui.components.AiAssistantSheet
 import com.example.ui.components.FeatherIcons
 import com.example.ui.components.FindInPageBar
 import com.example.ui.components.HttpWarningOverlay
@@ -162,6 +163,11 @@ fun BrowserScreen(
   val fullscreenView by viewModel.fullscreenView.collectAsStateWithLifecycle()
   val statusToast by viewModel.statusToast.collectAsStateWithLifecycle()
   val showIntro by viewModel.showIntro.collectAsStateWithLifecycle()
+  val showAiSheet by viewModel.showAiAssistantSheet.collectAsStateWithLifecycle()
+  val pageSummary by viewModel.pageSummary.collectAsStateWithLifecycle()
+  val chatQas by viewModel.chatQas.collectAsStateWithLifecycle()
+  val isAiLoading by viewModel.isAiLoading.collectAsStateWithLifecycle()
+  val phishingAssessment by viewModel.phishingAssessment.collectAsStateWithLifecycle()
 
   var showSiteInfoDialog by remember { mutableStateOf(false) }
   var showQuickSheet by remember { mutableStateOf(false) }
@@ -308,6 +314,41 @@ fun BrowserScreen(
                   onNext = { viewModel.findNext(true) },
                   onClose = { viewModel.closeFindInPage() }
                 )
+              }
+            }
+
+            phishingAssessment?.let { scam ->
+              Surface(
+                color = MaterialTheme.colorScheme.errorContainer,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                shape = RoundedCornerShape(8.dp)
+              ) {
+                Row(
+                  modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                  Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                      text = "⚠️ Suspected Scam / Phishing (${scam.score}/100)",
+                      style = MaterialTheme.typography.labelMedium,
+                      color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    Text(
+                      text = scam.reasons.firstOrNull() ?: "High risk of credential theft",
+                      style = MaterialTheme.typography.bodySmall,
+                      color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                  }
+                  Row {
+                    TextButton(onClick = { viewModel.goBack() }) {
+                      Text("Leave", color = MaterialTheme.colorScheme.error)
+                    }
+                    TextButton(onClick = { viewModel.dismissPhishingWarning(scam.url) }) {
+                      Text("Dismiss", color = MaterialTheme.colorScheme.onErrorContainer)
+                    }
+                  }
+                }
               }
             }
 
@@ -813,6 +854,10 @@ fun BrowserScreen(
             showQuickSheet = false
             viewModel.openNewTab(isPrivate = false)
           },
+          QuickActionItem(FeatherIcons.Sparkle, "AI Assistant", hasUrl) {
+            showQuickSheet = false
+            viewModel.openAiAssistant()
+          },
           QuickActionItem(FeatherIcons.PrivateMask, stringResource(R.string.action_new_private_tab), true) {
             showQuickSheet = false
             viewModel.openNewTab(isPrivate = true)
@@ -1205,6 +1250,17 @@ fun BrowserScreen(
           Text("Deny")
         }
       }
+    )
+  }
+
+  if (showAiSheet) {
+    AiAssistantSheet(
+      summary = pageSummary,
+      chatQas = chatQas,
+      isLoading = isAiLoading,
+      onModeSelected = { viewModel.generatePageSummary(it) },
+      onAskQuestion = { viewModel.askPageQuestion(it) },
+      onDismiss = { viewModel.dismissAiAssistant() }
     )
   }
 }
