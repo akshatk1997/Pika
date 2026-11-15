@@ -937,6 +937,17 @@ class WebViewPool(
             (document.head || document.documentElement).appendChild(meta);
           }
         } catch(e) {}
+
+        // 6. Global Privacy Control (GPC) DOM standard (W3C / CCPA / GDPR)
+        try {
+          if (!('globalPrivacyControl' in navigator)) {
+            Object.defineProperty(navigator, 'globalPrivacyControl', {
+              get: function() { return true; },
+              configurable: false,
+              enumerable: true
+            });
+          }
+        } catch(e) {}
       })();
     """.trimIndent()
     try {
