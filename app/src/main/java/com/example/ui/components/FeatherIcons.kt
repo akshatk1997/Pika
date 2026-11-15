@@ -644,4 +644,15 @@ object FeatherIcons {
       }
     }.build()
   }
+
+  val Play: ImageVector by lazy {
+    ImageVector.Builder("Play", 24.dp, 24.dp, 24f, 24f).apply {
+      path(fill = SolidColor(Color.Black)) {
+        moveTo(8f, 5f)
+        verticalLineTo(19f)
+        lineTo(19f, 12f)
+        close()
+      }
+    }.build()
+  }
 }

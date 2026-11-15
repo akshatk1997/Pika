@@ -296,7 +296,7 @@ fun BrowserScreen(
                 ) {
                   Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                      Icons.Filled.PlayArrow,
+                      FeatherIcons.Play,
                       contentDescription = null,
                       tint = MaterialTheme.colorScheme.primary,
                       modifier = Modifier.size(18.dp)
