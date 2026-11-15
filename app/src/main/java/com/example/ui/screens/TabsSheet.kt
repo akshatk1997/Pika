@@ -6,6 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -63,10 +65,11 @@ import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.model.ClosedTabRecord
 import com.example.model.TabInfo
+import com.example.ai.TabHistoryAiOrganizer
 import com.example.ui.components.FeatherIcons
 import com.example.ui.theme.FeatherPrivateAccent
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun TabsSheet(
   tabs: List<TabInfo>,
@@ -85,11 +88,19 @@ fun TabsSheet(
   val activeIsPrivate = tabs.firstOrNull { it.id == activeTabId }?.isPrivate == true
   var showPrivate by remember(activeIsPrivate) { mutableStateOf(activeIsPrivate) }
   var searchQuery by remember { mutableStateOf("") }
+  var selectedCategory by remember { mutableStateOf("All") }
 
-  val filteredTabs = remember(tabs, showPrivate, searchQuery) {
-    tabs.filter { it.isPrivate == showPrivate }.filter { tab ->
-      if (searchQuery.isBlank()) true
-      else tab.title.contains(searchQuery, ignoreCase = true) || tab.url.contains(searchQuery, ignoreCase = true)
+  val currentTypeTabs = remember(tabs, showPrivate) { tabs.filter { it.isPrivate == showPrivate } }
+  val groupedTabs = remember(currentTypeTabs) { TabHistoryAiOrganizer.groupTabs(currentTypeTabs) }
+  val availableCategories = remember(groupedTabs) {
+    listOf("All") + groupedTabs.keys.filter { it != "General" && (groupedTabs[it]?.size ?: 0) > 0 }
+  }
+
+  val filteredTabs = remember(currentTypeTabs, selectedCategory, searchQuery, groupedTabs) {
+    currentTypeTabs.filter { tab ->
+      val matchesCategory = if (selectedCategory == "All") true else (groupedTabs[selectedCategory]?.contains(tab) == true)
+      val matchesSearch = if (searchQuery.isBlank()) true else tab.title.contains(searchQuery, ignoreCase = true) || tab.url.contains(searchQuery, ignoreCase = true)
+      matchesCategory && matchesSearch
     }
   }
 
@@ -180,6 +191,23 @@ fun TabsSheet(
           placeholder = { Text(stringResource(R.string.tabs_search_hint)) },
           modifier = Modifier.fillMaxWidth().testTag("tabs_search_input")
         )
+
+        if (availableCategories.size > 1) {
+          Spacer(modifier = Modifier.height(8.dp))
+          FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.fillMaxWidth()
+          ) {
+            availableCategories.forEach { cat ->
+              FilterChip(
+                selected = selectedCategory == cat,
+                onClick = { selectedCategory = cat },
+                label = { Text(cat, style = MaterialTheme.typography.labelSmall) }
+              )
+            }
+          }
+        }
 
         Spacer(modifier = Modifier.height(12.dp))
 

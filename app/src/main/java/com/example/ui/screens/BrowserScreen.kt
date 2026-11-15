@@ -165,6 +165,9 @@ fun BrowserScreen(
   val showIntro by viewModel.showIntro.collectAsStateWithLifecycle()
   val showAiSheet by viewModel.showAiAssistantSheet.collectAsStateWithLifecycle()
   val pageSummary by viewModel.pageSummary.collectAsStateWithLifecycle()
+  val pageActionItems by viewModel.pageActionItems.collectAsStateWithLifecycle()
+  val pageInsights by viewModel.pageInsights.collectAsStateWithLifecycle()
+  val ttsState by viewModel.ttsState.collectAsStateWithLifecycle()
   val chatQas by viewModel.chatQas.collectAsStateWithLifecycle()
   val isAiLoading by viewModel.isAiLoading.collectAsStateWithLifecycle()
   val phishingAssessment by viewModel.phishingAssessment.collectAsStateWithLifecycle()
@@ -267,9 +270,50 @@ fun BrowserScreen(
               onToggleDesktopMode = { viewModel.toggleDesktopMode() },
               onOpenBookmarks = { viewModel.setOverlay(ActiveOverlay.BOOKMARKS) },
               onOpenDownloads = { viewModel.setOverlay(ActiveOverlay.DOWNLOADS) },
+              onOpenAi = { viewModel.openAiAssistant() },
               onNewTab = { viewModel.openNewTab(isPrivate = false) }
             )
           }
+
+            AnimatedVisibility(
+              visible = ttsState.isPlaying,
+              enter = expandVertically() + fadeIn(),
+              exit = shrinkVertically() + fadeOut()
+            ) {
+              Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+                shadowElevation = 6.dp,
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(horizontal = 14.dp, vertical = 6.dp)
+              ) {
+                Row(
+                  modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                  Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                      Icons.Filled.PlayArrow,
+                      contentDescription = null,
+                      tint = MaterialTheme.colorScheme.primary,
+                      modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                      "🎧 Reading page aloud...",
+                      style = MaterialTheme.typography.labelMedium,
+                      fontWeight = FontWeight.Bold
+                    )
+                  }
+                  TextButton(onClick = { viewModel.stopReadAloud() }) {
+                    Text("Stop", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall)
+                  }
+                }
+              }
+            }
 
             if (activeTab.isLoading && activeTab.progress in 1..99) {
               Box(
@@ -1263,10 +1307,16 @@ fun BrowserScreen(
   if (showAiSheet) {
     AiAssistantSheet(
       summary = pageSummary,
+      actionItems = pageActionItems,
+      insights = pageInsights,
+      ttsState = ttsState,
       chatQas = chatQas,
       isLoading = isAiLoading,
       onModeSelected = { viewModel.generatePageSummary(it) },
       onAskQuestion = { viewModel.askPageQuestion(it) },
+      onReadAloud = { viewModel.readAloudCurrentPage() },
+      onStopReadAloud = { viewModel.stopReadAloud() },
+      onSetSpeechRate = { viewModel.setReadAloudRate(it) },
       onDismiss = { viewModel.dismissAiAssistant() }
     )
   }
@@ -1312,6 +1362,7 @@ private fun BrowserToolbar(
   onToggleDesktopMode: () -> Unit = {},
   onOpenBookmarks: () -> Unit = {},
   onOpenDownloads: () -> Unit = {},
+  onOpenAi: () -> Unit = {},
   onNewTab: () -> Unit = {},
   modifier: Modifier = Modifier
 ) {
@@ -1723,6 +1774,20 @@ private fun BrowserToolbar(
                   imageVector = if (activeTab.isLoading) Icons.Filled.Close else Icons.Filled.Refresh,
                   contentDescription = if (activeTab.isLoading) stringResource(R.string.cd_stop) else stringResource(R.string.cd_reload)
                 )
+              }
+
+              if (activeTab.url.isNotBlank()) {
+                IconButton(
+                  onClick = onOpenAi,
+                  modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_ai_button")
+                ) {
+                  Icon(
+                    FeatherIcons.Sparkle,
+                    contentDescription = "AI Assistant",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(19.dp)
+                  )
+                }
               }
 
               Surface(

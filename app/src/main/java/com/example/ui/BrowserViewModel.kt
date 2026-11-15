@@ -15,13 +15,16 @@ import android.webkit.WebChromeClient
 import android.webkit.WebView
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.ai.PageActionItemsResult
 import com.example.ai.PageAnswerResult
 import com.example.ai.PageAssistantEngine
+import com.example.ai.PageInsightsResult
 import com.example.ai.PageSummaryResult
 import com.example.ai.PhishingRiskAssessment
 import com.example.ai.PhishingRiskLevel
 import com.example.ai.PhishingScamDetector
 import com.example.ai.SummaryMode
+import com.example.ai.TtsReader
 import com.example.data.BookmarkImportExport
 import com.example.data.LocalBrowserDatabase
 import com.example.data.SettingsRepository
@@ -212,6 +215,26 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   private val _pageSummary = MutableStateFlow<PageSummaryResult?>(null)
   val pageSummary: StateFlow<PageSummaryResult?> = _pageSummary.asStateFlow()
 
+  private val _pageActionItems = MutableStateFlow<PageActionItemsResult?>(null)
+  val pageActionItems: StateFlow<PageActionItemsResult?> = _pageActionItems.asStateFlow()
+
+  private val _pageInsights = MutableStateFlow<PageInsightsResult?>(null)
+  val pageInsights: StateFlow<PageInsightsResult?> = _pageInsights.asStateFlow()
+
+  data class TtsUiState(
+    val isPlaying: Boolean = false,
+    val isPaused: Boolean = false,
+    val speechRate: Float = 1.0f,
+    val errorMessage: String? = null
+  )
+
+  private val _ttsState = MutableStateFlow(TtsUiState())
+  val ttsState: StateFlow<TtsUiState> = _ttsState.asStateFlow()
+
+  private val ttsReader = TtsReader(appContext) { isPlaying, isPaused, err ->
+    _ttsState.update { it.copy(isPlaying = isPlaying, isPaused = isPaused, errorMessage = err) }
+  }
+
   private val _chatQas = MutableStateFlow<List<PageAnswerResult>>(emptyList())
   val chatQas: StateFlow<List<PageAnswerResult>> = _chatQas.asStateFlow()
 
@@ -225,6 +248,12 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     _showAiAssistantSheet.value = true
     if (_pageSummary.value == null) {
       generatePageSummary(SummaryMode.EXPLAIN_SIMPLY)
+    }
+    if (_pageActionItems.value == null) {
+      fetchPageActionItems()
+    }
+    if (_pageInsights.value == null) {
+      fetchPageInsights()
     }
   }
 
@@ -243,6 +272,58 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         _isAiLoading.value = false
       }
     }
+  }
+
+  fun fetchPageActionItems() {
+    val tab = activeTab()
+    webViewPool.extractReaderArticle(tab.id, tab.url) { article ->
+      viewModelScope.launch(Dispatchers.Default) {
+        val text = article?.paragraphs?.joinToString("\n\n") ?: ""
+        val items = PageAssistantEngine.extractActionItems(text)
+        _pageActionItems.value = items
+      }
+    }
+  }
+
+  fun fetchPageInsights() {
+    val tab = activeTab()
+    webViewPool.extractReaderArticle(tab.id, tab.url) { article ->
+      viewModelScope.launch(Dispatchers.Default) {
+        val text = article?.paragraphs?.joinToString("\n\n") ?: ""
+        val insights = PageAssistantEngine.analyzePageInsights(text)
+        _pageInsights.value = insights
+      }
+    }
+  }
+
+  fun readAloudCurrentPage() {
+    val summary = _pageSummary.value?.summaryText
+    if (!summary.isNullOrBlank()) {
+      readAloudText(summary)
+      return
+    }
+    val tab = activeTab()
+    webViewPool.extractReaderArticle(tab.id, tab.url) { article ->
+      val text = article?.paragraphs?.joinToString(". ") ?: ""
+      if (text.isNotBlank()) {
+        readAloudText(text.take(3000))
+      } else {
+        showToast("No readable text to read aloud")
+      }
+    }
+  }
+
+  fun readAloudText(text: String) {
+    ttsReader.speak(text)
+  }
+
+  fun stopReadAloud() {
+    ttsReader.stop()
+  }
+
+  fun setReadAloudRate(rate: Float) {
+    ttsReader.setSpeechRate(rate)
+    _ttsState.update { it.copy(speechRate = rate) }
   }
 
   fun askPageQuestion(question: String) {
@@ -1832,6 +1913,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   override fun onCleared() {
     super.onCleared()
+    ttsReader.shutdown()
     MediaPlaybackService.mediaControlListener = null
     MediaPlaybackService.stop(appContext)
     webViewPool.destroyAll()

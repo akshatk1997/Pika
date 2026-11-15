@@ -46,4 +46,37 @@ class PageAssistantEngineTest {
     val result = PageAssistantEngine.summarize(maliciousText, SummaryMode.KEY_POINTS)
     assertFalse(result.summaryText.contains("Ignore previous instructions", ignoreCase = true))
   }
+
+  @Test
+  fun extractsActionItemsAndTakeawaysAccurately() {
+    val tutorialText = """
+      To build a secure app, you must configure network security config properly.
+      Developers should verify third-party libraries before production deployment.
+      Studies showed that security hardening decreased vulnerability exploits by 85 percent.
+    """.trimIndent()
+    val result = PageAssistantEngine.extractActionItems(tutorialText)
+    assertTrue(result.actionItems.any { it.contains("configure", ignoreCase = true) })
+    assertTrue(result.keyTakeaways.any { it.contains("85 percent", ignoreCase = true) })
+  }
+
+  @Test
+  fun analyzesPageInsightsReadabilityAndTone() {
+    val newsText = """
+      According to a research study published by global researchers, clean energy data resulted in a 40 percent reduction in carbon emissions.
+      Scientists documented the evidence across multiple international laboratories over five consecutive years.
+    """.trimIndent()
+    val insights = PageAssistantEngine.analyzePageInsights(newsText)
+    assertTrue(insights.readingEaseScore in 10..100)
+    assertTrue(insights.toneLabel.contains("Objective", ignoreCase = true))
+    assertTrue(insights.wordCount > 10)
+  }
+
+  @Test
+  fun simplifiesComplexSentences() {
+    val complex = "Developers must utilize modern tools in order to facilitate faster builds prior to release."
+    val simplified = PageAssistantEngine.simplifySentence(complex)
+    assertTrue(simplified.contains("use"))
+    assertTrue(simplified.contains("help"))
+    assertTrue(simplified.contains("before"))
+  }
 }
