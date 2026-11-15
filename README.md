@@ -10,6 +10,7 @@
 
 | Version | Version Code | Target Platforms & OS | Key Highlights |
 |---|---:|---|---|
+| **v1.7.4** | `47` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Comprehensive Security Hardening & Zero-Dependency Secure AI: complete defense-in-depth hardening across 13 core WebView security domains; network security config with strict cleartext traffic lockout (`usesCleartextTraffic="false"`); Google Safe Browsing enabled with `onSafeBrowsingHit` safe fallback; browsable intent scheme sanitization (`Intent.parseUri`) preventing component hijacking; production web debugging lockout (`setWebContentsDebuggingEnabled(false)`); dangerous download warning banner for executable file types (.apk, .exe, .dex); dynamic `FLAG_SECURE` toggling on private browsing tabs preventing OS task switcher snapshots; DOM Global Privacy Control (`navigator.globalPrivacyControl = true`); expanded Privacy Dashboard with active site permissions and System WebView version inspector; on-device prompt-injection defense (`PromptInjectionDefense`), on-device phishing/scam detector with real-time risk scoring, grounded page summarizer (ELI5, Key Points), and intelligent tab grouping; 0 third-party telemetry, strictly under 2 MB |
 | **v1.7.3** | `46` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Permanent Kai AI Removal & Full Storage Footprint Reduction: completely and permanently removed Kai AI from the browser; deleted the `kai.html` asset (~90 KB) and the `com.example.ui.ai` package (`KaiAiApp.kt` and `KaiVoiceBridge.kt`); removed Kai AI intercept handlers, exemptions, and bridges from `WebViewPool` and `TrackerBlocker`; restored a clean, distraction-free standard search homepage without AI mode toggles; reduced overall app storage footprint and release APK size; zero regressions to core browser features, video shields, background playback, and settings; strictly under 2 MB |
 | **v1.7.2** | `45` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Voice Mic Option Removal, Reconstructed Resilient Search Pipeline & Preserved Existing Models: removed voice mic button (#mic-btn), voice banner, and speech listeners from Kai AI while retaining dormant bridge compatibility; patched the root cause of the 'Connection issue with AI engine' error during search by adding strict 4s per-tier timeouts, Pollinations direct stream GET fallback, and in-browser real-time Wikipedia REST search knowledge synthesis; strictly preserved all existing v1.5.2 models intact (gemini-3.5-flash-lite, gemini-3.8-flash, openai-fast) without replacement; multimodal analysis for PPT/PPTX, PDF documents, audio profiling, and images intact; zero browser regressions; strictly under 2 MB |
 | **v1.7.1** | `44` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Kai AI Reverted to v1.5.2 Foundation with A-to-Z Features Intact & Zero Changes to Core Browser: strictly restored Kai AI to the authentic v1.5.2 architecture; complete multimodal suite including native Kai Voice mic bridge (`KaiVoice` SpeechRecognizer bridge), deep PPT/PPTX presentation comprehension (OpenXML ZIP decompressor, slide breakdown, speaker notes), deep multi-page PDF document analysis with Flate decompression, deep audio (.mp3, .wav, .m4a, .ogg, .aac) acoustic profiling with built-in in-app audio player, and high-resolution image understanding; Dark & Light mode toggle with ChatGPT typography (Söhne & Söhne Mono); clean header without 100% Anonymous badge; zero changes to the rest of the browser; strictly under 2 MB |
@@ -93,16 +94,20 @@ Pre-built signed release APK (< 2 MB) is tracked directly in this repository at 
 
 ---
 
-## Security Model
+## Security Architecture & Model
 
-- **HTTPS-Only by Default:** HTTP URLs are upgraded to HTTPS automatically when HTTPS-Only is enabled, or blocked with an explicit warning interstitial before connecting.
-- **Strict TLS Validation:** `WebViewClient.onReceivedSslError` always calls `handler.cancel()` — invalid/expired/untrusted certificates can never be bypassed.
-- **Mixed Content Blocked:** `WebSettings.MIXED_CONTENT_NEVER_ALLOW` is enforced unconditionally.
-- **Zero Web-to-Native Bridges:** `addJavascriptInterface` and `setWebContentsDebuggingEnabled` are never used.
-- **Sandboxed File & Scheme Access:** `allowFileAccess`, `allowContentAccess`, `allowFileAccessFromFileURLs`, `allowUniversalAccessFromFileURLs`, `databaseEnabled`, and `saveFormData` are all disabled. `javascript:`, `data:`, `file:`, `content:`, and `vbscript:` navigations are blocked.
-- **Consent-Gated Capabilities:** External app links (`mailto:`, `tel:`, `intent:`), popups, fullscreen, geolocation, media permissions, file uploads (via zero-permission SAF), and downloads all require explicit user consent.
-- **Encrypted Settings at Rest:** Settings and saved per-site permission rules are encrypted using **Android Keystore (`AES/GCM/NoPadding`, 256-bit)** in app-private storage.
-- **Input Sanitization:** All user inputs, filenames, titles, and imported bookmarks strip control characters, BiDi override characters, and path traversal sequences.
+Kai implements the complete **Android WebView Security Hardening Standard**:
+
+- **Network Security Configuration:** Global cleartext traffic is disabled (`usesCleartextTraffic="false"`). All network communication enforces system-anchored TLS via `res/xml/network_security_config.xml`.
+- **Google Safe Browsing:** Safe Browsing manifest meta-data is declared, and `WebViewClient.onSafeBrowsingHit` is explicitly handled to safely abort dangerous navigations (`callback.backToSafety(true)`).
+- **Hardened Intent Handling:** External `intent://` URIs are parsed using `Intent.parseUri(..., URI_INTENT_SCHEME)` with mandatory `CATEGORY_BROWSABLE`, stripped component/selector targets, and cleared URI permission grant flags.
+- **Production Debugging Disabled:** `WebView.setWebContentsDebuggingEnabled` is explicitly bound to `BuildConfig.DEBUG`, blocking remote Chrome DevTools inspection in production builds.
+- **Screen & Private Tab Security:** `WindowManager.LayoutParams.FLAG_SECURE` is dynamically applied whenever a private tab is active to block OS task switcher snapshots and screen recording.
+- **Download Safety:** Risky executable file formats (`.apk`, `.exe`, `.dex`, `.sh`, `.bat`) trigger a prominent high-risk security warning banner before confirmation.
+- **Strict TLS & WebSettings:** `onReceivedSslError` unconditionally cancels navigation (`handler.cancel()`); `allowFileAccess`, `allowContentAccess`, and `allowFileAccessFromFileURLs` are all `false`; `mixedContentMode = MIXED_CONTENT_NEVER_ALLOW`.
+- **Encrypted Local Storage:** Settings, bookmarks, and site permissions are encrypted at rest using **Android Keystore (AES-256-GCM)** in app-private storage.
+- **Secure On-Device AI:** Webpage text is treated as untrusted data, scrubbed of PII and prompt injection directives (`PromptInjectionDefense`), and analyzed entirely on-device with zero cloud telemetry.
+- **Documentation:** See [SECURITY.md](SECURITY.md) for vulnerability reporting and [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for data safety disclosures.
 
 ---
 
