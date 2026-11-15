@@ -1000,6 +1000,46 @@ fun BrowserScreen(
               onCheckedChange = { enabled -> viewModel.updateSettings { it.copy(noImageMode = enabled) } }
             )
           }
+          val currentOrigin = UrlValidator.extractOrigin(activeTab.url)
+          val currentSitePerms = sitePermissions.filter {
+            it.origin.equals(currentOrigin, ignoreCase = true) || it.origin.equals(host, ignoreCase = true)
+          }
+          if (currentSitePerms.isNotEmpty()) {
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            Text("Site Permissions", style = MaterialTheme.typography.labelMedium)
+            currentSitePerms.forEach { perm ->
+              Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+              ) {
+                Text(
+                  perm.kind.name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() },
+                  style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                  text = if (perm.allowed) "Allowed" else "Blocked",
+                  style = MaterialTheme.typography.labelSmall,
+                  color = if (perm.allowed) FeatherSecureGreen else FeatherWarningAmber
+                )
+              }
+            }
+          }
+          HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+          viewModel.systemWebViewPackageInfo?.let { wvInfo ->
+            Text(
+              "Engine: $wvInfo",
+              style = MaterialTheme.typography.labelSmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+          }
+          if (viewModel.isSystemWebViewOutdated) {
+            Text(
+              "Notice: System WebView may be outdated. Consider updating via Google Play.",
+              style = MaterialTheme.typography.labelSmall,
+              color = FeatherWarningAmber
+            )
+          }
         }
       },
       confirmButton = {

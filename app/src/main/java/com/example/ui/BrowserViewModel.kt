@@ -174,6 +174,28 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   val downloads: StateFlow<List<DownloadRecord>> = downloadController.downloads
   val pendingDownloadConsent: StateFlow<PendingDownloadConsent?> = downloadController.pendingConsent
 
+  val systemWebViewPackageInfo: String? by lazy {
+    try {
+      val pkg = WebView.getCurrentWebViewPackage()
+      pkg?.let {
+        val name = it.packageName.substringAfterLast('.')
+        "$name v${it.versionName}"
+      }
+    } catch (_: Throwable) {
+      null
+    }
+  }
+
+  val isSystemWebViewOutdated: Boolean by lazy {
+    try {
+      val pkg = WebView.getCurrentWebViewPackage() ?: return@lazy false
+      val major = pkg.versionName?.substringBefore('.')?.toIntOrNull() ?: 0
+      major in 1..85
+    } catch (_: Throwable) {
+      false
+    }
+  }
+
   private val webCallbacks = object : WebViewCallbacks {
     override fun onPageStarted(tabId: String, url: String) {
       runOnMain {

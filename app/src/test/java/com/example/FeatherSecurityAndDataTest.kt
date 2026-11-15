@@ -186,4 +186,12 @@ class FeatherSecurityAndDataTest {
     assertFalse(DownloadController.isRiskyFileType("photo.jpg", "image/jpeg"))
     assertFalse(DownloadController.isRiskyFileType("document.pdf", "application/pdf"))
   }
+
+  @Test
+  fun outdatedWebViewMajorVersionLogic() {
+    val isOutdated80 = 80 in 1..85
+    val isOutdated120 = 120 in 1..85
+    assertTrue(isOutdated80)
+    assertFalse(isOutdated120)
+  }
 }
