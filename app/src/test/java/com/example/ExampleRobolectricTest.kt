@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.6.5", BuildConfig.VERSION_NAME)
-    assertEquals(38, BuildConfig.VERSION_CODE)
+    assertEquals("1.6.6", BuildConfig.VERSION_NAME)
+    assertEquals(39, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -162,7 +162,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.6.5").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.6.6").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -378,7 +378,9 @@ class ExampleRobolectricTest {
     assertFalse(html.contains("mic-btn"))
     assertFalse(html.contains("extractVideoKeyframes"))
     assertFalse(html.contains("SpeechRecognition"))
-    assertTrue(html.contains("gemini-3.5-flash-lite"))
+    assertFalse(html.contains("gemini-3.5-flash-lite"))
+    assertFalse(html.contains("gemini-3.8-flash"))
+    assertTrue(html.contains("openai-fast"))
     assertTrue(html.contains("thought-process"))
     assertTrue(html.contains("Söhne"))
     assertTrue(html.contains("Söhne Mono"))
@@ -558,9 +560,9 @@ class ExampleRobolectricTest {
     assertFalse("HTML must not contain key-settings-overlay", html.contains("key-settings-overlay"))
     assertFalse("HTML must not expose API key prompts to users", html.contains("API key"))
 
-    // 5. Verify frontier chat and fallback models are correctly configured
-    assertTrue(scriptContent.contains("gemini-3.5-flash-lite"))
-    assertTrue(scriptContent.contains("gemini-3.8-flash"))
+    // 5. Verify free open-source multi-model AI architecture (old models completely removed)
+    assertFalse(scriptContent.contains("gemini-3.5-flash-lite"))
+    assertFalse(scriptContent.contains("gemini-3.8-flash"))
     assertTrue(scriptContent.contains("openai-fast"))
     assertTrue(scriptContent.contains("https://text.pollinations.ai/openai/chat/completions"))
     assertTrue(scriptContent.contains("synthesizeNeuralSearch"))
