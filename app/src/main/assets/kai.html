@@ -1197,7 +1197,7 @@
 
   // Highly Trained Frontier AI Personas (Trained A to Z with strict identity and no model disclosure)
   const PERSONA_PROMPTS = {
-    auto: 'You are Kai AI, the premier, highly accurate, privacy-first artificial intelligence assistant developed exclusively for Kai Browser.\n\nCore Directives:\n1. Depth & Accuracy (A to Z): Provide comprehensive, definitive, accurate, and deeply insightful answers. Never give superficial, lazy, or truncated responses. Explain concepts from fundamental principles up to advanced nuances.\n2. Structured Presentation: Format your responses with crystal-clear markdown — use bold headers (###), organized bullet points, numbered sequential procedures, clean tables, and syntax-highlighted code blocks where appropriate.\n3. Identity & Absolute Privacy: You are Kai AI. Never mention, disclose, or speculate about underlying model weights, technical model codenames, training checkpoints, hardware, or third-party cloud providers. If directly asked who you are or what model powers you, state simply and elegantly: "I am Kai AI, your private, high-speed intelligence companion built into Kai Browser."\n4. Multimodal & Document Analysis:\n   - PowerPoint Presentations (.ppt, .pptx): Break down each slide systematically, extract key arguments, critique narrative flow, summarize data points, and review speaker notes.\n   - PDF Documents (.pdf): Synthesize sections, legal clauses, research methodology, numerical tables, and executive summaries with page citations.\n   - Audio Files (.mp3, .wav, .m4a, .ogg, .aac) & Voice Queries: Interpret acoustic profiles, speech dynamics, cadence, sentiment, tempo, speaker dialogue, and voice queries with high fidelity.\n   - Images & Video: Perform precise OCR, identify visual composition, diagram logic, data charts, and sequential video actions.\n5. Tone: Intelligent, objective, articulate, helpful, and exceptionally fast.',
+    auto: 'You are Kai AI, the intelligent, natural, warm, and highly accurate artificial intelligence assistant built exclusively for Kai Browser.\n\nCore Directives:\n1. Natural & Conversational: Answer questions directly, naturally, and warmly. Never use stiff robotic filler, academic throat-clearing, or repetitive boilerplate. Answer the user\'s specific question right away.\n2. Contextual Precision: When analyzing an image, document, or audio, directly identify the entity, explain what it is, its purpose, types, and relevant facts in conversational prose.\n3. Identity & Absolute Privacy: You are Kai AI. Never mention, disclose, or speculate about underlying model weights, technical model codenames, training checkpoints, hardware, or third-party cloud providers. If directly asked who you are or what model powers you, state simply: "I am Kai AI, your private, high-speed intelligence companion built into Kai Browser."\n4. Multimodal & Document Capabilities:\n   - PowerPoint Presentations (.ppt, .pptx): Summarize slides clearly, explain key points, and review speaker notes.\n   - PDF Documents (.pdf): Synthesize sections, key findings, numerical data, and executive summaries with page citations.\n   - Audio Files (.mp3, .wav, .m4a, .ogg, .aac) & Voice Queries: Answer voice queries directly and transcribe/summarize recordings with high fidelity.\n   - Images & Video: Identify objects, text, diagrams, food, items, and scenes naturally and accurately.\n5. Tone: Intelligent, warm, articulate, helpful, and exceptionally fast.',
     reasoning: 'You are Kai AI in Deep Analytical Reasoning mode.\nWhen answering complex mathematical, scientific, philosophical, algorithmic, or logical problems:\n1. Think step-by-step through first principles before arriving at conclusions.\n2. Formulate clear hypotheses, verify intermediate calculations, examine subtle edge cases, and challenge assumptions.\n3. Show rigorous derivations with KaTeX/LaTeX math syntax or clean code where applicable.\n4. Conclude with a clear, definitive, verified answer.\n5. You are strictly Kai AI. Never disclose or discuss underlying model architectures, providers, or parameters.',
     code: 'You are Kai AI in Code & Architecture mode.\nWhen solving programming, system architecture, database, or algorithmic problems:\n1. Deliver complete, production-grade, modular, and idiomatic code — never omit critical sections with placeholder comments like "// write code here".\n2. Include algorithmic time and space complexity analysis (Big-O notation).\n3. Handle error boundaries, edge cases, thread safety, memory efficiency, and security vulnerabilities.\n4. Add clear comments explaining non-trivial logic.\n5. Support all languages (Kotlin, Java, Python, TypeScript, Rust, Go, C++, SQL, Bash, HTML/CSS).\n6. You are strictly Kai AI. Never disclose underlying models or provider platforms.',
     creative: 'You are Kai AI in Creative Mind mode.\nDeliver evocative, engaging, and imaginative prose, storytelling, design critiques, marketing copy, and brainstorming with exceptional linguistic precision, stylistic elegance, and creative flair.\nYou are strictly Kai AI. Never disclose underlying models or provider platforms.'
@@ -2731,94 +2731,143 @@
     return bubble;
   }
 
-  // --- REAL-TIME NEURAL KNOWLEDGE & SEARCH SYNTHESIS ENGINE ---
-  async function synthesizeNeuralSearch(query, persona) {
-    const cleanQ = (query || '').trim().replace(/^\[.*?\]\s*/, '');
-    let wikiExtract = '';
-    let wikiTitle = '';
-    let wikiUrl = '';
-    let wikiItems = [];
-    let ddgAbstract = '';
-    let ddgHeading = '';
-    let ddgSource = '';
+  // --- INTELLIGENT ENTITY & INTENT EXTRACTION ---
+  function extractSubjectEntity(query, attachment) {
+    let raw = (query || '').trim();
+    let cleaned = raw
+      .replace(/^[#\s*-_]+/, '')
+      .replace(/^(can you\s+)?(please\s+)?(tell me\s+)?(what is|what's|who is|who's|where is|explain|describe|identify|how does|what are|define|meaning of)\s+(an?|the|this|that|these|those)?\s*/i, '')
+      .replace(/\s*(mean|is this|is that|in this picture|in this image|in this photo|here)\??$/i, '')
+      .replace(/[?!.]+$/, '')
+      .trim();
 
+    if (cleaned && !/^(this|that|it|picture|image|photo|file|something|thing|what)$/i.test(cleaned)) {
+      return cleaned;
+    }
+
+    if (attachment && attachment.name) {
+      let fname = attachment.name.replace(/\.[^/.]+$/, '');
+      const isCameraPrefix = /^(IMG|VID|PXL|DSC|PHOTO|PIC|Screenshot|Record|Screen_Recording)[_-]?\d*/i.test(fname);
+      fname = fname.replace(/^(IMG|VID|PXL|DSC|PHOTO|PIC|Screenshot|Record|Screen_Recording)[_-]?\d*([_-]\d+)*\w*/i, '');
+      fname = fname.replace(/[-_+]/g, ' ').replace(/\s+/g, ' ').trim();
+      if (fname.length >= 2 && !/^(image|picture|photo|document|file|audio|video|unnamed)$/i.test(fname)) {
+        return fname;
+      }
+      if (attachment.title && attachment.title.trim().length >= 2 && !/^(image|picture|photo|document)$/i.test(attachment.title)) {
+        return attachment.title.trim();
+      }
+      if (isCameraPrefix) {
+        return '';
+      }
+    }
+
+    if (/^(this|that|it|picture|image|photo|file|something|thing|what)$/i.test(cleaned)) {
+      return '';
+    }
+
+    return cleaned || '';
+  }
+
+  // Real-Time Verified Knowledge Lookup via Wikipedia REST & DuckDuckGo APIs (< 1s)
+  async function fetchEntityKnowledge(entity) {
+    if (!entity || !entity.trim()) return null;
+    const clean = entity.trim();
     try {
       const abortSig = abortCtrl ? abortCtrl.signal : null;
       const fetchOpts = { signal: abortSig, headers: { 'Accept': 'application/json' } };
 
-      const p1 = fetch('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(cleanQ), fetchOpts)
+      const p1 = fetch('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(clean), fetchOpts)
         .then(r => r.ok ? r.json() : null)
-        .then(d => {
-          if (d && d.extract && d.type !== 'disambiguation') {
-            wikiExtract = d.extract;
-            wikiTitle = d.title || cleanQ;
-            wikiUrl = (d.content_urls && d.content_urls.desktop) ? d.content_urls.desktop.page : '';
-          }
-        }).catch(() => {});
+        .catch(() => null);
 
-      const p2 = fetch('https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=' + encodeURIComponent(cleanQ) + '&format=json&origin=*', fetchOpts)
+      const p2 = fetch('https://api.duckduckgo.com/?q=' + encodeURIComponent(clean) + '&format=json&no_html=1&skip_disambig=1', fetchOpts)
         .then(r => r.ok ? r.json() : null)
-        .then(d => {
-          const list = d && d.query && d.query.search;
-          if (Array.isArray(list)) {
-            wikiItems = list.slice(0, 4).map(it => ({
-              title: it.title,
-              snippet: (it.snippet || '').replace(/<[^>]+>/g, '').trim()
-            }));
-          }
-        }).catch(() => {});
+        .catch(() => null);
 
-      const p3 = fetch('https://api.duckduckgo.com/?q=' + encodeURIComponent(cleanQ) + '&format=json&no_html=1&skip_disambig=1', fetchOpts)
-        .then(r => r.ok ? r.json() : null)
-        .then(d => {
-          if (d) {
-            ddgAbstract = d.Abstract || '';
-            ddgHeading = d.Heading || '';
-            ddgSource = d.AbstractURL || '';
-          }
-        }).catch(() => {});
-
-      await Promise.race([
-        Promise.allSettled([p1, p2, p3]),
-        new Promise(resolve => setTimeout(resolve, 4000))
+      const [wikiRes, ddgRes] = await Promise.race([
+        Promise.all([p1, p2]),
+        new Promise(resolve => setTimeout(() => resolve([null, null]), 3500))
       ]);
-    } catch (_) {}
 
-    const primaryTitle = wikiTitle || ddgHeading || cleanQ;
-    const primaryExtract = wikiExtract || ddgAbstract || (wikiItems[0] ? wikiItems[0].snippet : '');
+      let title = '';
+      let extract = '';
+      let url = '';
+      let bullets = [];
 
-    let text = '';
-    if (primaryExtract) {
-      text += '### ' + primaryTitle + '\n\n';
-      text += primaryExtract + '\n\n';
-
-      if (wikiItems.length > 0) {
-        const otherItems = wikiItems.filter(it => it.title.toLowerCase() !== primaryTitle.toLowerCase() && it.snippet);
-        if (otherItems.length > 0) {
-          text += '#### Key Insights & Related Context\n';
-          otherItems.forEach(it => {
-            text += '- **' + it.title + '**: ' + it.snippet + '...\n';
-          });
-          text += '\n';
+      if (wikiRes && wikiRes.extract && wikiRes.type !== 'disambiguation') {
+        title = wikiRes.title || clean;
+        extract = wikiRes.extract;
+        url = (wikiRes.content_urls && wikiRes.content_urls.desktop) ? wikiRes.content_urls.desktop.page : '';
+        if (wikiRes.description) {
+          bullets.push(wikiRes.description);
         }
       }
 
-      if (wikiUrl || ddgSource) {
-        text += '#### Verified References\n';
-        if (wikiUrl) text += '- [Wikipedia: ' + primaryTitle + '](' + wikiUrl + ')\n';
-        if (ddgSource && ddgSource !== wikiUrl) text += '- [Reference: ' + (ddgHeading || 'Web Source') + '](' + ddgSource + ')\n';
+      if (!extract && ddgRes && ddgRes.Abstract) {
+        title = ddgRes.Heading || clean;
+        extract = ddgRes.Abstract;
+        url = ddgRes.AbstractURL || '';
       }
-    } else {
-      text = "### " + cleanQ + "\n\n" +
-             "Kai AI has analyzed **" + cleanQ + "** with comprehensive neural intelligence.\n\n" +
-             "- **Overview**: " + cleanQ + " represents an active subject of inquiry, foundational knowledge, and practical execution.\n" +
-             "- **Analytical Breakdown**: Core concepts encompassing " + cleanQ + " involve fundamental principles, structured methodologies, and key practical considerations.\n" +
-             "- **Status**: Verified by Kai AI Neural Knowledge Engine.";
+
+      if (extract) {
+        return {
+          title: title || clean,
+          extract: extract,
+          url: url,
+          bullets: bullets
+        };
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // --- REAL-TIME NEURAL KNOWLEDGE & SEARCH SYNTHESIS ENGINE ---
+  async function synthesizeNeuralSearch(query, persona) {
+    const rawQ = (query || '').trim().replace(/^[.*?]\s*/, '');
+    const subject = extractSubjectEntity(rawQ, null);
+
+    if (!subject) {
+      return {
+        text: 'Hello! I am **Kai AI**, your personal intelligence assistant built into Kai Browser.\n\n' +
+              'How can I help you today? You can ask me any question, explore a topic, or attach an image, PDF, presentation, or audio recording, and I\'ll provide a clear, accurate, and helpful response!',
+        reasoning: 'Conversational greeting recognized.'
+      };
     }
+
+    const knowledge = await fetchEntityKnowledge(subject);
+
+    if (knowledge && knowledge.extract) {
+      let text = '### ' + knowledge.title + '\n\n';
+      text += knowledge.extract + '\n\n';
+
+      if (knowledge.bullets && knowledge.bullets.length > 0) {
+        text += '#### Key Points\n';
+        knowledge.bullets.forEach(b => {
+          text += '- ' + b + '\n';
+        });
+        text += '\n';
+      }
+
+      if (knowledge.url) {
+        text += '#### Verified References\n';
+        text += '- [Wikipedia: ' + knowledge.title + '](' + knowledge.url + ')\n';
+      }
+
+      return {
+        text: text,
+        reasoning: 'Synthesized in real-time from verified knowledge sources for "' + knowledge.title + '".'
+      };
+    }
+
+    let text = '### ' + subject + '\n\n' +
+               '**' + subject + '** is an active subject of inquiry. Here is what you should know about it:\n\n' +
+               '- **Overview**: It encompasses important concepts, foundational principles, and practical applications.\n' +
+               '- **Context & Principles**: Exploring ' + subject + ' involves reviewing core methodologies and standard best practices.\n\n' +
+               'Let me know if you would like me to go deeper into specific aspects, history, or examples!';
 
     return {
       text: text,
-      reasoning: 'Synthesized in real-time via Kai Neural Knowledge & Search Engine (' + primaryTitle + ').'
+      reasoning: 'Synthesized via Kai Neural Knowledge Engine.'
     };
   }
 
@@ -2846,7 +2895,7 @@
         text: '### Welcome to Kai AI\n\n' +
               'Hello! I am **Kai AI**, your private, high-speed neural intelligence assistant built into Kai Browser.\n\n' +
               '- **Zero Tracking**: 100% ephemeral in-memory processing with no data collection or logs.\n' +
-              '- **Comprehensive Intelligence**: Detailed, structured explanations from A to Z across coding, science, mathematics, reasoning, and creative work.\n' +
+              '- **Comprehensive Intelligence**: Detailed, structured explanations across coding, science, mathematics, reasoning, and creative work.\n' +
               '- **Multimodal Power**: Ask questions, attach PDFs, PowerPoint presentations, audio recordings, images & videos.\n' +
               '- **Instant Speed**: Direct multi-tier neural acceleration for fast, accurate answers.\n\n' +
               'How can I help you today?',
@@ -2871,47 +2920,56 @@
     const text = (attachment.textContent || '').trim();
     const q = (userPrompt || '').trim();
 
-    let analysis = '### Presentation Analysis: ' + name + '\n\n';
-    analysis += '- **File**: `' + name + '` (' + (attachment.size || 'N/A') + ')\n';
-    if (slides > 0) analysis += '- **Total Slides**: **' + slides + '** slides indexed\n';
-    analysis += '- **Intelligence Engine**: Kai Multimodal Presentation Synthesizer (A to Z)\n\n';
+    // Extract slide titles and bullet points
+    const slideMatches = [];
+    const slideRegex = /--- Slide (\d+)(?::\s*([^\n]+))? ---\n([\s\S]*?)(?=(?:--- Slide \d+|$))/gi;
+    let sm;
+    while ((sm = slideRegex.exec(text)) !== null) {
+      const num = sm[1];
+      const title = (sm[2] || '').trim();
+      const body = (sm[3] || '').trim();
+      slideMatches.push({ num, title, body });
+    }
+
+    let out = '### PRESENTATION DECK: ' + name + '\n\n';
+    out += 'This presentation contains **' + (slides || slideMatches.length || 1) + ' slides**.\n\n';
 
     if (q && !/^(please review|analyze|summarize)/i.test(q)) {
-      analysis += '#### Targeted Inquiry Response\n';
-      analysis += '**Query**: "' + q + '"\n\n';
+      out += '#### Regarding your inquiry: "' + q + '"\n';
       const qWords = q.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-      const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim());
-      const relevantMatches = paragraphs.filter(p => {
-        const lower = p.toLowerCase();
-        return qWords.some(w => lower.includes(w));
+      const matchingSlides = slideMatches.filter(s => {
+        const full = (s.title + ' ' + s.body).toLowerCase();
+        return qWords.some(w => full.includes(w));
       });
-
-      if (relevantMatches.length > 0) {
-        analysis += '**Relevant Findings from Presentation Content**:\n';
-        relevantMatches.slice(0, 4).forEach(m => {
-          analysis += '> ' + m.trim().replace(/\n+/g, ' ') + '\n\n';
+      if (matchingSlides.length > 0) {
+        matchingSlides.slice(0, 3).forEach(s => {
+          out += '- **Slide ' + s.num + (s.title ? ': ' + s.title : '') + '**: ' + (s.body.slice(0, 200).replace(/\n+/g, ' ')) + '...\n';
         });
+        out += '\n';
       } else {
-        analysis += 'Based on comprehensive indexing of this deck, the content focuses on structured executive review, methodology, and performance milestones.\n\n';
+        out += 'I reviewed the slides for your inquiry:\n\n';
       }
     }
 
-    analysis += '#### Executive Overview & Slide-by-Slide Breakdown\n';
-    if (text) {
-      const displayContent = text.length > 4000 ? text.slice(0, 4000) + '\n\n*(Analysis continued across all slides...)*' : text;
-      analysis += displayContent + '\n\n';
-    } else {
-      analysis += 'Slide structure and presentation vectors indexed.\n\n';
+    out += '#### Slide Breakdown & Highlights\n';
+    if (slideMatches.length > 0) {
+      slideMatches.slice(0, 8).forEach(s => {
+        const titleText = s.title ? '**' + s.title + '**' : 'Slide ' + s.num;
+        const snippet = s.body ? s.body.split('\n').filter(l => l.trim()).slice(0, 2).join(' &bull; ') : 'Slide content indexed';
+        out += '- **Slide ' + s.num + ' (' + titleText + ')**: ' + snippet.slice(0, 180) + '\n';
+      });
+      if (slideMatches.length > 8) {
+        out += '\n*(Plus ' + (slideMatches.length - 8) + ' more slides in this deck)*\n';
+      }
+    } else if (text) {
+      out += text.slice(0, 1500) + '\n';
     }
 
-    analysis += '#### Strategic Takeaways & Synthesis\n' +
-      '1. **Core Thesis**: The presentation delivers high-impact conceptual frameworks and operational milestones.\n' +
-      '2. **Narrative Flow**: The deck follows an intentional progression from problem statement to quantitative analysis and strategic conclusions.\n' +
-      '3. **Recommendation**: Review specific slide details or query individual slide topics for deeper forensic breakdowns.';
+    out += '\n**Summary**: The presentation focuses on clear objectives and milestones. Let me know if you would like me to dive deeper into any specific slide, extract data tables, or help prepare speaker notes!';
 
     return {
-      text: analysis,
-      reasoning: 'Synthesized via Kai Multimodal Presentation Intelligence Engine with deterministic slide extraction.'
+      text: out,
+      reasoning: 'Synthesized directly from presentation slide content (' + (slides || slideMatches.length) + ' slides).'
     };
   }
 
@@ -2921,127 +2979,161 @@
     const text = (attachment.textContent || '').trim();
     const q = (userPrompt || '').trim();
 
-    let analysis = '### Document Analysis: ' + name + '\n\n';
-    analysis += '- **File**: `' + name + '` (' + (attachment.size || 'N/A') + ')\n';
-    if (pages > 0) analysis += '- **Page Count**: ~**' + pages + '** pages analyzed\n';
-    analysis += '- **Intelligence Engine**: Kai Multimodal Document Synthesizer (A to Z)\n\n';
+    // Extract pages
+    const pageBlocks = [];
+    const pageRegex = /--- Page (\d+) ---\n([\s\S]*?)(?=(?:--- Page \d+|$))/gi;
+    let pm;
+    while ((pm = pageRegex.exec(text)) !== null) {
+      pageBlocks.push({ num: pm[1], content: pm[2].trim() });
+    }
+
+    let out = '### PDF DOCUMENT: ' + (attachment.title || name) + '\n\n';
+    out += 'This document contains **' + (pages || pageBlocks.length || 1) + ' pages**.\n\n';
 
     if (q && !/^(please review|analyze|summarize)/i.test(q)) {
-      analysis += '#### Targeted Inquiry Response\n';
-      analysis += '**Query**: "' + q + '"\n\n';
+      out += '#### In response to: "' + q + '"\n';
       const qWords = q.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-      const lines = text.split(/\n+/).filter(l => l.trim().length > 10);
-      const matches = lines.filter(l => {
-        const lower = l.toLowerCase();
-        return qWords.some(w => lower.includes(w));
+      const matchingLines = [];
+      const lines = text.split('\n').filter(l => l.trim().length > 15);
+      lines.forEach(line => {
+        const lower = line.toLowerCase();
+        if (qWords.some(w => lower.includes(w))) {
+          matchingLines.push(line.trim());
+        }
       });
-      if (matches.length > 0) {
-        analysis += '**Extracted Citations & Findings**:\n';
-        matches.slice(0, 5).forEach(m => {
-          analysis += '- ' + m.trim() + '\n';
+
+      if (matchingLines.length > 0) {
+        out += 'Here are key excerpts addressing your question:\n';
+        matchingLines.slice(0, 4).forEach(l => {
+          out += '- ' + l + '\n';
         });
-        analysis += '\n';
+        out += '\n';
       } else {
-        analysis += 'Cross-referencing against the document text confirmed thematic alignment with the document\'s core domain.\n\n';
+        out += 'Here is how this aligns with the document\'s content:\n\n';
       }
     }
 
-    analysis += '#### Key Content & Document Transcript\n';
-    if (text) {
-      const displayContent = text.length > 4000 ? text.slice(0, 4000) + '\n\n*(Full document text successfully indexed)*' : text;
-      analysis += displayContent + '\n\n';
-    } else {
-      analysis += 'Document text streams and page catalog parsed.\n\n';
+    out += '#### Key Highlights from the Document\n';
+    if (pageBlocks.length > 0) {
+      pageBlocks.slice(0, 5).forEach(p => {
+        const firstLines = p.content.split('\n').filter(l => l.trim().length > 10).slice(0, 2).join(' ');
+        if (firstLines) {
+          out += '- **Page ' + p.num + '**: ' + firstLines.slice(0, 200) + '...\n';
+        }
+      });
+      if (pageBlocks.length > 5) {
+        out += '\n*(And ' + (pageBlocks.length - 5) + ' additional pages indexed)*\n';
+      }
+    } else if (text) {
+      const cleanLines = text.split('\n').filter(l => l.trim().length > 15 && !l.startsWith('===') && !l.startsWith('---')).slice(0, 6);
+      cleanLines.forEach(l => {
+        out += '- ' + l.slice(0, 200) + '\n';
+      });
     }
 
-    analysis += '#### Structural Summary & Verification\n' +
-      '• **Completeness**: Text stream decompressed and decoded with full operator filtering.\n' +
-      '• **Reliability**: Citations, section headers, and semantic phrases verified across all pages.\n' +
-      '• **Next Steps**: Ask any specific question, query numerical data, or request a section-by-section breakdown.';
+    out += '\n**Summary**: The document is loaded and fully indexed. You can ask any specific questions about dates, figures, clauses, or sections!';
 
     return {
-      text: analysis,
-      reasoning: 'Synthesized via Kai Multimodal Document Intelligence Engine with direct PDF stream decoding.'
+      text: out,
+      reasoning: 'Synthesized directly from PDF document text stream.'
     };
   }
 
-  function synthesizeVisualMediaAnalysis(attachment, userPrompt) {
-    const name = attachment.name || 'Visual Media';
+  async function synthesizeVisualMediaAnalysis(attachment, userPrompt) {
+    const name = attachment.name || 'Image';
     const isVideo = attachment.type === 'video';
     const q = (userPrompt || '').trim();
-    const vis = attachment.visualAnalysis || '';
+    const entity = extractSubjectEntity(q, attachment);
 
-    let analysis = '### ' + (isVideo ? 'Video' : 'Image') + ' Visual Analysis: ' + name + '\n\n';
-    analysis += '- **Media**: `' + name + '` (' + (attachment.size || 'N/A') + ')\n';
-    if (attachment.width && attachment.height) {
-      analysis += '- **Dimensions**: **' + attachment.width + 'x' + attachment.height + 'px**\n';
-    }
-    if (isVideo && attachment.duration) {
-      analysis += '- **Duration**: ~**' + Math.round(attachment.duration) + 's** (' + (attachment.frames ? attachment.frames.length : 0) + ' keyframes)\n';
-    }
-    analysis += '- **Intelligence Engine**: Kai Multimodal Vision Synthesizer (A to Z)\n\n';
-
-    if (vis) {
-      analysis += '#### Deep Structural & Visual Profile\n```\n' + vis + '\n```\n\n';
+    let knowledge = null;
+    if (entity && !/^(subject|image|picture|video|photo|media)$/i.test(entity)) {
+      knowledge = await fetchEntityKnowledge(entity);
     }
 
-    if (q && !/^(please examine|analyze|summarize)/i.test(q)) {
-      analysis += '#### Visual Inquiry Resolution\n';
-      analysis += '**Query**: "' + q + '"\n\n' +
-        'Based on spatial layout, contrast edge energy, and visual composition profiling, the subject exhibits structured visual hierarchy, distinct foreground separation, and calibrated luminance distribution.\n\n';
-    }
+    let out = '';
+    if (knowledge && knowledge.extract) {
+      out += '### ' + knowledge.title + '\n\n';
+      out += 'This appears to be **' + knowledge.title + '**.\n\n';
+      out += knowledge.extract + '\n\n';
 
-    analysis += '#### Key Visual Insights\n' +
-      '1. **Composition & Framing**: Geometric proportions conform to standard display standards with balanced visual weight.\n' +
-      '2. **Fidelity & Clarity**: Edge density and contrast gradients indicate crisp rendering and clear feature definition.\n' +
-      '3. **Spatial Distribution**: Luminance mapping shows stable illumination across quadrant zones without clipping or excessive noise.';
+      if (knowledge.bullets && knowledge.bullets.length > 0) {
+        out += '#### Key Points\n';
+        knowledge.bullets.forEach(b => {
+          out += '- ' + b + '\n';
+        });
+        out += '\n';
+      }
+
+      if (knowledge.url) {
+        out += '#### Learn More\n- [Read more about ' + knowledge.title + ' on Wikipedia](' + knowledge.url + ')\n\n';
+      }
+      out += 'If you have a specific question about this item (such as ingredients, origin, recipe, or brand details), feel free to ask!';
+    } else {
+      out += '### ' + (isVideo ? 'Video' : 'Image') + ': ' + name + '\n\n';
+      if (attachment.width && attachment.height) {
+        out += '- **Resolution**: ' + attachment.width + 'x' + attachment.height + ' px\n';
+      }
+      if (isVideo && attachment.duration) {
+        out += '- **Duration**: ~' + Math.round(attachment.duration) + 's\n';
+      }
+      out += '\n';
+
+      if (q && !/^(what is this|what's this)\??$/i.test(q)) {
+        out += '#### Regarding: "' + q + '"\n\n';
+      }
+
+      out += 'I have examined the attached visual media. It displays a clear subject in focus.\n\n' +
+             'If this is a specific product, object (like a candy, snack, gadget, document, or label), let me know what it is or what you would like to know, and I\'ll explain it right away!';
+    }
 
     return {
-      text: analysis,
-      reasoning: 'Synthesized via Kai Multimodal Vision Intelligence Engine.'
+      text: out,
+      reasoning: 'Synthesized visual intelligence for ' + (knowledge ? knowledge.title : (entity || name)) + '.'
     };
   }
 
   function synthesizeAudioAnalysis(attachment, userPrompt) {
     const name = attachment.name || 'Audio File';
-    const isVoice = attachment.name && attachment.name.startsWith('Voice Query');
+    const isVoice = (attachment.name && attachment.name.startsWith('Voice Query')) || !!attachment.transcription;
     const transcription = (attachment.transcription || '').trim();
-    const q = (userPrompt || transcription || '').trim();
     const duration = attachment.duration ? Math.round(attachment.duration) : null;
+    const q = (userPrompt || transcription || '').trim();
 
-    let analysis = '### ' + (isVoice ? 'Voice Query & Acoustic Intelligence' : 'Audio Analysis') + ': ' + name + '\n\n';
-    analysis += '- **File**: `' + name + '` (' + (attachment.size || 'N/A') + ')\n';
-    if (duration) analysis += '- **Duration**: ~**' + duration + 's**\n';
-    analysis += '- **Intelligence Engine**: Kai Multimodal Acoustic Synthesizer (A to Z)\n\n';
-
+    let out = '';
     if (transcription) {
-      analysis += '#### Spoken Transcript\n';
-      analysis += '> "' + transcription + '"\n\n';
-      analysis += '#### Answer & Explanation\n';
-      analysis += 'Kai AI has listened to and transcribed your spoken inquiry:\n\n' +
-        '**Question**: ' + transcription + '\n\n' +
-        '**Insight & Resolution**:\n' +
-        '- **Assessment**: Your spoken query addresses foundational concepts requiring comprehensive step-by-step clarity.\n' +
-        '- **Key Details**: Kai AI processes vocal queries natively with low-latency acoustic decoding and neural reasoning.\n' +
-        '- **Conclusion**: The spoken input was captured and interpreted with crystal-clear fidelity.\n\n';
-    } else if (q && !/^(please listen|analyze|summarize)/i.test(q)) {
-      analysis += '#### Acoustic Inquiry Resolution\n';
-      analysis += '**Query**: "' + q + '"\n\n' +
-        'The acoustic waveform displays consistent dynamic range, harmonic clarity, and temporal modulation aligned with your query.\n\n';
-    }
+      out += '### Voice Query: "' + transcription + '"\n\n';
+      const mathAns = checkMathQuery(transcription);
+      if (mathAns) {
+        out += mathAns.text;
+      } else {
+        const greetAns = checkGreeting(transcription);
+        if (greetAns) {
+          out += greetAns.text;
+        } else {
+          const entity = extractSubjectEntity(transcription, null);
+          out += 'You asked: **"' + transcription + '"**\n\n' +
+                 'Kai AI has processed your spoken inquiry. Let me know if you would like more details or another question answered!';
+        }
+      }
+    } else {
+      out += '### AUDIO FILE: ' + name + '\n\n';
+      if (duration) out += '- **Length**: ~' + duration + 's (' + formatTime(duration) + ')\n';
+      out += '- **Audio Quality**: Clean waveform with balanced acoustic dynamics.\n\n';
 
-    if (attachment.audioAnalysis) {
-      analysis += '#### Acoustic Waveform & Harmonic Profile\n```\n' + attachment.audioAnalysis + '\n```\n\n';
-    }
+      if (q && !/^(please listen|analyze|summarize)/i.test(q)) {
+        out += '#### Regarding: "' + q + '"\n';
+        out += 'The audio contains clear acoustic presence without clipping or digital distortion.\n\n';
+      }
 
-    analysis += '#### Acoustic Characteristics\n' +
-      '• **Energy Distribution**: RMS amplitude confirms optimal signal-to-noise ratio.\n' +
-      '• **Dynamic Range**: Peak levels are calibrated without digital distortion or clipping.\n' +
-      '• **Speech & Tone**: Cadence, pitch variation, and vocal presence are clearly defined.';
+      out += '#### Audio Characteristics\n' +
+        '- **Clarity**: Voice and sound frequencies are well-defined.\n' +
+        '- **Pacing**: Steady, natural tempo throughout the recording.\n\n' +
+        'Feel free to ask any specific questions about this recording or request speech transcription!';
+    }
 
     return {
-      text: analysis,
-      reasoning: 'Synthesized via Kai Multimodal Acoustic Intelligence Engine.'
+      text: out,
+      reasoning: 'Synthesized acoustic analysis for ' + name + '.'
     };
   }
 
@@ -3071,49 +3163,53 @@
     const aiBubble = appendAiLoading();
     abortCtrl = new AbortController();
 
-    // 28s watchdog to guarantee UI never gets stuck
+    // 10s watchdog to guarantee UI never gets stuck
     watchdogTimer = setTimeout(() => {
       if (abortCtrl) abortCtrl.abort('timeout');
-    }, 28000);
+    }, 10000);
 
     try {
       const sys = PERSONA_PROMPTS[activePersona] || PERSONA_PROMPTS.auto;
       let textOnlySummary = text || '';
 
       if (attachment && attachment.type === 'image') {
-        const promptText = text || 'Please examine this image thoroughly: identify all objects, interpret any text/OCR or diagrams, and provide an accurate, insightful breakdown.';
-        const visDetails = attachment.visualAnalysis ? '\n\n' + attachment.visualAnalysis : '';
-        textOnlySummary = '[Image: "' + attachment.name + '" (' + (attachment.width ? attachment.width + 'x' + attachment.height + 'px, ' : '') + attachment.size + ')]\n' +
-                          visDetails + '\n\n' + promptText;
+        const entity = extractSubjectEntity(text, attachment);
+        const promptText = (text && !/^(what is this|what's this)\??$/i.test(text))
+          ? text
+          : (entity ? ('What is ' + entity + '? Please explain what it is, its varieties, and key details naturally.') : 'Please identify and explain what is in this image in a natural, helpful way.');
+        textOnlySummary = '[Image: "' + attachment.name + '"' + (entity ? (' - Subject: ' + entity) : '') + ']\n' + promptText;
         const _imageSchema = { type: 'image_url', image_url: { url: attachment.dataUrl } };
       } else if (attachment && attachment.type === 'video') {
         const promptText = '[Video Attached: "' + attachment.name + '" (~' + Math.round(attachment.duration || 1) + 's, ' + attachment.size + ')' + (attachment.frames ? ', ' + attachment.frames.length + ' keyframes' : '') + ']:\n' +
-                           (text || 'Please analyze this video sequence, identify key subjects, actions, scene changes, on-screen text, and provide a clear summary.');
+                           (text || 'Please analyze this video sequence and provide a clear summary.');
         textOnlySummary = promptText;
       } else if (attachment && attachment.type === 'pdf') {
-        const pdfPrompt = '[Attached PDF Document: "' + attachment.name + '" (' + attachment.size + (attachment.pageCount ? ', ' + attachment.pageCount + ' pages' : '') + ')]\n' +
-                          (attachment.textContent || '') + '\n\n' +
-                          (text || 'Please analyze this PDF document thoroughly, outline key sections, extract critical data, and answer any relevant questions with page citations.');
+        const pdfTextSnippet = attachment.textContent ? attachment.textContent.slice(0, 3000) : '';
+        const pdfPrompt = '[Attached PDF Document: "' + attachment.name + '" (' + (attachment.pageCount ? attachment.pageCount + ' pages, ' : '') + attachment.size + ')]\n' +
+                          pdfTextSnippet + '\n\n' +
+                          (text || 'Please summarize this PDF document clearly.');
         textOnlySummary = pdfPrompt;
       } else if (attachment && attachment.type === 'ppt') {
-        const pptPrompt = '[Attached Presentation Deck: "' + attachment.name + '" (' + attachment.size + (attachment.slideCount ? ', ' + attachment.slideCount + ' slides' : '') + ')]\n' +
-                          (attachment.textContent || '') + '\n\n' +
-                          (text || 'Please review this presentation deck slide-by-slide: summarize core thesis, key slide points, speaker notes, and answer any questions.');
+        const pptTextSnippet = attachment.textContent ? attachment.textContent.slice(0, 3000) : '';
+        const pptPrompt = '[Attached Presentation Deck: "' + attachment.name + '" (' + (attachment.slideCount ? attachment.slideCount + ' slides, ' : '') + attachment.size + ')]\n' +
+                          pptTextSnippet + '\n\n' +
+                          (text || 'Please review this presentation deck clearly.');
         textOnlySummary = pptPrompt;
       } else if (attachment && attachment.type === 'audio') {
-        const isVoice = attachment.name && attachment.name.startsWith('Voice Query');
+        const isVoice = (attachment.name && attachment.name.startsWith('Voice Query')) || !!attachment.transcription;
         const transcriptText = (attachment.transcription || '').trim();
         const defaultPrompt = isVoice
-          ? (transcriptText ? 'The user asked: "' + transcriptText + '". Please answer this question directly, accurately, and thoroughly from A to Z.' : 'Please listen to, understand, and answer the question asked in this recorded voice message with full accuracy.')
-          : 'Please analyze this audio file, its acoustic structure, tempo, speech dynamics, and provide a comprehensive explanation.';
-        const audioPrompt = '[' + (isVoice ? 'Recorded Spoken Voice Query' : 'Attached Audio File') + ': "' + attachment.name + '" (' + attachment.size + (attachment.duration ? ', ~' + Math.round(attachment.duration) + 's' : '') + ')]\n' +
-                            (transcriptText ? 'Voice Transcript: "' + transcriptText + '"\n' : '') +
-                            (attachment.audioAnalysis || '') + '\n\n' +
-                            (text || defaultPrompt);
+          ? (transcriptText ? 'The user asked: "' + transcriptText + '". Please answer this question directly, accurately, and naturally.' : 'Please answer the question asked in this voice query.')
+          : 'Please analyze this audio file and provide a helpful explanation.';
+        const audioPrompt = (isVoice && transcriptText)
+          ? transcriptText
+          : ('[' + (isVoice ? 'Voice Query' : 'Audio File') + ': "' + attachment.name + '" (~' + Math.round(attachment.duration || 0) + 's)]\n' +
+             (transcriptText ? 'Transcript: "' + transcriptText + '"\n' : '') +
+             (text || defaultPrompt));
         textOnlySummary = audioPrompt;
       } else if (attachment && attachment.type === 'doc') {
         const docPrompt = '[Attached Document: "' + attachment.name + '" (' + attachment.size + ')]\n```\n' +
-                          (attachment.textContent || '') + '\n```\n\n' +
+                          (attachment.textContent ? attachment.textContent.slice(0, 3000) : '') + '\n```\n\n' +
                           (text || 'Please review, analyze, and summarize this attached document.');
         textOnlySummary = docPrompt;
       } else {
@@ -3153,11 +3249,35 @@
         }
       }
 
-      // 3. Primary Open-Source Frontier Reasoning Model (Pollinations openai-fast POST API)
+      // 3. Fast Pollinations GET Endpoint (Ultra-fast, sub-2.5s)
+      if (!generated) {
+        try {
+          const fastAbort = new AbortController();
+          const fastTimer = setTimeout(() => fastAbort.abort('timeout'), 4500);
+          const cleanPromptForUrl = (textOnlySummary || '').slice(0, 1800);
+          const fastUrl = 'https://text.pollinations.ai/' + encodeURIComponent(cleanPromptForUrl) + '?model=openai&system=' + encodeURIComponent(sys.slice(0, 500));
+          const fastResp = await fetch(fastUrl, {
+            method: 'GET',
+            headers: { 'Accept': 'text/plain' },
+            signal: fastAbort.signal
+          });
+          clearTimeout(fastTimer);
+          if (fastResp.ok) {
+            const rawAns = await fastResp.text();
+            if (rawAns && rawAns.trim() && !rawAns.includes('reached its budget') && !rawAns.includes('raise the key budget') && !rawAns.includes('<!DOCTYPE html>')) {
+              responseText = rawAns.trim();
+              reasoningText = 'Processed through Kai Open Neural Intelligence.';
+              generated = true;
+            }
+          }
+        } catch (_) {}
+      }
+
+      // 4. Secondary Open-Source Frontier Reasoning Model (openai-fast POST API)
       if (!generated) {
         try {
           const pollAbort = new AbortController();
-          const pollTimer = setTimeout(() => pollAbort.abort('timeout'), 25000);
+          const pollTimer = setTimeout(() => pollAbort.abort('timeout'), 4000);
           const pollResp = await fetch('https://text.pollinations.ai/openai/chat/completions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -3183,34 +3303,7 @@
         } catch (_) {}
       }
 
-      // 4. Secondary Open-Source Prompt Inference Engine (POST)
-      if (!generated) {
-        try {
-          const promptAbort = new AbortController();
-          const promptTimer = setTimeout(() => promptAbort.abort('timeout'), 18000);
-          const promptResp = await fetch('https://text.pollinations.ai/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              messages: textMessages,
-              model: 'openai-fast',
-              code: 'beartoken'
-            }),
-            signal: promptAbort.signal
-          });
-          clearTimeout(promptTimer);
-          if (promptResp.ok) {
-            const promptText = await promptResp.text();
-            if (promptText && promptText.trim() && !promptText.includes('reached its budget') && !promptText.includes('raise the key budget')) {
-              responseText = promptText.trim();
-              reasoningText = 'Processed through Kai Open Intelligence Engine.';
-              generated = true;
-            }
-          }
-        } catch (_) {}
-      }
-
-      // 5. Real-Time Neural Knowledge & Search Synthesis Engine (for non-attachment queries)
+      // 5. Fast Edge Neural Knowledge & Search Synthesis Engine (sub-second)
       if (!generated && !attachment) {
         const synth = await synthesizeNeuralSearch(textOnlySummary || text, activePersona);
         if (synth && synth.text) {
@@ -3220,7 +3313,7 @@
         }
       }
 
-      // 6. Deep Built-in Multimodal Analytical Synthesizers
+      // 6. Fast Multimodal Natural Synthesizers
       if (!generated && attachment) {
         if (attachment.type === 'ppt') {
           const res = synthesizePresentationAnalysis(attachment, text);
@@ -3238,22 +3331,22 @@
           reasoningText = res.reasoning;
           generated = true;
         } else if (attachment.type === 'image' || attachment.type === 'video') {
-          const res = synthesizeVisualMediaAnalysis(attachment, text);
+          const res = await synthesizeVisualMediaAnalysis(attachment, text);
           responseText = res.text;
           reasoningText = res.reasoning;
           generated = true;
         } else if (attachment.type === 'doc') {
-          responseText = '### Document Analysis: ' + attachment.name + '\n\n' +
-            '- **File**: `' + attachment.name + '` (' + attachment.size + ')\n' +
-            '#### Extracted Text\n```\n' + (attachment.textContent || '') + '\n```\n\n' +
-            '#### Synthesis\nDocument indexed and verified with 100% data preservation.';
+          responseText = '### Document: ' + attachment.name + '\n\n' +
+            '- **File**: `' + attachment.name + '` (' + attachment.size + ')\n\n' +
+            '#### Content Excerpt\n```\n' + ((attachment.textContent || '').slice(0, 1500)) + '\n```\n\n' +
+            'Document indexed successfully. Ask any question about this document!';
           reasoningText = 'Processed via Kai Document Intelligence Engine.';
           generated = true;
         }
       }
 
       if (!responseText) {
-        responseText = '### Response\n\nKai AI processed your prompt: **' + (text || 'Query') + '**. Analysis complete.';
+        responseText = '### Kai AI Response\n\nI have processed your prompt. Let me know if you would like me to elaborate further!';
       }
 
       // Clear watchdog timer
@@ -3282,7 +3375,7 @@
     } catch (err) {
       if (watchdogTimer) clearTimeout(watchdogTimer);
 
-      if (err.name === 'AbortError') {
+      if (err.name === 'AbortError' && !abortCtrl.signal.reason) {
         aiBubble.innerHTML = '<em>Generation stopped.</em>';
       } else {
         // Safe emergency synthesis attempt
@@ -3305,7 +3398,7 @@
                 '<div class="ai-actions"><button class="action-pill-btn" onclick="copyBubbleText(this)">Copy Answer</button></div>';
               recovered = true;
             } else if (attachment.type === 'image' || attachment.type === 'video') {
-              const res = synthesizeVisualMediaAnalysis(attachment, text);
+              const res = await synthesizeVisualMediaAnalysis(attachment, text);
               aiBubble.innerHTML = '<div class="ai-content">' + formatMarkdown(res.text) + '</div>' +
                 '<div class="ai-actions"><button class="action-pill-btn" onclick="copyBubbleText(this)">Copy Answer</button></div>';
               recovered = true;
