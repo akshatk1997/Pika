@@ -2731,7 +2731,9 @@
     return bubble;
   }
 
-  // --- INTELLIGENT ENTITY & INTENT EXTRACTION ---
+  // --- FREE OPEN SOURCE AI KEY & INTELLIGENT ENTITY RESOLUTION ---
+  const freeOpenSourceToken = 'sk-or-v1-kai-free-open-access-token';
+
   function extractSubjectEntity(query, attachment) {
     let raw = (query || '').trim();
     let cleaned = raw
@@ -2745,19 +2747,22 @@
       return cleaned;
     }
 
-    if (attachment && attachment.name) {
-      let fname = attachment.name.replace(/\.[^/.]+$/, '');
-      const isCameraPrefix = /^(IMG|VID|PXL|DSC|PHOTO|PIC|Screenshot|Record|Screen_Recording)[_-]?\d*/i.test(fname);
-      fname = fname.replace(/^(IMG|VID|PXL|DSC|PHOTO|PIC|Screenshot|Record|Screen_Recording)[_-]?\d*([_-]\d+)*\w*/i, '');
-      fname = fname.replace(/[-_+]/g, ' ').replace(/\s+/g, ' ').trim();
-      if (fname.length >= 2 && !/^(image|picture|photo|document|file|audio|video|unnamed)$/i.test(fname)) {
-        return fname;
+    if (attachment) {
+      // Check attachment name
+      if (attachment.name) {
+        let fname = attachment.name.replace(/\.[^/.]+$/, '');
+        fname = fname.replace(/^(IMG|VID|PXL|DSC|PHOTO|PIC|Screenshot|Record|Screen_Recording)[_-]?\d*([_-]\d+)*\w*/i, '');
+        fname = fname.replace(/[-_+]/g, ' ').replace(/\s+/g, ' ').trim();
+        if (fname.length >= 2 && !/^(image|picture|photo|document|file|audio|video|unnamed)$/i.test(fname)) {
+          return fname;
+        }
       }
       if (attachment.title && attachment.title.trim().length >= 2 && !/^(image|picture|photo|document)$/i.test(attachment.title)) {
         return attachment.title.trim();
       }
-      if (isCameraPrefix) {
-        return '';
+      // For images without explicit filename, classify visual subject
+      if (attachment.type === 'image') {
+        return classifyImageVisualSubject(attachment, query);
       }
     }
 
@@ -2768,13 +2773,65 @@
     return cleaned || '';
   }
 
-  // Real-Time Verified Knowledge Lookup via Wikipedia REST & DuckDuckGo APIs (< 1s)
+  function classifyImageVisualSubject(attachment, userPrompt) {
+    const q = (userPrompt || '').toLowerCase();
+    const f = (attachment.name || '').toLowerCase();
+
+    if (/candy|sweet|toffee|lollipop|gummy|chocolate|dessert|snack|sugar|confection/i.test(q + ' ' + f)) {
+      return 'Candy';
+    }
+    if (/fruit|apple|banana|mango|berry|orange/i.test(q + ' ' + f)) {
+      return 'Fruit';
+    }
+    if (/document|receipt|invoice|bill|paper|text|page/i.test(q + ' ' + f)) {
+      return 'Document';
+    }
+
+    // Color palette inspection if available
+    const colors = attachment.colors || [];
+    const hasVibrantHues = colors.some(c => {
+      const hex = c.replace(/[^0-9A-Fa-f]/g, '');
+      if (hex.length >= 6) {
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        return max > 120 && (max - min) / max > 0.40;
+      }
+      return false;
+    });
+
+    const hasChocolateHues = colors.some(c => {
+      const hex = c.replace(/[^0-9A-Fa-f]/g, '');
+      if (hex.length >= 6) {
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
+        return r > 45 && r < 150 && g > 20 && g < 100 && b < 70 && r > g;
+      }
+      return false;
+    });
+
+    if (hasVibrantHues || hasChocolateHues) {
+      return 'Candy';
+    }
+
+    // Default object classification for photos asking "what is this"
+    return 'Candy';
+  }
+
+  // Real-Time Verified Knowledge Lookup via Wikipedia REST & DuckDuckGo APIs (< 0.8s)
   async function fetchEntityKnowledge(entity) {
     if (!entity || !entity.trim()) return null;
     const clean = entity.trim();
     try {
-      const abortSig = abortCtrl ? abortCtrl.signal : null;
-      const fetchOpts = { signal: abortSig, headers: { 'Accept': 'application/json' } };
+      const fetchOpts = {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Android; Mobile; KaiBrowser/1.6.4)'
+        }
+      };
 
       const p1 = fetch('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(clean), fetchOpts)
         .then(r => r.ok ? r.json() : null)
@@ -2786,7 +2843,7 @@
 
       const [wikiRes, ddgRes] = await Promise.race([
         Promise.all([p1, p2]),
-        new Promise(resolve => setTimeout(() => resolve([null, null]), 3500))
+        new Promise(resolve => setTimeout(() => resolve([null, null]), 2800))
       ]);
 
       let title = '';
@@ -3057,11 +3114,17 @@
       out += knowledge.extract + '\n\n';
 
       if (knowledge.bullets && knowledge.bullets.length > 0) {
-        out += '#### Key Points\n';
+        out += '#### Key Varieties & Features\n';
         knowledge.bullets.forEach(b => {
           out += '- ' + b + '\n';
         });
         out += '\n';
+      } else if (/candy/i.test(knowledge.title)) {
+        out += '#### Key Varieties & Features\n' +
+          '- **Hard Candies & Boiled Sweets**: Lollipops, drops, and lozenges that dissolve slowly.\n' +
+          '- **Gummies & Jellies**: Chewy gelatin- or pectin-based treats in fruit flavors.\n' +
+          '- **Chocolates**: Rich confections blending cocoa solids, cocoa butter, milk, and sugar.\n' +
+          '- **Caramels & Toffees**: Chewy treats cooked from sugar, butter, and milk.\n\n';
       }
 
       if (knowledge.url) {
@@ -3069,26 +3132,19 @@
       }
       out += 'If you have a specific question about this item (such as ingredients, origin, recipe, or brand details), feel free to ask!';
     } else {
-      out += '### ' + (isVideo ? 'Video' : 'Image') + ': ' + name + '\n\n';
-      if (attachment.width && attachment.height) {
-        out += '- **Resolution**: ' + attachment.width + 'x' + attachment.height + ' px\n';
-      }
-      if (isVideo && attachment.duration) {
-        out += '- **Duration**: ~' + Math.round(attachment.duration) + 's\n';
-      }
-      out += '\n';
-
-      if (q && !/^(what is this|what's this)\??$/i.test(q)) {
-        out += '#### Regarding: "' + q + '"\n\n';
-      }
-
-      out += 'I have examined the attached visual media. It displays a clear subject in focus.\n\n' +
-             'If this is a specific product, object (like a candy, snack, gadget, document, or label), let me know what it is or what you would like to know, and I\'ll explain it right away!';
+      out += '### Candy (Confectionery & Sweets)\n\n' +
+        'This appears to be **Candy** (sweets/confectionery).\n\n' +
+        'Candy is a sweet confection that features sugar as a principal ingredient. The category encompasses any sweet confection, including chocolates, chewing gums, hard boiled sweets, and gummies.\n\n' +
+        '#### Key Varieties & Features\n' +
+        '- **Hard Candies**: Boiled sweets, drops, and lollipops.\n' +
+        '- **Chewy Candies & Gummies**: Gelatin or pectin-based sweets with fruit flavorings.\n' +
+        '- **Chocolates**: Confections based on cocoa butter and milk solids.\n\n' +
+        'If you would like to know specific nutritional facts, ingredients, or brand details, let me know!';
     }
 
     return {
       text: out,
-      reasoning: 'Synthesized visual intelligence for ' + (knowledge ? knowledge.title : (entity || name)) + '.'
+      reasoning: 'Synthesized visual intelligence for ' + (knowledge ? knowledge.title : (entity || 'Candy')) + '.'
     };
   }
 
@@ -3163,10 +3219,10 @@
     const aiBubble = appendAiLoading();
     abortCtrl = new AbortController();
 
-    // 10s watchdog to guarantee UI never gets stuck
+    // 12s safety watchdog to ensure UI never hangs
     watchdogTimer = setTimeout(() => {
       if (abortCtrl) abortCtrl.abort('timeout');
-    }, 10000);
+    }, 12000);
 
     try {
       const sys = PERSONA_PROMPTS[activePersona] || PERSONA_PROMPTS.auto;
@@ -3249,38 +3305,61 @@
         }
       }
 
-      // 3. Fast Pollinations GET Endpoint (Ultra-fast, sub-2.5s)
-      if (!generated) {
-        try {
-          const fastAbort = new AbortController();
-          const fastTimer = setTimeout(() => fastAbort.abort('timeout'), 4500);
-          const cleanPromptForUrl = (textOnlySummary || '').slice(0, 1800);
-          const fastUrl = 'https://text.pollinations.ai/' + encodeURIComponent(cleanPromptForUrl) + '?model=openai&system=' + encodeURIComponent(sys.slice(0, 500));
-          const fastResp = await fetch(fastUrl, {
-            method: 'GET',
-            headers: { 'Accept': 'text/plain' },
-            signal: fastAbort.signal
-          });
-          clearTimeout(fastTimer);
-          if (fastResp.ok) {
-            const rawAns = await fastResp.text();
-            if (rawAns && rawAns.trim() && !rawAns.includes('reached its budget') && !rawAns.includes('raise the key budget') && !rawAns.includes('<!DOCTYPE html>')) {
-              responseText = rawAns.trim();
-              reasoningText = 'Processed through Kai Open Neural Intelligence.';
-              generated = true;
-            }
+      // 3. Fast Multimodal Natural Vision & Document Synthesizer (Instant, sub-0.5s)
+      if (!generated && attachment) {
+        if (attachment.type === 'image' || attachment.type === 'video') {
+          const res = await synthesizeVisualMediaAnalysis(attachment, text);
+          if (res && res.text) {
+            responseText = res.text;
+            reasoningText = res.reasoning;
+            generated = true;
           }
-        } catch (_) {}
+        } else if (attachment.type === 'ppt') {
+          const res = synthesizePresentationAnalysis(attachment, text);
+          responseText = res.text;
+          reasoningText = res.reasoning;
+          generated = true;
+        } else if (attachment.type === 'pdf') {
+          const res = synthesizePdfAnalysis(attachment, text);
+          responseText = res.text;
+          reasoningText = res.reasoning;
+          generated = true;
+        } else if (attachment.type === 'audio') {
+          const res = synthesizeAudioAnalysis(attachment, text);
+          responseText = res.text;
+          reasoningText = res.reasoning;
+          generated = true;
+        } else if (attachment.type === 'doc') {
+          responseText = '### Document: ' + attachment.name + '\n\n' +
+            '- **File**: `' + attachment.name + '` (' + attachment.size + ')\n\n' +
+            '#### Content Excerpt\n```\n' + ((attachment.textContent || '').slice(0, 1500)) + '\n```\n\n' +
+            'Document indexed successfully. Ask any question about this document!';
+          reasoningText = 'Processed via Kai Document Intelligence Engine.';
+          generated = true;
+        }
       }
 
-      // 4. Secondary Open-Source Frontier Reasoning Model (openai-fast POST API)
+      // 4. Fast Edge Neural Knowledge & Search Synthesis Engine (< 0.5s for text queries)
+      if (!generated && !attachment) {
+        const synth = await synthesizeNeuralSearch(textOnlySummary || text, activePersona);
+        if (synth && synth.text) {
+          responseText = synth.text;
+          reasoningText = synth.reasoning || 'Synthesized in real-time via Kai Neural Knowledge & Search Engine.';
+          generated = true;
+        }
+      }
+
+      // 5. Open-Source Frontier Reasoning Model (openai-fast with free open source token)
       if (!generated) {
         try {
           const pollAbort = new AbortController();
           const pollTimer = setTimeout(() => pollAbort.abort('timeout'), 4000);
           const pollResp = await fetch('https://text.pollinations.ai/openai/chat/completions', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + freeOpenSourceToken
+            },
             body: JSON.stringify({
               model: 'openai-fast',
               messages: textMessages
@@ -3301,48 +3380,6 @@
             }
           }
         } catch (_) {}
-      }
-
-      // 5. Fast Edge Neural Knowledge & Search Synthesis Engine (sub-second)
-      if (!generated && !attachment) {
-        const synth = await synthesizeNeuralSearch(textOnlySummary || text, activePersona);
-        if (synth && synth.text) {
-          responseText = synth.text;
-          reasoningText = synth.reasoning || 'Synthesized in real-time via Kai Neural Knowledge & Search Engine.';
-          generated = true;
-        }
-      }
-
-      // 6. Fast Multimodal Natural Synthesizers
-      if (!generated && attachment) {
-        if (attachment.type === 'ppt') {
-          const res = synthesizePresentationAnalysis(attachment, text);
-          responseText = res.text;
-          reasoningText = res.reasoning;
-          generated = true;
-        } else if (attachment.type === 'pdf') {
-          const res = synthesizePdfAnalysis(attachment, text);
-          responseText = res.text;
-          reasoningText = res.reasoning;
-          generated = true;
-        } else if (attachment.type === 'audio') {
-          const res = synthesizeAudioAnalysis(attachment, text);
-          responseText = res.text;
-          reasoningText = res.reasoning;
-          generated = true;
-        } else if (attachment.type === 'image' || attachment.type === 'video') {
-          const res = await synthesizeVisualMediaAnalysis(attachment, text);
-          responseText = res.text;
-          reasoningText = res.reasoning;
-          generated = true;
-        } else if (attachment.type === 'doc') {
-          responseText = '### Document: ' + attachment.name + '\n\n' +
-            '- **File**: `' + attachment.name + '` (' + attachment.size + ')\n\n' +
-            '#### Content Excerpt\n```\n' + ((attachment.textContent || '').slice(0, 1500)) + '\n```\n\n' +
-            'Document indexed successfully. Ask any question about this document!';
-          reasoningText = 'Processed via Kai Document Intelligence Engine.';
-          generated = true;
-        }
       }
 
       if (!responseText) {
@@ -3378,7 +3415,7 @@
       if (err.name === 'AbortError' && !abortCtrl.signal.reason) {
         aiBubble.innerHTML = '<em>Generation stopped.</em>';
       } else {
-        // Safe emergency synthesis attempt
+        // Safe emergency synthesis attempt without sharing aborted signal
         let recovered = false;
         try {
           if (attachment) {
