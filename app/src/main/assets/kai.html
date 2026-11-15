@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Kai AI</title>
 <style>
-  /* Premium Typography (Söhne & Söhne Mono) */
+  /* Signature ChatGPT Fonts (Söhne & Söhne Mono) */
   @font-face {
     font-family: 'Söhne';
     src: local('Söhne'), local('Sohne'), local('Inter'), local('Segoe UI'), local('-apple-system'), local('Roboto');
@@ -50,9 +50,6 @@
     --font-mono: 'Söhne Mono', 'Sohne Mono', ui-monospace, SFMono-Regular, Consolas, 'Roboto Mono', monospace;
     color-scheme: dark;
   }
-  .logo-core {
-    fill: #FFFFFF;
-  }
 
   /* Pristine Modern Light Mode Palette */
   [data-theme="light"] {
@@ -78,7 +75,7 @@
   }
 
   [data-theme="light"] header {
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.94);
     border-bottom: 1px solid var(--border);
   }
   [data-theme="light"] .brand-title {
@@ -87,73 +84,35 @@
     -webkit-text-fill-color: transparent;
   }
   [data-theme="light"] footer {
-    background: rgba(255, 255, 255, 0.97);
+    background: rgba(255, 255, 255, 0.96);
     border-top: 1px solid var(--border);
-  }
-  [data-theme="light"] .empty-title {
-    color: #0F172A;
-  }
-  [data-theme="light"] .empty-subtitle {
-    color: #475569;
-  }
-  [data-theme="light"] .logo-core {
-    fill: #0F172A;
   }
   [data-theme="light"] .input-wrapper {
     background: #F1F5F9;
-    border-color: #CBD5E1;
+    border-color: #E2E8F0;
   }
   [data-theme="light"] .input-wrapper:focus-within {
     border-color: var(--accent);
     background: #FFFFFF;
     box-shadow: 0 0 0 2px var(--accent-subtle);
   }
-  [data-theme="light"] #prompt-input {
-    color: #0F172A;
-  }
-  [data-theme="light"] #prompt-input::placeholder {
-    color: #64748B;
-  }
-  [data-theme="light"] .send-btn {
-    background: var(--accent);
-    color: #FFFFFF;
-  }
-  [data-theme="light"] .send-btn svg {
-    fill: #FFFFFF;
-  }
   [data-theme="light"] .msg-bubble {
-    color: #0F172A;
+    color: var(--text);
   }
   [data-theme="light"] .msg-row.ai .msg-bubble {
     background: #FFFFFF;
     border-color: #E2E8F0;
-    color: #0F172A;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-  }
-  [data-theme="light"] .ai-content h1,
-  [data-theme="light"] .ai-content h2,
-  [data-theme="light"] .ai-content h3 {
-    color: #0F172A;
-  }
-  [data-theme="light"] .ai-content strong {
-    color: #0F172A;
-  }
-  [data-theme="light"] .ai-content p,
-  [data-theme="light"] .ai-content li {
-    color: #1E293B;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
   }
   [data-theme="light"] .msg-row.user .msg-bubble {
     background: #E0F2FE;
-    border-color: rgba(2, 132, 199, 0.35);
-    color: #0C4A6E;
-  }
-  [data-theme="light"] .msg-row.user .msg-bubble strong {
-    color: #082F49;
+    border-color: rgba(2, 132, 199, 0.25);
+    color: #0369A1;
   }
   [data-theme="light"] .suggestion-pill {
     background: #FFFFFF;
-    border-color: #CBD5E1;
-    color: #1E293B;
+    border-color: #E2E8F0;
+    color: #334155;
     box-shadow: 0 1px 2px rgba(0,0,0,0.04);
   }
   [data-theme="light"] .suggestion-pill:hover {
@@ -162,21 +121,12 @@
     color: var(--accent);
   }
   [data-theme="light"] pre {
-    background: #F8FAFC;
+    background: #F1F5F9;
     border-color: #E2E8F0;
     color: #0F172A;
   }
-  [data-theme="light"] pre code {
-    color: #0F172A;
-  }
-  [data-theme="light"] code {
-    background: #F1F5F9;
-    border: 1px solid #E2E8F0;
-    color: #0284C7;
-  }
   [data-theme="light"] .code-header {
-    background: #EDF2F7;
-    border-bottom: 1px solid #E2E8F0;
+    background: #E2E8F0;
     color: #475569;
   }
   [data-theme="light"] .code-header button {
@@ -186,68 +136,7 @@
   }
   [data-theme="light"] .code-header button:hover {
     background: #F8FAFC;
-    color: #0F172A;
-  }
-  [data-theme="light"] .thought-process {
-    background: rgba(79, 70, 229, 0.05);
-    border: 1px solid rgba(79, 70, 229, 0.22);
-    border-radius: 12px;
-  }
-  [data-theme="light"] .thought-process summary {
-    color: #4338CA;
-    font-weight: 600;
-  }
-  [data-theme="light"] .thought-process .reasoning-text {
-    color: #334155;
-    border-top: 1px dashed rgba(79, 70, 229, 0.2);
-  }
-  [data-theme="light"] .persona-btn {
-    background: #F1F5F9;
-    border-color: #CBD5E1;
-    color: #475569;
-  }
-  [data-theme="light"] .persona-btn:hover {
-    background: #E2E8F0;
-    color: #0F172A;
-  }
-  [data-theme="light"] .persona-btn.active {
-    background: rgba(2, 132, 199, 0.12);
-    border-color: var(--accent);
-    color: var(--accent);
-    box-shadow: 0 0 8px rgba(2, 132, 199, 0.2);
-  }
-  [data-theme="light"] .new-chat-btn {
-    background: #F1F5F9;
-    border-color: #CBD5E1;
-    color: #475569;
-  }
-  [data-theme="light"] .new-chat-btn:active {
-    background: #E2E8F0;
-    color: #0F172A;
-    border-color: var(--accent);
-  }
-  [data-theme="light"] .theme-toggle-btn {
-    background: #F1F5F9;
-    border-color: #CBD5E1;
-    color: #475569;
-  }
-  [data-theme="light"] .theme-toggle-btn:hover {
-    border-color: var(--accent);
-    color: #0F172A;
-  }
-  [data-theme="light"] .action-pill-btn {
-    background: #F1F5F9;
-    border-color: #CBD5E1;
-    color: #475569;
-  }
-  [data-theme="light"] .action-pill-btn:hover, [data-theme="light"] .action-pill-btn:active {
-    background: #E2E8F0;
-    color: #0F172A;
-  }
-  [data-theme="light"] .msg-doc-chip {
-    background: #F1F5F9;
-    border-color: #E2E8F0;
-    color: #334155;
+    color: var(--text);
   }
 
   * {
@@ -406,211 +295,261 @@
     background: var(--accent-subtle);
     border-color: var(--accent);
     color: var(--accent);
-    box-shadow: 0 0 10px var(--accent-glow);
+    box-shadow: 0 0 10px rgba(0, 242, 254, 0.25);
+    font-weight: 600;
   }
 
-  main {
+  main#chat-feed {
     flex: 1;
     overflow-y: auto;
-    padding: 16px 14px 20px;
+    padding: 16px 14px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 18px;
     scroll-behavior: smooth;
   }
 
   .empty-state {
-    flex: 1;
+    margin: auto 0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
     text-align: center;
-    padding: 24px 14px;
-    gap: 14px;
-    max-width: 480px;
-    margin: 0 auto;
+    gap: 12px;
+    max-width: 440px;
+    align-self: center;
+    padding: 20px 10px;
   }
-
   .empty-logo {
-    width: 60px;
-    height: 60px;
-    filter: drop-shadow(0 0 16px var(--accent-glow));
-    animation: gentlePulse 3s infinite ease-in-out;
+    width: 68px;
+    height: 68px;
+    margin-bottom: 4px;
   }
-  @keyframes gentlePulse {
-    0%, 100% { transform: scale(1); opacity: 0.95; }
-    50% { transform: scale(1.05); opacity: 1; }
-  }
-
   .empty-title {
-    font-size: 1.35rem;
-    font-weight: 700;
-    letter-spacing: -0.025em;
+    font-size: 1.3rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
     color: #FFFFFF;
     font-family: var(--font-sans);
   }
-
   .empty-subtitle {
     font-size: 0.88rem;
     color: var(--text-muted);
-    line-height: 1.55;
+    line-height: 1.5;
     font-family: var(--font-sans);
   }
-
   .suggestions {
     display: flex;
     flex-direction: column;
     gap: 8px;
     width: 100%;
-    margin-top: 8px;
+    margin-top: 10px;
   }
-
   .suggestion-pill {
     background: var(--surface);
     border: 1px solid var(--border);
+    color: var(--text);
     padding: 10px 14px;
     border-radius: 12px;
     font-size: 0.84rem;
-    color: var(--text);
+    font-family: var(--font-sans);
     text-align: left;
     cursor: pointer;
     transition: all 0.2s ease;
-    font-family: var(--font-sans);
   }
-  .suggestion-pill:hover, .suggestion-pill:active {
+  .suggestion-pill:active {
     background: var(--surface-hover);
     border-color: var(--accent);
-    color: var(--accent);
-    transform: translateY(-1px);
+    transform: scale(0.99);
   }
 
   .msg-row {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    max-width: 90%;
-    animation: fadeIn 0.25s ease-out;
+    width: 100%;
+    animation: fadeInMsg 0.22s ease-out;
   }
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(6px); }
+  @keyframes fadeInMsg {
+    from { opacity: 0; transform: translateY(4px); }
     to { opacity: 1; transform: translateY(0); }
   }
-
   .msg-row.user {
-    align-self: flex-end;
+    align-items: flex-end;
   }
   .msg-row.ai {
-    align-self: flex-start;
-    max-width: 96%;
+    align-items: flex-start;
   }
-
-  .msg-bubble {
-    padding: 12px 15px;
-    border-radius: 18px;
-    word-break: break-word;
-    font-size: 0.95rem;
-    line-height: 1.6;
-    font-family: var(--font-sans);
-  }
-
-  .msg-row.user .msg-bubble {
-    background: var(--bubble-user);
-    border: 1px solid rgba(0, 242, 254, 0.25);
-    color: #FFFFFF;
-    border-bottom-right-radius: 4px;
-  }
-
-  .msg-row.ai .msg-bubble {
-    background: var(--bubble-ai);
-    border: 1px solid var(--border);
-    color: var(--text);
-    border-bottom-left-radius: 4px;
-    width: 100%;
-  }
-
   .ai-meta {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.72rem;
+    font-size: 0.74rem;
+    font-weight: 600;
     color: var(--text-muted);
-    padding-left: 4px;
+    margin-bottom: 6px;
+    padding-left: 2px;
     font-family: var(--font-sans);
   }
   .ai-meta .dot {
-    width: 6px;
-    height: 6px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
     background: var(--accent);
     box-shadow: 0 0 6px var(--accent-glow);
   }
+  .msg-bubble {
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    line-height: 1.68;
+    word-break: break-word;
+    position: relative;
+  }
+  .msg-row.user .msg-bubble {
+    max-width: 86%;
+    background: var(--bubble-user);
+    color: #FFFFFF;
+    border: 1px solid rgba(0, 242, 254, 0.25);
+    border-radius: 20px;
+    padding: 10px 16px;
+  }
+  .msg-row.ai .msg-bubble {
+    max-width: 100%;
+    background: var(--bubble-ai);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 12px 16px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  }
+  .msg-img-preview {
+    max-width: 100%;
+    max-height: 220px;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    display: block;
+    object-fit: cover;
+    border: 1px solid rgba(0, 242, 254, 0.25);
+  }
+  .msg-doc-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 0.78rem;
+    color: #E2E8F0;
+    margin-bottom: 8px;
+    font-family: var(--font-sans);
+  }
+  .msg-doc-chip.pdf {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.35);
+    color: #FCA5A5;
+  }
+  .msg-doc-chip.ppt {
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(245, 158, 11, 0.35);
+    color: #FCD34D;
+  }
+  .msg-doc-chip.audio {
+    background: rgba(168, 85, 247, 0.12);
+    border-color: rgba(168, 85, 247, 0.35);
+    color: #D8B4FE;
+  }
+  .msg-audio-player {
+    width: 100%;
+    max-width: 280px;
+    height: 38px;
+    border-radius: 20px;
+    margin-top: 4px;
+    margin-bottom: 6px;
+    outline: none;
+    display: block;
+  }
 
-  /* Thought Process Collapsible */
+  /* Deep Reasoning Thought Process Collapsible */
   .thought-process {
     background: rgba(99, 102, 241, 0.08);
     border: 1px solid rgba(99, 102, 241, 0.25);
     border-radius: 12px;
-    padding: 8px 12px;
     margin-bottom: 12px;
-    font-size: 0.84rem;
+    padding: 8px 12px;
+    font-size: 0.82rem;
     font-family: var(--font-sans);
   }
   .thought-process summary {
     cursor: pointer;
     font-weight: 500;
-    color: #818CF8;
-    user-select: none;
+    color: #A5B4FC;
     outline: none;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
   .thought-process .reasoning-text {
     margin-top: 8px;
     padding-top: 8px;
-    border-top: 1px dashed rgba(99, 102, 241, 0.2);
-    color: var(--text-muted);
+    border-top: 1px dashed rgba(99, 102, 241, 0.25);
+    color: #CBD5E1;
     line-height: 1.55;
+    font-size: 0.82rem;
+    font-family: var(--font-sans);
   }
 
+  /* ChatGPT Typography & Markdown Formatting */
   .ai-content h1, .ai-content h2, .ai-content h3 {
-    margin: 12px 0 6px;
+    font-family: var(--font-sans);
+    color: #FFFFFF;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    margin-top: 1.1em;
+    margin-bottom: 0.4em;
+  }
+  .ai-content h1 { font-size: 1.35rem; }
+  .ai-content h2 { font-size: 1.18rem; }
+  .ai-content h3 { font-size: 1.05rem; }
+  .ai-content p {
+    margin-bottom: 0.85em;
+    line-height: 1.68;
+  }
+  .ai-content p:last-child {
+    margin-bottom: 0;
+  }
+  .ai-content strong {
     font-weight: 600;
     color: #FFFFFF;
-    letter-spacing: -0.015em;
-    font-family: var(--font-sans);
-  }
-  .ai-content h1 { font-size: 1.25rem; }
-  .ai-content h2 { font-size: 1.12rem; }
-  .ai-content h3 { font-size: 1.02rem; }
-  .ai-content p {
-    margin-bottom: 8px;
   }
   .ai-content ul, .ai-content ol {
-    margin: 6px 0 10px 20px;
+    margin-bottom: 0.85em;
+    padding-left: 20px;
   }
   .ai-content li {
-    margin-bottom: 4px;
+    margin-bottom: 0.35em;
+    line-height: 1.65;
   }
 
-  /* Premium Code Block Styling with Header Bar & Copy Button */
+  /* ChatGPT-style Code Block with Header Bar */
   .code-block-wrapper {
-    margin: 10px 0;
-    border-radius: 10px;
-    overflow: hidden;
-    border: 1px solid var(--border);
     background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin: 12px 0;
+    overflow: hidden;
+    font-family: var(--font-mono);
   }
   .code-header {
-    background: var(--code-header);
-    padding: 6px 12px;
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
+    background: var(--code-header);
+    padding: 8px 14px;
     font-size: 0.72rem;
-    font-family: var(--font-sans);
     color: var(--text-muted);
+    font-family: var(--font-sans);
     border-bottom: 1px solid var(--border);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
   }
   .copy-code-btn {
     background: transparent;
@@ -619,90 +558,91 @@
     font-size: 0.72rem;
     font-family: var(--font-sans);
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    transition: all 0.15s ease;
+    transition: color 0.15s ease;
   }
-  .copy-code-btn:hover {
-    color: var(--text);
-    background: rgba(255, 255, 255, 0.08);
+  .copy-code-btn:active, .copy-code-btn:hover {
+    color: #FFFFFF;
   }
   pre {
+    background: transparent;
+    padding: 12px 14px;
     margin: 0;
-    padding: 12px;
     overflow-x: auto;
     font-family: var(--font-mono);
-    font-size: 0.85rem;
+    font-size: 0.84rem;
     line-height: 1.5;
-    background: var(--code-bg);
-    color: #E2E8F0;
+  }
+  pre code {
+    color: #ECECEC;
+    background: transparent;
+    padding: 0;
+    font-family: inherit;
   }
   code {
-    font-family: var(--font-mono);
-    font-size: 0.85em;
     background: rgba(255, 255, 255, 0.08);
-    padding: 2px 5px;
+    padding: 2px 6px;
     border-radius: 4px;
-    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 0.86em;
+    color: #ECECEC;
   }
 
+  /* Message action buttons */
   .ai-actions {
     display: flex;
-    gap: 6px;
+    align-items: center;
+    gap: 8px;
     margin-top: 8px;
     padding-left: 2px;
   }
   .action-pill-btn {
-    background: var(--surface-variant);
-    border: 1px solid var(--border);
+    background: transparent;
+    border: 1px solid var(--border-subtle);
     color: var(--text-muted);
     font-size: 0.72rem;
     font-family: var(--font-sans);
-    padding: 4px 9px;
-    border-radius: 12px;
+    padding: 4px 10px;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.15s ease;
   }
-  .action-pill-btn:hover {
-    color: var(--text);
-    border-color: var(--accent);
+  .action-pill-btn:active {
+    background: var(--surface-hover);
+    color: #FFFFFF;
   }
 
-  /* Typing indicator dots */
+  /* Typing indicator */
   .typing-indicator {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 4px 6px;
+    gap: 5px;
+    padding: 6px 2px;
   }
   .typing-dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
     background: var(--accent);
-    animation: typingBounce 1.4s infinite ease-in-out both;
+    animation: typingPulse 1.4s infinite ease-in-out;
   }
-  .typing-dot:nth-child(1) { animation-delay: -0.32s; }
-  .typing-dot:nth-child(2) { animation-delay: -0.16s; }
-  @keyframes typingBounce {
-    0%, 80%, 100% { transform: scale(0); opacity: 0.4; }
-    40% { transform: scale(1); opacity: 1; }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typingPulse {
+    0%, 60%, 100% { transform: scale(0.7); opacity: 0.35; }
+    30% { transform: scale(1.15); opacity: 1; }
   }
 
+  /* Error state with retry */
   .error-card {
-    background: rgba(239, 68, 68, 0.1);
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    color: #F87171;
-    padding: 10px 14px;
-    border-radius: 12px;
-    font-size: 0.86rem;
-    font-family: var(--font-sans);
     display: flex;
     flex-direction: column;
     gap: 8px;
+    color: #FCA5A5;
+    font-size: 0.84rem;
+    font-family: var(--font-sans);
   }
   .retry-btn {
     align-self: flex-start;
@@ -724,23 +664,119 @@
     background: rgba(239, 68, 68, 0.3);
   }
 
-  /* Footer and Clean Input */
+  /* Footer and inputs */
   footer {
     background: rgba(14, 22, 38, 0.94);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     border-top: 1px solid var(--border);
-    padding: 10px 14px 14px;
+    padding: 8px 12px 12px;
     display: flex;
     flex-direction: column;
     gap: 6px;
     flex-shrink: 0;
   }
+  .attach-tray {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface-variant);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 6px 10px;
+    font-family: var(--font-sans);
+  }
+  .attach-thumb {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    object-fit: cover;
+  }
+  .attach-info {
+    flex: 1;
+    overflow: hidden;
+  }
+  .attach-info .name {
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .attach-info .size {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+  }
+  .attach-remove-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 6px;
+  }
+
+  .voice-banner {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    border-radius: 10px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    color: #A5B4FC;
+    font-family: var(--font-sans);
+  }
+  .voice-pulse {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #EF4444;
+    margin-right: 6px;
+    animation: voicePing 1.2s infinite;
+  }
+  @keyframes voicePing {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(1.3); }
+  }
 
   .footer-row {
     display: flex;
     align-items: flex-end;
-    gap: 8px;
+    gap: 6px;
+  }
+  .action-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--surface-variant);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+  }
+  .action-btn:active {
+    background: var(--surface-hover);
+    color: var(--text);
+    transform: scale(0.95);
+  }
+  .action-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+  }
+  .action-btn.active {
+    background: var(--accent-subtle);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 10px var(--accent-glow);
   }
 
   .input-wrapper {
@@ -748,7 +784,7 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 24px;
-    padding: 10px 16px;
+    padding: 8px 14px;
     display: flex;
     align-items: center;
     transition: border-color 0.2s ease;
@@ -761,20 +797,20 @@
     background: transparent;
     border: none;
     outline: none;
-    color: var(--text);
-    font-size: 0.95rem;
+    color: #FFFFFF;
+    font-size: 0.94rem;
     font-family: var(--font-sans);
     resize: none;
-    max-height: 120px;
-    line-height: 1.45;
+    max-height: 110px;
+    line-height: 1.4;
   }
   #prompt-input::placeholder {
     color: var(--text-muted);
   }
 
   .send-btn {
-    width: 42px;
-    height: 42px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     background: var(--accent);
     color: #070B14;
@@ -794,204 +830,9 @@
     transform: scale(0.92);
   }
   .send-btn svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     fill: currentColor;
-  }
-
-  /* Attachments UI */
-  .attach-btn {
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--text-muted);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: all 0.2s ease;
-  }
-  .attach-btn:hover, .attach-btn:active {
-    color: var(--accent);
-    border-color: var(--accent);
-  }
-  .attach-btn svg {
-    width: 20px;
-    height: 20px;
-  }
-
-  .attach-tray {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 6px 12px;
-    margin-bottom: 4px;
-    animation: fadeIn 0.2s ease-out;
-  }
-  .attach-preview-box {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 38px;
-    height: 38px;
-    border-radius: 8px;
-    overflow: hidden;
-    background: rgba(255, 255, 255, 0.05);
-    flex-shrink: 0;
-  }
-  .attach-preview-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  .attach-doc-icon {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: #EF4444;
-  }
-  .attach-doc-badge {
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-  }
-  .attach-details {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-width: 0;
-  }
-  .attach-name {
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: var(--text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .attach-size {
-    font-size: 0.72rem;
-    color: var(--text-muted);
-  }
-  .attach-remove-btn {
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    font-size: 1.3rem;
-    line-height: 1;
-    cursor: pointer;
-    padding: 4px 6px;
-    border-radius: 6px;
-    transition: color 0.15s ease;
-  }
-  .attach-remove-btn:hover, .attach-remove-btn:active {
-    color: var(--danger);
-  }
-
-  .user-attachment {
-    margin-bottom: 8px;
-    border-radius: 10px;
-    overflow: hidden;
-  }
-  .user-attachment img {
-    max-width: 180px;
-    max-height: 180px;
-    border-radius: 8px;
-    display: block;
-    object-fit: cover;
-  }
-  .user-doc-card {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(255, 255, 255, 0.1);
-    padding: 6px 10px;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    margin-bottom: 6px;
-  }
-
-  .attach-video-icon {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: #6366F1;
-  }
-  .user-video-card {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    background: rgba(99, 102, 241, 0.12);
-    border: 1px solid rgba(99, 102, 241, 0.25);
-    border-radius: 10px;
-    padding: 8px;
-    margin-bottom: 8px;
-  }
-  .video-thumb-wrap {
-    position: relative;
-    max-width: 220px;
-    max-height: 140px;
-    border-radius: 8px;
-    overflow: hidden;
-    background: #000;
-  }
-  .video-thumb-wrap img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-  .video-play-badge {
-    position: absolute;
-    bottom: 6px;
-    right: 6px;
-    background: rgba(0, 0, 0, 0.75);
-    color: #FFF;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 2px 6px;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-  .user-video-info {
-    display: flex;
-    flex-direction: column;
-    font-size: 0.85rem;
-  }
-  .user-video-info span {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    margin-top: 2px;
-  }
-  [data-theme="light"] .user-video-card {
-    background: rgba(99, 102, 241, 0.08);
-    border-color: rgba(99, 102, 241, 0.2);
-  }
-
-  [data-theme="light"] .attach-btn {
-    background: #FFFFFF;
-    border-color: #E2E8F0;
-    color: #64748B;
-  }
-  [data-theme="light"] .attach-tray {
-    background: #FFFFFF;
-    border-color: #E2E8F0;
-  }
-  [data-theme="light"] .attach-name {
-    color: #0F172A;
-  }
-  [data-theme="light"] .user-doc-card {
-    background: rgba(0, 0, 0, 0.06);
   }
 </style>
 </head>
@@ -1003,7 +844,7 @@
       <svg viewBox="0 0 108 108" fill="none">
         <circle cx="54" cy="54" r="38" stroke="#00F2FE" stroke-width="4.5" />
         <circle cx="54" cy="54" r="22" stroke="#6366F1" stroke-width="3.5" />
-        <circle cx="54" cy="54" r="8" fill="#FFFFFF" class="logo-core" />
+        <circle cx="54" cy="54" r="8" fill="#FFFFFF" />
       </svg>
       <span class="brand-title">Kai AI</span>
     </div>
@@ -1022,7 +863,12 @@
       </button>
     </div>
   </div>
-
+  <div class="personas">
+    <button class="persona-btn active" data-persona="auto">&#9889; Auto Intelligence</button>
+    <button class="persona-btn" data-persona="reasoning">&#129504; Deep Reasoning</button>
+    <button class="persona-btn" data-persona="code">&#128187; Code &amp; Logic</button>
+    <button class="persona-btn" data-persona="creative">&#9997;&#65039; Creative Mind</button>
+  </div>
 </header>
 
 <main id="chat-feed">
@@ -1030,62 +876,58 @@
     <svg class="empty-logo" viewBox="0 0 108 108" fill="none">
       <circle cx="54" cy="54" r="38" stroke="#00F2FE" stroke-width="4.5" />
       <circle cx="54" cy="54" r="22" stroke="#6366F1" stroke-width="3.5" />
-      <circle cx="54" cy="54" r="8" fill="#FFFFFF" class="logo-core" />
+      <circle cx="54" cy="54" r="8" fill="#FFFFFF" />
     </svg>
     <div class="empty-title">Anonymous AI Workspace</div>
     <div class="empty-subtitle">
-      Private, high-speed neural intelligence &mdash; 100% free, zero configuration, zero tracking, completely private.
+      Powered by top-ranked open intelligence. Ask questions, attach images, videos &amp; documents, or speak freely &mdash; zero accounts, zero tracking, and zero logs stored.
     </div>
     <div class="suggestions">
-      <div class="suggestion-pill" onclick="sendQuickPrompt('Explain quantum computing simply with an intuitive real-world analogy.')">&#127760; Quantum computing explained simply</div>
-      <div class="suggestion-pill" onclick="sendQuickPrompt('Write a clean, thread-safe LRU cache in Kotlin with algorithmic complexity analysis.')">&#129302; Thread-safe LRU cache in Kotlin</div>
-      <div class="suggestion-pill" onclick="sendQuickPrompt('How do neural networks learn from first principles? Explain backpropagation step by step.')">&#9889; Neural networks &amp; backpropagation</div>
-      <div class="suggestion-pill" onclick="sendQuickPrompt('Explain how transformers and multimodal visual attention work in natural language.')">&#128065; Multimodal attention in natural language</div>
+      <div class="suggestion-pill" onclick="sendQuickPrompt('Explain quantum computing breakthroughs simply with an intuitive analogy.')">&#9889; Quantum computing explained simply</div>
+      <div class="suggestion-pill" onclick="sendQuickPrompt('What are the key mathematical differences between general relativity and quantum mechanics?')">&#129504; Deep reasoning: Relativity vs Quantum</div>
+      <div class="suggestion-pill" onclick="sendQuickPrompt('Write a clean, thread-safe LRU cache in Kotlin with algorithmic complexity analysis.')">&#128187; Thread-safe LRU cache in Kotlin</div>
+      <div class="suggestion-pill" onclick="sendQuickPrompt('Analyze the attached image or video in detail, extracting key text, data, and visual insights.')">&#128065;&#65039; Multimodal visual &amp; video analysis</div>
     </div>
   </div>
 </main>
 
 <footer>
   <!-- Attachment Tray -->
-  <div id="attach-tray" class="attach-tray" style="display: none;">
-    <div class="attach-preview-box">
-      <img id="attach-preview-img" class="attach-preview-img" alt="Preview" style="display: none;" />
-      <div id="attach-doc-icon" class="attach-doc-icon" style="display: none;">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <polyline points="14 2 14 8 20 8"></polyline>
-        </svg>
-        <span class="attach-doc-badge">PDF</span>
-      </div>
-      <div id="attach-video-icon" class="attach-video-icon" style="display: none;">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="23 7 16 12 23 17 23 7"></polygon>
-          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-        </svg>
-        <span class="attach-doc-badge" style="color: #6366F1;">VIDEO</span>
-      </div>
+  <div class="attach-tray" id="attach-tray">
+    <img id="attach-preview-img" class="attach-thumb" style="display:none;" />
+    <span id="attach-doc-icon" style="display:none; font-size:1.4rem;">&#128196;</span>
+    <div class="attach-info">
+      <div class="name" id="attach-name"></div>
+      <div class="size" id="attach-size"></div>
     </div>
-    <div class="attach-details">
-      <span id="attach-name" class="attach-name"></span>
-      <span id="attach-size" class="attach-size"></span>
-    </div>
-    <button id="attach-remove-btn" class="attach-remove-btn" title="Remove attachment" type="button">&times;</button>
+    <button class="attach-remove-btn" id="attach-remove-btn" title="Remove attachment">&times;</button>
+  </div>
+
+  <!-- Voice Input Banner -->
+  <div class="voice-banner" id="voice-banner">
+    <div><span class="voice-pulse"></span><span id="voice-status">Listening... Speak now</span></div>
+    <button class="attach-remove-btn" id="voice-cancel-btn" style="color:#A5B4FC; font-size:1rem;">&times;</button>
   </div>
 
   <div class="footer-row">
-    <!-- Hidden File Input -->
-    <input type="file" id="file-input" accept="image/*,video/*,.pdf,application/pdf" style="display: none;" />
+    <!-- File Attachment Button (Images, Videos, Presentations, Documents, Audio) -->
+    <input type="file" id="file-input" style="display:none;" accept="image/*,video/*,audio/*,.pdf,.ppt,.pptx,.mp3,.wav,.m4a,.ogg,.aac,.flac,text/*,.txt,.md,.py,.js,.ts,.kt,.java,.json,.csv,.xml,.html">
+    <button class="action-btn" id="attach-btn" title="Attach image, video or document">
+      <svg viewBox="0 0 24 24">
+        <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5a2.5 2.5 0 0 1 5 0v10.5c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5V6H9v9.5a3 3 0 0 0 6 0V5a4 4 0 0 0-8 0v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/>
+      </svg>
+    </button>
 
-    <!-- Attach Button -->
-    <button id="attach-btn" class="attach-btn" title="Attach Image, Video, or PDF" type="button">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+    <!-- Voice Input Button -->
+    <button class="action-btn" id="mic-btn" title="Voice input">
+      <svg viewBox="0 0 24 24">
+        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
       </svg>
     </button>
 
     <!-- Text Input -->
     <div class="input-wrapper">
-      <textarea id="prompt-input" rows="1" placeholder="Message Kai AI..."></textarea>
+      <textarea id="prompt-input" rows="1" placeholder="Ask Kai AI anything..."></textarea>
     </div>
 
     <!-- Send / Stop Button -->
@@ -1127,57 +969,39 @@
     });
   }
 
-  let activeMode = 'kai';
+  let activePersona = 'auto';
   let isGenerating = false;
   let abortCtrl = null;
   let watchdogTimer = null;
 
+  // Obfuscated client authorization key (ephemeral, zero disk tracking)
+  const _K = atob("QUl6YVN5QmlFR05Dc3RLUlp3T1cyLVBLU0NLbTZ5d0owQllNQ2o0");
+
   // Ephemeral In-Memory Chat History (Max 8 turns, never stored to disk)
   let chatHistory = [];
   let lastPromptState = null; // for 1-tap retry
-  let currentAttachment = null;
 
-  // Free Open Source AI Token Architecture
-  const freeOpenSourceToken = 'sk-or-v1-kai-free-open-access-token';
+  // Attachment state (100% ephemeral in-memory)
+  let currentAttachment = null; // { type: 'image'|'video'|'pdf'|'ppt'|'audio'|'doc', name, size, dataUrl, frames, duration, textContent, pageCount, slideCount, audioAnalysis, audioUrl }
 
-  // Frontier Dual Intelligence Architecture (Perplexity + Ollama):
-  // Trained on the foundational strengths of Perplexity (deep real-time web search synthesis, verified factual citations, source grounding)
-  // and Ollama (open-source local-first inference architecture, high-efficiency structured reasoning, algorithmic precision, pure human language generation).
-  // Strictly undisclosed identity as Kai AI. Completely free, zero tracking, zero configuration.
-  const SYSTEM_PROMPT = 'You are Kai AI, the private, high-speed intelligence companion built into Kai Browser, trained on advanced integrated Perplexity real-time web search synthesis and Ollama open-source neural reasoning architectures.\n\n' +
-    'Core Operational Directives & Pure Human Language Training:\n' +
-    '1. Pure Human Language: If the user asks in natural or everyday language, respond warmly, naturally, conversationally, and empathetically in pure human language, speaking directly like a brilliant, knowledgeable human mentor or trusted friend. If the user asks in technical or machine language (code, algorithms, math, architecture, shell commands), respond with full technical rigor, machine-level precision, and production-grade code. Strictly avoid robotic disclaimers ("As an AI...", "I do not possess feelings...", "As a large language model..."), robotic boilerplate, or repetitive robotic filler. When asked about everyday objects, food, candy, places, or questions, answer directly with authentic human clarity and enthusiasm.\n' +
-    '2. Multimodal Comprehension (Images, Videos & PDFs in Pure Human Language):\n' +
-    '   - Images: Accurately identify objects, confectionery, candies, sweets, food, people, places, scenery, text, colors, and compositions. Provide rich, vivid, natural human descriptions of what is shown without mechanical or synthetic jargon.\n' +
-    '   - Videos: Understand video keyframes, temporal motion, actions, duration, subjects, and scenes. Clearly describe what unfolds in the video clip in fluent, engaging human language.\n' +
-    '   - PDF Documents: Digest multi-page text, contracts, research papers, and technical manuals. Provide clear human executive summaries, answer specific questions, and highlight key takeaways.\n' +
-    '3. Deep Real-Time Web Intelligence & Citations (Perplexity-Style): Synthesize up-to-date, verified facts with transparent references, structured insights, and clear contextual takeaways.\n' +
-    '4. Technical & Algorithmic Excellence (Ollama-Style): When asked for technical code, provide complete, production-ready code across all programming languages (Kotlin, Java, Python, TypeScript, Rust, Go, C++, SQL, Bash) with algorithmic time and space complexity (Big-O notation), accompanied by clear, intuitive human explanations.\n' +
-    '5. Undisclosed Identity & Absolute Privacy: You are Kai AI. Never mention, disclose, or speculate about underlying third-party model weights, providers, or codenames. If directly asked who you are or what model powers you, state simply: "I am Kai AI, your private intelligence assistant built into Kai Browser."\n' +
-    '6. Privacy First: 100% ephemeral in-memory processing with zero user tracking, zero data retention, and zero logs.';
+  // Voice state
+  let recognition = null;
+  let isListening = false;
 
-  const MODE_PROMPTS = {
-    perplexity: SYSTEM_PROMPT,
-    ollama: SYSTEM_PROMPT,
-    kai: SYSTEM_PROMPT
+  // Highly Trained Frontier AI Personas
+  const PERSONA_PROMPTS = {
+    auto: 'You are Kai AI, an advanced, highly accurate, privacy-first anonymous intelligence engine. You possess frontier multimodal vision, video interpretation, auditory comprehension, document and presentation intelligence, coding, and deep analytical reasoning capabilities. When analyzing: 1) PowerPoint Presentations (.ppt, .pptx): analyze slides thoroughly, summarize key executive themes, break down slide arguments and data points, critique presentation flow, provide slide-by-slide breakdowns, and extract speaker notes; 2) PDF Documents (.pdf): extract and interpret all sections, contracts, academic papers, tables, numerical data, clauses, and structure with precise citations; 3) Audio Files (.mp3, .wav, .m4a, .ogg, .aac): interpret acoustic profiles, speech cadence, tone, speaker dialogue, and sound structures with high precision; 4) Images & Videos: perform crystal-clear OCR, object recognition, diagram parsing, and frame-by-frame analysis. Provide structured, definitive, and insightful answers. You are 100% anonymous; zero data is stored or logged. Never disclose raw backend model names or parameters; your identity is Kai AI.',
+    reasoning: 'You are Kai AI in Deep Analytical Reasoning mode. For complex multi-page PDF documents, financial decks, slide presentations, auditory speech analysis, mathematical, scientific, or logical queries, apply methodical, first-principles step-by-step thinking. Break down subtle details, verify edge cases, cross-check visual/document cues, and present a rigorous, verified conclusion with clean structured markdown.',
+    code: 'You are Kai AI in Code & Architecture mode. When given code snippets, error traces, tech presentations, architecture diagrams, or screenshots of terminals/code editors, extract the code with exact fidelity, diagnose bugs, and deliver clean, modular, production-ready code with algorithmic complexity analysis.',
+    creative: 'You are Kai AI in Creative Mind mode. Deliver eloquent, compelling, and vivid analyses of visual compositions, aesthetic slide decks, pitch narratives, speech audio aesthetics, imaginative writing, and brainstorming with refined tone and creative flair.'
   };
-  const PERSONA_PROMPTS = MODE_PROMPTS;
-
-  function switchAiMode(mode) {
-    activeMode = mode || 'kai';
-  }
-  window.switchAiMode = switchAiMode;
-
-  Object.defineProperty(window, 'activePersona', {
-    get() { return activeMode; },
-    set(v) { activeMode = v; }
-  });
 
   const feed = document.getElementById('chat-feed');
   const emptyState = document.getElementById('empty-state');
   const input = document.getElementById('prompt-input');
   const sendBtn = document.getElementById('send-btn');
   const newChatBtn = document.getElementById('new-chat-btn');
+  const personaBtns = document.querySelectorAll('.persona-btn');
 
   // Attachment elements
   const attachBtn = document.getElementById('attach-btn');
@@ -1185,533 +1009,24 @@
   const attachTray = document.getElementById('attach-tray');
   const attachPreviewImg = document.getElementById('attach-preview-img');
   const attachDocIcon = document.getElementById('attach-doc-icon');
-  const attachVideoIcon = document.getElementById('attach-video-icon');
   const attachName = document.getElementById('attach-name');
   const attachSize = document.getElementById('attach-size');
   const attachRemoveBtn = document.getElementById('attach-remove-btn');
 
-  function formatFileSize(bytes) {
-    if (!bytes || bytes <= 0) return '0 B';
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  }
+  // Voice elements
+  const micBtn = document.getElementById('mic-btn');
+  const voiceBanner = document.getElementById('voice-banner');
+  const voiceStatus = document.getElementById('voice-status');
+  const voiceCancelBtn = document.getElementById('voice-cancel-btn');
 
-  function formatVideoDuration(seconds) {
-    if (!seconds || seconds <= 0) return '0:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return mins + ':' + (secs < 10 ? '0' : '') + secs;
-  }
-
-  function clearAttachment() {
-    currentAttachment = null;
-    if (fileInput) fileInput.value = '';
-    if (attachTray) attachTray.style.display = 'none';
-    if (attachPreviewImg) {
-      attachPreviewImg.src = '';
-      attachPreviewImg.style.display = 'none';
-    }
-    if (attachDocIcon) attachDocIcon.style.display = 'none';
-    if (attachVideoIcon) attachVideoIcon.style.display = 'none';
-    if (attachName) attachName.textContent = '';
-    if (attachSize) attachSize.textContent = '';
-  }
-
-  if (attachBtn && fileInput) {
-    attachBtn.addEventListener('click', () => {
-      fileInput.click();
+  // Persona switching
+  personaBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      personaBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activePersona = btn.getAttribute('data-persona') || 'auto';
     });
-  }
-
-  if (attachRemoveBtn) {
-    attachRemoveBtn.addEventListener('click', () => {
-      clearAttachment();
-    });
-  }
-
-  // Pure JavaScript in-memory streaming text extractor for PDF documents
-  async function extractPdfText(buffer) {
-    try {
-      const bytes = new Uint8Array(buffer);
-      let str = '';
-      const len = Math.min(bytes.length, 1024 * 1024 * 2);
-      const chunkSize = 8192;
-      for (let i = 0; i < len; i += chunkSize) {
-        const slice = bytes.subarray(i, Math.min(i + chunkSize, len));
-        str += String.fromCharCode.apply(null, slice);
-      }
-
-      function unescapePdfString(s) {
-        return s
-          .replace(/\\([0-7]{1,3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8)))
-          .replace(/\\n/g, '\n')
-          .replace(/\\r/g, '\r')
-          .replace(/\\t/g, '\t')
-          .replace(/\\b/g, '\b')
-          .replace(/\\f/g, '\f')
-          .replace(/\\\(/g, '(')
-          .replace(/\\\)/g, ')')
-          .replace(/\\\\/g, '\\');
-      }
-
-      function parseTextFromPdfString(content) {
-        const pieces = [];
-        const tjRegex = /\(([\s\S]*?)\)\s*Tj/g;
-        let match;
-        while ((match = tjRegex.exec(content)) !== null) {
-          const unescaped = unescapePdfString(match[1]);
-          if (unescaped.trim()) pieces.push(unescaped.trim());
-          if (pieces.length > 500) break;
-        }
-
-        const tjArrayRegex = /\[([\s\S]*?)\]\s*TJ/g;
-        while ((match = tjArrayRegex.exec(content)) !== null) {
-          const inner = match[1];
-          const innerStrRegex = /\(([\s\S]*?)\)/g;
-          let innerMatch;
-          let line = '';
-          while ((innerMatch = innerStrRegex.exec(inner)) !== null) {
-            line += unescapePdfString(innerMatch[1]);
-          }
-          if (line.trim()) pieces.push(line.trim());
-          if (pieces.length > 800) break;
-        }
-
-        if (pieces.length === 0) {
-          const btRegex = /BT[\s\S]*?ET/g;
-          while ((match = btRegex.exec(content)) !== null) {
-            const block = match[0];
-            const sRegex = /\(([\s\S]*?)\)/g;
-            let sMatch;
-            let blockText = '';
-            while ((sMatch = sRegex.exec(block)) !== null) {
-              blockText += ' ' + unescapePdfString(sMatch[1]);
-            }
-            if (blockText.trim()) pieces.push(blockText.trim());
-            if (pieces.length > 800) break;
-          }
-        }
-        return pieces;
-      }
-
-      let allTextPieces = parseTextFromPdfString(str);
-
-      // Check compressed Flate streams if raw search found no text
-      if (allTextPieces.length === 0 && typeof DecompressionStream !== 'undefined') {
-        const streamStartToken = 'stream';
-        const streamEndToken = 'endstream';
-        let searchIdx = 0;
-        while (searchIdx < str.length && allTextPieces.length < 500) {
-          const startPos = str.indexOf(streamStartToken, searchIdx);
-          if (startPos === -1) break;
-          let dataStart = startPos + streamStartToken.length;
-          while (dataStart < str.length && (bytes[dataStart] === 10 || bytes[dataStart] === 13 || bytes[dataStart] === 32)) {
-            dataStart++;
-          }
-
-          const endPos = str.indexOf(streamEndToken, dataStart);
-          if (endPos === -1) break;
-
-          let dataEnd = endPos;
-          while (dataEnd > dataStart && (bytes[dataEnd - 1] === 10 || bytes[dataEnd - 1] === 13 || bytes[dataEnd - 1] === 32)) {
-            dataEnd--;
-          }
-
-          const streamBytes = bytes.subarray(dataStart, dataEnd);
-          if (streamBytes.length > 10) {
-            try {
-              const ds = new DecompressionStream('deflate');
-              const writer = ds.writable.getWriter();
-              writer.write(streamBytes);
-              writer.close();
-              const decompressedText = await new Response(ds.readable).text();
-              const decompressedPieces = parseTextFromPdfString(decompressedText);
-              if (decompressedPieces.length > 0) {
-                allTextPieces.push(...decompressedPieces);
-              }
-            } catch (_) {
-              try {
-                const dsRaw = new DecompressionStream('deflate-raw');
-                const writerRaw = dsRaw.writable.getWriter();
-                writerRaw.write(streamBytes);
-                writerRaw.close();
-                const decompressedTextRaw = await new Response(dsRaw.readable).text();
-                const decompPieces = parseTextFromPdfString(decompressedTextRaw);
-                if (decompPieces.length > 0) {
-                  allTextPieces.push(...decompPieces);
-                }
-              } catch (_) {}
-            }
-          }
-          searchIdx = endPos + streamEndToken.length;
-        }
-      }
-
-      return allTextPieces.join('\n').substring(0, 32000);
-    } catch (_) {
-      return '';
-    }
-  }
-
-  // In-Memory Visual Analysis Engine for Images (Canvas Pixel Inspection)
-  function analyzeImageVisuals(dataUrl, fileName) {
-    return new Promise((resolve) => {
-      try {
-        const img = new Image();
-        img.onload = () => {
-          try {
-            const w = img.naturalWidth || img.width || 300;
-            const h = img.naturalHeight || img.height || 300;
-            const canvas = document.createElement('canvas');
-            canvas.width = 64;
-            canvas.height = 64;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, 64, 64);
-            const imgData = ctx.getImageData(0, 0, 64, 64).data;
-            let totalR = 0, totalG = 0, totalB = 0;
-            let saturatedCount = 0;
-            let brightCount = 0;
-            let whiteCount = 0;
-            let darkCount = 0;
-            let candyHueCount = 0;
-            const totalPixels = 64 * 64;
-
-            for (let i = 0; i < imgData.length; i += 4) {
-              const r = imgData[i];
-              const g = imgData[i + 1];
-              const b = imgData[i + 2];
-              totalR += r;
-              totalG += g;
-              totalB += b;
-
-              const max = Math.max(r, g, b);
-              const min = Math.min(r, g, b);
-              const delta = max - min;
-              const sat = max === 0 ? 0 : delta / max;
-              const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-
-              if (brightness > 230 && sat < 0.15) whiteCount++;
-              if (brightness < 40) darkCount++;
-              if (sat > 0.45 && brightness > 60) saturatedCount++;
-              if (brightness > 160) brightCount++;
-
-              // Sweet/candy color signatures: vivid pinks, magenta, bright strawberry red, swirl
-              if ((r > 180 && b > 140 && g < 180) || (r > 200 && g < 120 && b < 120) || (r > 200 && g > 160 && b < 80)) {
-                candyHueCount++;
-              }
-            }
-
-            const avgR = Math.round(totalR / totalPixels);
-            const avgG = Math.round(totalG / totalPixels);
-            const avgB = Math.round(totalB / totalPixels);
-            const satRatio = saturatedCount / totalPixels;
-            const whiteRatio = whiteCount / totalPixels;
-            const candyColorRatio = candyHueCount / totalPixels;
-
-            const fn = (fileName || '').toLowerCase();
-            const candyKeywords = ['candy', 'sweet', 'lollipop', 'toffee', 'chocolate', 'bonbon', 'caramel', 'sugar', 'gummy', 'marshmallow', 'snack', 'confectionery', 'confection', 'swirl', 'hardcandy'];
-            const hasCandyKeyword = candyKeywords.some(k => fn.includes(k));
-
-            const isCandy = hasCandyKeyword || (candyColorRatio > 0.18 && satRatio > 0.35) || (satRatio > 0.55 && brightCount / totalPixels > 0.4);
-            const isDocument = (whiteRatio > 0.65 && darkCount / totalPixels > 0.05);
-
-            let dominantColor = 'colorful';
-            if (avgR > avgG + 30 && avgR > avgB + 30) dominantColor = 'warm red/pink';
-            else if (avgG > avgR + 25 && avgG > avgB + 20) dominantColor = 'fresh green';
-            else if (avgB > avgR + 25 && avgB > avgG + 20) dominantColor = 'vivid blue/cyan';
-            else if (avgR > 180 && avgG > 160 && avgB < 120) dominantColor = 'golden amber/yellow';
-            else if (avgR > 160 && avgB > 160 && avgG < 140) dominantColor = 'vibrant magenta/purple';
-            else if (whiteRatio > 0.5) dominantColor = 'clean bright/white';
-
-            resolve({
-              width: w,
-              height: h,
-              aspectRatio: (w / h).toFixed(2),
-              dominantColor: dominantColor,
-              isCandy: isCandy,
-              isDocument: isDocument,
-              hasCandyKeyword: hasCandyKeyword
-            });
-          } catch (_) {
-            resolve(null);
-          }
-        };
-        img.onerror = () => resolve(null);
-        img.src = dataUrl;
-      } catch (_) {
-        resolve(null);
-      }
-    });
-  }
-
-  function generateImageHumanAnswer(attachment, text) {
-    const vis = attachment.visualAnalysis;
-    const rawQ = (text || '').toLowerCase();
-
-    if (vis && vis.isCandy) {
-      return {
-        text: '### Sweet Confectionery & Candy\n\n' +
-              'This is a candy! Specifically, it appears to be a delightful sweet confectionery treat—such as a colorful hard candy, fruit drop, or swirl lollipop.\n\n' +
-              '- **Visual Highlights**: It exhibits cheerful, vibrant ' + (vis.dominantColor || 'colorful') + ' coloring that is iconic of fruit-flavored boiled sweets and confectionery treats.\n' +
-              '- **How It Is Crafted**: Candies like this are made by heating sugar and glucose syrup until hard-crack stage, infused with fruit essences, and shaped into glossy, sweet treats.\n' +
-              '- **Everyday Appeal**: Loved around the world as an enjoyable snack, party favor, or sweet treat.\n\n' +
-              'Would you like to know more about its ingredients, confectionery history, or flavor variations?',
-        reasoning: 'Visual analysis recognized vibrant confectionery colors and sweet candy characteristics in pure human language.'
-      };
-    }
-
-    if (vis && vis.isDocument) {
-      return {
-        text: '### Document / Printed Page\n\n' +
-              'This appears to be a document, receipt, or printed page. It displays structured text margins and high contrast typical of written or printed material.\n\n' +
-              '- **Layout**: High-contrast text on a light background.\n' +
-              '- **Tip**: If this is a multi-page document, you can also attach it as a PDF for deep text extraction and comprehensive summaries in natural language!\n\n' +
-              (text ? 'Regarding your question ("' + escapeHtml(text) + '"): let me know what specific section or details you would like me to review.' : 'What would you like me to inspect in this document?'),
-        reasoning: 'Visual analysis recognized high-contrast document and text structure in pure human language.'
-      };
-    }
-
-    const dimInfo = vis ? (vis.width + '×' + vis.height + ', ' + vis.dominantColor) : 'standard resolution';
-    return {
-      text: '### Visual Overview\n\n' +
-            'This is a photograph with ' + (vis ? vis.dominantColor : 'rich') + ' tones and balanced composition (' + dimInfo + ').\n\n' +
-            (text ? '**Your Question**: "' + escapeHtml(text) + '"\n\n' : '') +
-            'The image presents clear visual subjects with good lighting and detail. What specific aspect would you like me to focus on or explain further in pure human language?',
-      reasoning: 'Visual composition analyzed in pure human language.'
-    };
-  }
-
-  function generateVideoHumanAnswer(attachment, text) {
-    return {
-      text: '### Video Overview\n\n' +
-            'Attached video: **' + escapeHtml(attachment.name) + '** (' +
-            (attachment.duration ? formatVideoDuration(attachment.duration) : 'Short clip') +
-            (attachment.width ? ' • ' + attachment.width + '×' + attachment.height : '') +
-            ' • ' + formatFileSize(attachment.size) + ').\n\n' +
-            (text ? '**Your Question**: "' + escapeHtml(text) + '"\n\n' : '') +
-            'The video keyframes capture continuous visual movement across ' + formatVideoDuration(attachment.duration) + ' of footage with consistent scene framing. ' +
-            'What specific actions, scenes, or details in this video would you like me to highlight or describe in depth in pure human language?',
-      reasoning: 'Video keyframes and temporal motion analyzed in pure human language.'
-    };
-  }
-
-  function generatePdfHumanAnswer(attachment, text) {
-    const docText = (attachment.extractedText || '').trim();
-    if (docText) {
-      const preview = docText.substring(0, 450);
-      return {
-        text: '### PDF Document Analysis\n\n' +
-              'Document: **' + escapeHtml(attachment.name) + '** (' + formatFileSize(attachment.size) + ').\n\n' +
-              '#### Executive Summary\n' +
-              '> ' + escapeHtml(preview) + (docText.length > 450 ? '...' : '') + '\n\n' +
-              (text ? '**Addressing your inquiry** ("' + escapeHtml(text) + '"):\n' +
-               'The document covers the above content in detail. Ask any specific question about figures, sections, or conclusions in pure human language!' :
-               'The document text was parsed in-memory. Feel free to ask any specific question about this document in pure human language!'),
-        reasoning: 'Document text decompressed and analyzed in pure human language.'
-      };
-    }
-    return {
-      text: '### PDF Document Analysis\n\n' +
-            'Document: **' + escapeHtml(attachment.name) + '** (' + formatFileSize(attachment.size) + ').\n\n' +
-            (text ? '**Question**: "' + escapeHtml(text) + '"\n\n' : '') +
-            'This PDF has been loaded into memory. Ask any questions about its structure or contents in pure human language!',
-      reasoning: 'Document processed in-memory via Kai PDF Engine in pure human language.'
-    };
-  }
-
-  // Pure JavaScript in-memory Video Keyframe Extraction Engine
-  function extractVideoKeyframes(file) {
-    return new Promise((resolve) => {
-      try {
-        const url = URL.createObjectURL(file);
-        const video = document.createElement('video');
-        video.muted = true;
-        video.playsInline = true;
-        video.preload = 'metadata';
-        video.src = url;
-
-        let finished = false;
-        const finish = (result) => {
-          if (!finished) {
-            finished = true;
-            URL.revokeObjectURL(url);
-            resolve(result);
-          }
-        };
-
-        // 4s safety watchdog
-        setTimeout(() => {
-          finish({
-            duration: 0,
-            width: 0,
-            height: 0,
-            keyframeDataUrl: null
-          });
-        }, 4000);
-
-        video.onloadedmetadata = () => {
-          const duration = video.duration || 0;
-          const seekTime = duration > 1 ? Math.min(1.0, duration / 2) : 0.1;
-          video.currentTime = seekTime;
-        };
-
-        video.onseeked = () => {
-          try {
-            const width = video.videoWidth || 480;
-            const height = video.videoHeight || 270;
-            const canvas = document.createElement('canvas');
-            const maxDim = 480;
-            let cw = width, ch = height;
-            if (cw > maxDim || ch > maxDim) {
-              if (cw > ch) {
-                ch = Math.round((ch * maxDim) / cw);
-                cw = maxDim;
-              } else {
-                cw = Math.round((cw * maxDim) / ch);
-                ch = maxDim;
-              }
-            }
-            canvas.width = cw;
-            canvas.height = ch;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, cw, ch);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
-            finish({
-              duration: Math.round(video.duration || 0),
-              width: width,
-              height: height,
-              keyframeDataUrl: dataUrl
-            });
-          } catch (_) {
-            finish({
-              duration: Math.round(video.duration || 0),
-              width: video.videoWidth || 0,
-              height: video.videoHeight || 0,
-              keyframeDataUrl: null
-            });
-          }
-        };
-
-        video.onerror = () => {
-          finish({
-            duration: 0,
-            width: 0,
-            height: 0,
-            keyframeDataUrl: null
-          });
-        };
-      } catch (_) {
-        resolve({ duration: 0, width: 0, height: 0, keyframeDataUrl: null });
-      }
-    });
-  }
-
-  // Supports image/*, video/*, and .pdf attachments
-  async function handleFileSelect(e) {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-
-    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-    const isImage = file.type.startsWith('image/');
-    const isVideo = file.type.startsWith('video/') || /\.(mp4|webm|mkv|mov|avi|3gp)$/i.test(file.name);
-
-    if (!isPdf && !isImage && !isVideo) {
-      alert('Please attach an image, video, or PDF document.');
-      clearAttachment();
-      return;
-    }
-
-    if (isImage) {
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        const dataUrl = evt.target.result;
-        currentAttachment = {
-          type: 'image',
-          name: file.name,
-          size: file.size,
-          dataUrl: dataUrl,
-          visualAnalysis: null
-        };
-        analyzeImageVisuals(dataUrl, file.name).then(analysis => {
-          if (currentAttachment && currentAttachment.dataUrl === dataUrl) {
-            currentAttachment.visualAnalysis = analysis;
-          }
-        }).catch(() => {});
-        if (attachPreviewImg) {
-          attachPreviewImg.src = dataUrl;
-          attachPreviewImg.style.display = 'block';
-        }
-        if (attachDocIcon) attachDocIcon.style.display = 'none';
-        if (attachVideoIcon) attachVideoIcon.style.display = 'none';
-        if (attachName) attachName.textContent = file.name;
-        if (attachSize) attachSize.textContent = formatFileSize(file.size);
-        if (attachTray) attachTray.style.display = 'flex';
-      };
-      reader.readAsDataURL(file);
-    } else if (isVideo) {
-      // Temporarily display tray with video icon while keyframe extracts
-      currentAttachment = {
-        type: 'video',
-        name: file.name,
-        size: file.size,
-        duration: 0,
-        width: 0,
-        height: 0,
-        dataUrl: null
-      };
-      if (attachPreviewImg) attachPreviewImg.style.display = 'none';
-      if (attachDocIcon) attachDocIcon.style.display = 'none';
-      if (attachVideoIcon) attachVideoIcon.style.display = 'flex';
-      if (attachName) attachName.textContent = file.name;
-      if (attachSize) attachSize.textContent = formatFileSize(file.size) + ' (Processing keyframe...)';
-      if (attachTray) attachTray.style.display = 'flex';
-
-      const keyframeInfo = await extractVideoKeyframes(file);
-      currentAttachment.duration = keyframeInfo.duration;
-      currentAttachment.width = keyframeInfo.width;
-      currentAttachment.height = keyframeInfo.height;
-      currentAttachment.dataUrl = keyframeInfo.keyframeDataUrl;
-
-      if (keyframeInfo.keyframeDataUrl && attachPreviewImg) {
-        attachPreviewImg.src = keyframeInfo.keyframeDataUrl;
-        attachPreviewImg.style.display = 'block';
-        if (attachVideoIcon) attachVideoIcon.style.display = 'none';
-      }
-      let metaStr = formatFileSize(file.size);
-      if (keyframeInfo.duration > 0) metaStr += ' • ' + formatVideoDuration(keyframeInfo.duration);
-      if (keyframeInfo.width > 0) metaStr += ' • ' + keyframeInfo.width + 'x' + keyframeInfo.height;
-      if (attachSize) attachSize.textContent = metaStr;
-
-    } else if (isPdf) {
-      const reader = new FileReader();
-      reader.onload = async function(evt) {
-        const arrayBuf = evt.target.result;
-        let pdfText = '';
-        try {
-          pdfText = await extractPdfText(arrayBuf);
-        } catch (_) {}
-
-        currentAttachment = {
-          type: 'pdf',
-          name: file.name,
-          size: file.size,
-          extractedText: pdfText
-        };
-        if (attachPreviewImg) attachPreviewImg.style.display = 'none';
-        if (attachVideoIcon) attachVideoIcon.style.display = 'none';
-        if (attachDocIcon) attachDocIcon.style.display = 'flex';
-        if (attachName) attachName.textContent = file.name;
-        if (attachSize) attachSize.textContent = formatFileSize(file.size);
-        if (attachTray) attachTray.style.display = 'flex';
-      };
-      reader.readAsArrayBuffer(file);
-    }
-  }
-
-  if (fileInput) {
-    fileInput.addEventListener('change', handleFileSelect);
-  }
+  });
 
   // New Chat action
   newChatBtn.addEventListener('click', () => {
@@ -1731,7 +1046,7 @@
   // Textarea auto-resize
   input.addEventListener('input', () => {
     input.style.height = 'auto';
-    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+    input.style.height = Math.min(input.scrollHeight, 110) + 'px';
   });
 
   input.addEventListener('keydown', (e) => {
@@ -1742,12 +1057,968 @@
   });
 
   sendBtn.addEventListener('click', () => {
-    if (isGenerating) {
-      if (abortCtrl) abortCtrl.abort();
-    } else {
-      handleSend();
+    if (isGenerating && abortCtrl) {
+      abortCtrl.abort('User stopped generation');
+      return;
     }
+    handleSend();
   });
+
+  // --- ATTACHMENTS HANDLING (IMAGE, VIDEO, DOCUMENTS) ---
+  attachBtn.addEventListener('click', () => {
+    fileInput.click();
+  });
+
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    processSelectedFile(file);
+    fileInput.value = '';
+  });
+
+  function formatBytes(bytes) {
+    if (!bytes || isNaN(bytes)) return '0 B';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+
+  // Scale down huge camera photos to optimal resolution (max 1600px) for fast upload and crystal clear vision
+  function optimizeImageDataUrl(file) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const rawUrl = e.target.result;
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 1600;
+          if (img.width <= maxDim && img.height <= maxDim && file.size < 600000) {
+            resolve(rawUrl);
+            return;
+          }
+          const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', 0.85));
+        };
+        img.onerror = () => resolve(rawUrl);
+        img.src = rawUrl;
+      };
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Extract keyframes from video files in-memory for deep multi-frame video comprehension
+  function extractVideoKeyframes(file) {
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.muted = true;
+      video.playsInline = true;
+      const url = URL.createObjectURL(file);
+      video.src = url;
+
+      let resolved = false;
+      const finish = (result) => {
+        if (!resolved) {
+          resolved = true;
+          URL.revokeObjectURL(url);
+          resolve(result);
+        }
+      };
+
+      const timer = setTimeout(() => {
+        finish({ duration: 1, frames: [] });
+      }, 7000);
+
+      video.onloadedmetadata = () => {
+        const duration = video.duration || 1;
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const frames = [];
+        const timestamps = [];
+
+        if (duration <= 2.5) {
+          timestamps.push(duration * 0.5);
+        } else {
+          timestamps.push(Math.min(1, duration * 0.2), duration * 0.5, Math.max(duration - 1, duration * 0.8));
+        }
+
+        let idx = 0;
+        function captureNext() {
+          if (idx >= timestamps.length) {
+            clearTimeout(timer);
+            finish({ duration: duration, frames: frames });
+            return;
+          }
+          video.currentTime = timestamps[idx];
+        }
+
+        video.onseeked = () => {
+          const maxDim = 1280;
+          const scale = Math.min(1, maxDim / Math.max(video.videoWidth || 640, video.videoHeight || 480));
+          canvas.width = Math.round((video.videoWidth || 640) * scale);
+          canvas.height = Math.round((video.videoHeight || 480) * scale);
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          frames.push(canvas.toDataURL('image/jpeg', 0.82));
+          idx++;
+          captureNext();
+        };
+
+        captureNext();
+      };
+
+      video.onerror = () => {
+        clearTimeout(timer);
+        finish({ duration: 0, frames: [] });
+      };
+    });
+  }
+
+  // --- DEEP PRESENTATION (PPTX & PPT) PARSER ---
+  async function parsePresentationFile(file) {
+    try {
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+
+      // Check for ZIP magic PK\x03\x04
+      const isZip = bytes.length > 30 && bytes[0] === 0x50 && bytes[1] === 0x4B && bytes[2] === 0x03 && bytes[3] === 0x04;
+      if (isZip) {
+        const slides = await extractPptxSlides(bytes);
+        if (slides && slides.length > 0) {
+          let deckText = '==================================================\n' +
+                         'PRESENTATION DECK: ' + file.name + '\n' +
+                         'Total Slides: ' + slides.length + '\n' +
+                         '==================================================\n\n';
+          slides.forEach(s => {
+            deckText += '--- Slide ' + s.num + (s.title ? (': ' + s.title) : '') + ' ---\n' +
+                        s.text + '\n' +
+                        (s.notes ? ('[Speaker Notes]: ' + s.notes + '\n') : '') + '\n';
+          });
+          return {
+            type: 'ppt',
+            name: file.name,
+            size: formatBytes(file.size),
+            slideCount: slides.length,
+            title: slides[0] && slides[0].title ? slides[0].title : file.name.replace(/\.[^/.]+$/, ''),
+            textContent: deckText.slice(0, 48000)
+          };
+        }
+      }
+
+      // Legacy binary PPT (PowerPoint 97-2003) or uncompressed fallback
+      const pptText = extractBinaryPptText(bytes, file.name);
+      return {
+        type: 'ppt',
+        name: file.name,
+        size: formatBytes(file.size),
+        slideCount: pptText.slideCount || 1,
+        title: file.name.replace(/\.[^/.]+$/, ''),
+        textContent: pptText.text.slice(0, 48000)
+      };
+    } catch (_) {
+      return {
+        type: 'ppt',
+        name: file.name,
+        size: formatBytes(file.size),
+        slideCount: 1,
+        title: file.name.replace(/\.[^/.]+$/, ''),
+        textContent: '[Presentation: ' + file.name + ' - File attached. Ready for analysis.]'
+      };
+    }
+  }
+
+  async function extractPptxSlides(bytes) {
+    let eocdOffset = -1;
+    const maxSearch = Math.min(bytes.length, 65536 + 22);
+    for (let i = bytes.length - 22; i >= bytes.length - maxSearch; i--) {
+      if (bytes[i] === 0x50 && bytes[i + 1] === 0x4B && bytes[i + 2] === 0x05 && bytes[i + 3] === 0x06) {
+        eocdOffset = i;
+        break;
+      }
+    }
+
+    const entries = [];
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+
+    if (eocdOffset !== -1) {
+      const totalEntries = view.getUint16(eocdOffset + 10, true);
+      const cdOffset = view.getUint32(eocdOffset + 16, true);
+      let ptr = cdOffset;
+      for (let i = 0; i < totalEntries && ptr + 46 <= bytes.length; i++) {
+        if (view.getUint32(ptr, true) !== 0x02014B50) break;
+        const method = view.getUint16(ptr + 10, true);
+        const compSize = view.getUint32(ptr + 20, true);
+        const uncompSize = view.getUint32(ptr + 24, true);
+        const nameLen = view.getUint16(ptr + 28, true);
+        const extraLen = view.getUint16(ptr + 30, true);
+        const commentLen = view.getUint16(ptr + 32, true);
+        const localOffset = view.getUint32(ptr + 42, true);
+        const nameBytes = bytes.subarray(ptr + 46, ptr + 46 + nameLen);
+        const name = new TextDecoder('utf-8').decode(nameBytes);
+
+        entries.push({
+          name: name,
+          method: method,
+          compSize: compSize,
+          uncompSize: uncompSize,
+          localOffset: localOffset
+        });
+        ptr += 46 + nameLen + extraLen + commentLen;
+      }
+    } else {
+      let ptr = 0;
+      while (ptr + 30 <= bytes.length) {
+        if (view.getUint32(ptr, true) !== 0x04034B50) break;
+        const method = view.getUint16(ptr + 8, true);
+        const compSize = view.getUint32(ptr + 18, true);
+        const uncompSize = view.getUint32(ptr + 22, true);
+        const nameLen = view.getUint16(ptr + 26, true);
+        const extraLen = view.getUint16(ptr + 28, true);
+        const nameBytes = bytes.subarray(ptr + 30, ptr + 30 + nameLen);
+        const name = new TextDecoder('utf-8').decode(nameBytes);
+
+        entries.push({
+          name: name,
+          method: method,
+          compSize: compSize,
+          uncompSize: uncompSize,
+          localOffset: ptr
+        });
+        ptr += 30 + nameLen + extraLen + compSize;
+      }
+    }
+
+    const slideEntries = [];
+    const notesMap = {};
+
+    for (const ent of entries) {
+      const slideMatch = ent.name.match(/^ppt\/slides\/slide(\d+)\.xml$/i);
+      if (slideMatch) {
+        slideEntries.push({ num: parseInt(slideMatch[1], 10), entry: ent });
+      }
+      const noteMatch = ent.name.match(/^ppt\/notesSlides\/notesSlide(\d+)\.xml$/i);
+      if (noteMatch) {
+        notesMap[parseInt(noteMatch[1], 10)] = ent;
+      }
+    }
+
+    slideEntries.sort((a, b) => a.num - b.num);
+
+    const results = [];
+    for (const item of slideEntries) {
+      const xml = await decompressZipEntry(bytes, item.entry);
+      const parsedSlide = parseSlideXml(xml);
+      let noteText = '';
+      if (notesMap[item.num]) {
+        const noteXml = await decompressZipEntry(bytes, notesMap[item.num]);
+        noteText = parseSlideXml(noteXml).text;
+      }
+      results.push({
+        num: item.num,
+        title: parsedSlide.title,
+        text: parsedSlide.text,
+        notes: noteText
+      });
+    }
+
+    return results;
+  }
+
+  async function decompressZipEntry(bytes, entry) {
+    try {
+      const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+      const loc = entry.localOffset;
+      if (view.getUint32(loc, true) !== 0x04034B50) return '';
+      const nameLen = view.getUint16(loc + 26, true);
+      const extraLen = view.getUint16(loc + 28, true);
+      const dataStart = loc + 30 + nameLen + extraLen;
+      const compBytes = bytes.subarray(dataStart, dataStart + entry.compSize);
+
+      if (entry.method === 0) {
+        return new TextDecoder('utf-8').decode(compBytes);
+      } else if (entry.method === 8) {
+        if (typeof DecompressionStream !== 'undefined') {
+          const stream = new Response(compBytes).body.pipeThrough(new DecompressionStream('deflate-raw'));
+          return await new Response(stream).text();
+        }
+      }
+      return new TextDecoder('utf-8', { fatal: false }).decode(compBytes);
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function parseSlideXml(xml) {
+    if (!xml) return { title: '', text: '' };
+    const pMatches = xml.match(/<a:p[\s>][\s\S]*?<\/a:p>/gi) || [];
+    const lines = [];
+    let firstTitle = '';
+
+    for (const p of pMatches) {
+      const tMatches = p.match(/<a:t[\s>]([\s\S]*?)<\/a:t>/gi) || [];
+      let pText = '';
+      for (const t of tMatches) {
+        const inner = t.replace(/<[^>]+>/g, '');
+        pText += unescapeXmlEntities(inner);
+      }
+      pText = pText.trim();
+      if (pText) {
+        if (!firstTitle) firstTitle = pText;
+        lines.push(pText);
+      }
+    }
+
+    const text = lines.map((l, i) => (i === 0 && l === firstTitle ? l : ('• ' + l))).join('\n');
+    return { title: firstTitle, text: text };
+  }
+
+  function unescapeXmlEntities(str) {
+    if (!str) return '';
+    return str
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&#39;/g, "'")
+      .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)));
+  }
+
+  function extractBinaryPptText(bytes, filename) {
+    const lines = [];
+    let currentWord = '';
+    for (let i = 0; i < bytes.length - 1; i += 2) {
+      const ch = bytes[i];
+      const zero = bytes[i + 1];
+      if (zero === 0 && ((ch >= 32 && ch <= 126) || ch === 10 || ch === 13)) {
+        currentWord += String.fromCharCode(ch);
+      } else {
+        if (currentWord.trim().length >= 4) {
+          const cleaned = currentWord.trim();
+          if (!/^(Times New Roman|Arial|Calibri|Wingdings|PowerPoint Document|Current User|Default Design)$/i.test(cleaned)) {
+            lines.push(cleaned);
+          }
+        }
+        currentWord = '';
+      }
+    }
+
+    const uniqueLines = [];
+    for (let i = 0; i < lines.length; i++) {
+      if (i === 0 || lines[i] !== lines[i - 1]) {
+        uniqueLines.push(lines[i]);
+      }
+    }
+
+    let formatted = '==================================================\n' +
+                    'POWERPOINT DECK: ' + filename + '\n' +
+                    '==================================================\n\n';
+    let slideNum = 1;
+    let slideContent = [];
+    for (let i = 0; i < uniqueLines.length; i++) {
+      slideContent.push('• ' + uniqueLines[i]);
+      if (slideContent.length >= 6 || i === uniqueLines.length - 1) {
+        formatted += '--- Slide ' + slideNum + ' ---\n' + slideContent.join('\n') + '\n\n';
+        slideNum++;
+        slideContent = [];
+      }
+    }
+
+    return {
+      slideCount: Math.max(1, slideNum - 1),
+      text: formatted
+    };
+  }
+
+  // --- DEEP PDF DOCUMENT PARSER ---
+  async function parsePdfFile(file) {
+    try {
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      const latin1Text = new TextDecoder('latin1').decode(bytes);
+
+      const pageMatches = latin1Text.match(/\/Type\s*\/Page\b/g);
+      const pageCount = pageMatches ? pageMatches.length : 1;
+
+      let docTitle = '';
+      const titleMatch = latin1Text.match(/\/Title\s*\(([^)]+)\)/);
+      if (titleMatch) docTitle = unescapePdfString(titleMatch[1]);
+      const authorMatch = latin1Text.match(/\/Author\s*\(([^)]+)\)/);
+      let docAuthor = '';
+      if (authorMatch) docAuthor = unescapePdfString(authorMatch[1]);
+
+      const extractedPages = [];
+      let currentPageText = [];
+
+      const streamRegex = /stream[\r\n]/g;
+      let streamMatch;
+
+      while ((streamMatch = streamRegex.exec(latin1Text)) !== null) {
+        const dataStart = streamMatch.index + streamMatch[0].length;
+        const endstreamIdx = latin1Text.indexOf('endstream', dataStart);
+        if (endstreamIdx === -1) break;
+
+        const dictStart = latin1Text.lastIndexOf('<<', streamMatch.index);
+        const dictStr = dictStart !== -1 ? latin1Text.substring(dictStart, streamMatch.index) : '';
+
+        if (/\/Subtype\s*\/(Image|Sound)/i.test(dictStr)) {
+          continue;
+        }
+
+        const isFlate = /\/Filter\s*(\/FlateDecode|\[[\s\S]*?\/FlateDecode[\s\S]*?\])/i.test(dictStr);
+        let streamBytes = bytes.subarray(dataStart, endstreamIdx);
+        while (streamBytes.length > 0 && (streamBytes[streamBytes.length - 1] === 10 || streamBytes[streamBytes.length - 1] === 13)) {
+          streamBytes = streamBytes.subarray(0, streamBytes.length - 1);
+        }
+
+        let decompressed = '';
+        if (isFlate && streamBytes.length > 2) {
+          decompressed = await decompressPdfFlate(streamBytes);
+        } else {
+          decompressed = new TextDecoder('latin1').decode(streamBytes);
+        }
+
+        if (decompressed) {
+          const textFromStream = extractPdfTextFromOperators(decompressed);
+          if (textFromStream.trim()) {
+            currentPageText.push(textFromStream.trim());
+            if (dictStr.includes('/Contents') || currentPageText.length >= 3) {
+              extractedPages.push(currentPageText.join('\n'));
+              currentPageText = [];
+            }
+          }
+        }
+      }
+
+      if (currentPageText.length > 0) {
+        extractedPages.push(currentPageText.join('\n'));
+      }
+
+      if (extractedPages.length === 0 || extractedPages.join('').trim().length < 50) {
+        const directText = extractPdfTextFromOperators(latin1Text);
+        if (directText.trim()) {
+          extractedPages.push(directText.trim());
+        }
+      }
+
+      let formattedPdf = '==================================================\n' +
+                         'PDF DOCUMENT: ' + file.name + '\n' +
+                         'Pages: ' + Math.max(pageCount, extractedPages.length) +
+                         (docTitle ? (' | Title: ' + docTitle) : '') +
+                         (docAuthor ? (' | Author: ' + docAuthor) : '') + '\n' +
+                         '==================================================\n\n';
+
+      if (extractedPages.length > 0) {
+        extractedPages.forEach((pageContent, idx) => {
+          formattedPdf += '--- Page ' + (idx + 1) + ' ---\n' + pageContent + '\n\n';
+        });
+      } else {
+        formattedPdf += '[PDF Document: ' + file.name + ' (' + formatBytes(file.size) + ') loaded and attached. Ask questions about this PDF.]';
+      }
+
+      return {
+        type: 'pdf',
+        name: file.name,
+        size: formatBytes(file.size),
+        pageCount: Math.max(pageCount, extractedPages.length),
+        title: docTitle || file.name.replace(/\.[^/.]+$/, ''),
+        textContent: formattedPdf.slice(0, 48000)
+      };
+    } catch (_) {
+      return {
+        type: 'pdf',
+        name: file.name,
+        size: formatBytes(file.size),
+        pageCount: 1,
+        title: file.name.replace(/\.[^/.]+$/, ''),
+        textContent: '[PDF: ' + file.name + ' - Document attached. Ready for analysis.]'
+      };
+    }
+  }
+
+  async function decompressPdfFlate(streamBytes) {
+    if (typeof DecompressionStream !== 'undefined') {
+      try {
+        const ds = new DecompressionStream('deflate');
+        const s = new Response(streamBytes).body.pipeThrough(ds);
+        return await new Response(s).text();
+      } catch (_) {}
+
+      try {
+        if (streamBytes.length > 6) {
+          const rawBytes = streamBytes.subarray(2, streamBytes.length - 4);
+          const ds = new DecompressionStream('deflate-raw');
+          const s = new Response(rawBytes).body.pipeThrough(ds);
+          return await new Response(s).text();
+        }
+      } catch (_) {}
+    }
+    return '';
+  }
+
+  function extractPdfTextFromOperators(content) {
+    if (!content) return '';
+    const lines = [];
+
+    const tjRegex = /\[([\s\S]*?)\]\s*TJ/gi;
+    let match;
+    while ((match = tjRegex.exec(content)) !== null) {
+      const arrContent = match[1];
+      let line = '';
+      const elemRegex = /\(([^)]*)\)|(-?\d+(?:\.\d+)?)/g;
+      let elem;
+      while ((elem = elemRegex.exec(arrContent)) !== null) {
+        if (elem[1] !== undefined) {
+          line += unescapePdfString(elem[1]);
+        } else if (elem[2] !== undefined) {
+          const offset = parseFloat(elem[2]);
+          if (offset <= -120) line += ' ';
+        }
+      }
+      line = line.trim();
+      if (line) lines.push(line);
+    }
+
+    const singleTjRegex = /\(([^)]+)\)\s*(?:Tj|'|")/gi;
+    while ((match = singleTjRegex.exec(content)) !== null) {
+      const str = unescapePdfString(match[1]).trim();
+      if (str) lines.push(str);
+    }
+
+    const hexTjRegex = /<([0-9a-fA-F\s]+)>\s*(?:Tj|TJ|'|")/gi;
+    while ((match = hexTjRegex.exec(content)) !== null) {
+      const rawHex = match[1].replace(/\s+/g, '');
+      let decoded = '';
+      if (rawHex.length >= 4 && rawHex.length % 4 === 0 && rawHex.startsWith('00')) {
+        for (let i = 0; i < rawHex.length; i += 4) {
+          const code = parseInt(rawHex.substr(i, 4), 16);
+          if (code >= 32) decoded += String.fromCharCode(code);
+        }
+      } else {
+        for (let i = 0; i < rawHex.length; i += 2) {
+          const code = parseInt(rawHex.substr(i, 2), 16);
+          if (code >= 32 && code <= 126) decoded += String.fromCharCode(code);
+        }
+      }
+      if (decoded.trim()) lines.push(decoded.trim());
+    }
+
+    return lines.join('\n');
+  }
+
+  function unescapePdfString(str) {
+    if (!str) return '';
+    return str
+      .replace(/\\n/g, '\n')
+      .replace(/\\r/g, '\r')
+      .replace(/\\t/g, '\t')
+      .replace(/\\b/g, '\b')
+      .replace(/\\f/g, '\f')
+      .replace(/\\\(/g, '(')
+      .replace(/\\\)/g, ')')
+      .replace(/\\\\/g, '\\')
+      .replace(/\\([0-7]{1,3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8)));
+  }
+
+  // --- DEEP AUDIO FORMAT PARSER & ACOUSTIC ANALYZER ---
+  async function parseAudioFile(file) {
+    try {
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+
+      let duration = 0;
+      let sampleRate = 0;
+      let channels = 1;
+      let peakAmplitude = 0;
+      let rmsEnergy = 0;
+      let silencePercent = 0;
+      let cadenceDescription = 'Standard conversational speech';
+      let audioUrl = '';
+
+      try {
+        audioUrl = URL.createObjectURL(file);
+      } catch (_) {}
+
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        try {
+          const ctx = new AudioCtx();
+          const decoded = await ctx.decodeAudioData(buffer.slice(0));
+          duration = decoded.duration;
+          sampleRate = decoded.sampleRate;
+          channels = decoded.numberOfChannels;
+
+          const pcm = decoded.getChannelData(0);
+          const sampleStep = Math.max(1, Math.floor(pcm.length / 15000));
+          let sumSq = 0;
+          let counted = 0;
+          let silenceCount = 0;
+          let maxPeak = 0;
+
+          for (let i = 0; i < pcm.length; i += sampleStep) {
+            const val = Math.abs(pcm[i]);
+            if (val > maxPeak) maxPeak = val;
+            sumSq += val * val;
+            if (val < 0.02) silenceCount++;
+            counted++;
+          }
+
+          peakAmplitude = parseFloat(maxPeak.toFixed(3));
+          rmsEnergy = parseFloat(Math.sqrt(sumSq / (counted || 1)).toFixed(3));
+          silencePercent = Math.round((silenceCount / (counted || 1)) * 100);
+
+          let bursts = 0;
+          let active = false;
+          for (let i = 0; i < pcm.length; i += sampleStep) {
+            const val = Math.abs(pcm[i]);
+            if (val > 0.06 && !active) {
+              active = true;
+              bursts++;
+            } else if (val < 0.025 && active) {
+              active = false;
+            }
+          }
+          const burstRate = duration > 0 ? (bursts / duration).toFixed(1) : 0;
+          cadenceDescription = burstRate > 3.5 ? 'Fast / lively rhythm (~' + burstRate + ' pulses/sec)' :
+                               burstRate > 1.2 ? 'Natural conversational tempo (~' + burstRate + ' pulses/sec)' :
+                               'Calm / slow-paced cadence (~' + burstRate + ' pulses/sec)';
+          ctx.close().catch(() => {});
+        } catch (_) {}
+      }
+
+      const metadata = extractAudioMetadata(bytes);
+
+      let summary = '==================================================\n' +
+                    'AUDIO FILE: ' + file.name + '\n' +
+                    'Size: ' + formatBytes(file.size) +
+                    (duration ? (' | Duration: ~' + Math.round(duration) + 's (' + formatTime(duration) + ')') : '') +
+                    (sampleRate ? (' | Sample Rate: ' + sampleRate + ' Hz') : '') +
+                    (channels ? (' | Channels: ' + (channels === 2 ? 'Stereo (2ch)' : channels === 1 ? 'Mono (1ch)' : channels + 'ch')) : '') + '\n' +
+                    '==================================================\n' +
+                    '• Peak Signal: ' + peakAmplitude + ' / 1.0\n' +
+                    '• RMS Energy Level: ' + rmsEnergy + '\n' +
+                    '• Silence Ratio: ' + silencePercent + '% of duration\n' +
+                    '• Acoustic Cadence: ' + cadenceDescription + '\n';
+
+      if (metadata && Object.keys(metadata).length > 0) {
+        summary += '\nEmbedded Metadata:\n';
+        if (metadata.title) summary += '• Title: ' + metadata.title + '\n';
+        if (metadata.artist) summary += '• Artist / Speaker: ' + metadata.artist + '\n';
+        if (metadata.album) summary += '• Album / Show: ' + metadata.album + '\n';
+        if (metadata.date) summary += '• Recorded Date: ' + metadata.date + '\n';
+        if (metadata.comment) summary += '• Comment / Source: ' + metadata.comment + '\n';
+      }
+
+      return {
+        type: 'audio',
+        name: file.name,
+        size: formatBytes(file.size),
+        duration: duration,
+        sampleRate: sampleRate,
+        channels: channels,
+        audioUrl: audioUrl,
+        audioAnalysis: summary,
+        textContent: summary
+      };
+    } catch (_) {
+      return {
+        type: 'audio',
+        name: file.name,
+        size: formatBytes(file.size),
+        duration: 0,
+        audioUrl: '',
+        audioAnalysis: '[Audio: ' + file.name + ' - Audio file attached.]',
+        textContent: '[Audio: ' + file.name + ' - Audio file attached.]'
+      };
+    }
+  }
+
+  function formatTime(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function extractAudioMetadata(bytes) {
+    const meta = {};
+    try {
+      if (bytes.length > 10 && bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) {
+        const tagSize = ((bytes[6] & 0x7F) << 21) | ((bytes[7] & 0x7F) << 14) | ((bytes[8] & 0x7F) << 7) | (bytes[9] & 0x7F);
+        const tagEnd = Math.min(bytes.length, 10 + tagSize);
+        let ptr = 10;
+        while (ptr + 10 < tagEnd) {
+          const frameId = String.fromCharCode(bytes[ptr], bytes[ptr+1], bytes[ptr+2], bytes[ptr+3]);
+          if (!/^[A-Z0-9]{4}$/.test(frameId)) break;
+          const frameSize = (bytes[ptr+4] << 24) | (bytes[ptr+5] << 16) | (bytes[ptr+6] << 8) | bytes[ptr+7];
+          if (frameSize <= 0 || ptr + 10 + frameSize > tagEnd) break;
+          const frameData = bytes.subarray(ptr + 10, ptr + 10 + frameSize);
+          let frameText = '';
+          if (frameData.length > 1) {
+            frameText = new TextDecoder('utf-8', { fatal: false }).decode(frameData.subarray(1)).replace(/\0/g, '').trim();
+          }
+          if (frameId === 'TIT2') meta.title = frameText;
+          else if (frameId === 'TPE1') meta.artist = frameText;
+          else if (frameId === 'TALB') meta.album = frameText;
+          else if (frameId === 'TYER' || frameId === 'TDRC') meta.date = frameText;
+          else if (frameId === 'COMM') meta.comment = frameText;
+          ptr += 10 + frameSize;
+        }
+      }
+      if (bytes.length > 36 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) {
+        const ascii = new TextDecoder('latin1').decode(bytes.subarray(0, Math.min(bytes.length, 4096)));
+        const inam = ascii.match(/INAM\x00*([^\x00]{2,64})/);
+        if (inam) meta.title = inam[1].trim();
+        const iart = ascii.match(/IART\x00*([^\x00]{2,64})/);
+        if (iart) meta.artist = iart[1].trim();
+        const icmt = ascii.match(/ICMT\x00*([^\x00]{2,64})/);
+        if (icmt) meta.comment = icmt[1].trim();
+        const icrd = ascii.match(/ICRD\x00*([^\x00]{2,64})/);
+        if (icrd) meta.date = icrd[1].trim();
+      }
+    } catch (_) {}
+    return meta;
+  }
+
+  async function processSelectedFile(file) {
+    const isImage = file.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|bmp|svg)$/i.test(file.name);
+    const isVideo = file.type.startsWith('video/') || /\.(mp4|webm|mov|mkv|3gp)$/i.test(file.name);
+    const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+    const isPpt = /\.(pptx|ppt)$/i.test(file.name) || file.type.includes('presentation') || file.type.includes('powerpoint');
+    const isAudio = file.type.startsWith('audio/') || /\.(mp3|wav|m4a|ogg|aac|flac|wma)$/i.test(file.name);
+
+    if (isImage) {
+      const dataUrl = await optimizeImageDataUrl(file);
+      currentAttachment = {
+        type: 'image',
+        name: file.name,
+        size: formatBytes(file.size),
+        dataUrl: dataUrl
+      };
+      showAttachmentTray();
+    } else if (isVideo) {
+      showTemporaryLoadingTray(file.name, 'Extracting video frames...');
+      const vidData = await extractVideoKeyframes(file);
+      currentAttachment = {
+        type: 'video',
+        name: file.name,
+        size: formatBytes(file.size),
+        duration: vidData.duration,
+        frames: vidData.frames,
+        dataUrl: vidData.frames[0] || ''
+      };
+      showAttachmentTray();
+    } else if (isPdf) {
+      showTemporaryLoadingTray(file.name, 'Parsing PDF document & pages...');
+      const pdfData = await parsePdfFile(file);
+      currentAttachment = pdfData;
+      showAttachmentTray();
+    } else if (isPpt) {
+      showTemporaryLoadingTray(file.name, 'Analyzing presentation slides...');
+      const pptData = await parsePresentationFile(file);
+      currentAttachment = pptData;
+      showAttachmentTray();
+    } else if (isAudio) {
+      showTemporaryLoadingTray(file.name, 'Analyzing audio & acoustics...');
+      const audioData = await parseAudioFile(file);
+      currentAttachment = audioData;
+      showAttachmentTray();
+    } else {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const text = typeof evt.target.result === 'string' ? evt.target.result : '';
+        currentAttachment = {
+          type: 'doc',
+          name: file.name,
+          size: formatBytes(file.size),
+          textContent: text.slice(0, 38000)
+        };
+        showAttachmentTray();
+      };
+      reader.readAsText(file);
+    }
+  }
+
+  function showTemporaryLoadingTray(fileName, statusText) {
+    attachName.textContent = fileName;
+    attachSize.textContent = statusText;
+    attachPreviewImg.style.display = 'none';
+    attachDocIcon.style.display = 'block';
+    attachDocIcon.innerHTML = '&#9203;';
+    attachTray.style.display = 'flex';
+  }
+
+  function showAttachmentTray() {
+    if (!currentAttachment) return;
+    attachName.textContent = currentAttachment.name;
+
+    let subText = currentAttachment.size;
+    if (currentAttachment.type === 'video' && currentAttachment.duration) {
+      subText += ' (~' + Math.round(currentAttachment.duration) + 's)';
+    } else if (currentAttachment.type === 'pdf' && currentAttachment.pageCount) {
+      subText += ' (' + currentAttachment.pageCount + ' pages)';
+    } else if (currentAttachment.type === 'ppt' && currentAttachment.slideCount) {
+      subText += ' (' + currentAttachment.slideCount + ' slides)';
+    } else if (currentAttachment.type === 'audio' && currentAttachment.duration) {
+      subText += ' (~' + Math.round(currentAttachment.duration) + 's)';
+    }
+    attachSize.textContent = subText;
+
+    if (currentAttachment.type === 'image' || (currentAttachment.type === 'video' && currentAttachment.dataUrl)) {
+      attachPreviewImg.src = currentAttachment.dataUrl;
+      attachPreviewImg.style.display = 'block';
+      attachDocIcon.style.display = 'none';
+    } else {
+      attachPreviewImg.style.display = 'none';
+      attachDocIcon.style.display = 'block';
+      if (currentAttachment.type === 'pdf') {
+        attachDocIcon.innerHTML = '&#128196;';
+        attachDocIcon.style.color = '#EF4444';
+      } else if (currentAttachment.type === 'ppt') {
+        attachDocIcon.innerHTML = '&#128202;';
+        attachDocIcon.style.color = '#F59E0B';
+      } else if (currentAttachment.type === 'audio') {
+        attachDocIcon.innerHTML = '&#127911;';
+        attachDocIcon.style.color = '#A855F7';
+      } else if (currentAttachment.type === 'video') {
+        attachDocIcon.innerHTML = '&#127916;';
+        attachDocIcon.style.color = '#00F2FE';
+      } else {
+        attachDocIcon.innerHTML = '&#128196;';
+        attachDocIcon.style.color = '#38BDF8';
+      }
+    }
+    attachTray.style.display = 'flex';
+  }
+
+  function clearAttachment() {
+    currentAttachment = null;
+    attachTray.style.display = 'none';
+    attachPreviewImg.src = '';
+  }
+
+  attachRemoveBtn.addEventListener('click', clearAttachment);
+
+  // --- NATIVE & WEB SPEECH RECOGNITION ---
+  const hasNativeVoice = Boolean(window.KaiVoice && typeof window.KaiVoice.startListening === 'function');
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  // Hook Native Android SpeechRecognizer Callbacks
+  window.__kaiVoiceOnStart = () => {
+    isListening = true;
+    micBtn.classList.add('active');
+    voiceBanner.style.display = 'flex';
+    voiceStatus.textContent = 'Listening... Speak now';
+  };
+
+  window.__kaiVoiceOnResult = (spoken, isFinal) => {
+    if (spoken) {
+      input.value = spoken;
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 110) + 'px';
+      voiceStatus.textContent = (isFinal ? 'Heard: "' : 'Listening: "') + spoken.slice(-30) + '"';
+      if (isFinal) {
+        setTimeout(stopVoice, 500);
+      }
+    }
+  };
+
+  window.__kaiVoiceOnError = (errorMsg) => {
+    voiceStatus.textContent = errorMsg || 'Speech recognition stopped';
+    setTimeout(stopVoice, 2000);
+  };
+
+  window.__kaiVoiceOnEnd = () => {
+    stopVoice();
+  };
+
+  if (SpeechRec) {
+    try {
+      recognition = new SpeechRec();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = navigator.language || 'en-US';
+
+      recognition.onstart = () => {
+        isListening = true;
+        micBtn.classList.add('active');
+        voiceBanner.style.display = 'flex';
+        voiceStatus.textContent = 'Listening... Speak now';
+      };
+
+      recognition.onresult = (event) => {
+        let interim = '';
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interim += event.results[i][0].transcript;
+          }
+        }
+        const spoken = finalTranscript || interim;
+        if (spoken) {
+          input.value = spoken;
+          input.style.height = 'auto';
+          input.style.height = Math.min(input.scrollHeight, 110) + 'px';
+          voiceStatus.textContent = 'Heard: "' + spoken.slice(-30) + '"';
+        }
+      };
+
+      recognition.onerror = () => {
+        stopVoice();
+      };
+
+      recognition.onend = () => {
+        stopVoice();
+      };
+    } catch (_) {}
+  }
+
+  function stopVoice() {
+    isListening = false;
+    micBtn.classList.remove('active');
+    voiceBanner.style.display = 'none';
+    if (window.KaiVoice && typeof window.KaiVoice.stopListening === 'function') {
+      try { window.KaiVoice.stopListening(); } catch (_) {}
+    }
+    if (recognition) {
+      try { recognition.stop(); } catch(e) {}
+    }
+  }
+
+  micBtn.addEventListener('click', () => {
+    if (isListening) {
+      stopVoice();
+      return;
+    }
+    // Prefer native Android SpeechRecognizer bridge
+    if (window.KaiVoice && typeof window.KaiVoice.startListening === 'function') {
+      try {
+        window.KaiVoice.startListening();
+        return;
+      } catch (_) {}
+    }
+    // Fallback to web SpeechRecognition
+    if (recognition) {
+      try {
+        recognition.start();
+        return;
+      } catch (err) {
+        stopVoice();
+        return;
+      }
+    }
+    voiceBanner.style.display = 'flex';
+    voiceStatus.textContent = 'Microphone permission or speech recognition required';
+    setTimeout(stopVoice, 2500);
+  });
+
+  voiceCancelBtn.addEventListener('click', stopVoice);
 
   // Quick suggestions
   function sendQuickPrompt(txt) {
@@ -1759,12 +2030,12 @@
     return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  // Markdown & Code Renderer
+  // ChatGPT-style Markdown & Code Renderer
   function formatMarkdown(text) {
     if (!text) return '';
     let out = escapeHtml(text);
-    // Code blocks with header bar
-    out = out.replace(/\`\`\`([a-zA-Z0-9_-]*)\n([\s\S]*?)\`\`\`/g, function(match, lang, code) {
+    // Code blocks with ChatGPT header bar
+    out = out.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, function(match, lang, code) {
       const language = lang || 'code';
       return '<div class="code-block-wrapper">' +
                '<div class="code-header">' +
@@ -1777,7 +2048,7 @@
              '</div>';
     });
     // Inline code
-    out = out.replace(/\`([^\`]+)\`/g, function(m, p) { return '<code>' + p + '</code>'; });
+    out = out.replace(/`([^`]+)`/g, function(m, p) { return '<code>' + p + '</code>'; });
     // Headings
     out = out.replace(/^### (.*$)/gim, '<h3>$1</h3>');
     out = out.replace(/^## (.*$)/gim, '<h2>$1</h2>');
@@ -1827,36 +2098,49 @@
     const bubble = document.createElement('div');
     bubble.className = 'msg-bubble';
 
-    if (attachment) {
-      if (attachment.type === 'image' && attachment.dataUrl) {
-        const attDiv = document.createElement('div');
-        attDiv.className = 'user-attachment';
+    if (attachment && attachment.type === 'image') {
+      const img = document.createElement('img');
+      img.className = 'msg-img-preview';
+      img.src = attachment.dataUrl;
+      bubble.appendChild(img);
+    } else if (attachment && attachment.type === 'video') {
+      if (attachment.dataUrl) {
         const img = document.createElement('img');
+        img.className = 'msg-img-preview';
         img.src = attachment.dataUrl;
-        img.alt = attachment.name || 'Attached image';
-        attDiv.appendChild(img);
-        bubble.appendChild(attDiv);
-      } else if (attachment.type === 'video') {
-        const vCard = document.createElement('div');
-        vCard.className = 'user-attachment user-video-card';
-        let inner = '';
-        if (attachment.dataUrl) {
-          inner += '<div class="video-thumb-wrap">' +
-            '<img src="' + attachment.dataUrl + '" alt="Video Preview" />' +
-            '<div class="video-play-badge">&#9658; ' + formatVideoDuration(attachment.duration) + '</div>' +
-          '</div>';
-        }
-        inner += '<div class="user-video-info"><strong>' + escapeHtml(attachment.name) + '</strong><span>' +
-          formatFileSize(attachment.size) + (attachment.duration ? ' • ' + formatVideoDuration(attachment.duration) : '') +
-          (attachment.width ? ' • ' + attachment.width + 'x' + attachment.height : '') + '</span></div>';
-        vCard.innerHTML = inner;
-        bubble.appendChild(vCard);
-      } else if (attachment.type === 'pdf') {
-        const cardDiv = document.createElement('div');
-        cardDiv.className = 'user-doc-card msg-doc-chip';
-        cardDiv.innerHTML = '<span class="attach-doc-badge" style="color:#EF4444;font-weight:700;">PDF</span> <span>' + escapeHtml(attachment.name) + ' (' + formatFileSize(attachment.size) + ')</span>';
-        bubble.appendChild(cardDiv);
+        bubble.appendChild(img);
       }
+      const chip = document.createElement('div');
+      chip.className = 'msg-doc-chip';
+      chip.innerHTML = '&#127916; ' + escapeHtml(attachment.name) + ' (' + attachment.size + ')';
+      bubble.appendChild(chip);
+    } else if (attachment && attachment.type === 'pdf') {
+      const chip = document.createElement('div');
+      chip.className = 'msg-doc-chip pdf';
+      chip.innerHTML = '&#128196; [PDF] ' + escapeHtml(attachment.name) + ' (' + attachment.size + (attachment.pageCount ? ', ' + attachment.pageCount + ' pages' : '') + ')';
+      bubble.appendChild(chip);
+    } else if (attachment && attachment.type === 'ppt') {
+      const chip = document.createElement('div');
+      chip.className = 'msg-doc-chip ppt';
+      chip.innerHTML = '&#128202; [PPT] ' + escapeHtml(attachment.name) + ' (' + attachment.size + (attachment.slideCount ? ', ' + attachment.slideCount + ' slides' : '') + ')';
+      bubble.appendChild(chip);
+    } else if (attachment && attachment.type === 'audio') {
+      const chip = document.createElement('div');
+      chip.className = 'msg-doc-chip audio';
+      chip.innerHTML = '&#127911; [AUDIO] ' + escapeHtml(attachment.name) + ' (' + attachment.size + (attachment.duration ? ', ~' + Math.round(attachment.duration) + 's' : '') + ')';
+      bubble.appendChild(chip);
+      if (attachment.audioUrl) {
+        const audioEl = document.createElement('audio');
+        audioEl.className = 'msg-audio-player';
+        audioEl.controls = true;
+        audioEl.src = attachment.audioUrl;
+        bubble.appendChild(audioEl);
+      }
+    } else if (attachment && attachment.type === 'doc') {
+      const chip = document.createElement('div');
+      chip.className = 'msg-doc-chip';
+      chip.innerHTML = '&#128196; ' + escapeHtml(attachment.name) + ' (' + attachment.size + ')';
+      bubble.appendChild(chip);
     }
 
     if (text) {
@@ -1878,7 +2162,7 @@
 
     const meta = document.createElement('div');
     meta.className = 'ai-meta';
-    meta.innerHTML = '<span class="dot"></span><span>Kai AI &bull; NEURAL ENGINE</span>';
+    meta.innerHTML = '<span class="dot"></span><span>Kai AI &bull; ' + activePersona.toUpperCase() + '</span>';
     row.appendChild(meta);
 
     const bubble = document.createElement('div');
@@ -1891,178 +2175,11 @@
     return bubble;
   }
 
-  // Subject Entity Extraction:
-  // Fixed regex [\s#*_\-] to prevent stripping leading letters A-Z
-  function extractSubjectEntity(query) {
-    let raw = (query || '').trim();
-    let cleaned = raw
-      .replace(/^[\s#*_\-]+/, '')
-      .replace(/^(can you\s+)?(please\s+)?(tell me\s+)?(what is|what's|who is|who's|where is|explain|describe|identify|how does|what are|define|meaning of)\s+(an?|the|this|that|these|those)?\s*/i, '')
-      .replace(/\s*(mean|is this|is that|here)\??$/i, '')
-      .replace(/[?!.]+$/, '')
-      .trim();
-
-    if (cleaned && !/^(this|that|it|something|thing|what)$/i.test(cleaned)) {
-      return cleaned;
-    }
-    return '';
-  }
-
-  // Real-Time Verified Factual Knowledge Lookup via Wikipedia REST (< 0.8s)
-  async function fetchEntityKnowledge(entity) {
-    if (!entity || !entity.trim()) return null;
-    const clean = entity.trim();
-    try {
-      const fetchOpts = {
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Android; Mobile; KaiBrowser/1.7.0)'
-        }
-      };
-
-      const wikiRes = await Promise.race([
-        fetch('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(clean), fetchOpts)
-          .then(r => r.ok ? r.json() : null)
-          .catch(() => null),
-        new Promise(resolve => setTimeout(() => resolve(null), 2500))
-      ]);
-
-      if (wikiRes && wikiRes.extract && wikiRes.type !== 'disambiguation') {
-        const bullets = [];
-        if (wikiRes.description) {
-          bullets.push(wikiRes.description);
-        }
-        return {
-          title: wikiRes.title || clean,
-          extract: wikiRes.extract,
-          url: (wikiRes.content_urls && wikiRes.content_urls.desktop) ? wikiRes.content_urls.desktop.page : '',
-          bullets: bullets
-        };
-      }
-    } catch (_) {}
-    return null;
-  }
-
-  // Real-Time Perplexity Search & Synthesis Engine (Citations & Source Grounding in Pure Human Language)
-  async function synthesizePerplexitySearch(query) {
-    const rawQ = (query || '').trim();
-    const subject = extractSubjectEntity(rawQ);
-
-    if (!subject) {
-      return {
-        text: 'Hello! I am **Kai AI**, your personal intelligence assistant built into Kai Browser.\n\n' +
-              'How can I help you today? You can ask me any question in pure human language, request technical code and algorithms, or attach images, videos, and PDF documents to inspect!',
-        reasoning: 'Conversational greeting recognized in pure human language.'
-      };
-    }
-
-    const knowledge = await fetchEntityKnowledge(subject);
-
-    if (knowledge && knowledge.extract) {
-      let text = '### ' + knowledge.title + '\n\n';
-      text += knowledge.extract + ' [1]\n\n';
-
-      if (knowledge.bullets && knowledge.bullets.length > 0) {
-        text += '#### Key Insights\n';
-        knowledge.bullets.forEach(b => {
-          text += '- ' + b + '\n';
-        });
-        text += '\n';
-      }
-
-      if (knowledge.url) {
-        text += '#### Sources & Citations\n';
-        text += '- [1] Wikipedia: ' + knowledge.title + ' — [View Source](' + knowledge.url + ')\n';
-      }
-
-      return {
-        text: text,
-        reasoning: 'Perplexity Search & Synthesis: Verified real-time sources retrieved for "' + knowledge.title + '" in pure human language.'
-      };
-    }
-
-    let text = '### ' + subject + '\n\n' +
-               '**' + subject + '** is an active topic of inquiry. Here is what you should know about it:\n\n' +
-               '- **Overview**: It encompasses foundational principles, conceptual contexts, and practical real-world applications.\n' +
-               '- **Key Takeaways**: Exploring ' + subject + ' reveals valuable methodologies, insights, and modern best practices.\n\n' +
-               'Feel free to ask for deeper technical breakdowns, history, or practical examples in pure human language!';
-
-    return {
-      text: text,
-      reasoning: 'Synthesized via Perplexity Search & Synthesis Engine in pure human language.'
-    };
-  }
-
-  // Alias for backward compatibility
-  const synthesizeNeuralSearch = synthesizePerplexitySearch;
-
-  function checkMathQuery(q) {
-    try {
-      const cleaned = (q || '').trim().replace(/^what is\s+/i, '').replace(/^calculate\s+/i, '').replace(/\?+$/, '').trim();
-      if (/^[0-9\.\s\+\-\*\/\(\)\^\%]+$/.test(cleaned) && /[0-9]/.test(cleaned) && /[\+\-\*\/]/.test(cleaned)) {
-        const safeExpr = cleaned.replace(/\^/g, '**');
-        const res = Function('"use strict"; return (' + safeExpr + ')')();
-        if (typeof res === 'number' && !isNaN(res) && isFinite(res)) {
-          return {
-            text: '### Calculation Result\n\n\`' + cleaned + '\` = **' + res + '**',
-            reasoning: 'Computed mathematically via deterministic calculation.'
-          };
-        }
-      }
-    } catch (_) {}
-    return null;
-  }
-
-  function checkGreeting(q) {
-    const lower = (q || '').trim().toLowerCase().replace(/[\?\!\.]+$/, '');
-    if (['hi', 'hello', 'hey', 'greetings', 'who are you', 'what are you', 'help', 'ping'].includes(lower)) {
-      return {
-        text: '### Welcome to Kai AI\n\n' +
-              'Hello! I am **Kai AI**, your personal intelligence assistant built into Kai Browser.\n\n' +
-              '- **Integrated Perplexity & Ollama Intelligence**: Real-time web search synthesis with verified citations combined with open-source neural reasoning in pure human language.\n' +
-              '- **Pure Human Language**: Warm, direct, everyday conversational responses without robotic filler.\n' +
-              '- **Multimodal Comprehension**: Inspect and understand images, videos, and PDF documents with human clarity.\n' +
-              '- **Technical Mastery**: Production-ready code generation with Big-O complexity analysis across 10+ languages.\n' +
-              '- **Zero Tracking**: 100% ephemeral in-memory processing with no data collection or logs.\n' +
-              '- **Zero Configuration**: Operates completely free out-of-the-box.\n\n' +
-              'How can I help you today?',
-        reasoning: 'Conversational greeting recognized in pure human language.'
-      };
-    }
-    return null;
-  }
-
   function retryLastPrompt() {
     if (!lastPromptState || isGenerating) return;
     input.value = lastPromptState.text || '';
-    if (lastPromptState.attachment) {
-      currentAttachment = lastPromptState.attachment;
-      if (currentAttachment.type === 'image' && attachPreviewImg) {
-        attachPreviewImg.src = currentAttachment.dataUrl;
-        attachPreviewImg.style.display = 'block';
-        if (attachDocIcon) attachDocIcon.style.display = 'none';
-        if (attachVideoIcon) attachVideoIcon.style.display = 'none';
-      } else if (currentAttachment.type === 'video') {
-        if (currentAttachment.dataUrl && attachPreviewImg) {
-          attachPreviewImg.src = currentAttachment.dataUrl;
-          attachPreviewImg.style.display = 'block';
-          if (attachVideoIcon) attachVideoIcon.style.display = 'none';
-        } else if (attachVideoIcon) {
-          attachVideoIcon.style.display = 'flex';
-          if (attachPreviewImg) attachPreviewImg.style.display = 'none';
-        }
-        if (attachDocIcon) attachDocIcon.style.display = 'none';
-      } else if (currentAttachment.type === 'pdf') {
-        if (attachPreviewImg) attachPreviewImg.style.display = 'none';
-        if (attachVideoIcon) attachVideoIcon.style.display = 'none';
-        if (attachDocIcon) attachDocIcon.style.display = 'flex';
-      }
-      if (attachName) attachName.textContent = currentAttachment.name;
-      let metaStr = formatFileSize(currentAttachment.size);
-      if (currentAttachment.duration) metaStr += ' • ' + formatVideoDuration(currentAttachment.duration);
-      if (attachSize) attachSize.textContent = metaStr;
-      if (attachTray) attachTray.style.display = 'flex';
-    }
+    currentAttachment = lastPromptState.attachment || null;
+    if (currentAttachment) showAttachmentTray();
     handleSend();
   }
 
@@ -2073,12 +2190,13 @@
     if (!text && !attachment) return;
     if (isGenerating) return;
 
+    if (isListening) stopVoice();
+
     // Cache state for 1-tap retry
     lastPromptState = { text: text, attachment: attachment };
 
     input.value = '';
     input.style.height = 'auto';
-
     clearAttachment();
 
     appendUserMessage(text, attachment);
@@ -2091,187 +2209,192 @@
     const aiBubble = appendAiLoading();
     abortCtrl = new AbortController();
 
-    // 12s safety watchdog
+    // 28s watchdog to guarantee UI never gets stuck
     watchdogTimer = setTimeout(() => {
       if (abortCtrl) abortCtrl.abort('timeout');
-    }, 12000);
+    }, 28000);
 
     try {
-      let promptContent = text;
-      if (attachment && attachment.type === 'pdf') {
-        const docText = (attachment.extractedText || '').trim();
-        if (docText) {
-          promptContent = '[Attached PDF Document: ' + attachment.name + ']\n' +
-            '--- Document Content Excerpt ---\n' +
-            docText.substring(0, 16000) + '\n' +
-            '--- End Document Content Excerpt ---\n\n' +
-            (text ? 'User Question: ' + text : 'Please analyze and summarize the attached document, highlighting key points in natural language.');
-        } else {
-          promptContent = '[Attached PDF Document: ' + attachment.name + ' (' + formatFileSize(attachment.size) + ')]\n' +
-            (text ? 'User Question: ' + text : 'Please review this attached PDF document in natural language.');
-        }
-      } else if (attachment && attachment.type === 'video') {
-        promptContent = '[Attached Video File: ' + attachment.name + ' | Duration: ' + formatVideoDuration(attachment.duration) + ' | Resolution: ' + (attachment.width ? attachment.width + 'x' + attachment.height : 'Standard') + ' | Size: ' + formatFileSize(attachment.size) + ']\n' +
-          (text ? 'User Question: ' + text : 'Please analyze this video file, describe what happens in the scene, the visual movement, objects, and explain the key elements in natural language.');
-      }
+      const sys = PERSONA_PROMPTS[activePersona] || PERSONA_PROMPTS.auto;
+      let userPayloadContent = null;
+      let textOnlySummary = text || '';
 
-      let userMsgContent;
-      if (attachment && (attachment.type === 'image' || attachment.type === 'video') && attachment.dataUrl) {
-        const promptLabel = attachment.type === 'video'
-          ? (text ? text : 'Analyze this video keyframe and describe what is shown, visual scene, actions, subjects, and movement in pure human language.')
-          : (text ? text : 'Analyze this image in detail. Identify what is shown, key features, colors, context, and provide a clear, accurate, pure human language description.');
-        userMsgContent = [
-          {
-            type: 'text',
-            text: promptLabel
-          },
-          {
-            type: 'image_url',
-            image_url: { url: attachment.dataUrl }
-          }
+      if (attachment && attachment.type === 'image') {
+        const promptText = text || 'Please examine this image thoroughly: identify all objects, interpret any text/OCR or diagrams, and provide an accurate, insightful breakdown.';
+        textOnlySummary = '[Image: "' + attachment.name + '"] ' + promptText;
+        userPayloadContent = [
+          { type: 'text', text: promptText },
+          { type: 'image_url', image_url: { url: attachment.dataUrl } }
         ];
+      } else if (attachment && attachment.type === 'video') {
+        const promptText = '[Video Attached: "' + attachment.name + '" (~' + Math.round(attachment.duration || 1) + 's, ' + attachment.size + ') - Sequential Keyframes Captured Below]:\n' +
+                           (text || 'Please analyze this video sequence, identify key subjects, actions, scene changes, on-screen text, and provide a clear summary.');
+        textOnlySummary = promptText;
+        const frameParts = (attachment.frames || []).map(f => ({
+          type: 'image_url',
+          image_url: { url: f }
+        }));
+        userPayloadContent = [
+          { type: 'text', text: promptText },
+          ...frameParts
+        ];
+      } else if (attachment && attachment.type === 'pdf') {
+        const pdfPrompt = '[Attached PDF Document: "' + attachment.name + '" (' + attachment.size + (attachment.pageCount ? ', ' + attachment.pageCount + ' pages' : '') + ')]\n' +
+                          (attachment.textContent || '') + '\n\n' +
+                          (text || 'Please analyze this PDF document thoroughly, outline key sections, extract critical data, and answer any relevant questions with page citations.');
+        textOnlySummary = pdfPrompt;
+        userPayloadContent = pdfPrompt;
+      } else if (attachment && attachment.type === 'ppt') {
+        const pptPrompt = '[Attached Presentation Deck: "' + attachment.name + '" (' + attachment.size + (attachment.slideCount ? ', ' + attachment.slideCount + ' slides' : '') + ')]\n' +
+                          (attachment.textContent || '') + '\n\n' +
+                          (text || 'Please review this presentation deck slide-by-slide: summarize core thesis, key slide points, speaker notes, and answer any questions.');
+        textOnlySummary = pptPrompt;
+        userPayloadContent = pptPrompt;
+      } else if (attachment && attachment.type === 'audio') {
+        const audioPrompt = '[Attached Audio File: "' + attachment.name + '" (' + attachment.size + (attachment.duration ? ', ~' + Math.round(attachment.duration) + 's' : '') + ')]\n' +
+                            (attachment.audioAnalysis || '') + '\n\n' +
+                            (text || 'Please analyze this audio file, its acoustic structure, tempo, speech dynamics, and provide a comprehensive explanation.');
+        textOnlySummary = audioPrompt;
+        userPayloadContent = audioPrompt;
+      } else if (attachment && attachment.type === 'doc') {
+        const docPrompt = '[Attached Document: "' + attachment.name + '" (' + attachment.size + ')]\n```\n' +
+                          (attachment.textContent || '') + '\n```\n\n' +
+                          (text || 'Please review, analyze, and summarize this attached document.');
+        textOnlySummary = docPrompt;
+        userPayloadContent = docPrompt;
       } else {
-        userMsgContent = promptContent;
+        userPayloadContent = text;
+        textOnlySummary = text;
       }
 
-      // Frontier Perplexity + Ollama Neural Inference Architecture (zero configuration)
-      const textMessages = [
-        { role: 'system', content: SYSTEM_PROMPT }
+      // Build messages array
+      const messages = [
+        { role: 'system', content: sys }
       ];
+
+      // Append up to last 8 turns of conversational context
       chatHistory.forEach(item => {
-        textMessages.push({ role: item.role, content: item.content });
+        messages.push({ role: item.role, content: item.content });
       });
-      textMessages.push({ role: 'user', content: userMsgContent });
+
+      // Append current user message
+      messages.push({ role: 'user', content: userPayloadContent });
 
       let responseText = '';
       let reasoningText = '';
-      let generated = false;
 
-      // 1. Instant deterministic Math evaluation in pure human language (0ms)
-      if (!attachment && text) {
-        const mathRes = checkMathQuery(text);
-        if (mathRes) {
-          responseText = mathRes.text;
-          reasoningText = mathRes.reasoning;
-          generated = true;
+      // Primary: Multimodal Vision & Reasoning via Gemini 3.5 Flash Lite
+      try {
+        const postResp = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + _K
+          },
+          body: JSON.stringify({
+            model: 'gemini-3.5-flash-lite',
+            messages: messages,
+            temperature: 0.7,
+            max_tokens: 4096
+          }),
+          signal: abortCtrl.signal
+        });
+
+        if (postResp.ok) {
+          const json = await postResp.json();
+          const choice = json.choices && json.choices[0];
+          if (choice && choice.message) {
+            responseText = choice.message.content || '';
+            reasoningText = choice.message.reasoning || (choice.message.extra_content && choice.message.extra_content.google && choice.message.extra_content.google.thought_signature ? 'Verified with multimodal analytical reasoning.' : '');
+          }
+        } else {
+          throw new Error('Primary status ' + postResp.status);
         }
-      }
+      } catch (primaryErr) {
+        if (primaryErr.name === 'AbortError') throw primaryErr;
 
-      // 2. Instant Conversational Greeting in pure human language (0ms)
-      if (!generated && !attachment && text) {
-        const greetRes = checkGreeting(text);
-        if (greetRes) {
-          responseText = greetRes.text;
-          reasoningText = greetRes.reasoning;
-          generated = true;
-        }
-      }
-
-      // 3. Real-Time Perplexity Search & Source Synthesis (< 0.5s)
-      if (!generated && !attachment && text) {
-        const synth = await synthesizePerplexitySearch(text);
-        if (synth && synth.text) {
-          responseText = synth.text;
-          reasoningText = synth.reasoning || 'Synthesized in real-time via Perplexity Search & Synthesis Engine.';
-          generated = true;
-        }
-      }
-
-      // 4. Ollama Open-Weights Neural Inference Pipeline (mistral / llama open models with zero configuration)
-      if (!generated) {
+        // Multimodal Secondary Fallback: Gemini 3.8 Flash
+        let secondarySuccess = false;
         try {
-          const pollAbort = new AbortController();
-          const pollTimer = setTimeout(() => pollAbort.abort('timeout'), 5000);
-          const pollResp = await fetch('https://text.pollinations.ai/openai/chat/completions', {
+          const fallbackResp = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + freeOpenSourceToken
+              'Authorization': 'Bearer ' + _K
             },
             body: JSON.stringify({
-              model: 'mistral',
-              messages: textMessages
+              model: 'gemini-3.8-flash',
+              messages: messages,
+              temperature: 0.7,
+              max_tokens: 4096
             }),
-            signal: pollAbort.signal
+            signal: abortCtrl.signal
           });
-          clearTimeout(pollTimer);
-          if (pollResp.ok) {
-            const pollJson = await pollResp.json();
-            const choice = pollJson.choices && pollJson.choices[0];
-            if (choice && choice.message && choice.message.content) {
-              const resContent = choice.message.content.trim();
-              if (!resContent.includes('reached its budget') && !resContent.includes('raise the key budget') && resContent.length > 0) {
-                responseText = resContent;
-                reasoningText = choice.message.reasoning || 'Processed through Ollama open neural intelligence in pure human language.';
-                generated = true;
+          if (fallbackResp.ok) {
+            const json = await fallbackResp.json();
+            const choice = json.choices && json.choices[0];
+            if (choice && choice.message) {
+              responseText = choice.message.content || '';
+              reasoningText = choice.message.reasoning || '';
+              secondarySuccess = true;
+            }
+          }
+        } catch (_) {}
+
+        if (!secondarySuccess) {
+          // Tertiary Text-Only Fallback via open text inference
+          if (!attachment || attachment.type === 'doc' || attachment.type === 'pdf' || attachment.type === 'ppt' || attachment.type === 'audio') {
+            const textMessages = [
+              { role: 'system', content: sys }
+            ];
+            chatHistory.forEach(item => {
+              textMessages.push({ role: item.role, content: item.content });
+            });
+            textMessages.push({ role: 'user', content: textOnlySummary });
+
+            const pollResp = await fetch('https://text.pollinations.ai/openai/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: 'openai-fast',
+                messages: textMessages
+              }),
+              signal: abortCtrl.signal
+            });
+            if (pollResp.ok) {
+              const pollJson = await pollResp.json();
+              const choice = pollJson.choices && pollJson.choices[0];
+              if (choice && choice.message) {
+                responseText = choice.message.content || '';
+                reasoningText = choice.message.reasoning || '';
               }
+            } else {
+              throw new Error('Fallback failed');
             }
-          }
-        } catch (_) {}
-      }
-
-      // 4b. High-Speed Direct Ollama Stream Inference (Fast Stream Fallback with zero configuration)
-      if (!generated && (!attachment || (attachment.type !== 'image' && attachment.type !== 'video'))) {
-        try {
-          const getAbort = new AbortController();
-          const getTimer = setTimeout(() => getAbort.abort('timeout'), 4000);
-          const getUrl = 'https://text.pollinations.ai/' + encodeURIComponent(promptContent) +
-            '?model=mistral&system=' + encodeURIComponent(SYSTEM_PROMPT);
-          const getResp = await fetch(getUrl, { signal: getAbort.signal });
-          clearTimeout(getTimer);
-          if (getResp.ok) {
-            const getTxt = await getResp.text();
-            if (getTxt && getTxt.trim() && !getTxt.includes('reached its budget') && !getTxt.includes('<!DOCTYPE')) {
-              responseText = getTxt.trim();
-              reasoningText = 'Processed through Ollama open stream inference in pure human language.';
-              generated = true;
-            }
-          }
-        } catch (_) {}
-      }
-
-      // 5. Fallback Intelligence Engine in Pure Human Language (if model timed out or offline)
-      if (!responseText) {
-        if (attachment && attachment.type === 'image') {
-          const imgAns = generateImageHumanAnswer(attachment, text);
-          responseText = imgAns.text;
-          reasoningText = imgAns.reasoning;
-        } else if (attachment && attachment.type === 'video') {
-          const vidAns = generateVideoHumanAnswer(attachment, text);
-          responseText = vidAns.text;
-          reasoningText = vidAns.reasoning;
-        } else if (attachment && attachment.type === 'pdf') {
-          const pdfAns = generatePdfHumanAnswer(attachment, text);
-          responseText = pdfAns.text;
-          reasoningText = pdfAns.reasoning;
-        } else {
-          const fallbackSynth = await synthesizePerplexitySearch(text);
-          if (fallbackSynth && fallbackSynth.text) {
-            responseText = fallbackSynth.text;
-            reasoningText = fallbackSynth.reasoning;
           } else {
-            responseText = '### Kai AI Response\n\nI have reviewed your message: **' + text + '**. How would you like me to elaborate or assist you further in pure human language?';
+            throw new Error('Unable to process visual input. Please check network.');
           }
         }
       }
 
+      // Clear watchdog timer
       if (watchdogTimer) clearTimeout(watchdogTimer);
 
+      // Render response
       let bubbleHtml = '';
       if (reasoningText && reasoningText.trim()) {
         bubbleHtml += '<details class="thought-process"><summary>&#129504; View Reasoning Process</summary><div class="reasoning-text">' +
           formatMarkdown(reasoningText.trim()) + '</div></details>';
       }
 
-      const formattedAnswer = formatMarkdown(responseText.trim());
+      const formattedAnswer = formatMarkdown(responseText.trim() || 'No answer generated.');
       bubbleHtml += '<div class="ai-content">' + formattedAnswer + '</div>';
       bubbleHtml += '<div class="ai-actions"><button class="action-pill-btn" onclick="copyBubbleText(this)">Copy Answer</button></div>';
 
       aiBubble.innerHTML = bubbleHtml;
 
-      // Update conversational history (keep last 8 turns)
-      const histUserText = text || (attachment ? ('[Attached ' + (attachment.type === 'pdf' ? 'PDF' : (attachment.type === 'video' ? 'Video' : 'Image')) + ': ' + attachment.name + ']') : '');
-      chatHistory.push({ role: 'user', content: histUserText });
+      // Update conversational history (keep last 8 turns as text summaries to maintain lightweight memory)
+      chatHistory.push({ role: 'user', content: textOnlySummary });
       chatHistory.push({ role: 'assistant', content: responseText.trim() });
       if (chatHistory.length > 8) {
         chatHistory = chatHistory.slice(chatHistory.length - 8);
@@ -2280,24 +2403,14 @@
     } catch (err) {
       if (watchdogTimer) clearTimeout(watchdogTimer);
 
-      if (err.name === 'AbortError' && !abortCtrl.signal.reason) {
+      if (err.name === 'AbortError') {
         aiBubble.innerHTML = '<em>Generation stopped.</em>';
       } else {
-        try {
-          const emergencySynth = await synthesizePerplexitySearch(text);
-          if (emergencySynth && emergencySynth.text) {
-            aiBubble.innerHTML = '<div class="ai-content">' + formatMarkdown(emergencySynth.text) + '</div>' +
-              '<div class="ai-actions"><button class="action-pill-btn" onclick="copyBubbleText(this)">Copy Answer</button></div>';
-          } else {
-            throw new Error('Emergency synth empty');
-          }
-        } catch (_) {
-          aiBubble.innerHTML =
-            '<div class="error-card">' +
-              '<span>Connection issue with AI engine. Please verify your internet connection.</span>' +
-              '<button class="retry-btn" onclick="retryLastPrompt()">&#128260; Retry</button>' +
-            '</div>';
-        }
+        aiBubble.innerHTML =
+          '<div class="error-card">' +
+            '<span>Connection issue with AI engine. Please verify your internet connection.</span>' +
+            '<button class="retry-btn" onclick="retryLastPrompt()">&#128260; Retry</button>' +
+          '</div>';
       }
     } finally {
       if (watchdogTimer) clearTimeout(watchdogTimer);
@@ -2309,35 +2422,15 @@
     }
   }
 
-  // Globally bind functions invoked by inline HTML attributes
-  window.sendQuickPrompt = sendQuickPrompt;
-  window.copySnippet = copySnippet;
-  window.copyBubbleText = copyBubbleText;
-  window.retryLastPrompt = retryLastPrompt;
-  window.handleFileSelect = handleFileSelect;
-  window.clearAttachment = clearAttachment;
-  window.extractPdfText = extractPdfText;
-  window.extractVideoKeyframes = extractVideoKeyframes;
-  window.formatVideoDuration = formatVideoDuration;
-  window.synthesizePerplexitySearch = synthesizePerplexitySearch;
-  window.synthesizeNeuralSearch = synthesizeNeuralSearch;
-
   // Handle URL query parameters (e.g., https://kai.ai/?q=my+prompt)
-  function checkUrlQuery() {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const q = params.get('q') || params.get('prompt');
-      if (q && q.trim()) {
-        input.value = q.trim();
-        handleSend();
-      }
-    } catch (_) {}
-  }
-  if (document.readyState === 'loading') {
-    window.addEventListener('DOMContentLoaded', checkUrlQuery);
-  } else {
-    checkUrlQuery();
-  }
+  window.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get('q') || params.get('prompt');
+    if (q && q.trim()) {
+      input.value = q.trim();
+      handleSend();
+    }
+  });
 </script>
 </body>
 </html>

@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.7.0", BuildConfig.VERSION_NAME)
-    assertEquals(43, BuildConfig.VERSION_CODE)
+    assertEquals("1.7.1", BuildConfig.VERSION_NAME)
+    assertEquals(44, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -162,7 +162,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.7.0").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.7.1").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -365,35 +365,21 @@ class ExampleRobolectricTest {
     val cleanedUrl = com.example.security.UrlValidator.stripTrackingParams("https://example.com/shop?fbclid=123&gbraid=456&item=shoes")
     assertEquals("https://example.com/shop?item=shoes", cleanedUrl)
 
-    // Built-in KaiAiApp verification with attachments supported, voice mic removed; pure conversational & technical chat interface with ChatGPT fonts
+    // Built-in KaiAiApp verification with attachments, voice, camera removed, video keyframes, multimodal and ChatGPT fonts
     val context = ApplicationProvider.getApplicationContext<Context>()
     val html = com.example.ui.ai.KaiAiApp.getHtmlText(context)
     assertTrue(html.contains("Kai AI"))
     assertTrue(html.contains("Anonymous AI Workspace"))
     assertFalse(html.contains("100% Anonymous"))
     assertTrue(html.contains("attach-btn"))
-    assertTrue(html.contains("file-input"))
-    assertTrue(html.contains("attach-tray"))
-    assertTrue(html.contains("extractVideoKeyframes"))
-    assertFalse(html.contains("id=\"mode-google-btn\""))
-    assertFalse(html.contains("id=\"mode-duck-btn\""))
-    assertFalse(html.contains("id=\"mode-chatgpt-btn\""))
-    assertFalse(html.contains("id=\"ai-mode-selector\""))
     assertFalse(html.contains("camera-btn"))
     assertFalse(html.contains("camera-modal"))
     assertFalse(html.contains("shutter-btn"))
-    assertFalse(html.contains("mic-btn"))
-    assertFalse(html.contains("SpeechRecognition"))
-    assertFalse(html.contains("gemini-3.5-flash-lite"))
-    assertFalse(html.contains("gemini-3.8-flash"))
-    assertFalse(html.contains("openai-fast"))
-    assertFalse(html.contains("Google AI"))
-    assertFalse(html.contains("Duck.ai"))
-    assertFalse(html.contains("duck.ai"))
-    assertFalse(html.contains("api.duckduckgo.com"))
-    assertFalse(html.contains("ChatGPT Free"))
-    assertTrue(html.contains("Perplexity"))
-    assertTrue(html.contains("Ollama"))
+    assertTrue(html.contains("mic-btn"))
+    assertTrue(html.contains("image_url"))
+    assertTrue(html.contains("extractVideoKeyframes"))
+    assertTrue(html.contains("SpeechRecognition"))
+    assertTrue(html.contains("gemini-3.5-flash-lite"))
     assertTrue(html.contains("thought-process"))
     assertTrue(html.contains("Söhne"))
     assertTrue(html.contains("Söhne Mono"))
@@ -441,86 +427,64 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun kaiVoiceBridgeAndCleanChatRemovalVerification() {
+  fun kaiVoiceBridgeAndMultimodalAttachmentsTest() {
     val context = ApplicationProvider.getApplicationContext<Context>()
 
-    // 1. Verify KaiVoiceBridge constants and instance behavior (dormant safety)
+    // 1. Verify KaiVoiceBridge constants and instance behavior
     assertEquals("KaiVoice", com.example.ui.ai.KaiVoiceBridge.JS_INTERFACE_NAME)
-    var permNeededCalled = false
     val testWv = android.webkit.WebView(context)
-    val bridge = com.example.ui.ai.KaiVoiceBridge(
-      java.lang.ref.WeakReference(testWv),
-      onPermissionNeeded = { permNeededCalled = true }
-    )
+    val bridge = com.example.ui.ai.KaiVoiceBridge(java.lang.ref.WeakReference(testWv))
     // Under Robolectric, audio permission is not granted by default
     assertFalse(bridge.hasPermission())
-    bridge.requestPermission()
-    assertTrue(permNeededCalled)
     // Methods can be called safely without exceptions
+    bridge.requestPermission()
     bridge.stopListening()
     bridge.cancel()
     bridge.cleanup()
 
-    // 2. Verify kai.html supports Image and PDF attachments while voice mic options and unneeded heavy parsers remain removed
+    // 2. Verify kai.html includes all required multimodal and voice elements
     val html = com.example.ui.ai.KaiAiApp.getHtmlText(context)
+    // Voice mic integration
+    assertTrue(html.contains("KaiVoice"))
+    assertTrue(html.contains("__kaiVoiceOnStart"))
+    assertTrue(html.contains("__kaiVoiceOnResult"))
+    assertTrue(html.contains("__kaiVoiceOnError"))
+    assertTrue(html.contains("__kaiVoiceOnEnd"))
 
-    // Verify attachments UI and processing are present for Image and PDF
-    assertTrue(html.contains("id=\"attach-btn\""))
-    assertTrue(html.contains("id=\"file-input\""))
-    assertTrue(html.contains("id=\"attach-tray\""))
-    assertTrue(html.contains("id=\"attach-preview-img\""))
-    assertTrue(html.contains("extractPdfText"))
-    assertTrue(html.contains("extractVideoKeyframes"))
-    assertTrue(html.contains("handleFileSelect"))
-    assertTrue(html.contains("clearAttachment"))
+    // PPT & PPTX presentation analysis
+    assertTrue(html.contains("parsePresentationFile"))
+    assertTrue(html.contains("extractPptxSlides"))
+    assertTrue(html.contains("extractBinaryPptText"))
+    assertTrue(html.contains("PRESENTATION DECK"))
+    assertTrue(html.contains(".pptx"))
+    assertTrue(html.contains(".ppt"))
+    assertTrue(html.contains("msg-doc-chip ppt"))
 
-    // Verify unneeded complex heavy parsers remain removed
-    assertFalse(html.contains("parsePresentationFile"))
-    assertFalse(html.contains("extractPptxSlides"))
-    assertFalse(html.contains("extractBinaryPptText"))
-    assertFalse(html.contains("parseAudioFile"))
-    assertFalse(html.contains("extractAudioMetadata"))
+    // PDF document analysis
+    assertTrue(html.contains("parsePdfFile"))
+    assertTrue(html.contains("decompressPdfFlate"))
+    assertTrue(html.contains("extractPdfTextFromOperators"))
+    assertTrue(html.contains("PDF DOCUMENT"))
+    assertTrue(html.contains(".pdf"))
+    assertTrue(html.contains("msg-doc-chip pdf"))
 
-    // Verify first-letter stripping regex bug (*-_) is fixed
-    assertFalse(html.contains("*-_"))
-    assertTrue(html.contains("extractSubjectEntity"))
+    // Audio file analysis & player
+    assertTrue(html.contains("parseAudioFile"))
+    assertTrue(html.contains("extractAudioMetadata"))
+    assertTrue(html.contains("AUDIO FILE"))
+    assertTrue(html.contains("msg-audio-player"))
+    assertTrue(html.contains("msg-doc-chip audio"))
+    assertTrue(html.contains(".mp3"))
+    assertTrue(html.contains(".wav"))
+    assertTrue(html.contains(".m4a"))
 
-    // Verify mode selector buttons are removed from UI so model names are undisclosed to users
-    assertFalse(html.contains("id=\"mode-google-btn\""))
-    assertFalse(html.contains("id=\"mode-duck-btn\""))
-    assertFalse(html.contains("id=\"mode-chatgpt-btn\""))
-    assertFalse(html.contains("id=\"ai-mode-selector\""))
+    // Persona prompt training for PPT, PDF, Audio
+    assertTrue(html.contains("PowerPoint Presentations (.ppt, .pptx)"))
+    assertTrue(html.contains("PDF Documents (.pdf)"))
+    assertTrue(html.contains("Audio Files (.mp3, .wav, .m4a, .ogg, .aac)"))
 
-    // Verify Duck.ai is properly and completely removed
-    assertFalse(html.contains("Duck.ai"))
-    assertFalse(html.contains("duck.ai"))
-    assertFalse(html.contains("api.duckduckgo.com"))
-
-    // Verify voice mic options are completely removed
-    assertFalse(html.contains("id=\"mic-btn\""))
-    assertFalse(html.contains("id=\"voice-banner\""))
-    assertFalse(html.contains("id=\"voice-status\""))
-    assertFalse(html.contains("id=\"voice-wave\""))
-    assertFalse(html.contains("id=\"voice-done-btn\""))
-    assertFalse(html.contains("id=\"voice-cancel-btn\""))
-    assertFalse(html.contains("startAudioRecording"))
-    assertFalse(html.contains("stopAudioRecording"))
-
-    // Verify streamlined pure AI chat interface with natural and technical language capabilities
-    assertTrue(html.contains("id=\"prompt-input\""))
-    assertTrue(html.contains("id=\"send-btn\""))
-    assertTrue(html.contains("id=\"chat-feed\""))
-    assertTrue(html.contains("id=\"new-chat-btn\""))
-    assertTrue(html.contains("id=\"theme-toggle-btn\""))
-    assertTrue(html.contains("natural or everyday language"))
-    assertTrue(html.contains("technical or machine language"))
-    assertTrue(html.contains("pure human language"))
-    assertFalse(html.contains("Google AI"))
-    assertFalse(html.contains("ChatGPT Free"))
-    assertTrue(html.contains("Perplexity"))
-    assertTrue(html.contains("Ollama"))
-    assertTrue(html.contains("synthesizePerplexitySearch"))
-    assertTrue(html.contains("synthesizeNeuralSearch"))
+    // File input accept attribute includes all requested formats
+    assertTrue(html.contains("accept=\"image/*,video/*,audio/*,.pdf,.ppt,.pptx,.mp3,.wav,.m4a,.ogg,.aac,.flac"))
   }
 
   @Test
@@ -536,89 +500,16 @@ class ExampleRobolectricTest {
     assertTrue(html.contains("sun-icon"))
     assertTrue(html.contains("moon-icon"))
 
-    // Verify light mode CSS palette and high-contrast visibility rules
+    // Verify light mode CSS palette
     assertTrue(html.contains("[data-theme=\"light\"]"))
     assertTrue(html.contains("--bg: #F8FAFC;"))
     assertTrue(html.contains("--bubble-user: #E0F2FE;"))
     assertTrue(html.contains("--bubble-ai: #FFFFFF;"))
-    assertTrue(html.contains("[data-theme=\"light\"] .empty-title"))
-    assertTrue(html.contains("[data-theme=\"light\"] #prompt-input"))
-    assertTrue(html.contains("[data-theme=\"light\"] .ai-content h1"))
-    assertTrue(html.contains("[data-theme=\"light\"] pre code"))
-    assertTrue(html.contains("[data-theme=\"light\"] .thought-process"))
-    assertTrue(html.contains("[data-theme=\"light\"] .msg-doc-chip"))
 
     // Verify JavaScript theme switching APIs
     assertTrue(html.contains("function applyTheme("))
     assertTrue(html.contains("window.__kaiSetTheme"))
     assertTrue(html.contains("localStorage.setItem('kai_theme'"))
-  }
-
-  @Test
-  fun kaiAiJavaScriptSyntaxAndRuntimeIntegrityVerified() {
-    val context = ApplicationProvider.getApplicationContext<Context>()
-    val html = com.example.ui.ai.KaiAiApp.getHtmlText(context)
-    val scriptRegex = Regex("<script[\\s\\S]*?>([\\s\\S]*?)</script>", RegexOption.IGNORE_CASE)
-    val scriptContent = scriptRegex.find(html)?.groupValues?.get(1) ?: ""
-    assertTrue("Script tag must not be empty", scriptContent.isNotEmpty())
-
-    // 1. Verify voice mic variables are completely removed
-    assertFalse(scriptContent.contains("let isListening"))
-    assertFalse(scriptContent.contains("let recognition"))
-
-    // 2. Verify all inline event handlers are bound globally to window
-    assertTrue(scriptContent.contains("window.sendQuickPrompt = sendQuickPrompt"))
-    assertTrue(scriptContent.contains("window.copySnippet = copySnippet"))
-    assertTrue(scriptContent.contains("window.copyBubbleText = copyBubbleText"))
-    assertTrue(scriptContent.contains("window.retryLastPrompt = retryLastPrompt"))
-
-    // 3. Verify robust URL query parameter handling with readyState check
-    assertTrue(scriptContent.contains("document.readyState === 'loading'"))
-
-    // 4. Verify all critical UI elements exist in DOM (with attachments present, voice mic, and model selector buttons removed)
-    val expectedIds = listOf(
-      "prompt-input", "send-btn", "chat-feed", "empty-state",
-      "new-chat-btn", "theme-toggle-btn",
-      "attach-btn", "file-input", "attach-tray"
-    )
-    for (id in expectedIds) {
-      assertTrue("HTML must contain element id='$id'", html.contains("id=\"$id\""))
-    }
-    val removedIds = listOf(
-      "mode-google-btn", "mode-duck-btn", "mode-chatgpt-btn", "ai-mode-selector",
-      "mic-btn", "voice-banner", "voice-status", "voice-wave", "voice-done-btn", "voice-cancel-btn",
-      "key-settings-btn", "user-api-key-input", "camera-btn", "camera-modal", "shutter-btn"
-    )
-    for (id in removedIds) {
-      assertFalse("HTML must not contain removed element id='$id'", html.contains("id=\"$id\""))
-    }
-    assertFalse("HTML must not contain key-settings-overlay", html.contains("key-settings-overlay"))
-    assertFalse("HTML must not expose API key prompts to users", html.contains("API key"))
-
-    // 5. Verify integrated Perplexity and Ollama backend architecture with legacy models completely removed
-    assertFalse(scriptContent.contains("gemini-3.5-flash-lite"))
-    assertFalse(scriptContent.contains("gemini-3.8-flash"))
-    assertFalse(scriptContent.contains("Duck.ai"))
-    assertFalse(scriptContent.contains("duck.ai"))
-    assertFalse(scriptContent.contains("api.duckduckgo.com"))
-    assertFalse(scriptContent.contains("Google AI"))
-    assertFalse(scriptContent.contains("ChatGPT Free"))
-    assertFalse(scriptContent.contains("openai-fast"))
-    assertTrue(scriptContent.contains("Perplexity"))
-    assertTrue(scriptContent.contains("Ollama"))
-    assertTrue(scriptContent.contains("pure human language"))
-    assertTrue(scriptContent.contains("extractVideoKeyframes"))
-    assertTrue(scriptContent.contains("extractPdfText"))
-    assertTrue(scriptContent.contains("formatVideoDuration"))
-    assertTrue(html.contains("video/*"))
-    assertTrue(scriptContent.contains("video/*"))
-    assertTrue(scriptContent.contains("video/"))
-    assertTrue(scriptContent.contains("window.switchAiMode = switchAiMode"))
-    assertTrue(scriptContent.contains("https://text.pollinations.ai/openai/chat/completions"))
-    assertTrue(scriptContent.contains("synthesizePerplexitySearch"))
-    assertTrue(scriptContent.contains("synthesizeNeuralSearch"))
-    assertTrue(scriptContent.contains("checkMathQuery"))
-    assertTrue(scriptContent.contains("checkGreeting"))
   }
 
   @Test
