@@ -769,6 +769,7 @@ fun BrowserScreen(
       Column(
         modifier = Modifier
           .fillMaxWidth()
+          .verticalScroll(rememberScrollState())
           .padding(horizontal = 16.dp)
           .padding(bottom = 20.dp)
       ) {
@@ -778,6 +779,16 @@ fun BrowserScreen(
           verticalArrangement = Arrangement.spacedBy(6.dp),
           modifier = Modifier.fillMaxWidth()
         ) {
+          FilterChip(
+            selected = false,
+            onClick = {
+              showQuickSheet = false
+              viewModel.openAiAssistant()
+            },
+            enabled = hasUrl,
+            leadingIcon = { Icon(FeatherIcons.Sparkle, contentDescription = null, modifier = Modifier.size(16.dp)) },
+            label = { Text("AI Assistant") }
+          )
           FilterChip(
             selected = activeTab.userAgentMode == UserAgentMode.DESKTOP,
             onClick = {
@@ -853,10 +864,6 @@ fun BrowserScreen(
           QuickActionItem(Icons.Filled.Add, stringResource(R.string.action_new_tab), true) {
             showQuickSheet = false
             viewModel.openNewTab(isPrivate = false)
-          },
-          QuickActionItem(FeatherIcons.Sparkle, "AI Assistant", hasUrl) {
-            showQuickSheet = false
-            viewModel.openAiAssistant()
           },
           QuickActionItem(FeatherIcons.PrivateMask, stringResource(R.string.action_new_private_tab), true) {
             showQuickSheet = false
