@@ -1441,6 +1441,7 @@
     });
   }
 
+  // Supports image/*, video/*, and .pdf attachments
   async function handleFileSelect(e) {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
