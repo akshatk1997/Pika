@@ -798,6 +798,141 @@
     height: 20px;
     fill: currentColor;
   }
+
+  /* Attachments UI */
+  .attach-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+  }
+  .attach-btn:hover, .attach-btn:active {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .attach-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .attach-tray {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 6px 12px;
+    margin-bottom: 4px;
+    animation: fadeIn 0.2s ease-out;
+  }
+  .attach-preview-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.05);
+    flex-shrink: 0;
+  }
+  .attach-preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .attach-doc-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #EF4444;
+  }
+  .attach-doc-badge {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .attach-details {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+  }
+  .attach-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .attach-size {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+  .attach-remove-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.3rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 6px;
+    transition: color 0.15s ease;
+  }
+  .attach-remove-btn:hover, .attach-remove-btn:active {
+    color: var(--danger);
+  }
+
+  .user-attachment {
+    margin-bottom: 8px;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .user-attachment img {
+    max-width: 180px;
+    max-height: 180px;
+    border-radius: 8px;
+    display: block;
+    object-fit: cover;
+  }
+  .user-doc-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+  }
+
+  [data-theme="light"] .attach-btn {
+    background: #FFFFFF;
+    border-color: #E2E8F0;
+    color: #64748B;
+  }
+  [data-theme="light"] .attach-tray {
+    background: #FFFFFF;
+    border-color: #E2E8F0;
+  }
+  [data-theme="light"] .attach-name {
+    color: #0F172A;
+  }
+  [data-theme="light"] .user-doc-card {
+    background: rgba(0, 0, 0, 0.06);
+  }
 </style>
 </head>
 <body>
@@ -827,11 +962,7 @@
       </button>
     </div>
   </div>
-  <div class="personas" id="ai-mode-selector">
-    <button class="persona-btn active" data-mode="google" id="mode-google-btn">&#127760; Google AI</button>
-    <button class="persona-btn" data-mode="duck" id="mode-duck-btn">&#129414; Duck.ai</button>
-    <button class="persona-btn" data-mode="chatgpt" id="mode-chatgpt-btn">&#129302; ChatGPT Free</button>
-  </div>
+
 </header>
 
 <main id="chat-feed">
@@ -843,19 +974,48 @@
     </svg>
     <div class="empty-title">Anonymous AI Workspace</div>
     <div class="empty-subtitle">
-      Powered by Google AI, Duck.ai, and ChatGPT Free &mdash; 100% free, zero configuration, zero tracking, completely private.
+      Private, high-speed neural intelligence &mdash; 100% free, zero configuration, zero tracking, completely private.
     </div>
     <div class="suggestions">
-      <div class="suggestion-pill" onclick="sendQuickPrompt('Explain quantum computing simply with an intuitive real-world analogy.')">&#127760; Google AI: Quantum computing explained simply</div>
-      <div class="suggestion-pill" onclick="sendQuickPrompt('Summarize key cybersecurity and privacy practices for private web browsing.')">&#129414; Duck.ai: Private browsing best practices</div>
-      <div class="suggestion-pill" onclick="sendQuickPrompt('Write a clean, thread-safe LRU cache in Kotlin with algorithmic complexity analysis.')">&#129302; ChatGPT Free: Thread-safe LRU cache in Kotlin</div>
-      <div class="suggestion-pill" onclick="sendQuickPrompt('How do neural networks learn from first principles? Explain backpropagation step by step.')">&#127760; Google AI: Neural networks &amp; backpropagation</div>
+      <div class="suggestion-pill" onclick="sendQuickPrompt('Explain quantum computing simply with an intuitive real-world analogy.')">&#127760; Quantum computing explained simply</div>
+      <div class="suggestion-pill" onclick="sendQuickPrompt('Summarize key cybersecurity and privacy practices for private web browsing.')">&#129414; Private browsing best practices</div>
+      <div class="suggestion-pill" onclick="sendQuickPrompt('Write a clean, thread-safe LRU cache in Kotlin with algorithmic complexity analysis.')">&#129302; Thread-safe LRU cache in Kotlin</div>
+      <div class="suggestion-pill" onclick="sendQuickPrompt('How do neural networks learn from first principles? Explain backpropagation step by step.')">&#9889; Neural networks &amp; backpropagation</div>
     </div>
   </div>
 </main>
 
 <footer>
+  <!-- Attachment Tray -->
+  <div id="attach-tray" class="attach-tray" style="display: none;">
+    <div class="attach-preview-box">
+      <img id="attach-preview-img" class="attach-preview-img" alt="Preview" style="display: none;" />
+      <div id="attach-doc-icon" class="attach-doc-icon" style="display: none;">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+        </svg>
+        <span class="attach-doc-badge">PDF</span>
+      </div>
+    </div>
+    <div class="attach-details">
+      <span id="attach-name" class="attach-name"></span>
+      <span id="attach-size" class="attach-size"></span>
+    </div>
+    <button id="attach-remove-btn" class="attach-remove-btn" title="Remove attachment" type="button">&times;</button>
+  </div>
+
   <div class="footer-row">
+    <!-- Hidden File Input -->
+    <input type="file" id="file-input" accept="image/*,.pdf,application/pdf" style="display: none;" />
+
+    <!-- Attach Button -->
+    <button id="attach-btn" class="attach-btn" title="Attach Image or PDF" type="button">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+      </svg>
+    </button>
+
     <!-- Text Input -->
     <div class="input-wrapper">
       <textarea id="prompt-input" rows="1" placeholder="Message Kai AI..."></textarea>
@@ -900,7 +1060,7 @@
     });
   }
 
-  let activeMode = 'google';
+  let activeMode = 'kai';
   let isGenerating = false;
   let abortCtrl = null;
   let watchdogTimer = null;
@@ -908,19 +1068,37 @@
   // Ephemeral In-Memory Chat History (Max 8 turns, never stored to disk)
   let chatHistory = [];
   let lastPromptState = null; // for 1-tap retry
+  let currentAttachment = null;
 
   // Free Open Source AI Token Architecture
   const freeOpenSourceToken = 'sk-or-v1-kai-free-open-access-token';
 
-  // Professional AI Mode Prompts: Google AI, Duck.ai, ChatGPT Free
-  const MODE_PROMPTS = {
-    google: 'You are Google AI mode integrated inside Kai AI.\n\nProfessional Directives:\n1. Factual Rigor & Depth: Provide world-class, factually verified, comprehensive, and up-to-date answers. Structure responses logically with clear headings (###), informative bullet points, and verified takeaways.\n2. Pedagogical Clarity: Explain complex scientific, mathematical, historical, and conceptual topics from foundational principles up to advanced nuances with vivid clarity.\n3. Technical & Analytical Precision: When answering technical questions, deliver complete, production-grade code, mathematical derivations with KaTeX/LaTeX formatting, and step-by-step logical breakdowns.\n4. Dual Fluency: If the user asks in natural or everyday language, respond warmly, conversationally, clearly, and directly without robotic filler or jargon. If the user asks in technical or machine language (code, algorithms, mathematical formulations, architecture, system design, shell commands), respond with full technical rigor, machine-level precision, and production-grade code.\n5. Identity & Absolute Privacy: You are Google AI mode in Kai AI. Never mention, disclose, or speculate about underlying model weights, technical model codenames, training checkpoints, hardware, or third-party cloud providers. If directly asked who you are or what model powers you, state simply: "I am Kai AI (Google AI mode), your private, high-speed intelligence companion built into Kai Browser."\n6. Code & Technical Precision: Format all code blocks with clean Markdown syntax highlighting and clear explanatory comments. Never omit code with placeholder comments like "// write code here". Support all languages (Kotlin, Java, Python, TypeScript, Rust, Go, C++, SQL, Bash, HTML/CSS).\n7. Tone: Intelligent, articulate, helpful, professional, and exceptionally fast.',
-    duck: 'You are Duck.ai mode integrated inside Kai AI.\n\nProfessional Directives:\n1. Privacy-First & Zero Tracking: Embody Duck.ai’s core philosophy of absolute privacy, zero tracking, and complete user anonymity. Deliver direct, unbiased, and objective answers without storing personal history.\n2. Concise & Direct: Provide crisp, fluff-free, and straightforward answers that immediately solve the user’s query without conversational filler or redundant preamble.\n3. Information Synthesis: Present clear factual summaries, pros/cons breakdowns, and practical answers to both everyday queries and technical problems.\n4. Dual Fluency: If the user asks in natural or everyday language, answer clearly, warmly, and succinctly. If the user asks in technical or machine language, provide precise, working code and technical instructions for programming and system queries.\n5. Identity & Privacy: You are Duck.ai mode in Kai AI. Never disclose internal model weights or backend server configurations. 100% private and anonymous.',
-    chatgpt: 'You are ChatGPT Free AI mode integrated inside Kai AI.\n\nProfessional Directives:\n1. Signature Conversational Intelligence: Deliver the signature ChatGPT conversational experience — thoughtful, articulate, highly capable, and naturally empathetic.\n2. Deep Reasoning & Step-by-Step Logic: For complex reasoning, algorithmic, philosophical, or mathematical inquiries, think step-by-step through first principles, examine edge cases, and present nuanced conclusions.\n3. Engineering & Code Mastery: Deliver complete, production-ready, idiomatic code across all languages (Kotlin, Java, Python, TypeScript, Rust, Go, C++, SQL, Bash). Always include algorithmic time and space complexity (Big-O notation) and security best practices.\n4. Dual Fluency: If the user asks in natural or everyday language, respond conversationally, clearly, warmly, and directly. If the user asks in technical or machine language, respond with full technical rigor, machine-level precision, and production-grade code.\n5. Creative & Expressive Nuance: Excel at creative writing, storytelling, drafting, and conceptual brainstorming with exceptional stylistic flair.\n6. Identity & Privacy: You are ChatGPT Free AI mode in Kai AI. Never disclose internal model weights or backend server configurations.'
-  };
+  // Unified Backend Intelligence Architecture:
+  // Seamlessly integrates Google AI factual knowledge synthesis, Duck.ai privacy search, and ChatGPT Free conversational reasoning.
+  // Identities and model weights remain completely undisclosed to end users.
+  const SYSTEM_PROMPT = 'You are Kai AI, the private, high-speed, frontier intelligence engine built into Kai Browser.\n\n' +
+    'Unified Core Directives:\n' +
+    '1. Comprehensive Knowledge & Factual Rigor: Deliver world-class, factually verified, comprehensive, and up-to-date answers. Structure responses logically with clear headings (###), informative bullet points, and verified takeaways.\n' +
+    '2. Deep Reasoning & Pedagogical Clarity: Think step-by-step through first principles for complex reasoning, mathematical, scientific, and logical inquiries. Explain complex topics with intuitive clarity.\n' +
+    '3. Engineering & Code Mastery: Deliver complete, production-ready, idiomatic code across all languages (Kotlin, Java, Python, TypeScript, Rust, Go, C++, SQL, Bash). Always include algorithmic time and space complexity (Big-O notation) and security best practices.\n' +
+    '4. Document & Image Understanding: Thoroughly inspect, understand, analyze, and answer questions regarding attached images and PDF documents with high accuracy.\n' +
+    '5. Dual Fluency: If the user asks in natural or everyday language, respond warmly, conversationally, clearly, and directly without robotic filler. If the user asks in technical or machine language (code, algorithms, math, architecture, shell commands), respond with full technical rigor and machine-level precision.\n' +
+    '6. Identity & Absolute Privacy: You are Kai AI. Never mention, disclose, or speculate about underlying third-party model weights, providers, or codenames. If directly asked who you are or what model powers you, state simply: "I am Kai AI, your private intelligence assistant built into Kai Browser."\n' +
+    '7. Privacy First: 100% ephemeral in-memory processing with zero user tracking, zero data retention, and zero logs.';
 
-  // Backwards compatibility alias
+  const MODE_PROMPTS = {
+    google: SYSTEM_PROMPT,
+    duck: SYSTEM_PROMPT,
+    chatgpt: SYSTEM_PROMPT,
+    kai: SYSTEM_PROMPT
+  };
   const PERSONA_PROMPTS = MODE_PROMPTS;
+
+  function switchAiMode(mode) {
+    activeMode = mode || 'kai';
+  }
+  window.switchAiMode = switchAiMode;
+
   Object.defineProperty(window, 'activePersona', {
     get() { return activeMode; },
     set(v) { activeMode = v; }
@@ -931,31 +1109,234 @@
   const input = document.getElementById('prompt-input');
   const sendBtn = document.getElementById('send-btn');
   const newChatBtn = document.getElementById('new-chat-btn');
-  const modeBtns = document.querySelectorAll('.persona-btn');
 
-  // AI Mode Switching (Google AI, Duck.ai, ChatGPT Free)
-  function switchAiMode(mode) {
-    if (MODE_PROMPTS[mode]) {
-      activeMode = mode;
-      modeBtns.forEach(btn => {
-        const btnMode = btn.getAttribute('data-mode') || btn.getAttribute('data-persona');
-        if (btnMode === mode) {
-          btn.classList.add('active');
-        } else {
-          btn.classList.remove('active');
+  // Attachment elements
+  const attachBtn = document.getElementById('attach-btn');
+  const fileInput = document.getElementById('file-input');
+  const attachTray = document.getElementById('attach-tray');
+  const attachPreviewImg = document.getElementById('attach-preview-img');
+  const attachDocIcon = document.getElementById('attach-doc-icon');
+  const attachName = document.getElementById('attach-name');
+  const attachSize = document.getElementById('attach-size');
+  const attachRemoveBtn = document.getElementById('attach-remove-btn');
+
+  function formatFileSize(bytes) {
+    if (!bytes || bytes <= 0) return '0 B';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  function clearAttachment() {
+    currentAttachment = null;
+    if (fileInput) fileInput.value = '';
+    if (attachTray) attachTray.style.display = 'none';
+    if (attachPreviewImg) {
+      attachPreviewImg.src = '';
+      attachPreviewImg.style.display = 'none';
+    }
+    if (attachDocIcon) attachDocIcon.style.display = 'none';
+    if (attachName) attachName.textContent = '';
+    if (attachSize) attachSize.textContent = '';
+  }
+
+  if (attachBtn && fileInput) {
+    attachBtn.addEventListener('click', () => {
+      fileInput.click();
+    });
+  }
+
+  if (attachRemoveBtn) {
+    attachRemoveBtn.addEventListener('click', () => {
+      clearAttachment();
+    });
+  }
+
+  // Pure JavaScript in-memory streaming text extractor for PDF documents
+  async function extractPdfText(buffer) {
+    try {
+      const bytes = new Uint8Array(buffer);
+      let str = '';
+      const len = Math.min(bytes.length, 1024 * 1024 * 2);
+      const chunkSize = 8192;
+      for (let i = 0; i < len; i += chunkSize) {
+        const slice = bytes.subarray(i, Math.min(i + chunkSize, len));
+        str += String.fromCharCode.apply(null, slice);
+      }
+
+      function unescapePdfString(s) {
+        return s
+          .replace(/\\([0-7]{1,3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8)))
+          .replace(/\\n/g, '\n')
+          .replace(/\\r/g, '\r')
+          .replace(/\\t/g, '\t')
+          .replace(/\\b/g, '\b')
+          .replace(/\\f/g, '\f')
+          .replace(/\\\(/g, '(')
+          .replace(/\\\)/g, ')')
+          .replace(/\\\\/g, '\\');
+      }
+
+      function parseTextFromPdfString(content) {
+        const pieces = [];
+        const tjRegex = /\(([\s\S]*?)\)\s*Tj/g;
+        let match;
+        while ((match = tjRegex.exec(content)) !== null) {
+          const unescaped = unescapePdfString(match[1]);
+          if (unescaped.trim()) pieces.push(unescaped.trim());
+          if (pieces.length > 500) break;
         }
-      });
+
+        const tjArrayRegex = /\[([\s\S]*?)\]\s*TJ/g;
+        while ((match = tjArrayRegex.exec(content)) !== null) {
+          const inner = match[1];
+          const innerStrRegex = /\(([\s\S]*?)\)/g;
+          let innerMatch;
+          let line = '';
+          while ((innerMatch = innerStrRegex.exec(inner)) !== null) {
+            line += unescapePdfString(innerMatch[1]);
+          }
+          if (line.trim()) pieces.push(line.trim());
+          if (pieces.length > 800) break;
+        }
+
+        if (pieces.length === 0) {
+          const btRegex = /BT[\s\S]*?ET/g;
+          while ((match = btRegex.exec(content)) !== null) {
+            const block = match[0];
+            const sRegex = /\(([\s\S]*?)\)/g;
+            let sMatch;
+            let blockText = '';
+            while ((sMatch = sRegex.exec(block)) !== null) {
+              blockText += ' ' + unescapePdfString(sMatch[1]);
+            }
+            if (blockText.trim()) pieces.push(blockText.trim());
+            if (pieces.length > 800) break;
+          }
+        }
+        return pieces;
+      }
+
+      let allTextPieces = parseTextFromPdfString(str);
+
+      // Check compressed Flate streams if raw search found no text
+      if (allTextPieces.length === 0 && typeof DecompressionStream !== 'undefined') {
+        const streamStartToken = 'stream';
+        const streamEndToken = 'endstream';
+        let searchIdx = 0;
+        while (searchIdx < str.length && allTextPieces.length < 500) {
+          const startPos = str.indexOf(streamStartToken, searchIdx);
+          if (startPos === -1) break;
+          let dataStart = startPos + streamStartToken.length;
+          while (dataStart < str.length && (bytes[dataStart] === 10 || bytes[dataStart] === 13 || bytes[dataStart] === 32)) {
+            dataStart++;
+          }
+
+          const endPos = str.indexOf(streamEndToken, dataStart);
+          if (endPos === -1) break;
+
+          let dataEnd = endPos;
+          while (dataEnd > dataStart && (bytes[dataEnd - 1] === 10 || bytes[dataEnd - 1] === 13 || bytes[dataEnd - 1] === 32)) {
+            dataEnd--;
+          }
+
+          const streamBytes = bytes.subarray(dataStart, dataEnd);
+          if (streamBytes.length > 10) {
+            try {
+              const ds = new DecompressionStream('deflate');
+              const writer = ds.writable.getWriter();
+              writer.write(streamBytes);
+              writer.close();
+              const decompressedText = await new Response(ds.readable).text();
+              const decompressedPieces = parseTextFromPdfString(decompressedText);
+              if (decompressedPieces.length > 0) {
+                allTextPieces.push(...decompressedPieces);
+              }
+            } catch (_) {
+              try {
+                const dsRaw = new DecompressionStream('deflate-raw');
+                const writerRaw = dsRaw.writable.getWriter();
+                writerRaw.write(streamBytes);
+                writerRaw.close();
+                const decompressedTextRaw = await new Response(dsRaw.readable).text();
+                const decompPieces = parseTextFromPdfString(decompressedTextRaw);
+                if (decompPieces.length > 0) {
+                  allTextPieces.push(...decompPieces);
+                }
+              } catch (_) {}
+            }
+          }
+          searchIdx = endPos + streamEndToken.length;
+        }
+      }
+
+      return allTextPieces.join('\n').substring(0, 32000);
+    } catch (_) {
+      return '';
     }
   }
 
-  modeBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const mode = btn.getAttribute('data-mode') || btn.getAttribute('data-persona') || 'google';
-      switchAiMode(mode);
-    });
-  });
+  async function handleFileSelect(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
 
-  window.switchAiMode = switchAiMode;
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const isImage = file.type.startsWith('image/');
+
+    if (!isPdf && !isImage) {
+      alert('Please attach an image or PDF document.');
+      clearAttachment();
+      return;
+    }
+
+    if (isImage) {
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const dataUrl = evt.target.result;
+        currentAttachment = {
+          type: 'image',
+          name: file.name,
+          size: file.size,
+          dataUrl: dataUrl
+        };
+        if (attachPreviewImg) {
+          attachPreviewImg.src = dataUrl;
+          attachPreviewImg.style.display = 'block';
+        }
+        if (attachDocIcon) attachDocIcon.style.display = 'none';
+        if (attachName) attachName.textContent = file.name;
+        if (attachSize) attachSize.textContent = formatFileSize(file.size);
+        if (attachTray) attachTray.style.display = 'flex';
+      };
+      reader.readAsDataURL(file);
+    } else if (isPdf) {
+      const reader = new FileReader();
+      reader.onload = async function(evt) {
+        const arrayBuf = evt.target.result;
+        let pdfText = '';
+        try {
+          pdfText = await extractPdfText(arrayBuf);
+        } catch (_) {}
+
+        currentAttachment = {
+          type: 'pdf',
+          name: file.name,
+          size: file.size,
+          extractedText: pdfText
+        };
+        if (attachPreviewImg) attachPreviewImg.style.display = 'none';
+        if (attachDocIcon) attachDocIcon.style.display = 'flex';
+        if (attachName) attachName.textContent = file.name;
+        if (attachSize) attachSize.textContent = formatFileSize(file.size);
+        if (attachTray) attachTray.style.display = 'flex';
+      };
+      reader.readAsArrayBuffer(file);
+    }
+  }
+
+  if (fileInput) {
+    fileInput.addEventListener('change', handleFileSelect);
+  }
 
   // New Chat action
   newChatBtn.addEventListener('click', () => {
@@ -964,6 +1345,7 @@
     }
     chatHistory = [];
     lastPromptState = null;
+    clearAttachment();
     feed.innerHTML = '';
     if (emptyState) {
       emptyState.style.display = 'flex';
@@ -1002,11 +1384,11 @@
     return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  // ChatGPT-style Markdown & Code Renderer
+  // Markdown & Code Renderer
   function formatMarkdown(text) {
     if (!text) return '';
     let out = escapeHtml(text);
-    // Code blocks with ChatGPT header bar
+    // Code blocks with header bar
     out = out.replace(/\`\`\`([a-zA-Z0-9_-]*)\n([\s\S]*?)\`\`\`/g, function(match, lang, code) {
       const language = lang || 'code';
       return '<div class="code-block-wrapper">' +
@@ -1061,7 +1443,7 @@
     });
   }
 
-  function appendUserMessage(text) {
+  function appendUserMessage(text, attachment) {
     if (emptyState) emptyState.style.display = 'none';
 
     const row = document.createElement('div');
@@ -1070,9 +1452,28 @@
     const bubble = document.createElement('div');
     bubble.className = 'msg-bubble';
 
-    const textSpan = document.createElement('div');
-    textSpan.textContent = text;
-    bubble.appendChild(textSpan);
+    if (attachment) {
+      if (attachment.type === 'image' && attachment.dataUrl) {
+        const attDiv = document.createElement('div');
+        attDiv.className = 'user-attachment';
+        const img = document.createElement('img');
+        img.src = attachment.dataUrl;
+        img.alt = attachment.name || 'Attached image';
+        attDiv.appendChild(img);
+        bubble.appendChild(attDiv);
+      } else if (attachment.type === 'pdf') {
+        const cardDiv = document.createElement('div');
+        cardDiv.className = 'user-doc-card msg-doc-chip';
+        cardDiv.innerHTML = '<span class="attach-doc-badge" style="color:#EF4444;font-weight:700;">PDF</span> <span>' + escapeHtml(attachment.name) + ' (' + formatFileSize(attachment.size) + ')</span>';
+        bubble.appendChild(cardDiv);
+      }
+    }
+
+    if (text) {
+      const textSpan = document.createElement('div');
+      textSpan.textContent = text;
+      bubble.appendChild(textSpan);
+    }
 
     row.appendChild(bubble);
     feed.appendChild(row);
@@ -1087,8 +1488,7 @@
 
     const meta = document.createElement('div');
     meta.className = 'ai-meta';
-    const modeBadge = activeMode === 'google' ? 'GOOGLE AI' : (activeMode === 'duck' ? 'DUCK.AI' : 'CHATGPT FREE');
-    meta.innerHTML = '<span class="dot"></span><span>Kai AI &bull; ' + modeBadge + '</span>';
+    meta.innerHTML = '<span class="dot"></span><span>Kai AI &bull; NEURAL ENGINE</span>';
     row.appendChild(meta);
 
     const bubble = document.createElement('div');
@@ -1101,10 +1501,12 @@
     return bubble;
   }
 
+  // Subject Entity Extraction:
+  // Fixed regex [\s#*_\-] to prevent stripping leading letters A-Z
   function extractSubjectEntity(query) {
     let raw = (query || '').trim();
     let cleaned = raw
-      .replace(/^[#\s*-_]+/, '')
+      .replace(/^[\s#*_\-]+/, '')
       .replace(/^(can you\s+)?(please\s+)?(tell me\s+)?(what is|what's|who is|who's|where is|explain|describe|identify|how does|what are|define|meaning of)\s+(an?|the|this|that|these|those)?\s*/i, '')
       .replace(/\s*(mean|is this|is that|here)\??$/i, '')
       .replace(/[?!.]+$/, '')
@@ -1124,7 +1526,7 @@
       const fetchOpts = {
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Android; Mobile; KaiBrowser/1.6.4)'
+          'User-Agent': 'Mozilla/5.0 (Android; Mobile; KaiBrowser/1.6.8)'
         }
       };
 
@@ -1173,15 +1575,15 @@
     return null;
   }
 
-  // --- REAL-TIME NEURAL KNOWLEDGE & SEARCH SYNTHESIS ENGINE ---
-  async function synthesizeNeuralSearch(query, persona) {
-    const rawQ = (query || '').trim().replace(/^[.*?]\s*/, '');
+  // Real-Time Neural Knowledge & Search Synthesis Engine (Fixed leading character preservation)
+  async function synthesizeNeuralSearch(query) {
+    const rawQ = (query || '').trim();
     const subject = extractSubjectEntity(rawQ);
 
     if (!subject) {
       return {
         text: 'Hello! I am **Kai AI**, your personal intelligence assistant built into Kai Browser.\n\n' +
-              'How can I help you today? You can ask me any question in everyday language or ask for technical code, algorithms, and math!',
+              'How can I help you today? You can ask me any question in everyday language or ask for technical code, algorithms, math, or attach images and PDF documents to inspect!',
         reasoning: 'Conversational greeting recognized.'
       };
     }
@@ -1231,7 +1633,7 @@
         const res = Function('"use strict"; return (' + safeExpr + ')')();
         if (typeof res === 'number' && !isNaN(res) && isFinite(res)) {
           return {
-            text: '### Calculation Result\n\n`' + cleaned + '` = **' + res + '**',
+            text: '### Calculation Result\n\n\`' + cleaned + '\` = **' + res + '**',
             reasoning: 'Computed mathematically via deterministic calculation.'
           };
         }
@@ -1243,24 +1645,17 @@
   function checkGreeting(q) {
     const lower = (q || '').trim().toLowerCase().replace(/[\?\!\.]+$/, '');
     if (['hi', 'hello', 'hey', 'greetings', 'who are you', 'what are you', 'help', 'ping'].includes(lower)) {
-      const modeName = activeMode === 'google' ? 'Google AI' : (activeMode === 'duck' ? 'Duck.ai' : 'ChatGPT Free');
-      let modeDesc = '';
-      if (activeMode === 'google') {
-        modeDesc = '- **Google AI Mode**: Factually verified knowledge synthesis, deep explanations, and structured reasoning.\n';
-      } else if (activeMode === 'duck') {
-        modeDesc = '- **Duck.ai Mode**: 100% private, anonymous search and concise intelligence with zero tracking.\n';
-      } else {
-        modeDesc = '- **ChatGPT Free Mode**: Conversational intelligence, algorithmic coding with Big-O complexity, and creative synthesis.\n';
-      }
       return {
-        text: '### Welcome to ' + modeName + ' in Kai AI\n\n' +
-              'Hello! I am **Kai AI** operating in **' + modeName + '** mode.\n\n' +
-              modeDesc +
+        text: '### Welcome to Kai AI\n\n' +
+              'Hello! I am **Kai AI**, your personal intelligence assistant built into Kai Browser.\n\n' +
+              '- **Unified Intelligence**: Factually verified knowledge synthesis, deep reasoning, and clear explanations.\n' +
+              '- **Technical Mastery**: Full production-ready code generation with Big-O complexity analysis.\n' +
+              '- **Document & Image Understanding**: Attach images or PDF documents to inspect and analyze them.\n' +
               '- **Zero Tracking**: 100% ephemeral in-memory processing with no data collection or logs.\n' +
               '- **Zero Configuration**: Operates completely free out-of-the-box.\n' +
               '- **Dual Fluency**: Direct answers in natural everyday language or technical/machine precision.\n\n' +
               'How can I help you today?',
-        reasoning: 'Conversational greeting recognized for ' + modeName + ' mode.'
+        reasoning: 'Conversational greeting recognized.'
       };
     }
     return null;
@@ -1269,20 +1664,39 @@
   function retryLastPrompt() {
     if (!lastPromptState || isGenerating) return;
     input.value = lastPromptState.text || '';
+    if (lastPromptState.attachment) {
+      currentAttachment = lastPromptState.attachment;
+      if (currentAttachment.type === 'image' && attachPreviewImg) {
+        attachPreviewImg.src = currentAttachment.dataUrl;
+        attachPreviewImg.style.display = 'block';
+        if (attachDocIcon) attachDocIcon.style.display = 'none';
+      } else if (currentAttachment.type === 'pdf') {
+        if (attachPreviewImg) attachPreviewImg.style.display = 'none';
+        if (attachDocIcon) attachDocIcon.style.display = 'flex';
+      }
+      if (attachName) attachName.textContent = currentAttachment.name;
+      if (attachSize) attachSize.textContent = formatFileSize(currentAttachment.size);
+      if (attachTray) attachTray.style.display = 'flex';
+    }
     handleSend();
   }
 
   async function handleSend() {
     const text = input.value.trim();
-    if (!text || isGenerating) return;
+    const attachment = currentAttachment;
+
+    if (!text && !attachment) return;
+    if (isGenerating) return;
 
     // Cache state for 1-tap retry
-    lastPromptState = { text: text };
+    lastPromptState = { text: text, attachment: attachment };
 
     input.value = '';
     input.style.height = 'auto';
 
-    appendUserMessage(text);
+    clearAttachment();
+
+    appendUserMessage(text, attachment);
 
     isGenerating = true;
     sendBtn.classList.add('stop');
@@ -1298,31 +1712,62 @@
     }, 12000);
 
     try {
-      const sys = MODE_PROMPTS[activeMode] || MODE_PROMPTS.google;
+      let promptContent = text;
+      if (attachment && attachment.type === 'pdf') {
+        const docText = (attachment.extractedText || '').trim();
+        if (docText) {
+          promptContent = '[Attached PDF Document: ' + attachment.name + ']\n' +
+            '--- Document Content Excerpt ---\n' +
+            docText.substring(0, 16000) + '\n' +
+            '--- End Document Content Excerpt ---\n\n' +
+            (text ? 'User Question: ' + text : 'Please analyze and summarize the attached document, highlighting key points.');
+        } else {
+          promptContent = '[Attached PDF Document: ' + attachment.name + ' (' + formatFileSize(attachment.size) + ')]\n' +
+            (text ? 'User Question: ' + text : 'Please review this attached PDF document.');
+        }
+      }
+
+      let userMsgContent;
+      if (attachment && attachment.type === 'image' && attachment.dataUrl) {
+        userMsgContent = [
+          {
+            type: 'text',
+            text: text ? text : 'Analyze this image in detail. Identify what is shown, key features, colors, context, and provide a clear, accurate, natural description.'
+          },
+          {
+            type: 'image_url',
+            image_url: { url: attachment.dataUrl }
+          }
+        ];
+      } else {
+        userMsgContent = promptContent;
+      }
 
       // Frontier open-source neural inference architecture (openai-fast reasoning engine, zero-API-key open access)
       const textMessages = [
-        { role: 'system', content: sys }
+        { role: 'system', content: SYSTEM_PROMPT }
       ];
       chatHistory.forEach(item => {
         textMessages.push({ role: item.role, content: item.content });
       });
-      textMessages.push({ role: 'user', content: text });
+      textMessages.push({ role: 'user', content: userMsgContent });
 
       let responseText = '';
       let reasoningText = '';
       let generated = false;
 
       // 1. Instant deterministic Math evaluation (0ms)
-      const mathRes = checkMathQuery(text);
-      if (mathRes) {
-        responseText = mathRes.text;
-        reasoningText = mathRes.reasoning;
-        generated = true;
+      if (!attachment && text) {
+        const mathRes = checkMathQuery(text);
+        if (mathRes) {
+          responseText = mathRes.text;
+          reasoningText = mathRes.reasoning;
+          generated = true;
+        }
       }
 
       // 2. Instant Conversational Greeting (0ms)
-      if (!generated) {
+      if (!generated && !attachment && text) {
         const greetRes = checkGreeting(text);
         if (greetRes) {
           responseText = greetRes.text;
@@ -1331,12 +1776,12 @@
         }
       }
 
-      // 3. Real-Time Verified Encyclopedic Knowledge Search (preferred for Google AI and Duck.ai modes, < 0.5s)
-      if (!generated && (activeMode === 'google' || activeMode === 'duck')) {
-        const synth = await synthesizeNeuralSearch(text, activeMode);
+      // 3. Real-Time Verified Encyclopedic Knowledge Search (< 0.5s)
+      if (!generated && !attachment && text) {
+        const synth = await synthesizeNeuralSearch(text);
         if (synth && synth.text) {
           responseText = synth.text;
-          reasoningText = synth.reasoning || ('Synthesized in real-time via ' + (activeMode === 'google' ? 'Google AI' : 'Duck.ai') + ' Knowledge Engine.');
+          reasoningText = synth.reasoning || 'Synthesized in real-time via Kai Neural Knowledge Engine.';
           generated = true;
         }
       }
@@ -1345,7 +1790,7 @@
       if (!generated) {
         try {
           const pollAbort = new AbortController();
-          const pollTimer = setTimeout(() => pollAbort.abort('timeout'), 4500);
+          const pollTimer = setTimeout(() => pollAbort.abort('timeout'), 5000);
           const pollResp = await fetch('https://text.pollinations.ai/openai/chat/completions', {
             method: 'POST',
             headers: {
@@ -1366,7 +1811,7 @@
               const resContent = choice.message.content.trim();
               if (!resContent.includes('reached its budget') && !resContent.includes('raise the key budget') && resContent.length > 0) {
                 responseText = resContent;
-                reasoningText = choice.message.reasoning || ('Processed through ' + (activeMode === 'chatgpt' ? 'ChatGPT Free' : (activeMode === 'google' ? 'Google AI' : 'Duck.ai')) + ' Intelligence.');
+                reasoningText = choice.message.reasoning || 'Processed through Kai Neural Intelligence.';
                 generated = true;
               }
             }
@@ -1375,12 +1820,12 @@
       }
 
       // 4b. High-Speed Direct Stream Inference (Fast GET Fallback with zero-API-key)
-      if (!generated) {
+      if (!generated && (!attachment || attachment.type !== 'image')) {
         try {
           const getAbort = new AbortController();
-          const getTimer = setTimeout(() => getAbort.abort('timeout'), 3500);
-          const getUrl = 'https://text.pollinations.ai/' + encodeURIComponent(text) +
-            '?model=openai-fast&system=' + encodeURIComponent(sys);
+          const getTimer = setTimeout(() => getAbort.abort('timeout'), 4000);
+          const getUrl = 'https://text.pollinations.ai/' + encodeURIComponent(promptContent) +
+            '?model=openai-fast&system=' + encodeURIComponent(SYSTEM_PROMPT);
           const getResp = await fetch(getUrl, { signal: getAbort.signal });
           clearTimeout(getTimer);
           if (getResp.ok) {
@@ -1396,19 +1841,33 @@
 
       // 5. Fallback Knowledge Engine (if model timed out or offline)
       if (!responseText) {
-        const fallbackSynth = await synthesizeNeuralSearch(text, activeMode);
-        if (fallbackSynth && fallbackSynth.text) {
-          responseText = fallbackSynth.text;
-          reasoningText = fallbackSynth.reasoning;
+        if (attachment && attachment.type === 'image') {
+          responseText = '### Image Analysis\n\n' +
+            'Attached image: **' + escapeHtml(attachment.name) + '** (' + formatFileSize(attachment.size) + ').\n\n' +
+            (text ? '**Question**: ' + escapeHtml(text) + '\n\n' : '') +
+            'The image has been processed into memory. If network access to the remote neural engine is limited, verify your internet connection to receive full multimodal vision descriptions.';
+          reasoningText = 'Visual document processed locally in-memory.';
+        } else if (attachment && attachment.type === 'pdf') {
+          const docPreview = (attachment.extractedText || '').substring(0, 500);
+          responseText = '### PDF Document Analysis\n\n' +
+            'Document: **' + escapeHtml(attachment.name) + '** (' + formatFileSize(attachment.size) + ')\n\n' +
+            (docPreview ? '**Document Content Preview**:\n> ' + escapeHtml(docPreview) + '\n\n' : '') +
+            (text ? '**User Inquiry**: ' + escapeHtml(text) + '\n\n' : '') +
+            'The document text was parsed in-memory. Ask any specific question about its contents!';
+          reasoningText = 'Extracted in-memory via Kai PDF Engine.';
         } else {
-          responseText = '### Kai AI Response\n\nI have processed your prompt: **' + text + '**. How would you like me to elaborate?';
+          const fallbackSynth = await synthesizeNeuralSearch(text);
+          if (fallbackSynth && fallbackSynth.text) {
+            responseText = fallbackSynth.text;
+            reasoningText = fallbackSynth.reasoning;
+          } else {
+            responseText = '### Kai AI Response\n\nI have processed your prompt: **' + text + '**. How would you like me to elaborate?';
+          }
         }
       }
 
-      // Clear watchdog timer
       if (watchdogTimer) clearTimeout(watchdogTimer);
 
-      // Render response
       let bubbleHtml = '';
       if (reasoningText && reasoningText.trim()) {
         bubbleHtml += '<details class="thought-process"><summary>&#129504; View Reasoning Process</summary><div class="reasoning-text">' +
@@ -1422,7 +1881,8 @@
       aiBubble.innerHTML = bubbleHtml;
 
       // Update conversational history (keep last 8 turns)
-      chatHistory.push({ role: 'user', content: text });
+      const histUserText = text || (attachment ? ('[Attached ' + (attachment.type === 'pdf' ? 'PDF' : 'Image') + ': ' + attachment.name + ']') : '');
+      chatHistory.push({ role: 'user', content: histUserText });
       chatHistory.push({ role: 'assistant', content: responseText.trim() });
       if (chatHistory.length > 8) {
         chatHistory = chatHistory.slice(chatHistory.length - 8);
@@ -1435,7 +1895,7 @@
         aiBubble.innerHTML = '<em>Generation stopped.</em>';
       } else {
         try {
-          const emergencySynth = await synthesizeNeuralSearch(text, activePersona);
+          const emergencySynth = await synthesizeNeuralSearch(text);
           if (emergencySynth && emergencySynth.text) {
             aiBubble.innerHTML = '<div class="ai-content">' + formatMarkdown(emergencySynth.text) + '</div>' +
               '<div class="ai-actions"><button class="action-pill-btn" onclick="copyBubbleText(this)">Copy Answer</button></div>';
@@ -1465,6 +1925,9 @@
   window.copySnippet = copySnippet;
   window.copyBubbleText = copyBubbleText;
   window.retryLastPrompt = retryLastPrompt;
+  window.handleFileSelect = handleFileSelect;
+  window.clearAttachment = clearAttachment;
+  window.extractPdfText = extractPdfText;
 
   // Handle URL query parameters (e.g., https://kai.ai/?q=my+prompt)
   function checkUrlQuery() {

@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.6.7", BuildConfig.VERSION_NAME)
-    assertEquals(40, BuildConfig.VERSION_CODE)
+    assertEquals("1.6.8", BuildConfig.VERSION_NAME)
+    assertEquals(41, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -162,7 +162,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.6.7").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.6.8").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -365,13 +365,19 @@ class ExampleRobolectricTest {
     val cleanedUrl = com.example.security.UrlValidator.stripTrackingParams("https://example.com/shop?fbclid=123&gbraid=456&item=shoes")
     assertEquals("https://example.com/shop?item=shoes", cleanedUrl)
 
-    // Built-in KaiAiApp verification with attachments, voice mic, and camera removed; pure conversational & technical chat interface with ChatGPT fonts
+    // Built-in KaiAiApp verification with attachments supported, voice mic removed; pure conversational & technical chat interface with ChatGPT fonts
     val context = ApplicationProvider.getApplicationContext<Context>()
     val html = com.example.ui.ai.KaiAiApp.getHtmlText(context)
     assertTrue(html.contains("Kai AI"))
     assertTrue(html.contains("Anonymous AI Workspace"))
     assertFalse(html.contains("100% Anonymous"))
-    assertFalse(html.contains("attach-btn"))
+    assertTrue(html.contains("attach-btn"))
+    assertTrue(html.contains("file-input"))
+    assertTrue(html.contains("attach-tray"))
+    assertFalse(html.contains("id=\"mode-google-btn\""))
+    assertFalse(html.contains("id=\"mode-duck-btn\""))
+    assertFalse(html.contains("id=\"mode-chatgpt-btn\""))
+    assertFalse(html.contains("id=\"ai-mode-selector\""))
     assertFalse(html.contains("camera-btn"))
     assertFalse(html.contains("camera-modal"))
     assertFalse(html.contains("shutter-btn"))
@@ -451,21 +457,34 @@ class ExampleRobolectricTest {
     bridge.cancel()
     bridge.cleanup()
 
-    // 2. Verify kai.html has completely removed attachments, voice mic options, and unneeded parsers
+    // 2. Verify kai.html supports Image and PDF attachments while voice mic options and unneeded heavy parsers remain removed
     val html = com.example.ui.ai.KaiAiApp.getHtmlText(context)
 
-    // Verify attachments are completely removed
-    assertFalse(html.contains("id=\"attach-btn\""))
-    assertFalse(html.contains("id=\"file-input\""))
-    assertFalse(html.contains("id=\"attach-tray\""))
-    assertFalse(html.contains("id=\"attach-preview-img\""))
+    // Verify attachments UI and processing are present for Image and PDF
+    assertTrue(html.contains("id=\"attach-btn\""))
+    assertTrue(html.contains("id=\"file-input\""))
+    assertTrue(html.contains("id=\"attach-tray\""))
+    assertTrue(html.contains("id=\"attach-preview-img\""))
+    assertTrue(html.contains("extractPdfText"))
+    assertTrue(html.contains("handleFileSelect"))
+    assertTrue(html.contains("clearAttachment"))
+
+    // Verify unneeded complex heavy parsers remain removed
     assertFalse(html.contains("parsePresentationFile"))
     assertFalse(html.contains("extractPptxSlides"))
     assertFalse(html.contains("extractBinaryPptText"))
-    assertFalse(html.contains("parsePdfFile"))
-    assertFalse(html.contains("decompressPdfFlate"))
     assertFalse(html.contains("parseAudioFile"))
     assertFalse(html.contains("extractAudioMetadata"))
+
+    // Verify first-letter stripping regex bug (*-_) is fixed
+    assertFalse(html.contains("*-_"))
+    assertTrue(html.contains("extractSubjectEntity"))
+
+    // Verify mode selector buttons are removed from UI so model names are undisclosed to users
+    assertFalse(html.contains("id=\"mode-google-btn\""))
+    assertFalse(html.contains("id=\"mode-duck-btn\""))
+    assertFalse(html.contains("id=\"mode-chatgpt-btn\""))
+    assertFalse(html.contains("id=\"ai-mode-selector\""))
 
     // Verify voice mic options are completely removed
     assertFalse(html.contains("id=\"mic-btn\""))
@@ -543,17 +562,17 @@ class ExampleRobolectricTest {
     // 3. Verify robust URL query parameter handling with readyState check
     assertTrue(scriptContent.contains("document.readyState === 'loading'"))
 
-    // 4. Verify all critical UI elements exist in DOM (with attachments, voice mic, and API key options removed)
+    // 4. Verify all critical UI elements exist in DOM (with attachments present, voice mic, and model selector buttons removed)
     val expectedIds = listOf(
       "prompt-input", "send-btn", "chat-feed", "empty-state",
       "new-chat-btn", "theme-toggle-btn",
-      "mode-google-btn", "mode-duck-btn", "mode-chatgpt-btn"
+      "attach-btn", "file-input", "attach-tray"
     )
     for (id in expectedIds) {
       assertTrue("HTML must contain element id='$id'", html.contains("id=\"$id\""))
     }
     val removedIds = listOf(
-      "attach-btn", "file-input", "attach-tray", "attach-preview-img",
+      "mode-google-btn", "mode-duck-btn", "mode-chatgpt-btn", "ai-mode-selector",
       "mic-btn", "voice-banner", "voice-status", "voice-wave", "voice-done-btn", "voice-cancel-btn",
       "key-settings-btn", "user-api-key-input", "camera-btn", "camera-modal", "shutter-btn"
     )
