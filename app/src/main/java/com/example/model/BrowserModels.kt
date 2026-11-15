@@ -148,7 +148,8 @@ data class PendingDownloadConsent(
   val mimeType: String,
   val contentLengthBytes: Long,
   val isHttps: Boolean,
-  val isPrivateTab: Boolean
+  val isPrivateTab: Boolean,
+  val isRiskyFileType: Boolean = false
 )
 
 data class DownloadRecord(

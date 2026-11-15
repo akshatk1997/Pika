@@ -1079,6 +1079,13 @@ fun BrowserScreen(
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth()
           )
+          if (req.isRiskyFileType) {
+            Text(
+              text = "Warning: This file type may contain executable code. Only download if you completely trust this source.",
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.error
+            )
+          }
           if (!req.isHttps) {
             Text(
               text = "Unencrypted HTTP download",

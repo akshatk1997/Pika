@@ -58,6 +58,7 @@ class DownloadController(
     val safeName = UrlValidator.sanitizeFilename(guessedName)
     val cleanMime = sanitizeMimeType(mimeType)
     val host = UrlValidator.extractHost(url).ifEmpty { "unknown" }
+    val isRisky = isRiskyFileType(safeName, cleanMime)
     _pendingConsent.value = PendingDownloadConsent(
       id = UUID.randomUUID().toString(),
       url = url,
@@ -66,7 +67,8 @@ class DownloadController(
       mimeType = cleanMime,
       contentLengthBytes = contentLength,
       isHttps = UrlValidator.isHttpsUrl(url),
-      isPrivateTab = isPrivateTab
+      isPrivateTab = isPrivateTab,
+      isRiskyFileType = isRisky
     )
   }
 
@@ -323,6 +325,25 @@ class DownloadController(
   }
 
   companion object {
+    private val riskyExtensions = setOf(
+      "apk", "dex", "exe", "bat", "cmd", "msi", "vbs", "sh", "jar", "scr", "deb", "rpm", "bin", "elf"
+    )
+    private val riskyMimeTypes = setOf(
+      "application/vnd.android.package-archive",
+      "application/x-msdownload",
+      "application/x-msdos-program",
+      "application/x-executable",
+      "application/x-sh",
+      "application/x-shellscript"
+    )
+
+    fun isRiskyFileType(fileName: String, mimeType: String?): Boolean {
+      val ext = fileName.substringAfterLast('.', "").lowercase()
+      if (ext in riskyExtensions) return true
+      val cleanMime = sanitizeMimeType(mimeType)
+      return cleanMime in riskyMimeTypes
+    }
+
     fun sanitizeMimeType(rawMime: String?): String {
       val clean = rawMime?.substringBefore(';')?.trim()?.lowercase()
       return if (clean.isNullOrBlank() || !clean.contains('/')) "application/octet-stream" else clean

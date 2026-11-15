@@ -176,4 +176,14 @@ class FeatherSecurityAndDataTest {
     assertNull(parsed.selector)
     assertTrue(parsed.hasCategory(android.content.Intent.CATEGORY_BROWSABLE))
   }
+
+  @Test
+  fun detectsRiskyExecutableDownloadTypes() {
+    assertTrue(DownloadController.isRiskyFileType("malicious.apk", "application/vnd.android.package-archive"))
+    assertTrue(DownloadController.isRiskyFileType("payload.exe", "application/octet-stream"))
+    assertTrue(DownloadController.isRiskyFileType("script.sh", "text/plain"))
+    assertTrue(DownloadController.isRiskyFileType("archive.bin", "application/x-executable"))
+    assertFalse(DownloadController.isRiskyFileType("photo.jpg", "image/jpeg"))
+    assertFalse(DownloadController.isRiskyFileType("document.pdf", "application/pdf"))
+  }
 }
