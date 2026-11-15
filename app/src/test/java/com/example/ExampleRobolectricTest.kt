@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.6.1", BuildConfig.VERSION_NAME)
-    assertEquals(34, BuildConfig.VERSION_CODE)
+    assertEquals("1.6.2", BuildConfig.VERSION_NAME)
+    assertEquals(35, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -162,7 +162,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.6.1").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.6.2").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -494,6 +494,13 @@ class ExampleRobolectricTest {
     assertTrue(html.contains("PowerPoint Presentations (.ppt, .pptx)"))
     assertTrue(html.contains("PDF Documents (.pdf)"))
     assertTrue(html.contains("Audio Files (.mp3, .wav, .m4a, .ogg, .aac)"))
+
+    // Multimodal analytical synthesizers & visual details engine
+    assertTrue(html.contains("analyzeImageVisualDetails"))
+    assertTrue(html.contains("synthesizePresentationAnalysis"))
+    assertTrue(html.contains("synthesizePdfAnalysis"))
+    assertTrue(html.contains("synthesizeVisualMediaAnalysis"))
+    assertTrue(html.contains("synthesizeAudioAnalysis"))
 
     // File input accept attribute includes all requested formats
     assertTrue(html.contains("accept=\"image/*,video/*,audio/*,.pdf,.ppt,.pptx,.mp3,.wav,.m4a,.ogg,.aac,.flac"))

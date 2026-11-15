@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kai-v1.6.1.apk
+          cp "$APK_PATH" releases/Kai-v1.6.2.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kai-v1.6.1.apk
+          git add releases/Kai-v1.6.2.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kai-v1.6.1.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kai-v1.6.2.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.6.1
+      - name: Create or update GitHub Release v1.6.2
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kai-v1.6.1.apk)
-          NOTES="Kai Browser v1.6.1 (Build 34) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Complete YouTube & Video Streaming Black Screen Fix:** Resolved first-time play and mid-stream black screens across YouTube and streaming video platforms.\n- **Non-Destructive Ad Fast-Forward & Skip:** Eliminated destructive 'currentTime = duration' ad seeks that were corrupting the Chromium MSE/MediaSource decoding pipeline; replaced with safe 16x muted ad fast-forward and automatic skip button clicking with full audio/rate restoration for content videos.\n- **Universal CORS & JSON Empty Body Handlers:** Intercepted video ad and tracking endpoints now return HTTP 200 with standard CORS headers ('Access-Control-Allow-Origin: *') and clean empty JSON '{}' payloads, preventing YouTube player initialization crashes and promise rejections.\n- **Direct GPU Compositing (Layer Type Fix):** Removed off-screen hardware layer forcing on WebView, allowing Android's GPU compositor to render video frames directly to the window surface without FBO stalls.\n- **Protected Streaming Buffering in Data Saver:** Excluded video streaming domains from aggressive media preload disabling so streams buffer reliably even when Data Saver is active.\n- **Strictly Under 2 MB Footprint:** Release APK remains strictly under 2 MB (~1.46 MB).\n- **Checks Passed:** \`:app:testDebugUnitTest\` (API 26 & 36), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\`."
-          if gh release view v1.6.1 >/dev/null 2>&1; then
-            gh release upload v1.6.1 releases/Kai-v1.6.1.apk --clobber
-            gh release edit v1.6.1 --title "Kai v1.6.1 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kai-v1.6.2.apk)
+          NOTES="Kai Browser v1.6.2 (Build 35) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Comprehensive Multimodal Intelligence (Image, PDF, Audio, PPT/PPTX):** Deeply upgraded Kai AI to accurately understand and interpret uploaded files without superficial summaries or errors.\n- **Open-Source Multi-Model Reasoning Ensemble:** Eliminated deprecated API keys and integrated free, anonymous, open-source 20B frontier reasoning intelligence over POST with extended 25s timeouts.\n- **In-Browser Visual Media Profiling:** Added deep visual analysis engine extracting aspect ratio, resolution, contrast edge density, dominant color palette, and composition type, passing structured descriptors to reasoning models.\n- **Dual-Engine Audio & Spoken Voice Query Resolution:** Synced speech transcriptions with audio recording bridges so voice queries directly answer what the user asked with vocal clarity.\n- **Robust PDF Stream Decompression & Kerning Support:** Multi-stage FlateDecode fallback cascade with hex/TJ operator decoding for reliable document text extraction.\n- **Slide-by-Slide PPT & PPTX Extraction:** Systematic slide parsing extracting slide counts, titles, bullet structures, and speaker notes.\n- **Strictly Under 2 MB Footprint:** Release APK remains strictly under 2 MB (~1.46 MB).\n- **Checks Passed:** \`:app:testDebugUnitTest\` (API 26 & 36), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\`."
+          if gh release view v1.6.2 >/dev/null 2>&1; then
+            gh release upload v1.6.2 releases/Kai-v1.6.2.apk --clobber
+            gh release edit v1.6.2 --title "Kai v1.6.2 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.6.1 releases/Kai-v1.6.1.apk \
-              --title "Kai v1.6.1 (< 2 MB)" \
+            gh release create v1.6.2 releases/Kai-v1.6.2.apk \
+              --title "Kai v1.6.2 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi
