@@ -1605,12 +1605,32 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     val prompt = _externalLinkPrompt.value ?: return
     _externalLinkPrompt.value = null
     try {
-      val intent = Intent(Intent.ACTION_VIEW, Uri.parse(prompt.url)).apply {
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+      val intent = if (prompt.url.startsWith("intent:", ignoreCase = true)) {
+        Intent.parseUri(prompt.url, Intent.URI_INTENT_SCHEME).apply {
+          addCategory(Intent.CATEGORY_BROWSABLE)
+          component = null
+          selector = null
+        }
+      } else {
+        Intent(Intent.ACTION_VIEW, Uri.parse(prompt.url)).apply {
+          addCategory(Intent.CATEGORY_BROWSABLE)
+        }
       }
-      appContext.startActivity(intent)
+      intent.flags = (intent.flags and (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION).inv()) or
+        Intent.FLAG_ACTIVITY_NEW_TASK
+
+      try {
+        appContext.startActivity(intent)
+      } catch (_: Exception) {
+        val fallbackUrl = intent.getStringExtra("browser_fallback_url")
+        if (!fallbackUrl.isNullOrBlank() && UrlValidator.isSafeWebUrl(fallbackUrl)) {
+          openNewTab(isPrivate = activeTab().isPrivate, initialUrl = fallbackUrl)
+        } else {
+          showToast("No app available for ${prompt.scheme}:")
+        }
+      }
     } catch (_: Throwable) {
-      showToast("No app for ${prompt.scheme}:")
+      showToast("Invalid link (${prompt.scheme}:)")
     }
   }
 
