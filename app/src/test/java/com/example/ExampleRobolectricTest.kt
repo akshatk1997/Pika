@@ -27,6 +27,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [26, 36])
@@ -672,9 +673,14 @@ class ExampleRobolectricTest {
 
   @Test
   fun streamingVideoScriptAndCorsResponsesPreventBlackScreens() {
-    val webViewPoolFile = File("../app/src/main/java/com/example/webview/WebViewPool.kt")
-      .takeIf { it.exists() } ?: File("src/main/java/com/example/webview/WebViewPool.kt")
-    val content = webViewPoolFile.readText()
+    val candidates = listOf(
+      File("src/main/java/com/example/webview/WebViewPool.kt"),
+      File("app/src/main/java/com/example/webview/WebViewPool.kt"),
+      File("../app/src/main/java/com/example/webview/WebViewPool.kt")
+    )
+    val webViewPoolFile = candidates.firstOrNull { it.exists() }
+    assertNotNull("WebViewPool.kt should be found", webViewPoolFile)
+    val content = webViewPoolFile!!.readText()
 
     // Assert that destructive currentTime seeks are eliminated
     assertFalse("Should not force currentTime to duration as it causes black screens", content.contains("v.currentTime = v.duration"))
