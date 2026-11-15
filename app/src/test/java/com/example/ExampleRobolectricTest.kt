@@ -421,8 +421,7 @@ class ExampleRobolectricTest {
 
   @Test
   fun kaiAiDomainAndInferenceEndpointsNotExemptFromTrackerBlocking() {
-    val context = ApplicationProvider.getApplicationContext<Context>()
-    val pool = com.example.webview.WebViewPool(context, { com.example.model.SettingsState() }, object : com.example.webview.WebViewCallbacks {})
+    val pool = composeTestRule.activity.viewModel.webViewPool
     val webView = pool.getOrCreateWebView("tab_cleanup", false, com.example.model.UserAgentMode.MOBILE, emptySet())!!
     
     // Simulate request to kai.ai - should not be intercepted as special local HTML
