@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.7.1", BuildConfig.VERSION_NAME)
-    assertEquals(44, BuildConfig.VERSION_CODE)
+    assertEquals("1.7.2", BuildConfig.VERSION_NAME)
+    assertEquals(45, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -162,7 +162,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.7.1").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.7.2").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -375,10 +375,10 @@ class ExampleRobolectricTest {
     assertFalse(html.contains("camera-btn"))
     assertFalse(html.contains("camera-modal"))
     assertFalse(html.contains("shutter-btn"))
-    assertTrue(html.contains("mic-btn"))
+    assertFalse(html.contains("id=\"mic-btn\""))
     assertTrue(html.contains("image_url"))
     assertTrue(html.contains("extractVideoKeyframes"))
-    assertTrue(html.contains("SpeechRecognition"))
+    assertFalse(html.contains("SpeechRecognition"))
     assertTrue(html.contains("gemini-3.5-flash-lite"))
     assertTrue(html.contains("thought-process"))
     assertTrue(html.contains("Söhne"))
@@ -444,12 +444,20 @@ class ExampleRobolectricTest {
 
     // 2. Verify kai.html includes all required multimodal and voice elements
     val html = com.example.ui.ai.KaiAiApp.getHtmlText(context)
-    // Voice mic integration
-    assertTrue(html.contains("KaiVoice"))
+    // Voice mic removal verification & dormant bridge compatibility
+    assertFalse(html.contains("id=\"mic-btn\""))
+    assertFalse(html.contains("id=\"voice-banner\""))
     assertTrue(html.contains("__kaiVoiceOnStart"))
     assertTrue(html.contains("__kaiVoiceOnResult"))
     assertTrue(html.contains("__kaiVoiceOnError"))
     assertTrue(html.contains("__kaiVoiceOnEnd"))
+
+    // Preserved model tier and search synthesis verification
+    assertTrue(html.contains("gemini-3.5-flash-lite"))
+    assertTrue(html.contains("gemini-3.8-flash"))
+    assertTrue(html.contains("openai-fast"))
+    assertTrue(html.contains("fetchSearchKnowledge"))
+    assertTrue(html.contains("synthesizeSearchResponse"))
 
     // PPT & PPTX presentation analysis
     assertTrue(html.contains("parsePresentationFile"))

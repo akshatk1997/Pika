@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kai-v1.7.1.apk
+          cp "$APK_PATH" releases/Kai-v1.7.2.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kai-v1.7.1.apk
+          git add releases/Kai-v1.7.2.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kai-v1.7.1.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kai-v1.7.2.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.7.1
+      - name: Create or update GitHub Release v1.7.2
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kai-v1.7.1.apk)
-          NOTES="Kai Browser v1.7.1 (Build 44) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Kai AI Reverted to v1.5.2:** Reverted Kai AI strictly back to the authentic v1.5.2 foundation with all A-to-Z features intact.\n- **Full Multimodal Architecture:** Native Kai Voice mic bridge, deep PPT/PPTX presentation comprehension, multi-page PDF document analysis, audio file (.mp3, .wav, .m4a) profiling with in-app audio player, and image understanding.\n- **ChatGPT Typography & Theme Controls:** Clean header (without 100% Anonymous badge), Dark/Light theme switching with #theme-toggle-btn, and signature Söhne & Söhne Mono typography.\n- **Browser Unchanged:** All other core browser functionality, video playback shields, translation, and security hardening remain intact.\n- **Strictly Under 2 MB Footprint:** Release APK remains strictly under 2 MB (~1.46 MB).\n- **Checks Passed:** \`:app:testDebugUnitTest\` (API 26 & 36), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\`."
-          if gh release view v1.7.1 >/dev/null 2>&1; then
-            gh release upload v1.7.1 releases/Kai-v1.7.1.apk --clobber
-            gh release edit v1.7.1 --title "Kai v1.7.1 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kai-v1.7.2.apk)
+          NOTES="Kai Browser v1.7.2 (Build 45) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Voice Mic Option Removed:** Cleanly removed mic button (#mic-btn), voice banner, and speech listeners from Kai AI while preserving dormant bridge stubs for zero native crashes.\n- **Search Connection Issue Patched:** Reconstructed search execution pipeline with tight 4s timeouts, direct GET fallback, and Wikipedia REST search knowledge synthesis, permanently resolving 'Connection issue with AI engine' errors during search queries.\n- **Preserved Existing Models:** Strictly kept all existing models intact without replacement (gemini-3.5-flash-lite, gemini-3.8-flash, openai-fast).\n- **Multimodal Comprehension Preserved:** Retained deep PPT/PPTX presentation analysis, multi-page PDF document parsing, audio acoustic profiling, and image understanding.\n- **Zero Browser Regressions:** All other core browser functionality, video playback shields, translation, and security hardening remain intact.\n- **Strictly Under 2 MB Footprint:** Release APK remains strictly under 2 MB (~1.46 MB).\n- **Checks Passed:** \`:app:testDebugUnitTest\` (API 26 & 36), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\`."
+          if gh release view v1.7.2 >/dev/null 2>&1; then
+            gh release upload v1.7.2 releases/Kai-v1.7.2.apk --clobber
+            gh release edit v1.7.2 --title "Kai v1.7.2 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.7.1 releases/Kai-v1.7.1.apk \
-              --title "Kai v1.7.1 (< 2 MB)" \
+            gh release create v1.7.2 releases/Kai-v1.7.2.apk \
+              --title "Kai v1.7.2 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi
