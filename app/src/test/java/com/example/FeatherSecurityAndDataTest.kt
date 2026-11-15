@@ -165,19 +165,6 @@ class FeatherSecurityAndDataTest {
   }
 
   @Test
-  fun intentUriSanitizationEnforcesBrowsableCategoryAndNullsComponent() {
-    val rawIntentUri = "intent:#Intent;action=android.intent.action.VIEW;component=com.example/.UnexportedActivity;category=android.intent.category.DEFAULT;end"
-    val parsed = android.content.Intent.parseUri(rawIntentUri, android.content.Intent.URI_INTENT_SCHEME).apply {
-      addCategory(android.content.Intent.CATEGORY_BROWSABLE)
-      component = null
-      selector = null
-    }
-    assertNull(parsed.component)
-    assertNull(parsed.selector)
-    assertTrue(parsed.hasCategory(android.content.Intent.CATEGORY_BROWSABLE))
-  }
-
-  @Test
   fun detectsRiskyExecutableDownloadTypes() {
     assertTrue(DownloadController.isRiskyFileType("malicious.apk", "application/vnd.android.package-archive"))
     assertTrue(DownloadController.isRiskyFileType("payload.exe", "application/octet-stream"))

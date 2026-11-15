@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.7.3", BuildConfig.VERSION_NAME)
-    assertEquals(46, BuildConfig.VERSION_CODE)
+    assertEquals("1.7.4", BuildConfig.VERSION_NAME)
+    assertEquals(47, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -162,7 +162,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.7.3").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.7.4").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -555,5 +555,18 @@ class ExampleRobolectricTest {
     assertTrue(content.contains("emptyBlockedJsonResponse"))
     // Assert .ytp-ad-module is not hidden via CSS to prevent player breakages
     assertFalse(content.contains("'.ytp-ad-module'"))
+  }
+
+  @Test
+  fun intentUriSanitizationEnforcesBrowsableCategoryAndNullsComponent() {
+    val rawIntentUri = "intent:#Intent;action=android.intent.action.VIEW;component=com.example/.UnexportedActivity;category=android.intent.category.DEFAULT;end"
+    val parsed = android.content.Intent.parseUri(rawIntentUri, android.content.Intent.URI_INTENT_SCHEME).apply {
+      addCategory(android.content.Intent.CATEGORY_BROWSABLE)
+      component = null
+      selector = null
+    }
+    assertNull(parsed.component)
+    assertNull(parsed.selector)
+    assertTrue(parsed.hasCategory(android.content.Intent.CATEGORY_BROWSABLE))
   }
 }

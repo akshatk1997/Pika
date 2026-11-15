@@ -98,9 +98,10 @@ object PageAssistantEngine {
 
     for (sentence in sentences) {
       val lowerS = sentence.lowercase()
+      val sentenceTokens = lowerS.split(Regex("""\W+""")).toSet()
       var matchCount = 0
       for (term in queryTerms) {
-        if (lowerS.contains(term)) {
+        if (sentenceTokens.contains(term)) {
           matchCount++
         }
       }
@@ -149,7 +150,15 @@ object PageAssistantEngine {
   }
 
   private val commonStopwords = setOf(
-    "this", "that", "with", "from", "have", "were", "they", "will", "what", "when",
-    "where", "which", "there", "their", "about", "could", "would", "should", "your"
+    "a", "an", "the", "and", "or", "but", "if", "because", "as", "what",
+    "which", "this", "that", "these", "those", "then", "just", "so", "than",
+    "such", "both", "through", "about", "for", "is", "of", "while", "during",
+    "to", "from", "in", "out", "on", "off", "again", "further", "once",
+    "here", "there", "when", "where", "why", "how", "all", "any",
+    "each", "few", "more", "most", "other", "some", "no", "nor", "not",
+    "only", "own", "same", "too", "very", "can", "will", "don", "should", "now",
+    "have", "has", "had", "having", "do", "does", "did", "doing", "would", "could",
+    "they", "them", "their", "theirs", "themselves", "who", "whom", "am",
+    "are", "was", "were", "be", "been", "being", "your", "yours", "yourself", "yourselves"
   )
 }
