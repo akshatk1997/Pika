@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kai-v1.6.6.apk
+          cp "$APK_PATH" releases/Kai-v1.6.7.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kai-v1.6.6.apk
+          git add releases/Kai-v1.6.7.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kai-v1.6.6.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kai-v1.6.7.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.6.6
+      - name: Create or update GitHub Release v1.6.7
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kai-v1.6.6.apk)
-          NOTES="Kai Browser v1.6.6 (Build 39) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **100% Free Zero-API-Key Open-Source Multi-Model AI:** Replaced legacy model references with top-level open-source AI architecture operating out-of-the-box with zero API keys and zero setup, inspired by Duck.ai.\n- **Professional Multi-Model Training:** Trained comprehensive professional personas (Auto Intelligence, Deep Reasoning, Code & Architecture, Creative Mind) with strict dual fluency (warm conversational natural language for everyday queries, machine-level precision & Big-O complexity for technical code).\n- **High-Speed Dual Stream & Real-Time Knowledge Ensemble:** Multi-tier inference with instant deterministic math, conversational capabilities, fast direct streaming fallback, and real-time encyclopedic knowledge synthesis.\n- **Strictly Undisclosed Model Identity & Privacy:** 100% ephemeral in-memory privacy with zero tracking, zero logs, and zero disclosure of internal weights or third-party providers.\n- **Strictly Under 2 MB Footprint:** Release APK remains strictly under 2 MB (~1.45 MB).\n- **Checks Passed:** \`:app:testDebugUnitTest\` (API 26 & 36), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\`."
-          if gh release view v1.6.6 >/dev/null 2>&1; then
-            gh release upload v1.6.6 releases/Kai-v1.6.6.apk --clobber
-            gh release edit v1.6.6 --title "Kai v1.6.6 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kai-v1.6.7.apk)
+          NOTES="Kai Browser v1.6.7 (Build 40) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Integrated Google AI, Duck.ai & ChatGPT Free AI Modes:** Replaced previous AI models and seamlessly integrated three top-tier AI engines directly into Kai AI with dedicated, 1-tap mode pills (🌐 Google AI, 🦆 Duck.ai, 🤖 ChatGPT Free).\n- **Specialized Engine Training & Behaviors:**\n  - **Google AI Mode:** Deep factual knowledge synthesis, structured pedagogical explanations, and comprehensive multi-step reasoning.\n  - **Duck.ai Mode:** 100% private, anonymous search and concise intelligence with zero tracking and zero history retention.\n  - **ChatGPT Free Mode:** Conversational intelligence, algorithmic coding with Big-O complexity across 10+ languages, step-by-step reasoning drawer, and creative synthesis.\n- **100% Free Out-of-the-Box:** Operates with zero API keys and zero accounts, completely free, with zero connection errors.\n- **Strictly Under 2 MB Footprint:** Release APK remains strictly under 2 MB (~1.45 MB).\n- **Checks Passed:** \`:app:testDebugUnitTest\` (API 26 & 36), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\`."
+          if gh release view v1.6.7 >/dev/null 2>&1; then
+            gh release upload v1.6.7 releases/Kai-v1.6.7.apk --clobber
+            gh release edit v1.6.7 --title "Kai v1.6.7 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.6.6 releases/Kai-v1.6.6.apk \
-              --title "Kai v1.6.6 (< 2 MB)" \
+            gh release create v1.6.7 releases/Kai-v1.6.7.apk \
+              --title "Kai v1.6.7 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

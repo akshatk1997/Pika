@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.6.6", BuildConfig.VERSION_NAME)
-    assertEquals(39, BuildConfig.VERSION_CODE)
+    assertEquals("1.6.7", BuildConfig.VERSION_NAME)
+    assertEquals(40, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -162,7 +162,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.6.6").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.6.7").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -381,6 +381,9 @@ class ExampleRobolectricTest {
     assertFalse(html.contains("gemini-3.5-flash-lite"))
     assertFalse(html.contains("gemini-3.8-flash"))
     assertTrue(html.contains("openai-fast"))
+    assertTrue(html.contains("Google AI"))
+    assertTrue(html.contains("Duck.ai"))
+    assertTrue(html.contains("ChatGPT Free"))
     assertTrue(html.contains("thought-process"))
     assertTrue(html.contains("Söhne"))
     assertTrue(html.contains("Söhne Mono"))
@@ -482,10 +485,9 @@ class ExampleRobolectricTest {
     assertTrue(html.contains("id=\"theme-toggle-btn\""))
     assertTrue(html.contains("natural or everyday language"))
     assertTrue(html.contains("technical or machine language"))
-    assertTrue(html.contains("Auto Intelligence"))
-    assertTrue(html.contains("Deep Reasoning"))
-    assertTrue(html.contains("Code &amp; Logic"))
-    assertTrue(html.contains("Creative Mind"))
+    assertTrue(html.contains("Google AI"))
+    assertTrue(html.contains("Duck.ai"))
+    assertTrue(html.contains("ChatGPT Free"))
     assertTrue(html.contains("synthesizeNeuralSearch"))
   }
 
@@ -544,7 +546,8 @@ class ExampleRobolectricTest {
     // 4. Verify all critical UI elements exist in DOM (with attachments, voice mic, and API key options removed)
     val expectedIds = listOf(
       "prompt-input", "send-btn", "chat-feed", "empty-state",
-      "new-chat-btn", "theme-toggle-btn"
+      "new-chat-btn", "theme-toggle-btn",
+      "mode-google-btn", "mode-duck-btn", "mode-chatgpt-btn"
     )
     for (id in expectedIds) {
       assertTrue("HTML must contain element id='$id'", html.contains("id=\"$id\""))
@@ -560,10 +563,14 @@ class ExampleRobolectricTest {
     assertFalse("HTML must not contain key-settings-overlay", html.contains("key-settings-overlay"))
     assertFalse("HTML must not expose API key prompts to users", html.contains("API key"))
 
-    // 5. Verify free open-source multi-model AI architecture (old models completely removed)
+    // 5. Verify free open-source multi-model AI architecture (Google AI, Duck.ai, ChatGPT Free)
     assertFalse(scriptContent.contains("gemini-3.5-flash-lite"))
     assertFalse(scriptContent.contains("gemini-3.8-flash"))
     assertTrue(scriptContent.contains("openai-fast"))
+    assertTrue(scriptContent.contains("Google AI"))
+    assertTrue(scriptContent.contains("Duck.ai"))
+    assertTrue(scriptContent.contains("ChatGPT Free"))
+    assertTrue(scriptContent.contains("window.switchAiMode = switchAiMode"))
     assertTrue(scriptContent.contains("https://text.pollinations.ai/openai/chat/completions"))
     assertTrue(scriptContent.contains("synthesizeNeuralSearch"))
     assertTrue(scriptContent.contains("checkMathQuery"))

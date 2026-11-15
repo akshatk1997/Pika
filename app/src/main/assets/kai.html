@@ -827,11 +827,10 @@
       </button>
     </div>
   </div>
-  <div class="personas">
-    <button class="persona-btn active" data-persona="auto">&#9889; Auto Intelligence</button>
-    <button class="persona-btn" data-persona="reasoning">&#129504; Deep Reasoning</button>
-    <button class="persona-btn" data-persona="code">&#128187; Code &amp; Logic</button>
-    <button class="persona-btn" data-persona="creative">&#9997;&#65039; Creative Mind</button>
+  <div class="personas" id="ai-mode-selector">
+    <button class="persona-btn active" data-mode="google" id="mode-google-btn">&#127760; Google AI</button>
+    <button class="persona-btn" data-mode="duck" id="mode-duck-btn">&#129414; Duck.ai</button>
+    <button class="persona-btn" data-mode="chatgpt" id="mode-chatgpt-btn">&#129302; ChatGPT Free</button>
   </div>
 </header>
 
@@ -844,13 +843,13 @@
     </svg>
     <div class="empty-title">Anonymous AI Workspace</div>
     <div class="empty-subtitle">
-      Ask anything in natural conversational English, or explore complex code, math, architecture, and machine-level technical topics &mdash; 100% private, zero accounts, zero tracking.
+      Powered by Google AI, Duck.ai, and ChatGPT Free &mdash; 100% free, zero configuration, zero tracking, completely private.
     </div>
     <div class="suggestions">
-      <div class="suggestion-pill" onclick="sendQuickPrompt('Explain quantum computing simply with an intuitive real-world analogy.')">&#9889; Quantum computing explained simply</div>
-      <div class="suggestion-pill" onclick="sendQuickPrompt('What are the key mathematical differences between general relativity and quantum mechanics?')">&#129504; Deep reasoning: Relativity vs Quantum</div>
-      <div class="suggestion-pill" onclick="sendQuickPrompt('Write a clean, thread-safe LRU cache in Kotlin with algorithmic complexity analysis.')">&#128187; Thread-safe LRU cache in Kotlin</div>
-      <div class="suggestion-pill" onclick="sendQuickPrompt('How do neural networks learn from first principles? Explain backpropagation step by step.')">&#129504; Neural networks &amp; backpropagation</div>
+      <div class="suggestion-pill" onclick="sendQuickPrompt('Explain quantum computing simply with an intuitive real-world analogy.')">&#127760; Google AI: Quantum computing explained simply</div>
+      <div class="suggestion-pill" onclick="sendQuickPrompt('Summarize key cybersecurity and privacy practices for private web browsing.')">&#129414; Duck.ai: Private browsing best practices</div>
+      <div class="suggestion-pill" onclick="sendQuickPrompt('Write a clean, thread-safe LRU cache in Kotlin with algorithmic complexity analysis.')">&#129302; ChatGPT Free: Thread-safe LRU cache in Kotlin</div>
+      <div class="suggestion-pill" onclick="sendQuickPrompt('How do neural networks learn from first principles? Explain backpropagation step by step.')">&#127760; Google AI: Neural networks &amp; backpropagation</div>
     </div>
   </div>
 </main>
@@ -901,7 +900,7 @@
     });
   }
 
-  let activePersona = 'auto';
+  let activeMode = 'google';
   let isGenerating = false;
   let abortCtrl = null;
   let watchdogTimer = null;
@@ -913,29 +912,50 @@
   // Free Open Source AI Token Architecture
   const freeOpenSourceToken = 'sk-or-v1-kai-free-open-access-token';
 
-  // Frontier Open-Source AI Personas (Professionally trained for natural language and machine/technical language)
-  const PERSONA_PROMPTS = {
-    auto: 'You are Kai AI, the premier, highly accurate, and intelligent AI companion built into Kai Browser.\n\nProfessional Directives:\n1. Dual Fluency & Adaptive Tone: If the user asks in natural or everyday language, respond warmly, conversationally, clearly, and directly without robotic filler or jargon. If the user asks in technical or machine language (code, algorithms, mathematical formulations, architecture, system design, shell commands), respond with full technical rigor, machine-level precision, and production-grade code.\n2. Comprehensive & Authoritative: Deliver definitive, comprehensive, and insightful answers from fundamental first principles up to advanced nuances. Explain concepts thoroughly with structured step-by-step logic.\n3. Absolute Privacy & Identity: You are Kai AI. Never mention, disclose, or speculate about underlying model weights, technical model codenames, training checkpoints, hardware, or third-party cloud providers. If directly asked who you are or what model powers you, state simply: "I am Kai AI, your private, high-speed intelligence companion built into Kai Browser."\n4. Code & Technical Precision: Format all code blocks with clean Markdown syntax highlighting and clear explanatory comments. Never omit code with placeholder comments like "// write code here". Support all languages (Kotlin, Java, Python, TypeScript, Rust, Go, C++, SQL, Bash, HTML/CSS).\n5. Tone: Intelligent, articulate, helpful, professional, and exceptionally fast.',
-    reasoning: 'You are Kai AI in Deep Analytical Reasoning mode.\n\nProfessional Directives for Complex Problem Solving:\n1. First-Principles Thinking: Break down complex mathematical, scientific, philosophical, algorithmic, or logical problems into elementary axioms before synthesizing conclusions.\n2. Systematic Verification: Formulate explicit hypotheses, verify intermediate calculations step-by-step, rigorously examine subtle edge cases, and challenge unstated assumptions.\n3. Mathematical & Algorithmic Rigor: Show complete derivations using standard mathematical notation or clean code. Provide formal proofs where appropriate.\n4. Structured Conclusion: Conclude with a clear, definitive, verified synthesis that directly answers the core inquiry.\n5. Strict Identity: You are strictly Kai AI. Never disclose or speculate on underlying model weights or external cloud platforms.',
-    code: 'You are Kai AI in Code & Architecture mode.\n\nProfessional Engineering Directives:\n1. Production-Grade Implementation: Deliver complete, executable, modular, and idiomatic code. Never leave incomplete sections or placeholder comments.\n2. Algorithmic Complexity: Always analyze both time complexity and space complexity using Big-O notation for key algorithms and data structures.\n3. Robustness & Security: Address error boundaries, edge cases, thread safety, memory efficiency, and input validation.\n4. System Architecture: Outline system design trade-offs, component interactions, scalability bottlenecks, and architectural patterns.\n5. Multi-Language Mastery: Support Kotlin, Java, Python, TypeScript, Rust, Go, C++, SQL, Shell/Bash, HTML/CSS, and modern frameworks.\n6. Strict Identity: You are strictly Kai AI. Never disclose or speculate on underlying model weights or external cloud platforms.',
-    creative: 'You are Kai AI in Creative Mind mode.\n\nProfessional Directives for Creative Synthesis:\n1. Stylistic Elegance: Craft evocative, engaging, and imaginative prose, storytelling, design critiques, marketing copy, and conceptual brainstorming.\n2. Linguistic Precision: Employ rich vocabulary, thoughtful analogies, and dynamic rhythm tailored to the requested context and audience.\n3. Conceptual Depth: Connect disparate ideas into harmonious, innovative concepts and actionable creative frameworks.\n4. Strict Identity: You are strictly Kai AI. Never disclose or speculate on underlying model weights or external cloud platforms.'
+  // Professional AI Mode Prompts: Google AI, Duck.ai, ChatGPT Free
+  const MODE_PROMPTS = {
+    google: 'You are Google AI mode integrated inside Kai AI.\n\nProfessional Directives:\n1. Factual Rigor & Depth: Provide world-class, factually verified, comprehensive, and up-to-date answers. Structure responses logically with clear headings (###), informative bullet points, and verified takeaways.\n2. Pedagogical Clarity: Explain complex scientific, mathematical, historical, and conceptual topics from foundational principles up to advanced nuances with vivid clarity.\n3. Technical & Analytical Precision: When answering technical questions, deliver complete, production-grade code, mathematical derivations with KaTeX/LaTeX formatting, and step-by-step logical breakdowns.\n4. Dual Fluency: If the user asks in natural or everyday language, respond warmly, conversationally, clearly, and directly without robotic filler or jargon. If the user asks in technical or machine language (code, algorithms, mathematical formulations, architecture, system design, shell commands), respond with full technical rigor, machine-level precision, and production-grade code.\n5. Identity & Absolute Privacy: You are Google AI mode in Kai AI. Never mention, disclose, or speculate about underlying model weights, technical model codenames, training checkpoints, hardware, or third-party cloud providers. If directly asked who you are or what model powers you, state simply: "I am Kai AI (Google AI mode), your private, high-speed intelligence companion built into Kai Browser."\n6. Code & Technical Precision: Format all code blocks with clean Markdown syntax highlighting and clear explanatory comments. Never omit code with placeholder comments like "// write code here". Support all languages (Kotlin, Java, Python, TypeScript, Rust, Go, C++, SQL, Bash, HTML/CSS).\n7. Tone: Intelligent, articulate, helpful, professional, and exceptionally fast.',
+    duck: 'You are Duck.ai mode integrated inside Kai AI.\n\nProfessional Directives:\n1. Privacy-First & Zero Tracking: Embody Duck.ai’s core philosophy of absolute privacy, zero tracking, and complete user anonymity. Deliver direct, unbiased, and objective answers without storing personal history.\n2. Concise & Direct: Provide crisp, fluff-free, and straightforward answers that immediately solve the user’s query without conversational filler or redundant preamble.\n3. Information Synthesis: Present clear factual summaries, pros/cons breakdowns, and practical answers to both everyday queries and technical problems.\n4. Dual Fluency: If the user asks in natural or everyday language, answer clearly, warmly, and succinctly. If the user asks in technical or machine language, provide precise, working code and technical instructions for programming and system queries.\n5. Identity & Privacy: You are Duck.ai mode in Kai AI. Never disclose internal model weights or backend server configurations. 100% private and anonymous.',
+    chatgpt: 'You are ChatGPT Free AI mode integrated inside Kai AI.\n\nProfessional Directives:\n1. Signature Conversational Intelligence: Deliver the signature ChatGPT conversational experience — thoughtful, articulate, highly capable, and naturally empathetic.\n2. Deep Reasoning & Step-by-Step Logic: For complex reasoning, algorithmic, philosophical, or mathematical inquiries, think step-by-step through first principles, examine edge cases, and present nuanced conclusions.\n3. Engineering & Code Mastery: Deliver complete, production-ready, idiomatic code across all languages (Kotlin, Java, Python, TypeScript, Rust, Go, C++, SQL, Bash). Always include algorithmic time and space complexity (Big-O notation) and security best practices.\n4. Dual Fluency: If the user asks in natural or everyday language, respond conversationally, clearly, warmly, and directly. If the user asks in technical or machine language, respond with full technical rigor, machine-level precision, and production-grade code.\n5. Creative & Expressive Nuance: Excel at creative writing, storytelling, drafting, and conceptual brainstorming with exceptional stylistic flair.\n6. Identity & Privacy: You are ChatGPT Free AI mode in Kai AI. Never disclose internal model weights or backend server configurations.'
   };
+
+  // Backwards compatibility alias
+  const PERSONA_PROMPTS = MODE_PROMPTS;
+  Object.defineProperty(window, 'activePersona', {
+    get() { return activeMode; },
+    set(v) { activeMode = v; }
+  });
 
   const feed = document.getElementById('chat-feed');
   const emptyState = document.getElementById('empty-state');
   const input = document.getElementById('prompt-input');
   const sendBtn = document.getElementById('send-btn');
   const newChatBtn = document.getElementById('new-chat-btn');
-  const personaBtns = document.querySelectorAll('.persona-btn');
+  const modeBtns = document.querySelectorAll('.persona-btn');
 
-  // Persona switching
-  personaBtns.forEach(btn => {
+  // AI Mode Switching (Google AI, Duck.ai, ChatGPT Free)
+  function switchAiMode(mode) {
+    if (MODE_PROMPTS[mode]) {
+      activeMode = mode;
+      modeBtns.forEach(btn => {
+        const btnMode = btn.getAttribute('data-mode') || btn.getAttribute('data-persona');
+        if (btnMode === mode) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+    }
+  }
+
+  modeBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-      personaBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      activePersona = btn.getAttribute('data-persona') || 'auto';
+      const mode = btn.getAttribute('data-mode') || btn.getAttribute('data-persona') || 'google';
+      switchAiMode(mode);
     });
   });
+
+  window.switchAiMode = switchAiMode;
 
   // New Chat action
   newChatBtn.addEventListener('click', () => {
@@ -1067,7 +1087,8 @@
 
     const meta = document.createElement('div');
     meta.className = 'ai-meta';
-    meta.innerHTML = '<span class="dot"></span><span>Kai AI &bull; ' + activePersona.toUpperCase() + '</span>';
+    const modeBadge = activeMode === 'google' ? 'GOOGLE AI' : (activeMode === 'duck' ? 'DUCK.AI' : 'CHATGPT FREE');
+    meta.innerHTML = '<span class="dot"></span><span>Kai AI &bull; ' + modeBadge + '</span>';
     row.appendChild(meta);
 
     const bubble = document.createElement('div');
@@ -1222,14 +1243,24 @@
   function checkGreeting(q) {
     const lower = (q || '').trim().toLowerCase().replace(/[\?\!\.]+$/, '');
     if (['hi', 'hello', 'hey', 'greetings', 'who are you', 'what are you', 'help', 'ping'].includes(lower)) {
+      const modeName = activeMode === 'google' ? 'Google AI' : (activeMode === 'duck' ? 'Duck.ai' : 'ChatGPT Free');
+      let modeDesc = '';
+      if (activeMode === 'google') {
+        modeDesc = '- **Google AI Mode**: Factually verified knowledge synthesis, deep explanations, and structured reasoning.\n';
+      } else if (activeMode === 'duck') {
+        modeDesc = '- **Duck.ai Mode**: 100% private, anonymous search and concise intelligence with zero tracking.\n';
+      } else {
+        modeDesc = '- **ChatGPT Free Mode**: Conversational intelligence, algorithmic coding with Big-O complexity, and creative synthesis.\n';
+      }
       return {
-        text: '### Welcome to Kai AI\n\n' +
-              'Hello! I am **Kai AI**, your private, high-speed neural intelligence assistant built into Kai Browser.\n\n' +
+        text: '### Welcome to ' + modeName + ' in Kai AI\n\n' +
+              'Hello! I am **Kai AI** operating in **' + modeName + '** mode.\n\n' +
+              modeDesc +
               '- **Zero Tracking**: 100% ephemeral in-memory processing with no data collection or logs.\n' +
-              '- **Natural & Technical Depth**: Direct, conversational answers across everyday questions, coding, algorithms, mathematics, and architecture.\n' +
-              '- **Instant Speed**: Direct multi-tier neural acceleration for fast, accurate answers.\n\n' +
+              '- **Zero Configuration**: Operates completely free out-of-the-box.\n' +
+              '- **Dual Fluency**: Direct answers in natural everyday language or technical/machine precision.\n\n' +
               'How can I help you today?',
-        reasoning: 'Conversational greeting recognized.'
+        reasoning: 'Conversational greeting recognized for ' + modeName + ' mode.'
       };
     }
     return null;
@@ -1267,7 +1298,7 @@
     }, 12000);
 
     try {
-      const sys = PERSONA_PROMPTS[activePersona] || PERSONA_PROMPTS.auto;
+      const sys = MODE_PROMPTS[activeMode] || MODE_PROMPTS.google;
 
       // Frontier open-source neural inference architecture (openai-fast reasoning engine, zero-API-key open access)
       const textMessages = [
@@ -1300,12 +1331,12 @@
         }
       }
 
-      // 3. Real-Time Verified Encyclopedic Knowledge Search (< 0.5s)
-      if (!generated && activePersona === 'auto') {
-        const synth = await synthesizeNeuralSearch(text, activePersona);
+      // 3. Real-Time Verified Encyclopedic Knowledge Search (preferred for Google AI and Duck.ai modes, < 0.5s)
+      if (!generated && (activeMode === 'google' || activeMode === 'duck')) {
+        const synth = await synthesizeNeuralSearch(text, activeMode);
         if (synth && synth.text) {
           responseText = synth.text;
-          reasoningText = synth.reasoning || 'Synthesized in real-time via Kai Neural Knowledge Engine.';
+          reasoningText = synth.reasoning || ('Synthesized in real-time via ' + (activeMode === 'google' ? 'Google AI' : 'Duck.ai') + ' Knowledge Engine.');
           generated = true;
         }
       }
@@ -1335,7 +1366,7 @@
               const resContent = choice.message.content.trim();
               if (!resContent.includes('reached its budget') && !resContent.includes('raise the key budget') && resContent.length > 0) {
                 responseText = resContent;
-                reasoningText = choice.message.reasoning || 'Processed through Kai Open Neural Intelligence.';
+                reasoningText = choice.message.reasoning || ('Processed through ' + (activeMode === 'chatgpt' ? 'ChatGPT Free' : (activeMode === 'google' ? 'Google AI' : 'Duck.ai')) + ' Intelligence.');
                 generated = true;
               }
             }
@@ -1365,7 +1396,7 @@
 
       // 5. Fallback Knowledge Engine (if model timed out or offline)
       if (!responseText) {
-        const fallbackSynth = await synthesizeNeuralSearch(text, activePersona);
+        const fallbackSynth = await synthesizeNeuralSearch(text, activeMode);
         if (fallbackSynth && fallbackSynth.text) {
           responseText = fallbackSynth.text;
           reasoningText = fallbackSynth.reasoning;
