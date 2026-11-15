@@ -22,6 +22,7 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -161,6 +162,30 @@ class MainActivity : ComponentActivity() {
 
     setContent {
       val settings by viewModel.settings.collectAsStateWithLifecycle()
+      val tabs by viewModel.tabs.collectAsStateWithLifecycle()
+      val activeTabId by viewModel.activeTabId.collectAsStateWithLifecycle()
+      val isPrivateActive = remember(tabs, activeTabId) {
+        tabs.firstOrNull { it.id == activeTabId }?.isPrivate == true
+      }
+
+      DisposableEffect(isPrivateActive) {
+        val window = this@MainActivity.window
+        try {
+          if (isPrivateActive) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+          } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+          }
+        } catch (_: Throwable) {
+        }
+        onDispose {
+          try {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+          } catch (_: Throwable) {
+          }
+        }
+      }
+
       val systemDark = isSystemInDarkTheme()
       val darkTheme = when (settings.themeMode) {
         ThemeMode.SYSTEM -> systemDark
