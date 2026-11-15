@@ -408,12 +408,12 @@ class ExampleRobolectricTest {
     val assets = context.assets.list("")?.toList() ?: emptyList()
     assertFalse(assets.contains("kai.html"))
 
-    try {
-      context.assets.open("kai.html").close()
-      fail("kai.html should not exist in assets")
+    val hasKaiHtml = try {
+      context.assets.open("kai.html").use { true }
     } catch (_: java.io.IOException) {
-      // Expected
+      false
     }
+    assertFalse(hasKaiHtml)
 
     // Verify SearchEngine enum has no KAI_AI
     assertTrue(SearchEngine.entries.none { it.id == "kai_ai" })
