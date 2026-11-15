@@ -1466,8 +1466,8 @@ class WebViewPool(
     WebResourceResponse(
       "text/plain",
       "utf-8",
-      200,
-      "OK",
+      204,
+      "Blocked",
       corsBlockedHeaders,
       ByteArrayInputStream(ByteArray(0))
     )
