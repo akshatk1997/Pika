@@ -3085,6 +3085,7 @@
         const visDetails = attachment.visualAnalysis ? '\n\n' + attachment.visualAnalysis : '';
         textOnlySummary = '[Image: "' + attachment.name + '" (' + (attachment.width ? attachment.width + 'x' + attachment.height + 'px, ' : '') + attachment.size + ')]\n' +
                           visDetails + '\n\n' + promptText;
+        const _imageSchema = { type: 'image_url', image_url: { url: attachment.dataUrl } };
       } else if (attachment && attachment.type === 'video') {
         const promptText = '[Video Attached: "' + attachment.name + '" (~' + Math.round(attachment.duration || 1) + 's, ' + attachment.size + ')' + (attachment.frames ? ', ' + attachment.frames.length + ' keyframes' : '') + ']:\n' +
                            (text || 'Please analyze this video sequence, identify key subjects, actions, scene changes, on-screen text, and provide a clear summary.');
