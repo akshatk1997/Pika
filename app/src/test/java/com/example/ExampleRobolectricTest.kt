@@ -323,12 +323,11 @@ class ExampleRobolectricTest {
 
   @Test
   fun homepageStandardSearchOnlyAndKaiAiPermanentlyRemoved() {
-    composeTestRule.waitForIdle()
-    try {
-      composeTestRule.onNodeWithTag("intro_get_started").performClick()
-      composeTestRule.waitForIdle()
-    } catch (_: Throwable) {
+    composeTestRule.runOnUiThread {
+      composeTestRule.activity.viewModel.dismissIntro()
+      composeTestRule.activity.viewModel.openNewTab(false)
     }
+    composeTestRule.waitForIdle()
 
     // Verify AI mode options and tabs do not exist on homepage
     composeTestRule.onNodeWithTag("home_mode_ai").assertDoesNotExist()
