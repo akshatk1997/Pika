@@ -18,6 +18,7 @@ import android.webkit.CookieManager
 import android.webkit.GeolocationPermissions
 import android.webkit.PermissionRequest
 import android.webkit.RenderProcessGoneDetail
+import android.webkit.SafeBrowsingResponse
 import android.webkit.SslErrorHandler
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -1285,6 +1286,35 @@ class WebViewPool(
         } ?: view?.let { safelyDestroyWebView(it) }
         callbacks.onRenderProcessCrashed(tabId)
         return true
+      }
+
+      override fun onSafeBrowsingHit(
+        view: WebView?,
+        request: WebResourceRequest?,
+        threatType: Int,
+        callback: SafeBrowsingResponse?
+      ) {
+        try {
+          callback?.backToSafety(true)
+        } catch (_: Throwable) {
+        }
+        val failingUrl = request?.url?.toString() ?: try { view?.url } catch (_: Throwable) { null } ?: ""
+        val reason = when (threatType) {
+          SAFE_BROWSING_THREAT_MALWARE -> "Dangerous site (malware detected by Safe Browsing)"
+          SAFE_BROWSING_THREAT_PHISHING -> "Deceptive site (phishing detected by Safe Browsing)"
+          SAFE_BROWSING_THREAT_UNWANTED_SOFTWARE -> "Harmful site (unwanted software detected by Safe Browsing)"
+          SAFE_BROWSING_THREAT_BILLING -> "Deceptive billing site (detected by Safe Browsing)"
+          else -> "Unsafe resource detected by Safe Browsing"
+        }
+        callbacks.onPageError(
+          tabId,
+          PageError(
+            type = PageErrorType.BLOCKED,
+            failingUrl = failingUrl,
+            host = UrlValidator.extractHost(failingUrl),
+            reason = reason
+          )
+        )
       }
     }
 
