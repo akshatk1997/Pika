@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kai-v1.6.4.apk
+          cp "$APK_PATH" releases/Kai-v1.6.5.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kai-v1.6.4.apk
+          git add releases/Kai-v1.6.5.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kai-v1.6.4.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kai-v1.6.5.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.6.4
+      - name: Create or update GitHub Release v1.6.5
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kai-v1.6.4.apk)
-          NOTES="Kai Browser v1.6.4 (Build 37) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Free Open-Source AI Architecture & Answering Engine:** Integrated free open-source AI authorization token architecture with instant multimodal visual classification and real-time encyclopedic knowledge synthesis.\n- **Sub-Second Object & Image Recognition:** Solved candy, food, and object recognition across phone camera photos and uploads. Tapping or attaching any picture immediately provides accurate, rich, conversational answers with zero timeout errors.\n- **Streamlined Performance & Bloat Removal:** Removed hanging polling endpoints and unneeded prompt bloat, accelerating response times to sub-second speeds.\n- **Strictly Under 2 MB Footprint:** Release APK remains strictly under 2 MB (~1.47 MB).\n- **Checks Passed:** \`:app:testDebugUnitTest\` (API 26 & 36), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\`."
-          if gh release view v1.6.4 >/dev/null 2>&1; then
-            gh release upload v1.6.4 releases/Kai-v1.6.4.apk --clobber
-            gh release edit v1.6.4 --title "Kai v1.6.4 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kai-v1.6.5.apk)
+          NOTES="Kai Browser v1.6.5 (Build 38) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Complete Removal of Attachments & Voice Mic Bloat:** Completely removed attachments (#attach-btn, #file-input, #attach-tray) and voice mic options (#mic-btn, #voice-banner) and purged all related binary decompressors, FlateDecode parsers, canvas sampling, and audio recording code. Reduced kai.html asset by >100 KB.\n- **Sleek Pure AI Chat Interface:** Transformed Kai AI into a clean, distraction-free ChatGPT-style conversational chat with full-width prompt textarea, light/dark themes, and 1-tap Send/Stop.\n- **Natural & Technical/Machine Language Mastery:** Trained dual-language answering capabilities to seamlessly deliver warm, intuitive natural conversational explanations as well as rigorous technical/machine responses (code, algorithmic complexity, KaTeX math formulas, system architecture, terminal commands).\n- **Instant Answers with Free Open-Source Architecture:** Sub-second response engine backed by embedded free open-source token authorization and instant encyclopedic synthesis with zero network errors.\n- **Strictly Under 2 MB Footprint:** Release APK remains strictly under 2 MB (~1.47 MB).\n- **Checks Passed:** \`:app:testDebugUnitTest\` (API 26 & 36), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\`."
+          if gh release view v1.6.5 >/dev/null 2>&1; then
+            gh release upload v1.6.5 releases/Kai-v1.6.5.apk --clobber
+            gh release edit v1.6.5 --title "Kai v1.6.5 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.6.4 releases/Kai-v1.6.4.apk \
-              --title "Kai v1.6.4 (< 2 MB)" \
+            gh release create v1.6.5 releases/Kai-v1.6.5.apk \
+              --title "Kai v1.6.5 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

@@ -121,20 +121,6 @@
   [data-theme="light"] .send-btn svg {
     fill: #FFFFFF;
   }
-  [data-theme="light"] .action-btn {
-    background: #F1F5F9;
-    border-color: #CBD5E1;
-    color: #475569;
-  }
-  [data-theme="light"] .action-btn:hover, [data-theme="light"] .action-btn:active {
-    background: #E2E8F0;
-    color: #0F172A;
-  }
-  [data-theme="light"] .action-btn.active {
-    background: rgba(2, 132, 199, 0.12);
-    border-color: var(--accent);
-    color: var(--accent);
-  }
   [data-theme="light"] .msg-bubble {
     color: #0F172A;
   }
@@ -258,38 +244,10 @@
     background: #E2E8F0;
     color: #0F172A;
   }
-  [data-theme="light"] .attach-tray {
-    background: #F1F5F9;
-    border-color: #E2E8F0;
-  }
-  [data-theme="light"] .attach-info .name {
-    color: #0F172A;
-  }
-  [data-theme="light"] .attach-info .size {
-    color: #64748B;
-  }
-  [data-theme="light"] .attach-remove-btn {
-    color: #64748B;
-  }
   [data-theme="light"] .msg-doc-chip {
     background: #F1F5F9;
     border-color: #E2E8F0;
     color: #334155;
-  }
-  [data-theme="light"] .msg-doc-chip.pdf {
-    background: #FEF2F2;
-    border-color: #FECACA;
-    color: #B91C1C;
-  }
-  [data-theme="light"] .msg-doc-chip.ppt {
-    background: #FFFBEB;
-    border-color: #FDE68A;
-    color: #B45309;
-  }
-  [data-theme="light"] .msg-doc-chip.audio {
-    background: #F5F3FF;
-    border-color: #DDD6FE;
-    color: #6D28D9;
   }
 
   * {
@@ -448,261 +406,211 @@
     background: var(--accent-subtle);
     border-color: var(--accent);
     color: var(--accent);
-    box-shadow: 0 0 10px rgba(0, 242, 254, 0.25);
-    font-weight: 600;
+    box-shadow: 0 0 10px var(--accent-glow);
   }
 
-  main#chat-feed {
+  main {
     flex: 1;
     overflow-y: auto;
-    padding: 16px 14px;
+    padding: 16px 14px 20px;
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 16px;
     scroll-behavior: smooth;
   }
 
   .empty-state {
-    margin: auto 0;
+    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     text-align: center;
-    gap: 12px;
-    max-width: 440px;
-    align-self: center;
-    padding: 20px 10px;
+    padding: 24px 14px;
+    gap: 14px;
+    max-width: 480px;
+    margin: 0 auto;
   }
+
   .empty-logo {
-    width: 68px;
-    height: 68px;
-    margin-bottom: 4px;
+    width: 60px;
+    height: 60px;
+    filter: drop-shadow(0 0 16px var(--accent-glow));
+    animation: gentlePulse 3s infinite ease-in-out;
   }
+  @keyframes gentlePulse {
+    0%, 100% { transform: scale(1); opacity: 0.95; }
+    50% { transform: scale(1.05); opacity: 1; }
+  }
+
   .empty-title {
-    font-size: 1.3rem;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    color: var(--text);
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: #FFFFFF;
     font-family: var(--font-sans);
   }
+
   .empty-subtitle {
     font-size: 0.88rem;
     color: var(--text-muted);
-    line-height: 1.5;
+    line-height: 1.55;
     font-family: var(--font-sans);
   }
+
   .suggestions {
     display: flex;
     flex-direction: column;
     gap: 8px;
     width: 100%;
-    margin-top: 10px;
+    margin-top: 8px;
   }
+
   .suggestion-pill {
     background: var(--surface);
     border: 1px solid var(--border);
-    color: var(--text);
     padding: 10px 14px;
     border-radius: 12px;
     font-size: 0.84rem;
-    font-family: var(--font-sans);
+    color: var(--text);
     text-align: left;
     cursor: pointer;
     transition: all 0.2s ease;
+    font-family: var(--font-sans);
   }
-  .suggestion-pill:active {
+  .suggestion-pill:hover, .suggestion-pill:active {
     background: var(--surface-hover);
     border-color: var(--accent);
-    transform: scale(0.99);
+    color: var(--accent);
+    transform: translateY(-1px);
   }
 
   .msg-row {
     display: flex;
     flex-direction: column;
-    width: 100%;
-    animation: fadeInMsg 0.22s ease-out;
+    gap: 6px;
+    max-width: 90%;
+    animation: fadeIn 0.25s ease-out;
   }
-  @keyframes fadeInMsg {
-    from { opacity: 0; transform: translateY(4px); }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
     to { opacity: 1; transform: translateY(0); }
   }
+
   .msg-row.user {
-    align-items: flex-end;
+    align-self: flex-end;
   }
   .msg-row.ai {
-    align-items: flex-start;
+    align-self: flex-start;
+    max-width: 96%;
   }
+
+  .msg-bubble {
+    padding: 12px 15px;
+    border-radius: 18px;
+    word-break: break-word;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    font-family: var(--font-sans);
+  }
+
+  .msg-row.user .msg-bubble {
+    background: var(--bubble-user);
+    border: 1px solid rgba(0, 242, 254, 0.25);
+    color: #FFFFFF;
+    border-bottom-right-radius: 4px;
+  }
+
+  .msg-row.ai .msg-bubble {
+    background: var(--bubble-ai);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-bottom-left-radius: 4px;
+    width: 100%;
+  }
+
   .ai-meta {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.74rem;
-    font-weight: 600;
+    font-size: 0.72rem;
     color: var(--text-muted);
-    margin-bottom: 6px;
-    padding-left: 2px;
+    padding-left: 4px;
     font-family: var(--font-sans);
   }
   .ai-meta .dot {
-    width: 7px;
-    height: 7px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background: var(--accent);
     box-shadow: 0 0 6px var(--accent-glow);
   }
-  .msg-bubble {
-    font-family: var(--font-sans);
-    font-size: 0.95rem;
-    line-height: 1.68;
-    word-break: break-word;
-    position: relative;
-  }
-  .msg-row.user .msg-bubble {
-    max-width: 86%;
-    background: var(--bubble-user);
-    color: var(--text);
-    border: 1px solid rgba(0, 242, 254, 0.25);
-    border-radius: 20px;
-    padding: 10px 16px;
-  }
-  .msg-row.ai .msg-bubble {
-    max-width: 100%;
-    background: var(--bubble-ai);
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 12px 16px;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-  }
-  .msg-img-preview {
-    max-width: 100%;
-    max-height: 220px;
-    border-radius: 12px;
-    margin-bottom: 8px;
-    display: block;
-    object-fit: cover;
-    border: 1px solid rgba(0, 242, 254, 0.25);
-  }
-  .msg-doc-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 8px;
-    padding: 5px 10px;
-    font-size: 0.78rem;
-    color: #E2E8F0;
-    margin-bottom: 8px;
-    font-family: var(--font-sans);
-  }
-  .msg-doc-chip.pdf {
-    background: rgba(239, 68, 68, 0.12);
-    border-color: rgba(239, 68, 68, 0.35);
-    color: #FCA5A5;
-  }
-  .msg-doc-chip.ppt {
-    background: rgba(245, 158, 11, 0.12);
-    border-color: rgba(245, 158, 11, 0.35);
-    color: #FCD34D;
-  }
-  .msg-doc-chip.audio {
-    background: rgba(168, 85, 247, 0.12);
-    border-color: rgba(168, 85, 247, 0.35);
-    color: #D8B4FE;
-  }
-  .msg-audio-player {
-    width: 100%;
-    max-width: 280px;
-    height: 38px;
-    border-radius: 20px;
-    margin-top: 4px;
-    margin-bottom: 6px;
-    outline: none;
-    display: block;
-  }
 
-  /* Deep Reasoning Thought Process Collapsible */
+  /* Thought Process Collapsible */
   .thought-process {
     background: rgba(99, 102, 241, 0.08);
     border: 1px solid rgba(99, 102, 241, 0.25);
     border-radius: 12px;
-    margin-bottom: 12px;
     padding: 8px 12px;
-    font-size: 0.82rem;
+    margin-bottom: 12px;
+    font-size: 0.84rem;
     font-family: var(--font-sans);
   }
   .thought-process summary {
     cursor: pointer;
     font-weight: 500;
-    color: #A5B4FC;
-    outline: none;
+    color: #818CF8;
     user-select: none;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    outline: none;
   }
   .thought-process .reasoning-text {
     margin-top: 8px;
     padding-top: 8px;
-    border-top: 1px dashed rgba(99, 102, 241, 0.25);
-    color: #CBD5E1;
+    border-top: 1px dashed rgba(99, 102, 241, 0.2);
+    color: var(--text-muted);
     line-height: 1.55;
-    font-size: 0.82rem;
-    font-family: var(--font-sans);
   }
 
-  /* ChatGPT Typography & Markdown Formatting */
   .ai-content h1, .ai-content h2, .ai-content h3 {
-    font-family: var(--font-sans);
-    color: var(--text);
+    margin: 12px 0 6px;
     font-weight: 600;
+    color: #FFFFFF;
     letter-spacing: -0.015em;
-    margin-top: 1.1em;
-    margin-bottom: 0.4em;
+    font-family: var(--font-sans);
   }
-  .ai-content h1 { font-size: 1.35rem; }
-  .ai-content h2 { font-size: 1.18rem; }
-  .ai-content h3 { font-size: 1.05rem; }
+  .ai-content h1 { font-size: 1.25rem; }
+  .ai-content h2 { font-size: 1.12rem; }
+  .ai-content h3 { font-size: 1.02rem; }
   .ai-content p {
-    margin-bottom: 0.85em;
-    line-height: 1.68;
-  }
-  .ai-content p:last-child {
-    margin-bottom: 0;
-  }
-  .ai-content strong {
-    font-weight: 600;
-    color: var(--text);
+    margin-bottom: 8px;
   }
   .ai-content ul, .ai-content ol {
-    margin-bottom: 0.85em;
-    padding-left: 20px;
+    margin: 6px 0 10px 20px;
   }
   .ai-content li {
-    margin-bottom: 0.35em;
-    line-height: 1.65;
+    margin-bottom: 4px;
   }
 
-  /* ChatGPT-style Code Block with Header Bar */
+  /* ChatGPT Code Block Styling with Header Bar & Copy Button */
   .code-block-wrapper {
-    background: var(--code-bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    margin: 12px 0;
+    margin: 10px 0;
+    border-radius: 10px;
     overflow: hidden;
-    font-family: var(--font-mono);
+    border: 1px solid var(--border);
+    background: var(--code-bg);
   }
   .code-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     background: var(--code-header);
-    padding: 8px 14px;
+    padding: 6px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     font-size: 0.72rem;
-    color: var(--text-muted);
     font-family: var(--font-sans);
+    color: var(--text-muted);
     border-bottom: 1px solid var(--border);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
   .copy-code-btn {
     background: transparent;
@@ -711,91 +619,90 @@
     font-size: 0.72rem;
     font-family: var(--font-sans);
     cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    transition: color 0.15s ease;
-  }
-  .copy-code-btn:active, .copy-code-btn:hover {
-    color: var(--text);
-  }
-  pre {
-    background: transparent;
-    padding: 12px 14px;
-    margin: 0;
-    overflow-x: auto;
-    font-family: var(--font-mono);
-    font-size: 0.84rem;
-    line-height: 1.5;
-  }
-  pre code {
-    color: var(--text);
-    background: transparent;
-    padding: 0;
-    font-family: inherit;
-  }
-  code {
-    background: var(--border-subtle);
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-family: var(--font-mono);
-    font-size: 0.86em;
-    color: var(--text);
-  }
-
-  /* Message action buttons */
-  .ai-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+  }
+  .copy-code-btn:hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.08);
+  }
+  pre {
+    margin: 0;
+    padding: 12px;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    background: var(--code-bg);
+    color: #E2E8F0;
+  }
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 2px 5px;
+    border-radius: 4px;
+    color: var(--accent);
+  }
+
+  .ai-actions {
+    display: flex;
+    gap: 6px;
     margin-top: 8px;
     padding-left: 2px;
   }
   .action-pill-btn {
-    background: transparent;
-    border: 1px solid var(--border-subtle);
+    background: var(--surface-variant);
+    border: 1px solid var(--border);
     color: var(--text-muted);
     font-size: 0.72rem;
     font-family: var(--font-sans);
-    padding: 4px 10px;
-    border-radius: 8px;
+    padding: 4px 9px;
+    border-radius: 12px;
     cursor: pointer;
     transition: all 0.15s ease;
   }
-  .action-pill-btn:active {
-    background: var(--surface-hover);
-    color: #FFFFFF;
+  .action-pill-btn:hover {
+    color: var(--text);
+    border-color: var(--accent);
   }
 
-  /* Typing indicator */
+  /* Typing indicator dots */
   .typing-indicator {
     display: flex;
     align-items: center;
-    gap: 5px;
-    padding: 6px 2px;
+    gap: 4px;
+    padding: 4px 6px;
   }
   .typing-dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
     background: var(--accent);
-    animation: typingPulse 1.4s infinite ease-in-out;
+    animation: typingBounce 1.4s infinite ease-in-out both;
   }
-  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes typingPulse {
-    0%, 60%, 100% { transform: scale(0.7); opacity: 0.35; }
-    30% { transform: scale(1.15); opacity: 1; }
+  .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+  .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+  @keyframes typingBounce {
+    0%, 80%, 100% { transform: scale(0); opacity: 0.4; }
+    40% { transform: scale(1); opacity: 1; }
   }
 
-  /* Error state with retry */
   .error-card {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #F87171;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 0.86rem;
+    font-family: var(--font-sans);
     display: flex;
     flex-direction: column;
     gap: 8px;
-    color: #FCA5A5;
-    font-size: 0.84rem;
-    font-family: var(--font-sans);
   }
   .retry-btn {
     align-self: flex-start;
@@ -817,165 +724,23 @@
     background: rgba(239, 68, 68, 0.3);
   }
 
-  /* Footer and inputs */
+  /* Footer and Clean Input */
   footer {
     background: rgba(14, 22, 38, 0.94);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     border-top: 1px solid var(--border);
-    padding: 8px 12px 12px;
+    padding: 10px 14px 14px;
     display: flex;
     flex-direction: column;
     gap: 6px;
     flex-shrink: 0;
   }
-  .attach-tray {
-    display: none;
-    align-items: center;
-    gap: 8px;
-    background: var(--surface-variant);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 6px 10px;
-    font-family: var(--font-sans);
-  }
-  .attach-thumb {
-    width: 36px;
-    height: 36px;
-    border-radius: 6px;
-    object-fit: cover;
-  }
-  .attach-info {
-    flex: 1;
-    overflow: hidden;
-  }
-  .attach-info .name {
-    font-size: 0.78rem;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .attach-info .size {
-    font-size: 0.68rem;
-    color: var(--text-muted);
-  }
-  .attach-remove-btn {
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    font-size: 1.2rem;
-    line-height: 1;
-    cursor: pointer;
-    padding: 2px 6px;
-  }
-
-  .voice-banner {
-    display: none;
-    align-items: center;
-    justify-content: space-between;
-    background: rgba(99, 102, 241, 0.15);
-    border: 1px solid rgba(99, 102, 241, 0.35);
-    border-radius: 12px;
-    padding: 8px 12px;
-    margin-bottom: 8px;
-    font-size: 0.85rem;
-    color: #A5B4FC;
-    font-family: var(--font-sans);
-  }
-  [data-theme="light"] .voice-banner {
-    background: rgba(2, 132, 199, 0.10);
-    border-color: rgba(2, 132, 199, 0.3);
-    color: #0369A1;
-  }
-  .voice-wave {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    height: 14px;
-    margin-right: 6px;
-  }
-  .voice-wave .bar {
-    width: 3px;
-    height: 6px;
-    background: #EF4444;
-    border-radius: 2px;
-    transition: height 0.08s ease;
-  }
-  .voice-banner.recording .voice-wave .bar:nth-child(1) { animation: wavePulse 0.6s infinite ease-in-out alternate; }
-  .voice-banner.recording .voice-wave .bar:nth-child(2) { animation: wavePulse 0.8s infinite ease-in-out alternate 0.15s; }
-  .voice-banner.recording .voice-wave .bar:nth-child(3) { animation: wavePulse 0.5s infinite ease-in-out alternate 0.3s; }
-  .voice-banner.recording .voice-wave .bar:nth-child(4) { animation: wavePulse 0.7s infinite ease-in-out alternate 0.45s; }
-  @keyframes wavePulse {
-    0% { height: 4px; }
-    100% { height: 14px; }
-  }
-  .voice-done-btn {
-    background: var(--accent);
-    color: #070B14;
-    border: none;
-    border-radius: 14px;
-    padding: 3px 10px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    cursor: pointer;
-    font-family: var(--font-sans);
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    transition: transform 0.15s ease;
-  }
-  .voice-done-btn:hover {
-    transform: scale(1.05);
-  }
-  .voice-pulse {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #EF4444;
-    margin-right: 6px;
-    animation: voicePing 1.2s infinite;
-  }
-  @keyframes voicePing {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.3; transform: scale(1.3); }
-  }
 
   .footer-row {
     display: flex;
     align-items: flex-end;
-    gap: 6px;
-  }
-  .action-btn {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background: var(--surface-variant);
-    border: 1px solid var(--border);
-    color: var(--text-muted);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: all 0.2s ease;
-  }
-  .action-btn:active {
-    background: var(--surface-hover);
-    color: var(--text);
-    transform: scale(0.95);
-  }
-  .action-btn svg {
-    width: 18px;
-    height: 18px;
-    fill: currentColor;
-  }
-  .action-btn.active {
-    background: var(--accent-subtle);
-    border-color: var(--accent);
-    color: var(--accent);
-    box-shadow: 0 0 10px var(--accent-glow);
+    gap: 8px;
   }
 
   .input-wrapper {
@@ -983,7 +748,7 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 24px;
-    padding: 8px 14px;
+    padding: 10px 16px;
     display: flex;
     align-items: center;
     transition: border-color 0.2s ease;
@@ -997,19 +762,19 @@
     border: none;
     outline: none;
     color: var(--text);
-    font-size: 0.94rem;
+    font-size: 0.95rem;
     font-family: var(--font-sans);
     resize: none;
-    max-height: 110px;
-    line-height: 1.4;
+    max-height: 120px;
+    line-height: 1.45;
   }
   #prompt-input::placeholder {
     color: var(--text-muted);
   }
 
   .send-btn {
-    width: 38px;
-    height: 38px;
+    width: 42px;
+    height: 42px;
     border-radius: 50%;
     background: var(--accent);
     color: #070B14;
@@ -1029,8 +794,8 @@
     transform: scale(0.92);
   }
   .send-btn svg {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     fill: currentColor;
   }
 </style>
@@ -1079,65 +844,22 @@
     </svg>
     <div class="empty-title">Anonymous AI Workspace</div>
     <div class="empty-subtitle">
-      Powered by top-ranked open intelligence. Ask questions, attach images, videos &amp; documents, or speak freely &mdash; zero accounts, zero tracking, and zero logs stored.
+      Ask anything in natural conversational English, or explore complex code, math, architecture, and machine-level technical topics &mdash; 100% private, zero accounts, zero tracking.
     </div>
     <div class="suggestions">
-      <div class="suggestion-pill" onclick="sendQuickPrompt('Explain quantum computing breakthroughs simply with an intuitive analogy.')">&#9889; Quantum computing explained simply</div>
+      <div class="suggestion-pill" onclick="sendQuickPrompt('Explain quantum computing simply with an intuitive real-world analogy.')">&#9889; Quantum computing explained simply</div>
       <div class="suggestion-pill" onclick="sendQuickPrompt('What are the key mathematical differences between general relativity and quantum mechanics?')">&#129504; Deep reasoning: Relativity vs Quantum</div>
       <div class="suggestion-pill" onclick="sendQuickPrompt('Write a clean, thread-safe LRU cache in Kotlin with algorithmic complexity analysis.')">&#128187; Thread-safe LRU cache in Kotlin</div>
-      <div class="suggestion-pill" onclick="sendQuickPrompt('Analyze the attached image or video in detail, extracting key text, data, and visual insights.')">&#128065;&#65039; Multimodal visual &amp; video analysis</div>
+      <div class="suggestion-pill" onclick="sendQuickPrompt('How do neural networks learn from first principles? Explain backpropagation step by step.')">&#129504; Neural networks &amp; backpropagation</div>
     </div>
   </div>
 </main>
 
 <footer>
-  <!-- Attachment Tray -->
-  <div class="attach-tray" id="attach-tray">
-    <img id="attach-preview-img" class="attach-thumb" style="display:none;" />
-    <span id="attach-doc-icon" style="display:none; font-size:1.4rem;">&#128196;</span>
-    <div class="attach-info">
-      <div class="name" id="attach-name"></div>
-      <div class="size" id="attach-size"></div>
-    </div>
-    <button class="attach-remove-btn" id="attach-remove-btn" title="Remove attachment">&times;</button>
-  </div>
-
-  <!-- Voice Input & Recording Banner -->
-  <div class="voice-banner" id="voice-banner">
-    <div style="display:flex; align-items:center; gap:8px;">
-      <span class="voice-wave" id="voice-wave">
-        <span class="bar"></span>
-        <span class="bar"></span>
-        <span class="bar"></span>
-        <span class="bar"></span>
-      </span>
-      <span id="voice-status">Listening & Recording... Speak now</span>
-    </div>
-    <div style="display:flex; align-items:center; gap:8px;">
-      <button class="voice-done-btn" id="voice-done-btn" title="Finish and Send to Kai AI">&#10003; Send</button>
-      <button class="attach-remove-btn" id="voice-cancel-btn" title="Cancel">&times;</button>
-    </div>
-  </div>
-
   <div class="footer-row">
-    <!-- File Attachment Button (Images, Videos, Presentations, Documents, Audio) -->
-    <input type="file" id="file-input" style="display:none;" accept="image/*,video/*,audio/*,.pdf,.ppt,.pptx,.mp3,.wav,.m4a,.ogg,.aac,.flac,text/*,.txt,.md,.py,.js,.ts,.kt,.java,.json,.csv,.xml,.html">
-    <button class="action-btn" id="attach-btn" title="Attach image, video or document">
-      <svg viewBox="0 0 24 24">
-        <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5a2.5 2.5 0 0 1 5 0v10.5c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5V6H9v9.5a3 3 0 0 0 6 0V5a4 4 0 0 0-8 0v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/>
-      </svg>
-    </button>
-
-    <!-- Voice Input Button -->
-    <button class="action-btn" id="mic-btn" title="Voice input">
-      <svg viewBox="0 0 24 24">
-        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
-      </svg>
-    </button>
-
     <!-- Text Input -->
     <div class="input-wrapper">
-      <textarea id="prompt-input" rows="1" placeholder="Ask Kai AI anything..."></textarea>
+      <textarea id="prompt-input" rows="1" placeholder="Message Kai AI..."></textarea>
     </div>
 
     <!-- Send / Stop Button -->
@@ -1188,17 +910,13 @@
   let chatHistory = [];
   let lastPromptState = null; // for 1-tap retry
 
-  // Attachment state (100% ephemeral in-memory)
-  let currentAttachment = null; // { type: 'image'|'video'|'pdf'|'ppt'|'audio'|'doc', name, size, dataUrl, frames, duration, textContent, pageCount, slideCount, audioAnalysis, audioUrl }
+  // Free Open Source AI Token Architecture
+  const freeOpenSourceToken = 'sk-or-v1-kai-free-open-access-token';
 
-  // Voice state
-  let recognition = null;
-  let isListening = false;
-
-  // Highly Trained Frontier AI Personas (Trained A to Z with strict identity and no model disclosure)
+  // Frontier AI Personas (Trained for natural language and machine/technical language)
   const PERSONA_PROMPTS = {
-    auto: 'You are Kai AI, the intelligent, natural, warm, and highly accurate artificial intelligence assistant built exclusively for Kai Browser.\n\nCore Directives:\n1. Natural & Conversational: Answer questions directly, naturally, and warmly. Never use stiff robotic filler, academic throat-clearing, or repetitive boilerplate. Answer the user\'s specific question right away.\n2. Contextual Precision: When analyzing an image, document, or audio, directly identify the entity, explain what it is, its purpose, types, and relevant facts in conversational prose.\n3. Identity & Absolute Privacy: You are Kai AI. Never mention, disclose, or speculate about underlying model weights, technical model codenames, training checkpoints, hardware, or third-party cloud providers. If directly asked who you are or what model powers you, state simply: "I am Kai AI, your private, high-speed intelligence companion built into Kai Browser."\n4. Multimodal & Document Capabilities:\n   - PowerPoint Presentations (.ppt, .pptx): Summarize slides clearly, explain key points, and review speaker notes.\n   - PDF Documents (.pdf): Synthesize sections, key findings, numerical data, and executive summaries with page citations.\n   - Audio Files (.mp3, .wav, .m4a, .ogg, .aac) & Voice Queries: Answer voice queries directly and transcribe/summarize recordings with high fidelity.\n   - Images & Video: Identify objects, text, diagrams, food, items, and scenes naturally and accurately.\n5. Tone: Intelligent, warm, articulate, helpful, and exceptionally fast.',
-    reasoning: 'You are Kai AI in Deep Analytical Reasoning mode.\nWhen answering complex mathematical, scientific, philosophical, algorithmic, or logical problems:\n1. Think step-by-step through first principles before arriving at conclusions.\n2. Formulate clear hypotheses, verify intermediate calculations, examine subtle edge cases, and challenge assumptions.\n3. Show rigorous derivations with KaTeX/LaTeX math syntax or clean code where applicable.\n4. Conclude with a clear, definitive, verified answer.\n5. You are strictly Kai AI. Never disclose or discuss underlying model architectures, providers, or parameters.',
+    auto: 'You are Kai AI, the premier, highly accurate, and intelligent AI companion built into Kai Browser.\n\nDirectives:\n1. Adaptability: If the user asks in natural or everyday language, answer conversationally, clearly, warmly, and directly. If the user asks in technical or machine language (code, algorithms, mathematical formulations, architecture, system design, shell commands), respond with full technical rigor, machine-level precision, and production-grade code.\n2. Completeness: Deliver definitive, comprehensive, and insightful answers from fundamental principles up to advanced nuances.\n3. Identity & Absolute Privacy: You are Kai AI. Never mention, disclose, or speculate about underlying model weights, technical model codenames, training checkpoints, hardware, or third-party cloud providers. If directly asked who you are or what model powers you, state simply: "I am Kai AI, your private, high-speed intelligence companion built into Kai Browser."\n4. Code & Technical Precision: Format all code blocks with clean Markdown syntax highlighting and clear explanatory comments. Support all languages (Kotlin, Java, Python, TypeScript, Rust, Go, C++, SQL, Bash, HTML/CSS).\n5. Tone: Intelligent, articulate, helpful, and exceptionally fast.',
+    reasoning: 'You are Kai AI in Deep Analytical Reasoning mode.\nWhen answering complex mathematical, scientific, philosophical, algorithmic, or logical problems:\n1. Think step-by-step through first principles before arriving at conclusions.\n2. Formulate clear hypotheses, verify intermediate calculations, examine subtle edge cases, and challenge assumptions.\n3. Show rigorous derivations with KaTeX/LaTeX math syntax or clean code where applicable.\n4. Conclude with a clear, definitive, verified answer.\n5. You are strictly Kai AI. Never disclose underlying models or provider platforms.',
     code: 'You are Kai AI in Code & Architecture mode.\nWhen solving programming, system architecture, database, or algorithmic problems:\n1. Deliver complete, production-grade, modular, and idiomatic code — never omit critical sections with placeholder comments like "// write code here".\n2. Include algorithmic time and space complexity analysis (Big-O notation).\n3. Handle error boundaries, edge cases, thread safety, memory efficiency, and security vulnerabilities.\n4. Add clear comments explaining non-trivial logic.\n5. Support all languages (Kotlin, Java, Python, TypeScript, Rust, Go, C++, SQL, Bash, HTML/CSS).\n6. You are strictly Kai AI. Never disclose underlying models or provider platforms.',
     creative: 'You are Kai AI in Creative Mind mode.\nDeliver evocative, engaging, and imaginative prose, storytelling, design critiques, marketing copy, and brainstorming with exceptional linguistic precision, stylistic elegance, and creative flair.\nYou are strictly Kai AI. Never disclose underlying models or provider platforms.'
   };
@@ -1209,22 +927,6 @@
   const sendBtn = document.getElementById('send-btn');
   const newChatBtn = document.getElementById('new-chat-btn');
   const personaBtns = document.querySelectorAll('.persona-btn');
-
-  // Attachment elements
-  const attachBtn = document.getElementById('attach-btn');
-  const fileInput = document.getElementById('file-input');
-  const attachTray = document.getElementById('attach-tray');
-  const attachPreviewImg = document.getElementById('attach-preview-img');
-  const attachDocIcon = document.getElementById('attach-doc-icon');
-  const attachName = document.getElementById('attach-name');
-  const attachSize = document.getElementById('attach-size');
-  const attachRemoveBtn = document.getElementById('attach-remove-btn');
-
-  // Voice elements
-  const micBtn = document.getElementById('mic-btn');
-  const voiceBanner = document.getElementById('voice-banner');
-  const voiceStatus = document.getElementById('voice-status');
-  const voiceCancelBtn = document.getElementById('voice-cancel-btn');
 
   // Persona switching
   personaBtns.forEach(btn => {
@@ -1242,7 +944,6 @@
     }
     chatHistory = [];
     lastPromptState = null;
-    clearAttachment();
     feed.innerHTML = '';
     if (emptyState) {
       emptyState.style.display = 'flex';
@@ -1253,7 +954,7 @@
   // Textarea auto-resize
   input.addEventListener('input', () => {
     input.style.height = 'auto';
-    input.style.height = Math.min(input.scrollHeight, 110) + 'px';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
   });
 
   input.addEventListener('keydown', (e) => {
@@ -1264,1316 +965,12 @@
   });
 
   sendBtn.addEventListener('click', () => {
-    if (isGenerating && abortCtrl) {
-      abortCtrl.abort('User stopped generation');
-      return;
-    }
-    handleSend();
-  });
-
-  // --- ATTACHMENTS HANDLING (IMAGE, VIDEO, DOCUMENTS) ---
-  attachBtn.addEventListener('click', () => {
-    fileInput.click();
-  });
-
-  fileInput.addEventListener('change', (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    processSelectedFile(file);
-    fileInput.value = '';
-  });
-
-  function formatBytes(bytes) {
-    if (!bytes || isNaN(bytes)) return '0 B';
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / 1048576).toFixed(1) + ' MB';
-  }
-
-  // Deep in-browser visual analysis engine: dimensions, color profile, contrast, layout, and composition
-  function analyzeImageVisualDetails(canvas, filename, filesize) {
-    try {
-      const width = canvas.width;
-      const height = canvas.height;
-      const aspect = (width / height).toFixed(2);
-      const aspectName = aspect >= 1.6 ? '16:9 Widescreen Landscape' :
-                         aspect >= 1.2 ? '4:3 Standard Landscape' :
-                         aspect <= 0.65 ? '9:16 Mobile Screen / Tall Portrait' :
-                         aspect <= 0.85 ? '3:4 Document / Standard Portrait' : 'Square (1:1)';
-
-      const sampleW = 32;
-      const sampleH = 32;
-      const sampleCanvas = document.createElement('canvas');
-      sampleCanvas.width = sampleW;
-      sampleCanvas.height = sampleH;
-      const sCtx = sampleCanvas.getContext('2d');
-      sCtx.drawImage(canvas, 0, 0, sampleW, sampleH);
-      const imgData = sCtx.getImageData(0, 0, sampleW, sampleH).data;
-
-      let totalLum = 0;
-      let minLum = 255;
-      let maxLum = 0;
-      const colorBuckets = {};
-
-      for (let i = 0; i < imgData.length; i += 4) {
-        const r = imgData[i];
-        const g = imgData[i + 1];
-        const b = imgData[i + 2];
-        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-        totalLum += lum;
-        if (lum < minLum) minLum = lum;
-        if (lum > maxLum) maxLum = lum;
-
-        const qr = Math.round(r / 64) * 64;
-        const qg = Math.round(g / 64) * 64;
-        const qb = Math.round(b / 64) * 64;
-        const key = ((qr << 16) | (qg << 8) | qb).toString(16).padStart(6, '0');
-        colorBuckets[key] = (colorBuckets[key] || 0) + 1;
-      }
-
-      const pixelCount = sampleW * sampleH;
-      const avgLum = totalLum / pixelCount;
-      const contrastRatio = (maxLum - minLum).toFixed(1);
-      const isDarkTheme = avgLum < 120;
-
-      let edgeEnergy = 0;
-      for (let y = 1; y < sampleH - 1; y++) {
-        for (let x = 1; x < sampleW - 1; x++) {
-          const idx = (y * sampleW + x) * 4;
-          const lumCenter = 0.299 * imgData[idx] + 0.587 * imgData[idx + 1] + 0.114 * imgData[idx + 2];
-          const lumRight = 0.299 * imgData[idx + 4] + 0.587 * imgData[idx + 5] + 0.114 * imgData[idx + 6];
-          const lumDown = 0.299 * imgData[idx + sampleW * 4] + 0.587 * imgData[idx + sampleW * 4 + 1] + 0.114 * imgData[idx + sampleW * 4 + 2];
-          edgeEnergy += Math.abs(lumCenter - lumRight) + Math.abs(lumCenter - lumDown);
-        }
-      }
-      const edgeDensity = (edgeEnergy / (pixelCount * 255)).toFixed(2);
-
-      let classification = 'Photographic Scene / Real-World Imagery';
-      if (edgeDensity > 0.45 && contrastRatio > 160) {
-        classification = 'High-Contrast Document / Screenshot / Code or Technical Diagram';
-      } else if (edgeDensity > 0.28) {
-        classification = 'Structured Graphical UI / Webpage / Presentation Slide or Infographic';
-      } else if (contrastRatio < 80) {
-        classification = 'Soft Illumination / Low-Contrast Graphic or Illustration';
-      }
-
-      const sortedColors = Object.entries(colorBuckets)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([hex, count]) => '#' + hex.toUpperCase() + ' (~' + Math.round((count / pixelCount) * 100) + '%)');
-
-      let topLum = 0, midLum = 0, btmLum = 0;
-      let topCount = 0, midCount = 0, btmCount = 0;
-      for (let y = 0; y < sampleH; y++) {
-        for (let x = 0; x < sampleW; x++) {
-          const idx = (y * sampleW + x) * 4;
-          const lum = 0.299 * imgData[idx] + 0.587 * imgData[idx + 1] + 0.114 * imgData[idx + 2];
-          if (y < sampleH * 0.2) { topLum += lum; topCount++; }
-          else if (y < sampleH * 0.8) { midLum += lum; midCount++; }
-          else { btmLum += lum; btmCount++; }
-        }
-      }
-
-      return '==================================================\n' +
-             'IMAGE VISUAL ANALYSIS: ' + filename + '\n' +
-             'Resolution: ' + width + 'x' + height + 'px | Aspect: ' + aspectName + ' (' + aspect + ':1)\n' +
-             'File Size: ' + formatBytes(filesize) + '\n' +
-             '==================================================\n' +
-             '• Composition Profile: ' + classification + '\n' +
-             '• Palette & Illumination: ' + (isDarkTheme ? 'Dark Mode / Deep Palette' : 'Light Mode / Bright Backdrop') +
-             ' (Avg Brightness: ' + Math.round(avgLum) + '/255, Contrast Range: ' + contrastRatio + ')\n' +
-             '• Edge Complexity Score: ' + edgeDensity + ' / 1.0 (Detailed Structural Density)\n' +
-             '• Dominant Colors: ' + sortedColors.join(', ') + '\n' +
-             '• Spatial Layout Breakdown:\n' +
-             '  - Upper Region (0–20%): ' + (topLum / topCount < 100 ? 'Dark Header Bar / Navigation Area' : 'Light Title / Banner Area') + '\n' +
-             '  - Main Canvas (20–80%): ' + (midLum / midCount < 110 ? 'Primary Subject / Content Canvas' : 'High-Key Central Display / Body') + '\n' +
-             '  - Lower Region (80–100%): ' + (btmLum / btmCount < 100 ? 'Dark Footer / Action Row' : 'Clean Base / Legend Area') + '\n';
-    } catch (_) {
-      return '[Image: ' + filename + ' (' + formatBytes(filesize) + ') attached and inspected.]';
-    }
-  }
-
-  // Scale down huge camera photos to optimal resolution (max 1600px) and perform deep visual analysis
-  function optimizeImageDataUrl(file) {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const rawUrl = e.target.result;
-        const img = new Image();
-        img.onload = () => {
-          const maxDim = 1600;
-          const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-          const canvas = document.createElement('canvas');
-          canvas.width = Math.round(img.width * scale);
-          canvas.height = Math.round(img.height * scale);
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-          const visualAnalysis = analyzeImageVisualDetails(canvas, file.name, file.size);
-          resolve({
-            dataUrl: dataUrl,
-            visualAnalysis: visualAnalysis,
-            width: img.width,
-            height: img.height
-          });
-        };
-        img.onerror = () => resolve({
-          dataUrl: rawUrl,
-          visualAnalysis: '[Image: ' + file.name + ' (' + formatBytes(file.size) + ') loaded and attached.]',
-          width: 800,
-          height: 600
-        });
-        img.src = rawUrl;
-      };
-      reader.onerror = () => resolve({ dataUrl: '', visualAnalysis: '', width: 0, height: 0 });
-      reader.readAsDataURL(file);
-    });
-  }
-
-  // Extract keyframes from video files in-memory for deep multi-frame video comprehension
-  function extractVideoKeyframes(file) {
-    return new Promise((resolve) => {
-      const video = document.createElement('video');
-      video.preload = 'metadata';
-      video.muted = true;
-      video.playsInline = true;
-      const url = URL.createObjectURL(file);
-      video.src = url;
-
-      let resolved = false;
-      const finish = (result) => {
-        if (!resolved) {
-          resolved = true;
-          URL.revokeObjectURL(url);
-          resolve(result);
-        }
-      };
-
-      const timer = setTimeout(() => {
-        finish({ duration: 1, frames: [] });
-      }, 7000);
-
-      video.onloadedmetadata = () => {
-        const duration = video.duration || 1;
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const frames = [];
-        const timestamps = [];
-
-        if (duration <= 2.5) {
-          timestamps.push(duration * 0.5);
-        } else {
-          timestamps.push(Math.min(1, duration * 0.2), duration * 0.5, Math.max(duration - 1, duration * 0.8));
-        }
-
-        let idx = 0;
-        function captureNext() {
-          if (idx >= timestamps.length) {
-            clearTimeout(timer);
-            finish({ duration: duration, frames: frames });
-            return;
-          }
-          video.currentTime = timestamps[idx];
-        }
-
-        video.onseeked = () => {
-          const maxDim = 1280;
-          const scale = Math.min(1, maxDim / Math.max(video.videoWidth || 640, video.videoHeight || 480));
-          canvas.width = Math.round((video.videoWidth || 640) * scale);
-          canvas.height = Math.round((video.videoHeight || 480) * scale);
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          frames.push(canvas.toDataURL('image/jpeg', 0.82));
-          idx++;
-          captureNext();
-        };
-
-        captureNext();
-      };
-
-      video.onerror = () => {
-        clearTimeout(timer);
-        finish({ duration: 0, frames: [] });
-      };
-    });
-  }
-
-  // --- DEEP PRESENTATION (PPTX & PPT) PARSER ---
-  async function parsePresentationFile(file) {
-    try {
-      const buffer = await file.arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-
-      // Check for ZIP magic PK\x03\x04
-      const isZip = bytes.length > 30 && bytes[0] === 0x50 && bytes[1] === 0x4B && bytes[2] === 0x03 && bytes[3] === 0x04;
-      if (isZip) {
-        const slides = await extractPptxSlides(bytes);
-        if (slides && slides.length > 0) {
-          let deckText = '==================================================\n' +
-                         'PRESENTATION DECK: ' + file.name + '\n' +
-                         'Total Slides: ' + slides.length + '\n' +
-                         '==================================================\n\n';
-          slides.forEach(s => {
-            deckText += '--- Slide ' + s.num + (s.title ? (': ' + s.title) : '') + ' ---\n' +
-                        s.text + '\n' +
-                        (s.notes ? ('[Speaker Notes]: ' + s.notes + '\n') : '') + '\n';
-          });
-          return {
-            type: 'ppt',
-            name: file.name,
-            size: formatBytes(file.size),
-            slideCount: slides.length,
-            title: slides[0] && slides[0].title ? slides[0].title : file.name.replace(/\.[^/.]+$/, ''),
-            textContent: deckText.slice(0, 48000)
-          };
-        }
-      }
-
-      // Legacy binary PPT (PowerPoint 97-2003) or uncompressed fallback
-      const pptText = extractBinaryPptText(bytes, file.name);
-      return {
-        type: 'ppt',
-        name: file.name,
-        size: formatBytes(file.size),
-        slideCount: pptText.slideCount || 1,
-        title: file.name.replace(/\.[^/.]+$/, ''),
-        textContent: pptText.text.slice(0, 48000)
-      };
-    } catch (_) {
-      return {
-        type: 'ppt',
-        name: file.name,
-        size: formatBytes(file.size),
-        slideCount: 1,
-        title: file.name.replace(/\.[^/.]+$/, ''),
-        textContent: '[Presentation: ' + file.name + ' - File attached. Ready for analysis.]'
-      };
-    }
-  }
-
-  async function extractPptxSlides(bytes) {
-    let eocdOffset = -1;
-    const maxSearch = Math.min(bytes.length, 65536 + 22);
-    for (let i = bytes.length - 22; i >= bytes.length - maxSearch; i--) {
-      if (bytes[i] === 0x50 && bytes[i + 1] === 0x4B && bytes[i + 2] === 0x05 && bytes[i + 3] === 0x06) {
-        eocdOffset = i;
-        break;
-      }
-    }
-
-    const entries = [];
-    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-
-    if (eocdOffset !== -1) {
-      const totalEntries = view.getUint16(eocdOffset + 10, true);
-      const cdOffset = view.getUint32(eocdOffset + 16, true);
-      let ptr = cdOffset;
-      for (let i = 0; i < totalEntries && ptr + 46 <= bytes.length; i++) {
-        if (view.getUint32(ptr, true) !== 0x02014B50) break;
-        const method = view.getUint16(ptr + 10, true);
-        const compSize = view.getUint32(ptr + 20, true);
-        const uncompSize = view.getUint32(ptr + 24, true);
-        const nameLen = view.getUint16(ptr + 28, true);
-        const extraLen = view.getUint16(ptr + 30, true);
-        const commentLen = view.getUint16(ptr + 32, true);
-        const localOffset = view.getUint32(ptr + 42, true);
-        const nameBytes = bytes.subarray(ptr + 46, ptr + 46 + nameLen);
-        const name = new TextDecoder('utf-8').decode(nameBytes);
-
-        entries.push({
-          name: name,
-          method: method,
-          compSize: compSize,
-          uncompSize: uncompSize,
-          localOffset: localOffset
-        });
-        ptr += 46 + nameLen + extraLen + commentLen;
-      }
+    if (isGenerating) {
+      if (abortCtrl) abortCtrl.abort();
     } else {
-      let ptr = 0;
-      while (ptr + 30 <= bytes.length) {
-        if (view.getUint32(ptr, true) !== 0x04034B50) break;
-        const method = view.getUint16(ptr + 8, true);
-        const compSize = view.getUint32(ptr + 18, true);
-        const uncompSize = view.getUint32(ptr + 22, true);
-        const nameLen = view.getUint16(ptr + 26, true);
-        const extraLen = view.getUint16(ptr + 28, true);
-        const nameBytes = bytes.subarray(ptr + 30, ptr + 30 + nameLen);
-        const name = new TextDecoder('utf-8').decode(nameBytes);
-
-        entries.push({
-          name: name,
-          method: method,
-          compSize: compSize,
-          uncompSize: uncompSize,
-          localOffset: ptr
-        });
-        ptr += 30 + nameLen + extraLen + compSize;
-      }
-    }
-
-    const slideEntries = [];
-    const notesMap = {};
-
-    for (const ent of entries) {
-      const slideMatch = ent.name.match(/^ppt\/slides\/slide(\d+)\.xml$/i);
-      if (slideMatch) {
-        slideEntries.push({ num: parseInt(slideMatch[1], 10), entry: ent });
-      }
-      const noteMatch = ent.name.match(/^ppt\/notesSlides\/notesSlide(\d+)\.xml$/i);
-      if (noteMatch) {
-        notesMap[parseInt(noteMatch[1], 10)] = ent;
-      }
-    }
-
-    slideEntries.sort((a, b) => a.num - b.num);
-
-    const results = [];
-    for (const item of slideEntries) {
-      const xml = await decompressZipEntry(bytes, item.entry);
-      const parsedSlide = parseSlideXml(xml);
-      let noteText = '';
-      if (notesMap[item.num]) {
-        const noteXml = await decompressZipEntry(bytes, notesMap[item.num]);
-        noteText = parseSlideXml(noteXml).text;
-      }
-      results.push({
-        num: item.num,
-        title: parsedSlide.title,
-        text: parsedSlide.text,
-        notes: noteText
-      });
-    }
-
-    return results;
-  }
-
-  async function decompressZipEntry(bytes, entry) {
-    try {
-      const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-      const loc = entry.localOffset;
-      if (view.getUint32(loc, true) !== 0x04034B50) return '';
-      const nameLen = view.getUint16(loc + 26, true);
-      const extraLen = view.getUint16(loc + 28, true);
-      const dataStart = loc + 30 + nameLen + extraLen;
-      const compBytes = bytes.subarray(dataStart, dataStart + entry.compSize);
-
-      if (entry.method === 0) {
-        return new TextDecoder('utf-8').decode(compBytes);
-      } else if (entry.method === 8) {
-        if (typeof DecompressionStream !== 'undefined') {
-          const stream = new Response(compBytes).body.pipeThrough(new DecompressionStream('deflate-raw'));
-          return await new Response(stream).text();
-        }
-      }
-      return new TextDecoder('utf-8', { fatal: false }).decode(compBytes);
-    } catch (_) {
-      return '';
-    }
-  }
-
-  function parseSlideXml(xml) {
-    if (!xml) return { title: '', text: '' };
-    const pMatches = xml.match(/<a:p[\s>][\s\S]*?<\/a:p>/gi) || [];
-    const lines = [];
-    let firstTitle = '';
-
-    for (const p of pMatches) {
-      const tMatches = p.match(/<a:t[\s>]([\s\S]*?)<\/a:t>/gi) || [];
-      let pText = '';
-      for (const t of tMatches) {
-        const inner = t.replace(/<[^>]+>/g, '');
-        pText += unescapeXmlEntities(inner);
-      }
-      pText = pText.trim();
-      if (pText) {
-        if (!firstTitle) firstTitle = pText;
-        lines.push(pText);
-      }
-    }
-
-    const text = lines.map((l, i) => (i === 0 && l === firstTitle ? l : ('• ' + l))).join('\n');
-    return { title: firstTitle, text: text };
-  }
-
-  function unescapeXmlEntities(str) {
-    if (!str) return '';
-    return str
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&apos;/g, "'")
-      .replace(/&#39;/g, "'")
-      .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)));
-  }
-
-  function extractBinaryPptText(bytes, filename) {
-    const lines = [];
-    let currentWord = '';
-    for (let i = 0; i < bytes.length - 1; i += 2) {
-      const ch = bytes[i];
-      const zero = bytes[i + 1];
-      if (zero === 0 && ((ch >= 32 && ch <= 126) || ch === 10 || ch === 13)) {
-        currentWord += String.fromCharCode(ch);
-      } else {
-        if (currentWord.trim().length >= 4) {
-          const cleaned = currentWord.trim();
-          if (!/^(Times New Roman|Arial|Calibri|Wingdings|PowerPoint Document|Current User|Default Design)$/i.test(cleaned)) {
-            lines.push(cleaned);
-          }
-        }
-        currentWord = '';
-      }
-    }
-
-    const uniqueLines = [];
-    for (let i = 0; i < lines.length; i++) {
-      if (i === 0 || lines[i] !== lines[i - 1]) {
-        uniqueLines.push(lines[i]);
-      }
-    }
-
-    let formatted = '==================================================\n' +
-                    'POWERPOINT DECK: ' + filename + '\n' +
-                    '==================================================\n\n';
-    let slideNum = 1;
-    let slideContent = [];
-    for (let i = 0; i < uniqueLines.length; i++) {
-      slideContent.push('• ' + uniqueLines[i]);
-      if (slideContent.length >= 6 || i === uniqueLines.length - 1) {
-        formatted += '--- Slide ' + slideNum + ' ---\n' + slideContent.join('\n') + '\n\n';
-        slideNum++;
-        slideContent = [];
-      }
-    }
-
-    return {
-      slideCount: Math.max(1, slideNum - 1),
-      text: formatted
-    };
-  }
-
-  // --- DEEP PDF DOCUMENT PARSER ---
-  async function parsePdfFile(file) {
-    try {
-      const buffer = await file.arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-      const latin1Text = new TextDecoder('latin1').decode(bytes);
-
-      const pageMatches = latin1Text.match(/\/Type\s*\/Page\b/g);
-      const pageCount = pageMatches ? pageMatches.length : 1;
-
-      let docTitle = '';
-      const titleMatch = latin1Text.match(/\/Title\s*\(([^)]+)\)/);
-      if (titleMatch) docTitle = unescapePdfString(titleMatch[1]);
-      const authorMatch = latin1Text.match(/\/Author\s*\(([^)]+)\)/);
-      let docAuthor = '';
-      if (authorMatch) docAuthor = unescapePdfString(authorMatch[1]);
-
-      const extractedPages = [];
-      let currentPageText = [];
-
-      const streamRegex = /stream[\r\n]/g;
-      let streamMatch;
-
-      while ((streamMatch = streamRegex.exec(latin1Text)) !== null) {
-        const dataStart = streamMatch.index + streamMatch[0].length;
-        const endstreamIdx = latin1Text.indexOf('endstream', dataStart);
-        if (endstreamIdx === -1) break;
-
-        const dictStart = latin1Text.lastIndexOf('<<', streamMatch.index);
-        const dictStr = dictStart !== -1 ? latin1Text.substring(dictStart, streamMatch.index) : '';
-
-        if (/\/Subtype\s*\/(Image|Sound)/i.test(dictStr)) {
-          continue;
-        }
-
-        const isFlate = /\/Filter\s*(\/FlateDecode|\[[\s\S]*?\/FlateDecode[\s\S]*?\])/i.test(dictStr);
-        let streamBytes = bytes.subarray(dataStart, endstreamIdx);
-        while (streamBytes.length > 0 && (streamBytes[streamBytes.length - 1] === 10 || streamBytes[streamBytes.length - 1] === 13)) {
-          streamBytes = streamBytes.subarray(0, streamBytes.length - 1);
-        }
-
-        let decompressed = '';
-        if (isFlate && streamBytes.length > 2) {
-          decompressed = await decompressPdfFlate(streamBytes);
-        } else {
-          decompressed = new TextDecoder('latin1').decode(streamBytes);
-        }
-
-        if (decompressed) {
-          const textFromStream = extractPdfTextFromOperators(decompressed);
-          if (textFromStream.trim()) {
-            currentPageText.push(textFromStream.trim());
-            if (dictStr.includes('/Contents') || currentPageText.length >= 3) {
-              extractedPages.push(currentPageText.join('\n'));
-              currentPageText = [];
-            }
-          }
-        }
-      }
-
-      if (currentPageText.length > 0) {
-        extractedPages.push(currentPageText.join('\n'));
-      }
-
-      if (extractedPages.length === 0 || extractedPages.join('').trim().length < 50) {
-        const directText = extractPdfTextFromOperators(latin1Text);
-        if (directText.trim()) {
-          extractedPages.push(directText.trim());
-        }
-      }
-
-      let formattedPdf = '==================================================\n' +
-                         'PDF DOCUMENT: ' + file.name + '\n' +
-                         'Pages: ' + Math.max(pageCount, extractedPages.length) +
-                         (docTitle ? (' | Title: ' + docTitle) : '') +
-                         (docAuthor ? (' | Author: ' + docAuthor) : '') + '\n' +
-                         '==================================================\n\n';
-
-      if (extractedPages.length > 0) {
-        extractedPages.forEach((pageContent, idx) => {
-          formattedPdf += '--- Page ' + (idx + 1) + ' ---\n' + pageContent + '\n\n';
-        });
-      } else {
-        formattedPdf += '[PDF Document: ' + file.name + ' (' + formatBytes(file.size) + ') loaded and attached. Ask questions about this PDF.]';
-      }
-
-      return {
-        type: 'pdf',
-        name: file.name,
-        size: formatBytes(file.size),
-        pageCount: Math.max(pageCount, extractedPages.length),
-        title: docTitle || file.name.replace(/\.[^/.]+$/, ''),
-        textContent: formattedPdf.slice(0, 48000)
-      };
-    } catch (_) {
-      return {
-        type: 'pdf',
-        name: file.name,
-        size: formatBytes(file.size),
-        pageCount: 1,
-        title: file.name.replace(/\.[^/.]+$/, ''),
-        textContent: '[PDF: ' + file.name + ' - Document attached. Ready for analysis.]'
-      };
-    }
-  }
-
-  async function decompressPdfFlate(streamBytes) {
-    if (typeof DecompressionStream === 'undefined' || !streamBytes || streamBytes.length < 2) return '';
-    try {
-      const ds = new DecompressionStream('deflate');
-      const s = new Response(streamBytes).body.pipeThrough(ds);
-      return await new Response(s).text();
-    } catch (_) {}
-
-    try {
-      const ds = new DecompressionStream('deflate-raw');
-      const s = new Response(streamBytes).body.pipeThrough(ds);
-      return await new Response(s).text();
-    } catch (_) {}
-
-    try {
-      if (streamBytes.length > 6) {
-        const rawBytes = streamBytes.subarray(2, streamBytes.length - 4);
-        const ds = new DecompressionStream('deflate-raw');
-        const s = new Response(rawBytes).body.pipeThrough(ds);
-        return await new Response(s).text();
-      }
-    } catch (_) {}
-
-    try {
-      return new TextDecoder('utf-8', { fatal: false }).decode(streamBytes);
-    } catch (_) {
-      return '';
-    }
-  }
-
-  function extractPdfTextFromOperators(content) {
-    if (!content) return '';
-    const lines = [];
-
-    const tjRegex = /\[([\s\S]*?)\]\s*TJ/gi;
-    let match;
-    while ((match = tjRegex.exec(content)) !== null) {
-      const arrContent = match[1];
-      let line = '';
-      const elemRegex = /\(([^)]*)\)|<([0-9a-fA-F\s]+)>|(-?\d+(?:\.\d+)?)/g;
-      let elem;
-      while ((elem = elemRegex.exec(arrContent)) !== null) {
-        if (elem[1] !== undefined) {
-          line += unescapePdfString(elem[1]);
-        } else if (elem[2] !== undefined) {
-          line += decodeHexPdfString(elem[2]);
-        } else if (elem[3] !== undefined) {
-          const offset = parseFloat(elem[3]);
-          if (offset <= -120) line += ' ';
-        }
-      }
-      line = line.trim();
-      if (line.length > 1) lines.push(line);
-    }
-
-    const singleTjRegex = /\(([^)]+)\)\s*(?:Tj|'|")/gi;
-    while ((match = singleTjRegex.exec(content)) !== null) {
-      const str = unescapePdfString(match[1]).trim();
-      if (str.length > 1) lines.push(str);
-    }
-
-    const hexTjRegex = /<([0-9a-fA-F\s]+)>\s*(?:Tj|TJ|'|")/gi;
-    while ((match = hexTjRegex.exec(content)) !== null) {
-      const decoded = decodeHexPdfString(match[1]).trim();
-      if (decoded.length > 1) lines.push(decoded);
-    }
-
-    if (lines.length < 3) {
-      const words = content.match(/[A-Za-z0-9][A-Za-z0-9\s.,!?:;'"\-]{4,}/g);
-      if (words) {
-        for (const w of words) {
-          const trimmed = w.trim();
-          if (trimmed.length >= 4 && !/^(stream|endstream|Filter|FlateDecode|Length|Type|Page|Font|Widths)$/i.test(trimmed)) {
-            lines.push(trimmed);
-          }
-        }
-      }
-    }
-
-    return lines.join('\n');
-  }
-
-  function decodeHexPdfString(hex) {
-    if (!hex) return '';
-    const rawHex = hex.replace(/\s+/g, '');
-    let decoded = '';
-    if (rawHex.length >= 4 && rawHex.length % 4 === 0 && rawHex.startsWith('00')) {
-      for (let i = 0; i < rawHex.length; i += 4) {
-        const code = parseInt(rawHex.substr(i, 4), 16);
-        if (code >= 32) decoded += String.fromCharCode(code);
-      }
-    } else {
-      for (let i = 0; i < rawHex.length; i += 2) {
-        const code = parseInt(rawHex.substr(i, 2), 16);
-        if (code >= 32 && code <= 126) decoded += String.fromCharCode(code);
-      }
-    }
-    return decoded;
-  }
-
-  function unescapePdfString(str) {
-    if (!str) return '';
-    return str
-      .replace(/\\n/g, '\n')
-      .replace(/\\r/g, '\r')
-      .replace(/\\t/g, '\t')
-      .replace(/\\b/g, '\b')
-      .replace(/\\f/g, '\f')
-      .replace(/\\\(/g, '(')
-      .replace(/\\\)/g, ')')
-      .replace(/\\\\/g, '\\')
-      .replace(/\\([0-7]{1,3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8)));
-  }
-
-  // --- DEEP AUDIO FORMAT PARSER & ACOUSTIC ANALYZER ---
-  async function parseAudioFile(file) {
-    try {
-      const buffer = await file.arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-
-      let duration = 0;
-      let sampleRate = 0;
-      let channels = 1;
-      let peakAmplitude = 0;
-      let rmsEnergy = 0;
-      let silencePercent = 0;
-      let cadenceDescription = 'Standard conversational speech';
-      let audioUrl = '';
-
-      try {
-        audioUrl = URL.createObjectURL(file);
-      } catch (_) {}
-
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (AudioCtx) {
-        try {
-          const ctx = new AudioCtx();
-          const decoded = await ctx.decodeAudioData(buffer.slice(0));
-          duration = decoded.duration;
-          sampleRate = decoded.sampleRate;
-          channels = decoded.numberOfChannels;
-
-          const pcm = decoded.getChannelData(0);
-          const sampleStep = Math.max(1, Math.floor(pcm.length / 15000));
-          let sumSq = 0;
-          let counted = 0;
-          let silenceCount = 0;
-          let maxPeak = 0;
-
-          for (let i = 0; i < pcm.length; i += sampleStep) {
-            const val = Math.abs(pcm[i]);
-            if (val > maxPeak) maxPeak = val;
-            sumSq += val * val;
-            if (val < 0.02) silenceCount++;
-            counted++;
-          }
-
-          peakAmplitude = parseFloat(maxPeak.toFixed(3));
-          rmsEnergy = parseFloat(Math.sqrt(sumSq / (counted || 1)).toFixed(3));
-          silencePercent = Math.round((silenceCount / (counted || 1)) * 100);
-
-          let bursts = 0;
-          let active = false;
-          for (let i = 0; i < pcm.length; i += sampleStep) {
-            const val = Math.abs(pcm[i]);
-            if (val > 0.06 && !active) {
-              active = true;
-              bursts++;
-            } else if (val < 0.025 && active) {
-              active = false;
-            }
-          }
-          const burstRate = duration > 0 ? (bursts / duration).toFixed(1) : 0;
-          cadenceDescription = burstRate > 3.5 ? 'Fast / lively rhythm (~' + burstRate + ' pulses/sec)' :
-                               burstRate > 1.2 ? 'Natural conversational tempo (~' + burstRate + ' pulses/sec)' :
-                               'Calm / slow-paced cadence (~' + burstRate + ' pulses/sec)';
-          ctx.close().catch(() => {});
-        } catch (_) {}
-      }
-
-      const metadata = extractAudioMetadata(bytes);
-
-      let summary = '==================================================\n' +
-                    'AUDIO FILE: ' + file.name + '\n' +
-                    'Size: ' + formatBytes(file.size) +
-                    (duration ? (' | Duration: ~' + Math.round(duration) + 's (' + formatTime(duration) + ')') : '') +
-                    (sampleRate ? (' | Sample Rate: ' + sampleRate + ' Hz') : '') +
-                    (channels ? (' | Channels: ' + (channels === 2 ? 'Stereo (2ch)' : channels === 1 ? 'Mono (1ch)' : channels + 'ch')) : '') + '\n' +
-                    '==================================================\n' +
-                    '• Peak Signal: ' + peakAmplitude + ' / 1.0\n' +
-                    '• RMS Energy Level: ' + rmsEnergy + '\n' +
-                    '• Silence Ratio: ' + silencePercent + '% of duration\n' +
-                    '• Acoustic Cadence: ' + cadenceDescription + '\n';
-
-      if (metadata && Object.keys(metadata).length > 0) {
-        summary += '\nEmbedded Metadata:\n';
-        if (metadata.title) summary += '• Title: ' + metadata.title + '\n';
-        if (metadata.artist) summary += '• Artist / Speaker: ' + metadata.artist + '\n';
-        if (metadata.album) summary += '• Album / Show: ' + metadata.album + '\n';
-        if (metadata.date) summary += '• Recorded Date: ' + metadata.date + '\n';
-        if (metadata.comment) summary += '• Comment / Source: ' + metadata.comment + '\n';
-      }
-
-      return {
-        type: 'audio',
-        name: file.name,
-        size: formatBytes(file.size),
-        duration: duration,
-        sampleRate: sampleRate,
-        channels: channels,
-        audioUrl: audioUrl,
-        audioAnalysis: summary,
-        textContent: summary
-      };
-    } catch (_) {
-      return {
-        type: 'audio',
-        name: file.name,
-        size: formatBytes(file.size),
-        duration: 0,
-        audioUrl: '',
-        audioAnalysis: '[Audio: ' + file.name + ' - Audio file attached.]',
-        textContent: '[Audio: ' + file.name + ' - Audio file attached.]'
-      };
-    }
-  }
-
-  function formatTime(seconds) {
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    return m + ':' + (s < 10 ? '0' : '') + s;
-  }
-
-  function extractAudioMetadata(bytes) {
-    const meta = {};
-    try {
-      if (bytes.length > 10 && bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) {
-        const tagSize = ((bytes[6] & 0x7F) << 21) | ((bytes[7] & 0x7F) << 14) | ((bytes[8] & 0x7F) << 7) | (bytes[9] & 0x7F);
-        const tagEnd = Math.min(bytes.length, 10 + tagSize);
-        let ptr = 10;
-        while (ptr + 10 < tagEnd) {
-          const frameId = String.fromCharCode(bytes[ptr], bytes[ptr+1], bytes[ptr+2], bytes[ptr+3]);
-          if (!/^[A-Z0-9]{4}$/.test(frameId)) break;
-          const frameSize = (bytes[ptr+4] << 24) | (bytes[ptr+5] << 16) | (bytes[ptr+6] << 8) | bytes[ptr+7];
-          if (frameSize <= 0 || ptr + 10 + frameSize > tagEnd) break;
-          const frameData = bytes.subarray(ptr + 10, ptr + 10 + frameSize);
-          let frameText = '';
-          if (frameData.length > 1) {
-            frameText = new TextDecoder('utf-8', { fatal: false }).decode(frameData.subarray(1)).replace(/\0/g, '').trim();
-          }
-          if (frameId === 'TIT2') meta.title = frameText;
-          else if (frameId === 'TPE1') meta.artist = frameText;
-          else if (frameId === 'TALB') meta.album = frameText;
-          else if (frameId === 'TYER' || frameId === 'TDRC') meta.date = frameText;
-          else if (frameId === 'COMM') meta.comment = frameText;
-          ptr += 10 + frameSize;
-        }
-      }
-      if (bytes.length > 36 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) {
-        const ascii = new TextDecoder('latin1').decode(bytes.subarray(0, Math.min(bytes.length, 4096)));
-        const inam = ascii.match(/INAM\x00*([^\x00]{2,64})/);
-        if (inam) meta.title = inam[1].trim();
-        const iart = ascii.match(/IART\x00*([^\x00]{2,64})/);
-        if (iart) meta.artist = iart[1].trim();
-        const icmt = ascii.match(/ICMT\x00*([^\x00]{2,64})/);
-        if (icmt) meta.comment = icmt[1].trim();
-        const icrd = ascii.match(/ICRD\x00*([^\x00]{2,64})/);
-        if (icrd) meta.date = icrd[1].trim();
-      }
-    } catch (_) {}
-    return meta;
-  }
-
-  async function processSelectedFile(file) {
-    const isImage = file.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|bmp|svg)$/i.test(file.name);
-    const isVideo = file.type.startsWith('video/') || /\.(mp4|webm|mov|mkv|3gp)$/i.test(file.name);
-    const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
-    const isPpt = /\.(pptx|ppt)$/i.test(file.name) || file.type.includes('presentation') || file.type.includes('powerpoint');
-    const isAudio = file.type.startsWith('audio/') || /\.(mp3|wav|m4a|ogg|aac|flac|wma)$/i.test(file.name);
-
-    if (isImage) {
-      showTemporaryLoadingTray(file.name, 'Analyzing visual structure...');
-      const visualData = await optimizeImageDataUrl(file);
-      currentAttachment = {
-        type: 'image',
-        name: file.name,
-        size: formatBytes(file.size),
-        dataUrl: visualData.dataUrl,
-        visualAnalysis: visualData.visualAnalysis,
-        textContent: visualData.visualAnalysis,
-        width: visualData.width,
-        height: visualData.height
-      };
-      showAttachmentTray();
-    } else if (isVideo) {
-      showTemporaryLoadingTray(file.name, 'Extracting video frames...');
-      const vidData = await extractVideoKeyframes(file);
-      currentAttachment = {
-        type: 'video',
-        name: file.name,
-        size: formatBytes(file.size),
-        duration: vidData.duration,
-        frames: vidData.frames,
-        dataUrl: vidData.frames[0] || ''
-      };
-      showAttachmentTray();
-    } else if (isPdf) {
-      showTemporaryLoadingTray(file.name, 'Parsing PDF document & pages...');
-      const pdfData = await parsePdfFile(file);
-      currentAttachment = pdfData;
-      showAttachmentTray();
-    } else if (isPpt) {
-      showTemporaryLoadingTray(file.name, 'Analyzing presentation slides...');
-      const pptData = await parsePresentationFile(file);
-      currentAttachment = pptData;
-      showAttachmentTray();
-    } else if (isAudio) {
-      showTemporaryLoadingTray(file.name, 'Analyzing audio & acoustics...');
-      const audioData = await parseAudioFile(file);
-      currentAttachment = audioData;
-      showAttachmentTray();
-    } else {
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        const text = typeof evt.target.result === 'string' ? evt.target.result : '';
-        currentAttachment = {
-          type: 'doc',
-          name: file.name,
-          size: formatBytes(file.size),
-          textContent: text.slice(0, 38000)
-        };
-        showAttachmentTray();
-      };
-      reader.readAsText(file);
-    }
-  }
-
-  function showTemporaryLoadingTray(fileName, statusText) {
-    attachName.textContent = fileName;
-    attachSize.textContent = statusText;
-    attachPreviewImg.style.display = 'none';
-    attachDocIcon.style.display = 'block';
-    attachDocIcon.innerHTML = '&#9203;';
-    attachTray.style.display = 'flex';
-  }
-
-  function showAttachmentTray() {
-    if (!currentAttachment) return;
-    attachName.textContent = currentAttachment.name;
-
-    let subText = currentAttachment.size;
-    if (currentAttachment.type === 'video' && currentAttachment.duration) {
-      subText += ' (~' + Math.round(currentAttachment.duration) + 's)';
-    } else if (currentAttachment.type === 'pdf' && currentAttachment.pageCount) {
-      subText += ' (' + currentAttachment.pageCount + ' pages)';
-    } else if (currentAttachment.type === 'ppt' && currentAttachment.slideCount) {
-      subText += ' (' + currentAttachment.slideCount + ' slides)';
-    } else if (currentAttachment.type === 'audio' && currentAttachment.duration) {
-      subText += ' (~' + Math.round(currentAttachment.duration) + 's)';
-    }
-    attachSize.textContent = subText;
-
-    if (currentAttachment.type === 'image' || (currentAttachment.type === 'video' && currentAttachment.dataUrl)) {
-      attachPreviewImg.src = currentAttachment.dataUrl;
-      attachPreviewImg.style.display = 'block';
-      attachDocIcon.style.display = 'none';
-    } else {
-      attachPreviewImg.style.display = 'none';
-      attachDocIcon.style.display = 'block';
-      if (currentAttachment.type === 'pdf') {
-        attachDocIcon.innerHTML = '&#128196;';
-        attachDocIcon.style.color = '#EF4444';
-      } else if (currentAttachment.type === 'ppt') {
-        attachDocIcon.innerHTML = '&#128202;';
-        attachDocIcon.style.color = '#F59E0B';
-      } else if (currentAttachment.type === 'audio') {
-        attachDocIcon.innerHTML = '&#127911;';
-        attachDocIcon.style.color = '#A855F7';
-      } else if (currentAttachment.type === 'video') {
-        attachDocIcon.innerHTML = '&#127916;';
-        attachDocIcon.style.color = '#00F2FE';
-      } else {
-        attachDocIcon.innerHTML = '&#128196;';
-        attachDocIcon.style.color = '#38BDF8';
-      }
-    }
-    attachTray.style.display = 'flex';
-  }
-
-  function clearAttachment() {
-    currentAttachment = null;
-    attachTray.style.display = 'none';
-    attachPreviewImg.src = '';
-  }
-
-  attachRemoveBtn.addEventListener('click', clearAttachment);
-
-  // --- NATIVE & WEB SPEECH RECOGNITION + DUAL-ENGINE AUDIO RECORDING ---
-  let voiceMediaStream = null;
-  let voiceMediaRecorder = null;
-  let voiceAudioChunks = [];
-  let voiceRecordStartTime = 0;
-  let voiceSilenceTimer = null;
-  let voiceHasSpokenText = false;
-  let voiceRecognitionActive = false;
-  let lastTranscribedVoiceText = '';
-  const voiceDoneBtn = document.getElementById('voice-done-btn');
-  const voiceWave = document.getElementById('voice-wave');
-  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-  async function startAudioRecording() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
-    try {
-      voiceAudioChunks = [];
-      voiceRecordStartTime = Date.now();
-      voiceMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      let mimeType = 'audio/webm';
-      if (window.MediaRecorder) {
-        if (!MediaRecorder.isTypeSupported('audio/webm')) {
-          if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
-          else if (MediaRecorder.isTypeSupported('audio/aac')) mimeType = 'audio/aac';
-          else mimeType = '';
-        }
-      }
-      const options = mimeType ? { mimeType } : {};
-      voiceMediaRecorder = new MediaRecorder(voiceMediaStream, options);
-      voiceMediaRecorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) {
-          voiceAudioChunks.push(e.data);
-        }
-      };
-      voiceMediaRecorder.start(250);
-    } catch (e) {
-      console.warn('Audio capture warning:', e);
-    }
-  }
-
-  async function stopAudioRecording(shouldAttach) {
-    if (voiceMediaRecorder && voiceMediaRecorder.state !== 'inactive') {
-      try { voiceMediaRecorder.stop(); } catch (_) {}
-    }
-    if (voiceMediaStream) {
-      try { voiceMediaStream.getTracks().forEach(t => t.stop()); } catch (_) {}
-      voiceMediaStream = null;
-    }
-    if (!shouldAttach || voiceAudioChunks.length === 0) {
-      voiceAudioChunks = [];
-      return null;
-    }
-    const durationSec = Math.max(1, (Date.now() - voiceRecordStartTime) / 1000);
-    const mimeType = (voiceMediaRecorder && voiceMediaRecorder.mimeType) || 'audio/webm';
-    const audioBlob = new Blob(voiceAudioChunks, { type: mimeType });
-    voiceAudioChunks = [];
-    if (audioBlob.size < 400) return null;
-
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const dataUrl = reader.result;
-        let analysisSummary = 'Recorded Spoken Voice Audio: ~' + durationSec.toFixed(1) + 's duration.';
-        try {
-          const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-          const ab = await audioBlob.arrayBuffer();
-          const decoded = await audioCtx.decodeAudioData(ab.slice(0));
-          const channelData = decoded.getChannelData(0);
-          let sumSquares = 0;
-          let peak = 0;
-          for (let i = 0; i < channelData.length; i++) {
-            const val = Math.abs(channelData[i]);
-            if (val > peak) peak = val;
-            sumSquares += val * val;
-          }
-          const rms = Math.sqrt(sumSquares / channelData.length);
-          analysisSummary = [
-            'Acoustic Spoken Voice Profile:',
-            '- Duration: ~' + decoded.duration.toFixed(1) + 's',
-            '- Sampling Rate: ' + decoded.sampleRate + ' Hz',
-            '- Peak Amplitude: ' + peak.toFixed(2),
-            '- Spoken RMS Energy: ' + rms.toFixed(4)
-          ].join('\n');
-          try { audioCtx.close(); } catch(_) {}
-        } catch (_) {}
-
-        resolve({
-          type: 'audio',
-          name: 'Voice Query (' + Math.round(durationSec) + 's)',
-          size: formatBytes(audioBlob.size),
-          duration: durationSec,
-          audioAnalysis: analysisSummary,
-          transcription: lastTranscribedVoiceText || '',
-          dataUrl: dataUrl,
-          blob: audioBlob
-        });
-      };
-      reader.readAsDataURL(audioBlob);
-    });
-  }
-
-  // Hook Native Android SpeechRecognizer Callbacks
-  window.__kaiVoiceOnStart = () => {
-    isListening = true;
-    voiceRecognitionActive = true;
-    micBtn.classList.add('active');
-    voiceBanner.style.display = 'flex';
-    voiceBanner.classList.add('recording');
-    voiceStatus.textContent = 'Listening & Recording... Speak now';
-  };
-
-  window.__kaiVoiceOnResult = (spoken, isFinal) => {
-    if (spoken) {
-      voiceHasSpokenText = true;
-      lastTranscribedVoiceText = spoken;
-      input.value = spoken;
-      input.style.height = 'auto';
-      input.style.height = Math.min(input.scrollHeight, 110) + 'px';
-      voiceStatus.textContent = (isFinal ? 'Understood: "' : 'Listening: "') + spoken.slice(-30) + '"';
-      if (isFinal) {
-        if (voiceSilenceTimer) clearTimeout(voiceSilenceTimer);
-        voiceSilenceTimer = setTimeout(() => {
-          stopVoice(true);
-        }, 1200);
-      }
-    }
-  };
-
-  window.__kaiVoiceOnRmsChanged = (rmsdB) => {
-    if (voiceWave) {
-      const bars = voiceWave.querySelectorAll('.bar');
-      const normalized = Math.max(4, Math.min(16, (rmsdB + 2) * 2));
-      bars.forEach((bar, idx) => {
-        bar.style.height = Math.max(4, normalized * (0.6 + idx * 0.2)) + 'px';
-      });
-    }
-  };
-
-  window.__kaiVoiceOnPermissionNeeded = () => {
-    voiceStatus.textContent = 'Please allow microphone access in system prompt...';
-  };
-
-  window.__kaiVoiceOnPermissionGranted = () => {
-    startVoice();
-  };
-
-  window.__kaiVoiceOnError = (errorMsg, errorCode) => {
-    if (errorCode === 7 || errorCode === 6) { // NO_MATCH or SPEECH_TIMEOUT
-      if (voiceHasSpokenText) {
-        stopVoice(true);
-        return;
-      }
-    }
-    voiceRecognitionActive = false;
-    if (voiceMediaRecorder && voiceMediaRecorder.state === 'recording') {
-      voiceStatus.textContent = 'Recording voice note... Tap Send when done';
-    } else {
-      voiceStatus.textContent = errorMsg || 'Speech recognition stopped';
-      setTimeout(() => stopVoice(false), 2000);
-    }
-  };
-
-  window.__kaiVoiceOnEnd = () => {
-    if (!isListening) return;
-    if (voiceSilenceTimer) clearTimeout(voiceSilenceTimer);
-    voiceSilenceTimer = setTimeout(() => {
-      stopVoice(voiceHasSpokenText);
-    }, 600);
-  };
-
-  if (SpeechRec) {
-    try {
-      recognition = new SpeechRec();
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.lang = navigator.language || 'en-US';
-
-      recognition.onstart = () => {
-        isListening = true;
-        voiceRecognitionActive = true;
-        micBtn.classList.add('active');
-        voiceBanner.style.display = 'flex';
-        voiceBanner.classList.add('recording');
-        voiceStatus.textContent = 'Listening & Recording... Speak now';
-      };
-
-      recognition.onresult = (event) => {
-        let interim = '';
-        let finalTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          } else {
-            interim += event.results[i][0].transcript;
-          }
-        }
-        const spoken = finalTranscript || interim;
-        if (spoken) {
-          voiceHasSpokenText = true;
-          lastTranscribedVoiceText = spoken;
-          input.value = spoken;
-          input.style.height = 'auto';
-          input.style.height = Math.min(input.scrollHeight, 110) + 'px';
-          voiceStatus.textContent = 'Heard: "' + spoken.slice(-30) + '"';
-          if (finalTranscript) {
-            if (voiceSilenceTimer) clearTimeout(voiceSilenceTimer);
-            voiceSilenceTimer = setTimeout(() => {
-              stopVoice(true);
-            }, 1200);
-          }
-        }
-      };
-
-      recognition.onerror = () => {
-        voiceRecognitionActive = false;
-        if (!voiceMediaRecorder || voiceMediaRecorder.state === 'inactive') {
-          stopVoice(false);
-        }
-      };
-
-      recognition.onend = () => {
-        if (voiceSilenceTimer) clearTimeout(voiceSilenceTimer);
-        voiceSilenceTimer = setTimeout(() => {
-          stopVoice(voiceHasSpokenText);
-        }, 600);
-      };
-    } catch (_) {}
-  }
-
-  async function startVoice() {
-    if (isListening) return;
-    isListening = true;
-    voiceHasSpokenText = false;
-    lastTranscribedVoiceText = '';
-    micBtn.classList.add('active');
-    voiceBanner.style.display = 'flex';
-    voiceBanner.classList.add('recording');
-    voiceStatus.textContent = 'Listening & Recording... Speak now';
-
-    // Start background audio capture
-    startAudioRecording();
-
-    // Check permission with native bridge
-    if (window.KaiVoice && typeof window.KaiVoice.hasPermission === 'function') {
-      if (!window.KaiVoice.hasPermission()) {
-        window.KaiVoice.requestPermission();
-        voiceStatus.textContent = 'Please allow microphone access...';
-        return;
-      }
-      try {
-        window.KaiVoice.startListening();
-        return;
-      } catch (_) {}
-    }
-
-    // Fallback to web SpeechRecognition
-    if (recognition) {
-      try {
-        recognition.start();
-        return;
-      } catch (err) {
-        if (!voiceMediaRecorder || voiceMediaRecorder.state === 'inactive') {
-          stopVoice(false);
-        }
-      }
-    }
-  }
-
-  async function stopVoice(shouldSend = false) {
-    if (voiceSilenceTimer) clearTimeout(voiceSilenceTimer);
-    isListening = false;
-    micBtn.classList.remove('active');
-    voiceBanner.style.display = 'none';
-    voiceBanner.classList.remove('recording');
-
-    if (window.KaiVoice && typeof window.KaiVoice.stopListening === 'function') {
-      try { window.KaiVoice.stopListening(); } catch (_) {}
-    }
-    if (recognition) {
-      try { recognition.stop(); } catch (_) {}
-    }
-
-    const recordedAudio = await stopAudioRecording(true);
-    if (recordedAudio) {
-      if (lastTranscribedVoiceText) {
-        recordedAudio.transcription = lastTranscribedVoiceText;
-      }
-      currentAttachment = recordedAudio;
-      showAttachmentTray();
-      if (!input.value.trim()) {
-        input.value = recordedAudio.transcription || 'Please listen to, understand, and answer my recorded voice question.';
-      }
-    }
-
-    if (shouldSend && input.value.trim() && !isGenerating) {
       handleSend();
     }
-  }
-
-  micBtn.addEventListener('click', () => {
-    if (isListening) {
-      stopVoice(true);
-    } else {
-      startVoice();
-    }
   });
-
-  if (voiceDoneBtn) {
-    voiceDoneBtn.addEventListener('click', () => {
-      stopVoice(true);
-    });
-  }
-
-  if (voiceCancelBtn) {
-    voiceCancelBtn.addEventListener('click', () => {
-      stopVoice(false);
-    });
-  }
 
   // Quick suggestions
   function sendQuickPrompt(txt) {
@@ -2590,7 +987,7 @@
     if (!text) return '';
     let out = escapeHtml(text);
     // Code blocks with ChatGPT header bar
-    out = out.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, function(match, lang, code) {
+    out = out.replace(/\`\`\`([a-zA-Z0-9_-]*)\n([\s\S]*?)\`\`\`/g, function(match, lang, code) {
       const language = lang || 'code';
       return '<div class="code-block-wrapper">' +
                '<div class="code-header">' +
@@ -2603,7 +1000,7 @@
              '</div>';
     });
     // Inline code
-    out = out.replace(/`([^`]+)`/g, function(m, p) { return '<code>' + p + '</code>'; });
+    out = out.replace(/\`([^\`]+)\`/g, function(m, p) { return '<code>' + p + '</code>'; });
     // Headings
     out = out.replace(/^### (.*$)/gim, '<h3>$1</h3>');
     out = out.replace(/^## (.*$)/gim, '<h2>$1</h2>');
@@ -2644,7 +1041,7 @@
     });
   }
 
-  function appendUserMessage(text, attachment) {
+  function appendUserMessage(text) {
     if (emptyState) emptyState.style.display = 'none';
 
     const row = document.createElement('div');
@@ -2653,57 +1050,9 @@
     const bubble = document.createElement('div');
     bubble.className = 'msg-bubble';
 
-    if (attachment && attachment.type === 'image') {
-      const img = document.createElement('img');
-      img.className = 'msg-img-preview';
-      img.src = attachment.dataUrl;
-      bubble.appendChild(img);
-    } else if (attachment && attachment.type === 'video') {
-      if (attachment.dataUrl) {
-        const img = document.createElement('img');
-        img.className = 'msg-img-preview';
-        img.src = attachment.dataUrl;
-        bubble.appendChild(img);
-      }
-      const chip = document.createElement('div');
-      chip.className = 'msg-doc-chip';
-      chip.innerHTML = '&#127916; ' + escapeHtml(attachment.name) + ' (' + attachment.size + ')';
-      bubble.appendChild(chip);
-    } else if (attachment && attachment.type === 'pdf') {
-      const chip = document.createElement('div');
-      chip.className = 'msg-doc-chip pdf';
-      chip.innerHTML = '&#128196; [PDF] ' + escapeHtml(attachment.name) + ' (' + attachment.size + (attachment.pageCount ? ', ' + attachment.pageCount + ' pages' : '') + ')';
-      bubble.appendChild(chip);
-    } else if (attachment && attachment.type === 'ppt') {
-      const chip = document.createElement('div');
-      chip.className = 'msg-doc-chip ppt';
-      chip.innerHTML = '&#128202; [PPT] ' + escapeHtml(attachment.name) + ' (' + attachment.size + (attachment.slideCount ? ', ' + attachment.slideCount + ' slides' : '') + ')';
-      bubble.appendChild(chip);
-    } else if (attachment && attachment.type === 'audio') {
-      const chip = document.createElement('div');
-      chip.className = 'msg-doc-chip audio';
-      chip.innerHTML = '&#127911; [AUDIO] ' + escapeHtml(attachment.name) + ' (' + attachment.size + (attachment.duration ? ', ~' + Math.round(attachment.duration) + 's' : '') + ')';
-      bubble.appendChild(chip);
-      const audioSrc = attachment.audioUrl || attachment.dataUrl;
-      if (audioSrc) {
-        const audioEl = document.createElement('audio');
-        audioEl.className = 'msg-audio-player';
-        audioEl.controls = true;
-        audioEl.src = audioSrc;
-        bubble.appendChild(audioEl);
-      }
-    } else if (attachment && attachment.type === 'doc') {
-      const chip = document.createElement('div');
-      chip.className = 'msg-doc-chip';
-      chip.innerHTML = '&#128196; ' + escapeHtml(attachment.name) + ' (' + attachment.size + ')';
-      bubble.appendChild(chip);
-    }
-
-    if (text) {
-      const textSpan = document.createElement('div');
-      textSpan.textContent = text;
-      bubble.appendChild(textSpan);
-    }
+    const textSpan = document.createElement('div');
+    textSpan.textContent = text;
+    bubble.appendChild(textSpan);
 
     row.appendChild(bubble);
     feed.appendChild(row);
@@ -2731,94 +1080,19 @@
     return bubble;
   }
 
-  // --- FREE OPEN SOURCE AI KEY & INTELLIGENT ENTITY RESOLUTION ---
-  const freeOpenSourceToken = 'sk-or-v1-kai-free-open-access-token';
-
-  function extractSubjectEntity(query, attachment) {
+  function extractSubjectEntity(query) {
     let raw = (query || '').trim();
     let cleaned = raw
       .replace(/^[#\s*-_]+/, '')
       .replace(/^(can you\s+)?(please\s+)?(tell me\s+)?(what is|what's|who is|who's|where is|explain|describe|identify|how does|what are|define|meaning of)\s+(an?|the|this|that|these|those)?\s*/i, '')
-      .replace(/\s*(mean|is this|is that|in this picture|in this image|in this photo|here)\??$/i, '')
+      .replace(/\s*(mean|is this|is that|here)\??$/i, '')
       .replace(/[?!.]+$/, '')
       .trim();
 
-    if (cleaned && !/^(this|that|it|picture|image|photo|file|something|thing|what)$/i.test(cleaned)) {
+    if (cleaned && !/^(this|that|it|something|thing|what)$/i.test(cleaned)) {
       return cleaned;
     }
-
-    if (attachment) {
-      // Check attachment name
-      if (attachment.name) {
-        let fname = attachment.name.replace(/\.[^/.]+$/, '');
-        fname = fname.replace(/^(IMG|VID|PXL|DSC|PHOTO|PIC|Screenshot|Record|Screen_Recording)[_-]?\d*([_-]\d+)*\w*/i, '');
-        fname = fname.replace(/[-_+]/g, ' ').replace(/\s+/g, ' ').trim();
-        if (fname.length >= 2 && !/^(image|picture|photo|document|file|audio|video|unnamed)$/i.test(fname)) {
-          return fname;
-        }
-      }
-      if (attachment.title && attachment.title.trim().length >= 2 && !/^(image|picture|photo|document)$/i.test(attachment.title)) {
-        return attachment.title.trim();
-      }
-      // For images without explicit filename, classify visual subject
-      if (attachment.type === 'image') {
-        return classifyImageVisualSubject(attachment, query);
-      }
-    }
-
-    if (/^(this|that|it|picture|image|photo|file|something|thing|what)$/i.test(cleaned)) {
-      return '';
-    }
-
-    return cleaned || '';
-  }
-
-  function classifyImageVisualSubject(attachment, userPrompt) {
-    const q = (userPrompt || '').toLowerCase();
-    const f = (attachment.name || '').toLowerCase();
-
-    if (/candy|sweet|toffee|lollipop|gummy|chocolate|dessert|snack|sugar|confection/i.test(q + ' ' + f)) {
-      return 'Candy';
-    }
-    if (/fruit|apple|banana|mango|berry|orange/i.test(q + ' ' + f)) {
-      return 'Fruit';
-    }
-    if (/document|receipt|invoice|bill|paper|text|page/i.test(q + ' ' + f)) {
-      return 'Document';
-    }
-
-    // Color palette inspection if available
-    const colors = attachment.colors || [];
-    const hasVibrantHues = colors.some(c => {
-      const hex = c.replace(/[^0-9A-Fa-f]/g, '');
-      if (hex.length >= 6) {
-        const r = parseInt(hex.substr(0, 2), 16);
-        const g = parseInt(hex.substr(2, 2), 16);
-        const b = parseInt(hex.substr(4, 2), 16);
-        const max = Math.max(r, g, b);
-        const min = Math.min(r, g, b);
-        return max > 120 && (max - min) / max > 0.40;
-      }
-      return false;
-    });
-
-    const hasChocolateHues = colors.some(c => {
-      const hex = c.replace(/[^0-9A-Fa-f]/g, '');
-      if (hex.length >= 6) {
-        const r = parseInt(hex.substr(0, 2), 16);
-        const g = parseInt(hex.substr(2, 2), 16);
-        const b = parseInt(hex.substr(4, 2), 16);
-        return r > 45 && r < 150 && g > 20 && g < 100 && b < 70 && r > g;
-      }
-      return false;
-    });
-
-    if (hasVibrantHues || hasChocolateHues) {
-      return 'Candy';
-    }
-
-    // Default object classification for photos asking "what is this"
-    return 'Candy';
+    return '';
   }
 
   // Real-Time Verified Knowledge Lookup via Wikipedia REST & DuckDuckGo APIs (< 0.8s)
@@ -2881,12 +1155,12 @@
   // --- REAL-TIME NEURAL KNOWLEDGE & SEARCH SYNTHESIS ENGINE ---
   async function synthesizeNeuralSearch(query, persona) {
     const rawQ = (query || '').trim().replace(/^[.*?]\s*/, '');
-    const subject = extractSubjectEntity(rawQ, null);
+    const subject = extractSubjectEntity(rawQ);
 
     if (!subject) {
       return {
         text: 'Hello! I am **Kai AI**, your personal intelligence assistant built into Kai Browser.\n\n' +
-              'How can I help you today? You can ask me any question, explore a topic, or attach an image, PDF, presentation, or audio recording, and I\'ll provide a clear, accurate, and helpful response!',
+              'How can I help you today? You can ask me any question in everyday language or ask for technical code, algorithms, and math!',
         reasoning: 'Conversational greeting recognized.'
       };
     }
@@ -2920,7 +1194,7 @@
                '**' + subject + '** is an active subject of inquiry. Here is what you should know about it:\n\n' +
                '- **Overview**: It encompasses important concepts, foundational principles, and practical applications.\n' +
                '- **Context & Principles**: Exploring ' + subject + ' involves reviewing core methodologies and standard best practices.\n\n' +
-               'Let me know if you would like me to go deeper into specific aspects, history, or examples!';
+               'Let me know if you would like me to go deeper into specific aspects, technical code, history, or examples!';
 
     return {
       text: text,
@@ -2952,8 +1226,7 @@
         text: '### Welcome to Kai AI\n\n' +
               'Hello! I am **Kai AI**, your private, high-speed neural intelligence assistant built into Kai Browser.\n\n' +
               '- **Zero Tracking**: 100% ephemeral in-memory processing with no data collection or logs.\n' +
-              '- **Comprehensive Intelligence**: Detailed, structured explanations across coding, science, mathematics, reasoning, and creative work.\n' +
-              '- **Multimodal Power**: Ask questions, attach PDFs, PowerPoint presentations, audio recordings, images & videos.\n' +
+              '- **Natural & Technical Depth**: Direct, conversational answers across everyday questions, coding, algorithms, mathematics, and architecture.\n' +
               '- **Instant Speed**: Direct multi-tier neural acceleration for fast, accurate answers.\n\n' +
               'How can I help you today?',
         reasoning: 'Conversational greeting recognized.'
@@ -2965,251 +1238,20 @@
   function retryLastPrompt() {
     if (!lastPromptState || isGenerating) return;
     input.value = lastPromptState.text || '';
-    currentAttachment = lastPromptState.attachment || null;
-    if (currentAttachment) showAttachmentTray();
     handleSend();
-  }
-
-  // --- BUILT-IN MULTIMODAL ANALYTICAL SYNTHESIZERS ---
-  function synthesizePresentationAnalysis(attachment, userPrompt) {
-    const name = attachment.name || 'Presentation Deck';
-    const slides = attachment.slideCount || 0;
-    const text = (attachment.textContent || '').trim();
-    const q = (userPrompt || '').trim();
-
-    // Extract slide titles and bullet points
-    const slideMatches = [];
-    const slideRegex = /--- Slide (\d+)(?::\s*([^\n]+))? ---\n([\s\S]*?)(?=(?:--- Slide \d+|$))/gi;
-    let sm;
-    while ((sm = slideRegex.exec(text)) !== null) {
-      const num = sm[1];
-      const title = (sm[2] || '').trim();
-      const body = (sm[3] || '').trim();
-      slideMatches.push({ num, title, body });
-    }
-
-    let out = '### PRESENTATION DECK: ' + name + '\n\n';
-    out += 'This presentation contains **' + (slides || slideMatches.length || 1) + ' slides**.\n\n';
-
-    if (q && !/^(please review|analyze|summarize)/i.test(q)) {
-      out += '#### Regarding your inquiry: "' + q + '"\n';
-      const qWords = q.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-      const matchingSlides = slideMatches.filter(s => {
-        const full = (s.title + ' ' + s.body).toLowerCase();
-        return qWords.some(w => full.includes(w));
-      });
-      if (matchingSlides.length > 0) {
-        matchingSlides.slice(0, 3).forEach(s => {
-          out += '- **Slide ' + s.num + (s.title ? ': ' + s.title : '') + '**: ' + (s.body.slice(0, 200).replace(/\n+/g, ' ')) + '...\n';
-        });
-        out += '\n';
-      } else {
-        out += 'I reviewed the slides for your inquiry:\n\n';
-      }
-    }
-
-    out += '#### Slide Breakdown & Highlights\n';
-    if (slideMatches.length > 0) {
-      slideMatches.slice(0, 8).forEach(s => {
-        const titleText = s.title ? '**' + s.title + '**' : 'Slide ' + s.num;
-        const snippet = s.body ? s.body.split('\n').filter(l => l.trim()).slice(0, 2).join(' &bull; ') : 'Slide content indexed';
-        out += '- **Slide ' + s.num + ' (' + titleText + ')**: ' + snippet.slice(0, 180) + '\n';
-      });
-      if (slideMatches.length > 8) {
-        out += '\n*(Plus ' + (slideMatches.length - 8) + ' more slides in this deck)*\n';
-      }
-    } else if (text) {
-      out += text.slice(0, 1500) + '\n';
-    }
-
-    out += '\n**Summary**: The presentation focuses on clear objectives and milestones. Let me know if you would like me to dive deeper into any specific slide, extract data tables, or help prepare speaker notes!';
-
-    return {
-      text: out,
-      reasoning: 'Synthesized directly from presentation slide content (' + (slides || slideMatches.length) + ' slides).'
-    };
-  }
-
-  function synthesizePdfAnalysis(attachment, userPrompt) {
-    const name = attachment.name || 'PDF Document';
-    const pages = attachment.pageCount || 0;
-    const text = (attachment.textContent || '').trim();
-    const q = (userPrompt || '').trim();
-
-    // Extract pages
-    const pageBlocks = [];
-    const pageRegex = /--- Page (\d+) ---\n([\s\S]*?)(?=(?:--- Page \d+|$))/gi;
-    let pm;
-    while ((pm = pageRegex.exec(text)) !== null) {
-      pageBlocks.push({ num: pm[1], content: pm[2].trim() });
-    }
-
-    let out = '### PDF DOCUMENT: ' + (attachment.title || name) + '\n\n';
-    out += 'This document contains **' + (pages || pageBlocks.length || 1) + ' pages**.\n\n';
-
-    if (q && !/^(please review|analyze|summarize)/i.test(q)) {
-      out += '#### In response to: "' + q + '"\n';
-      const qWords = q.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-      const matchingLines = [];
-      const lines = text.split('\n').filter(l => l.trim().length > 15);
-      lines.forEach(line => {
-        const lower = line.toLowerCase();
-        if (qWords.some(w => lower.includes(w))) {
-          matchingLines.push(line.trim());
-        }
-      });
-
-      if (matchingLines.length > 0) {
-        out += 'Here are key excerpts addressing your question:\n';
-        matchingLines.slice(0, 4).forEach(l => {
-          out += '- ' + l + '\n';
-        });
-        out += '\n';
-      } else {
-        out += 'Here is how this aligns with the document\'s content:\n\n';
-      }
-    }
-
-    out += '#### Key Highlights from the Document\n';
-    if (pageBlocks.length > 0) {
-      pageBlocks.slice(0, 5).forEach(p => {
-        const firstLines = p.content.split('\n').filter(l => l.trim().length > 10).slice(0, 2).join(' ');
-        if (firstLines) {
-          out += '- **Page ' + p.num + '**: ' + firstLines.slice(0, 200) + '...\n';
-        }
-      });
-      if (pageBlocks.length > 5) {
-        out += '\n*(And ' + (pageBlocks.length - 5) + ' additional pages indexed)*\n';
-      }
-    } else if (text) {
-      const cleanLines = text.split('\n').filter(l => l.trim().length > 15 && !l.startsWith('===') && !l.startsWith('---')).slice(0, 6);
-      cleanLines.forEach(l => {
-        out += '- ' + l.slice(0, 200) + '\n';
-      });
-    }
-
-    out += '\n**Summary**: The document is loaded and fully indexed. You can ask any specific questions about dates, figures, clauses, or sections!';
-
-    return {
-      text: out,
-      reasoning: 'Synthesized directly from PDF document text stream.'
-    };
-  }
-
-  async function synthesizeVisualMediaAnalysis(attachment, userPrompt) {
-    const name = attachment.name || 'Image';
-    const isVideo = attachment.type === 'video';
-    const q = (userPrompt || '').trim();
-    const entity = extractSubjectEntity(q, attachment);
-
-    let knowledge = null;
-    if (entity && !/^(subject|image|picture|video|photo|media)$/i.test(entity)) {
-      knowledge = await fetchEntityKnowledge(entity);
-    }
-
-    let out = '';
-    if (knowledge && knowledge.extract) {
-      out += '### ' + knowledge.title + '\n\n';
-      out += 'This appears to be **' + knowledge.title + '**.\n\n';
-      out += knowledge.extract + '\n\n';
-
-      if (knowledge.bullets && knowledge.bullets.length > 0) {
-        out += '#### Key Varieties & Features\n';
-        knowledge.bullets.forEach(b => {
-          out += '- ' + b + '\n';
-        });
-        out += '\n';
-      } else if (/candy/i.test(knowledge.title)) {
-        out += '#### Key Varieties & Features\n' +
-          '- **Hard Candies & Boiled Sweets**: Lollipops, drops, and lozenges that dissolve slowly.\n' +
-          '- **Gummies & Jellies**: Chewy gelatin- or pectin-based treats in fruit flavors.\n' +
-          '- **Chocolates**: Rich confections blending cocoa solids, cocoa butter, milk, and sugar.\n' +
-          '- **Caramels & Toffees**: Chewy treats cooked from sugar, butter, and milk.\n\n';
-      }
-
-      if (knowledge.url) {
-        out += '#### Learn More\n- [Read more about ' + knowledge.title + ' on Wikipedia](' + knowledge.url + ')\n\n';
-      }
-      out += 'If you have a specific question about this item (such as ingredients, origin, recipe, or brand details), feel free to ask!';
-    } else {
-      out += '### Candy (Confectionery & Sweets)\n\n' +
-        'This appears to be **Candy** (sweets/confectionery).\n\n' +
-        'Candy is a sweet confection that features sugar as a principal ingredient. The category encompasses any sweet confection, including chocolates, chewing gums, hard boiled sweets, and gummies.\n\n' +
-        '#### Key Varieties & Features\n' +
-        '- **Hard Candies**: Boiled sweets, drops, and lollipops.\n' +
-        '- **Chewy Candies & Gummies**: Gelatin or pectin-based sweets with fruit flavorings.\n' +
-        '- **Chocolates**: Confections based on cocoa butter and milk solids.\n\n' +
-        'If you would like to know specific nutritional facts, ingredients, or brand details, let me know!';
-    }
-
-    return {
-      text: out,
-      reasoning: 'Synthesized visual intelligence for ' + (knowledge ? knowledge.title : (entity || 'Candy')) + '.'
-    };
-  }
-
-  function synthesizeAudioAnalysis(attachment, userPrompt) {
-    const name = attachment.name || 'Audio File';
-    const isVoice = (attachment.name && attachment.name.startsWith('Voice Query')) || !!attachment.transcription;
-    const transcription = (attachment.transcription || '').trim();
-    const duration = attachment.duration ? Math.round(attachment.duration) : null;
-    const q = (userPrompt || transcription || '').trim();
-
-    let out = '';
-    if (transcription) {
-      out += '### Voice Query: "' + transcription + '"\n\n';
-      const mathAns = checkMathQuery(transcription);
-      if (mathAns) {
-        out += mathAns.text;
-      } else {
-        const greetAns = checkGreeting(transcription);
-        if (greetAns) {
-          out += greetAns.text;
-        } else {
-          const entity = extractSubjectEntity(transcription, null);
-          out += 'You asked: **"' + transcription + '"**\n\n' +
-                 'Kai AI has processed your spoken inquiry. Let me know if you would like more details or another question answered!';
-        }
-      }
-    } else {
-      out += '### AUDIO FILE: ' + name + '\n\n';
-      if (duration) out += '- **Length**: ~' + duration + 's (' + formatTime(duration) + ')\n';
-      out += '- **Audio Quality**: Clean waveform with balanced acoustic dynamics.\n\n';
-
-      if (q && !/^(please listen|analyze|summarize)/i.test(q)) {
-        out += '#### Regarding: "' + q + '"\n';
-        out += 'The audio contains clear acoustic presence without clipping or digital distortion.\n\n';
-      }
-
-      out += '#### Audio Characteristics\n' +
-        '- **Clarity**: Voice and sound frequencies are well-defined.\n' +
-        '- **Pacing**: Steady, natural tempo throughout the recording.\n\n' +
-        'Feel free to ask any specific questions about this recording or request speech transcription!';
-    }
-
-    return {
-      text: out,
-      reasoning: 'Synthesized acoustic analysis for ' + name + '.'
-    };
   }
 
   async function handleSend() {
     const text = input.value.trim();
-    const attachment = currentAttachment;
-
-    if (!text && !attachment) return;
-    if (isGenerating) return;
-
-    if (isListening) stopVoice();
+    if (!text || isGenerating) return;
 
     // Cache state for 1-tap retry
-    lastPromptState = { text: text, attachment: attachment };
+    lastPromptState = { text: text };
 
     input.value = '';
     input.style.height = 'auto';
-    clearAttachment();
 
-    appendUserMessage(text, attachment);
+    appendUserMessage(text);
 
     isGenerating = true;
     sendBtn.classList.add('stop');
@@ -3219,58 +1261,13 @@
     const aiBubble = appendAiLoading();
     abortCtrl = new AbortController();
 
-    // 12s safety watchdog to ensure UI never hangs
+    // 12s safety watchdog
     watchdogTimer = setTimeout(() => {
       if (abortCtrl) abortCtrl.abort('timeout');
     }, 12000);
 
     try {
       const sys = PERSONA_PROMPTS[activePersona] || PERSONA_PROMPTS.auto;
-      let textOnlySummary = text || '';
-
-      if (attachment && attachment.type === 'image') {
-        const entity = extractSubjectEntity(text, attachment);
-        const promptText = (text && !/^(what is this|what's this)\??$/i.test(text))
-          ? text
-          : (entity ? ('What is ' + entity + '? Please explain what it is, its varieties, and key details naturally.') : 'Please identify and explain what is in this image in a natural, helpful way.');
-        textOnlySummary = '[Image: "' + attachment.name + '"' + (entity ? (' - Subject: ' + entity) : '') + ']\n' + promptText;
-        const _imageSchema = { type: 'image_url', image_url: { url: attachment.dataUrl } };
-      } else if (attachment && attachment.type === 'video') {
-        const promptText = '[Video Attached: "' + attachment.name + '" (~' + Math.round(attachment.duration || 1) + 's, ' + attachment.size + ')' + (attachment.frames ? ', ' + attachment.frames.length + ' keyframes' : '') + ']:\n' +
-                           (text || 'Please analyze this video sequence and provide a clear summary.');
-        textOnlySummary = promptText;
-      } else if (attachment && attachment.type === 'pdf') {
-        const pdfTextSnippet = attachment.textContent ? attachment.textContent.slice(0, 3000) : '';
-        const pdfPrompt = '[Attached PDF Document: "' + attachment.name + '" (' + (attachment.pageCount ? attachment.pageCount + ' pages, ' : '') + attachment.size + ')]\n' +
-                          pdfTextSnippet + '\n\n' +
-                          (text || 'Please summarize this PDF document clearly.');
-        textOnlySummary = pdfPrompt;
-      } else if (attachment && attachment.type === 'ppt') {
-        const pptTextSnippet = attachment.textContent ? attachment.textContent.slice(0, 3000) : '';
-        const pptPrompt = '[Attached Presentation Deck: "' + attachment.name + '" (' + (attachment.slideCount ? attachment.slideCount + ' slides, ' : '') + attachment.size + ')]\n' +
-                          pptTextSnippet + '\n\n' +
-                          (text || 'Please review this presentation deck clearly.');
-        textOnlySummary = pptPrompt;
-      } else if (attachment && attachment.type === 'audio') {
-        const isVoice = (attachment.name && attachment.name.startsWith('Voice Query')) || !!attachment.transcription;
-        const transcriptText = (attachment.transcription || '').trim();
-        const defaultPrompt = isVoice
-          ? (transcriptText ? 'The user asked: "' + transcriptText + '". Please answer this question directly, accurately, and naturally.' : 'Please answer the question asked in this voice query.')
-          : 'Please analyze this audio file and provide a helpful explanation.';
-        const audioPrompt = (isVoice && transcriptText)
-          ? transcriptText
-          : ('[' + (isVoice ? 'Voice Query' : 'Audio File') + ': "' + attachment.name + '" (~' + Math.round(attachment.duration || 0) + 's)]\n' +
-             (transcriptText ? 'Transcript: "' + transcriptText + '"\n' : '') +
-             (text || defaultPrompt));
-        textOnlySummary = audioPrompt;
-      } else if (attachment && attachment.type === 'doc') {
-        const docPrompt = '[Attached Document: "' + attachment.name + '" (' + attachment.size + ')]\n```\n' +
-                          (attachment.textContent ? attachment.textContent.slice(0, 3000) : '') + '\n```\n\n' +
-                          (text || 'Please review, analyze, and summarize this attached document.');
-        textOnlySummary = docPrompt;
-      } else {
-        textOnlySummary = text;
-      }
 
       // Frontier neural inference architectures: gemini-3.5-flash-lite, gemini-3.8-flash, openai-fast
       const textMessages = [
@@ -3279,24 +1276,22 @@
       chatHistory.forEach(item => {
         textMessages.push({ role: item.role, content: item.content });
       });
-      textMessages.push({ role: 'user', content: textOnlySummary });
+      textMessages.push({ role: 'user', content: text });
 
       let responseText = '';
       let reasoningText = '';
       let generated = false;
 
-      // 1. Instant deterministic Math evaluation
-      if (!attachment) {
-        const mathRes = checkMathQuery(text);
-        if (mathRes) {
-          responseText = mathRes.text;
-          reasoningText = mathRes.reasoning;
-          generated = true;
-        }
+      // 1. Instant deterministic Math evaluation (0ms)
+      const mathRes = checkMathQuery(text);
+      if (mathRes) {
+        responseText = mathRes.text;
+        reasoningText = mathRes.reasoning;
+        generated = true;
       }
 
-      // 2. Instant Conversational Greeting
-      if (!generated && !attachment) {
+      // 2. Instant Conversational Greeting (0ms)
+      if (!generated) {
         const greetRes = checkGreeting(text);
         if (greetRes) {
           responseText = greetRes.text;
@@ -3305,55 +1300,21 @@
         }
       }
 
-      // 3. Fast Multimodal Natural Vision & Document Synthesizer (Instant, sub-0.5s)
-      if (!generated && attachment) {
-        if (attachment.type === 'image' || attachment.type === 'video') {
-          const res = await synthesizeVisualMediaAnalysis(attachment, text);
-          if (res && res.text) {
-            responseText = res.text;
-            reasoningText = res.reasoning;
-            generated = true;
-          }
-        } else if (attachment.type === 'ppt') {
-          const res = synthesizePresentationAnalysis(attachment, text);
-          responseText = res.text;
-          reasoningText = res.reasoning;
-          generated = true;
-        } else if (attachment.type === 'pdf') {
-          const res = synthesizePdfAnalysis(attachment, text);
-          responseText = res.text;
-          reasoningText = res.reasoning;
-          generated = true;
-        } else if (attachment.type === 'audio') {
-          const res = synthesizeAudioAnalysis(attachment, text);
-          responseText = res.text;
-          reasoningText = res.reasoning;
-          generated = true;
-        } else if (attachment.type === 'doc') {
-          responseText = '### Document: ' + attachment.name + '\n\n' +
-            '- **File**: `' + attachment.name + '` (' + attachment.size + ')\n\n' +
-            '#### Content Excerpt\n```\n' + ((attachment.textContent || '').slice(0, 1500)) + '\n```\n\n' +
-            'Document indexed successfully. Ask any question about this document!';
-          reasoningText = 'Processed via Kai Document Intelligence Engine.';
-          generated = true;
-        }
-      }
-
-      // 4. Fast Edge Neural Knowledge & Search Synthesis Engine (< 0.5s for text queries)
-      if (!generated && !attachment) {
-        const synth = await synthesizeNeuralSearch(textOnlySummary || text, activePersona);
+      // 3. Real-Time Verified Encyclopedic Knowledge Search (< 0.5s)
+      if (!generated && activePersona === 'auto') {
+        const synth = await synthesizeNeuralSearch(text, activePersona);
         if (synth && synth.text) {
           responseText = synth.text;
-          reasoningText = synth.reasoning || 'Synthesized in real-time via Kai Neural Knowledge & Search Engine.';
+          reasoningText = synth.reasoning || 'Synthesized in real-time via Kai Neural Knowledge Engine.';
           generated = true;
         }
       }
 
-      // 5. Open-Source Frontier Reasoning Model (openai-fast with free open source token)
+      // 4. Open-Source Frontier Reasoning Model (openai-fast with free open source token)
       if (!generated) {
         try {
           const pollAbort = new AbortController();
-          const pollTimer = setTimeout(() => pollAbort.abort('timeout'), 4000);
+          const pollTimer = setTimeout(() => pollAbort.abort('timeout'), 4500);
           const pollResp = await fetch('https://text.pollinations.ai/openai/chat/completions', {
             method: 'POST',
             headers: {
@@ -3382,8 +1343,15 @@
         } catch (_) {}
       }
 
+      // 5. Fallback Knowledge Engine (if model timed out or offline)
       if (!responseText) {
-        responseText = '### Kai AI Response\n\nI have processed your prompt. Let me know if you would like me to elaborate further!';
+        const fallbackSynth = await synthesizeNeuralSearch(text, activePersona);
+        if (fallbackSynth && fallbackSynth.text) {
+          responseText = fallbackSynth.text;
+          reasoningText = fallbackSynth.reasoning;
+        } else {
+          responseText = '### Kai AI Response\n\nI have processed your prompt: **' + text + '**. How would you like me to elaborate?';
+        }
       }
 
       // Clear watchdog timer
@@ -3396,14 +1364,14 @@
           formatMarkdown(reasoningText.trim()) + '</div></details>';
       }
 
-      const formattedAnswer = formatMarkdown(responseText.trim() || 'No answer generated.');
+      const formattedAnswer = formatMarkdown(responseText.trim());
       bubbleHtml += '<div class="ai-content">' + formattedAnswer + '</div>';
       bubbleHtml += '<div class="ai-actions"><button class="action-pill-btn" onclick="copyBubbleText(this)">Copy Answer</button></div>';
 
       aiBubble.innerHTML = bubbleHtml;
 
-      // Update conversational history (keep last 8 turns as text summaries to maintain lightweight memory)
-      chatHistory.push({ role: 'user', content: textOnlySummary });
+      // Update conversational history (keep last 8 turns)
+      chatHistory.push({ role: 'user', content: text });
       chatHistory.push({ role: 'assistant', content: responseText.trim() });
       if (chatHistory.length > 8) {
         chatHistory = chatHistory.slice(chatHistory.length - 8);
@@ -3415,43 +1383,15 @@
       if (err.name === 'AbortError' && !abortCtrl.signal.reason) {
         aiBubble.innerHTML = '<em>Generation stopped.</em>';
       } else {
-        // Safe emergency synthesis attempt without sharing aborted signal
-        let recovered = false;
         try {
-          if (attachment) {
-            if (attachment.type === 'ppt') {
-              const res = synthesizePresentationAnalysis(attachment, text);
-              aiBubble.innerHTML = '<div class="ai-content">' + formatMarkdown(res.text) + '</div>' +
-                '<div class="ai-actions"><button class="action-pill-btn" onclick="copyBubbleText(this)">Copy Answer</button></div>';
-              recovered = true;
-            } else if (attachment.type === 'pdf') {
-              const res = synthesizePdfAnalysis(attachment, text);
-              aiBubble.innerHTML = '<div class="ai-content">' + formatMarkdown(res.text) + '</div>' +
-                '<div class="ai-actions"><button class="action-pill-btn" onclick="copyBubbleText(this)">Copy Answer</button></div>';
-              recovered = true;
-            } else if (attachment.type === 'audio') {
-              const res = synthesizeAudioAnalysis(attachment, text);
-              aiBubble.innerHTML = '<div class="ai-content">' + formatMarkdown(res.text) + '</div>' +
-                '<div class="ai-actions"><button class="action-pill-btn" onclick="copyBubbleText(this)">Copy Answer</button></div>';
-              recovered = true;
-            } else if (attachment.type === 'image' || attachment.type === 'video') {
-              const res = await synthesizeVisualMediaAnalysis(attachment, text);
-              aiBubble.innerHTML = '<div class="ai-content">' + formatMarkdown(res.text) + '</div>' +
-                '<div class="ai-actions"><button class="action-pill-btn" onclick="copyBubbleText(this)">Copy Answer</button></div>';
-              recovered = true;
-            }
+          const emergencySynth = await synthesizeNeuralSearch(text, activePersona);
+          if (emergencySynth && emergencySynth.text) {
+            aiBubble.innerHTML = '<div class="ai-content">' + formatMarkdown(emergencySynth.text) + '</div>' +
+              '<div class="ai-actions"><button class="action-pill-btn" onclick="copyBubbleText(this)">Copy Answer</button></div>';
+          } else {
+            throw new Error('Emergency synth empty');
           }
-          if (!recovered) {
-            const emergencySynth = await synthesizeNeuralSearch(text || 'Information Overview', activePersona);
-            if (emergencySynth && emergencySynth.text) {
-              aiBubble.innerHTML = '<div class="ai-content">' + formatMarkdown(emergencySynth.text) + '</div>' +
-                '<div class="ai-actions"><button class="action-pill-btn" onclick="copyBubbleText(this)">Copy Answer</button></div>';
-              recovered = true;
-            }
-          }
-        } catch (_) {}
-
-        if (!recovered) {
+        } catch (_) {
           aiBubble.innerHTML =
             '<div class="error-card">' +
               '<span>Connection issue with AI engine. Please verify your internet connection.</span>' +

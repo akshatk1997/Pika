@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.6.4", BuildConfig.VERSION_NAME)
-    assertEquals(37, BuildConfig.VERSION_CODE)
+    assertEquals("1.6.5", BuildConfig.VERSION_NAME)
+    assertEquals(38, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -162,7 +162,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.6.4").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.6.5").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -365,20 +365,19 @@ class ExampleRobolectricTest {
     val cleanedUrl = com.example.security.UrlValidator.stripTrackingParams("https://example.com/shop?fbclid=123&gbraid=456&item=shoes")
     assertEquals("https://example.com/shop?item=shoes", cleanedUrl)
 
-    // Built-in KaiAiApp verification with attachments, voice, camera removed, video keyframes, multimodal and ChatGPT fonts
+    // Built-in KaiAiApp verification with attachments, voice mic, and camera removed; pure conversational & technical chat interface with ChatGPT fonts
     val context = ApplicationProvider.getApplicationContext<Context>()
     val html = com.example.ui.ai.KaiAiApp.getHtmlText(context)
     assertTrue(html.contains("Kai AI"))
     assertTrue(html.contains("Anonymous AI Workspace"))
     assertFalse(html.contains("100% Anonymous"))
-    assertTrue(html.contains("attach-btn"))
+    assertFalse(html.contains("attach-btn"))
     assertFalse(html.contains("camera-btn"))
     assertFalse(html.contains("camera-modal"))
     assertFalse(html.contains("shutter-btn"))
-    assertTrue(html.contains("mic-btn"))
-    assertTrue(html.contains("image_url"))
-    assertTrue(html.contains("extractVideoKeyframes"))
-    assertTrue(html.contains("SpeechRecognition"))
+    assertFalse(html.contains("mic-btn"))
+    assertFalse(html.contains("extractVideoKeyframes"))
+    assertFalse(html.contains("SpeechRecognition"))
     assertTrue(html.contains("gemini-3.5-flash-lite"))
     assertTrue(html.contains("thought-process"))
     assertTrue(html.contains("Söhne"))
@@ -427,10 +426,10 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun kaiVoiceBridgeAndMultimodalAttachmentsTest() {
+  fun kaiVoiceBridgeAndCleanChatRemovalVerification() {
     val context = ApplicationProvider.getApplicationContext<Context>()
 
-    // 1. Verify KaiVoiceBridge constants and instance behavior
+    // 1. Verify KaiVoiceBridge constants and instance behavior (dormant safety)
     assertEquals("KaiVoice", com.example.ui.ai.KaiVoiceBridge.JS_INTERFACE_NAME)
     var permNeededCalled = false
     val testWv = android.webkit.WebView(context)
@@ -447,63 +446,45 @@ class ExampleRobolectricTest {
     bridge.cancel()
     bridge.cleanup()
 
-    // 2. Verify kai.html includes all required multimodal, dual-engine voice, and UI elements
+    // 2. Verify kai.html has completely removed attachments, voice mic options, and unneeded parsers
     val html = com.example.ui.ai.KaiAiApp.getHtmlText(context)
-    // Voice mic integration & dual-engine audio capture
-    assertTrue(html.contains("KaiVoice"))
-    assertTrue(html.contains("__kaiVoiceOnStart"))
-    assertTrue(html.contains("__kaiVoiceOnResult"))
-    assertTrue(html.contains("__kaiVoiceOnError"))
-    assertTrue(html.contains("__kaiVoiceOnEnd"))
-    assertTrue(html.contains("__kaiVoiceOnRmsChanged"))
-    assertTrue(html.contains("__kaiVoiceOnPermissionGranted"))
-    assertTrue(html.contains("__kaiVoiceOnPermissionNeeded"))
-    assertTrue(html.contains("startAudioRecording"))
-    assertTrue(html.contains("stopAudioRecording"))
-    assertTrue(html.contains("voice-done-btn"))
-    assertTrue(html.contains("voice-wave"))
 
-    // PPT & PPTX presentation analysis
-    assertTrue(html.contains("parsePresentationFile"))
-    assertTrue(html.contains("extractPptxSlides"))
-    assertTrue(html.contains("extractBinaryPptText"))
-    assertTrue(html.contains("PRESENTATION DECK"))
-    assertTrue(html.contains(".pptx"))
-    assertTrue(html.contains(".ppt"))
-    assertTrue(html.contains("msg-doc-chip ppt"))
+    // Verify attachments are completely removed
+    assertFalse(html.contains("id=\"attach-btn\""))
+    assertFalse(html.contains("id=\"file-input\""))
+    assertFalse(html.contains("id=\"attach-tray\""))
+    assertFalse(html.contains("id=\"attach-preview-img\""))
+    assertFalse(html.contains("parsePresentationFile"))
+    assertFalse(html.contains("extractPptxSlides"))
+    assertFalse(html.contains("extractBinaryPptText"))
+    assertFalse(html.contains("parsePdfFile"))
+    assertFalse(html.contains("decompressPdfFlate"))
+    assertFalse(html.contains("parseAudioFile"))
+    assertFalse(html.contains("extractAudioMetadata"))
 
-    // PDF document analysis
-    assertTrue(html.contains("parsePdfFile"))
-    assertTrue(html.contains("decompressPdfFlate"))
-    assertTrue(html.contains("extractPdfTextFromOperators"))
-    assertTrue(html.contains("PDF DOCUMENT"))
-    assertTrue(html.contains(".pdf"))
-    assertTrue(html.contains("msg-doc-chip pdf"))
+    // Verify voice mic options are completely removed
+    assertFalse(html.contains("id=\"mic-btn\""))
+    assertFalse(html.contains("id=\"voice-banner\""))
+    assertFalse(html.contains("id=\"voice-status\""))
+    assertFalse(html.contains("id=\"voice-wave\""))
+    assertFalse(html.contains("id=\"voice-done-btn\""))
+    assertFalse(html.contains("id=\"voice-cancel-btn\""))
+    assertFalse(html.contains("startAudioRecording"))
+    assertFalse(html.contains("stopAudioRecording"))
 
-    // Audio file analysis & player
-    assertTrue(html.contains("parseAudioFile"))
-    assertTrue(html.contains("extractAudioMetadata"))
-    assertTrue(html.contains("AUDIO FILE"))
-    assertTrue(html.contains("msg-audio-player"))
-    assertTrue(html.contains("msg-doc-chip audio"))
-    assertTrue(html.contains(".mp3"))
-    assertTrue(html.contains(".wav"))
-    assertTrue(html.contains(".m4a"))
-
-    // Persona prompt training for PPT, PDF, Audio
-    assertTrue(html.contains("PowerPoint Presentations (.ppt, .pptx)"))
-    assertTrue(html.contains("PDF Documents (.pdf)"))
-    assertTrue(html.contains("Audio Files (.mp3, .wav, .m4a, .ogg, .aac)"))
-
-    // Multimodal analytical synthesizers & visual details engine
-    assertTrue(html.contains("analyzeImageVisualDetails"))
-    assertTrue(html.contains("synthesizePresentationAnalysis"))
-    assertTrue(html.contains("synthesizePdfAnalysis"))
-    assertTrue(html.contains("synthesizeVisualMediaAnalysis"))
-    assertTrue(html.contains("synthesizeAudioAnalysis"))
-
-    // File input accept attribute includes all requested formats
-    assertTrue(html.contains("accept=\"image/*,video/*,audio/*,.pdf,.ppt,.pptx,.mp3,.wav,.m4a,.ogg,.aac,.flac"))
+    // Verify streamlined pure AI chat interface with natural and technical language capabilities
+    assertTrue(html.contains("id=\"prompt-input\""))
+    assertTrue(html.contains("id=\"send-btn\""))
+    assertTrue(html.contains("id=\"chat-feed\""))
+    assertTrue(html.contains("id=\"new-chat-btn\""))
+    assertTrue(html.contains("id=\"theme-toggle-btn\""))
+    assertTrue(html.contains("natural or everyday language"))
+    assertTrue(html.contains("technical or machine language"))
+    assertTrue(html.contains("Auto Intelligence"))
+    assertTrue(html.contains("Deep Reasoning"))
+    assertTrue(html.contains("Code &amp; Logic"))
+    assertTrue(html.contains("Creative Mind"))
+    assertTrue(html.contains("synthesizeNeuralSearch"))
   }
 
   @Test
@@ -545,11 +526,9 @@ class ExampleRobolectricTest {
     val scriptContent = scriptRegex.find(html)?.groupValues?.get(1) ?: ""
     assertTrue("Script tag must not be empty", scriptContent.isNotEmpty())
 
-    // 1. Verify zero duplicate let declarations that break V8 parsing
-    val letIsListeningCount = Regex("\\blet\\s+isListening\\b").findAll(scriptContent).count()
-    val letRecognitionCount = Regex("\\blet\\s+recognition\\b").findAll(scriptContent).count()
-    assertEquals("let isListening must only be declared once", 1, letIsListeningCount)
-    assertEquals("let recognition must only be declared once", 1, letRecognitionCount)
+    // 1. Verify voice mic variables are completely removed
+    assertFalse(scriptContent.contains("let isListening"))
+    assertFalse(scriptContent.contains("let recognition"))
 
     // 2. Verify all inline event handlers are bound globally to window
     assertTrue(scriptContent.contains("window.sendQuickPrompt = sendQuickPrompt"))
@@ -560,22 +539,26 @@ class ExampleRobolectricTest {
     // 3. Verify robust URL query parameter handling with readyState check
     assertTrue(scriptContent.contains("document.readyState === 'loading'"))
 
-    // 4. Verify all critical UI elements exist in DOM (with API key options removed)
+    // 4. Verify all critical UI elements exist in DOM (with attachments, voice mic, and API key options removed)
     val expectedIds = listOf(
       "prompt-input", "send-btn", "chat-feed", "empty-state",
-      "attach-btn", "file-input", "attach-tray", "attach-preview-img",
-      "mic-btn", "new-chat-btn", "theme-toggle-btn",
-      "voice-banner", "voice-status", "voice-wave", "voice-done-btn", "voice-cancel-btn"
+      "new-chat-btn", "theme-toggle-btn"
     )
     for (id in expectedIds) {
       assertTrue("HTML must contain element id='$id'", html.contains("id=\"$id\""))
     }
-    assertFalse("HTML must not contain key-settings-btn", html.contains("id=\"key-settings-btn\""))
-    assertFalse("HTML must not contain user-api-key-input", html.contains("id=\"user-api-key-input\""))
+    val removedIds = listOf(
+      "attach-btn", "file-input", "attach-tray", "attach-preview-img",
+      "mic-btn", "voice-banner", "voice-status", "voice-wave", "voice-done-btn", "voice-cancel-btn",
+      "key-settings-btn", "user-api-key-input", "camera-btn", "camera-modal", "shutter-btn"
+    )
+    for (id in removedIds) {
+      assertFalse("HTML must not contain removed element id='$id'", html.contains("id=\"$id\""))
+    }
     assertFalse("HTML must not contain key-settings-overlay", html.contains("key-settings-overlay"))
     assertFalse("HTML must not expose API key prompts to users", html.contains("API key"))
 
-    // 5. Verify frontier multimodal and fallback models are correctly configured
+    // 5. Verify frontier chat and fallback models are correctly configured
     assertTrue(scriptContent.contains("gemini-3.5-flash-lite"))
     assertTrue(scriptContent.contains("gemini-3.8-flash"))
     assertTrue(scriptContent.contains("openai-fast"))
