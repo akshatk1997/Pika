@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kai-v1.7.3.apk
+          cp "$APK_PATH" releases/Kai-v1.7.4.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kai-v1.7.3.apk
+          git add releases/Kai-v1.7.4.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kai-v1.7.3.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kai-v1.7.4.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.7.3
+      - name: Create or update GitHub Release v1.7.4
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kai-v1.7.3.apk)
-          NOTES="Kai Browser v1.7.3 (Build 46) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Permanent Removal of Kai AI:** Completely and permanently removed Kai AI from the browser, eliminating kai.html, KaiAiApp, and KaiVoiceBridge.\n- **Asset & Space Cleanup:** Deleted the ~90 KB kai.html web asset and ui/ai package, significantly reducing app storage footprint and release APK size.\n- **Clean Standard Search Homepage:** Restored a clutter-free homepage focused purely on privacy-first web search and bookmarks without AI mode switcher tabs.\n- **Zero Browser Regressions:** All other browser features, WebViewPool, ad/tracker blocker, background video/audio streaming, translation, and Keystore persistence remain 100% intact.\n- **Strictly Under 2 MB Footprint:** Release APK remains strictly under 2 MB (~1.4 MB).\n- **Checks Passed:** \`:app:testDebugUnitTest\` (API 26 & 36), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\`."
-          if gh release view v1.7.3 >/dev/null 2>&1; then
-            gh release upload v1.7.3 releases/Kai-v1.7.3.apk --clobber
-            gh release edit v1.7.3 --title "Kai v1.7.3 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kai-v1.7.4.apk)
+          NOTES="Kai Browser v1.7.4 (Build 47) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Comprehensive Security Hardening:** Disallowed cleartext traffic via system-anchored network security config (usesCleartextTraffic=false), Google Safe Browsing integration with onSafeBrowsingHit abort fallback, hardened browsable intent:// URI parsing, and explicit release web contents debugging lockout.\n- **Download & Screen Safety:** Warning banner on executable package downloads (.apk, .exe, .dex) and dynamic FLAG_SECURE window isolation on private tabs to prevent OS recent-tasks screenshots.\n- **Enhanced Privacy Dashboard:** Site-specific permissions viewer (Camera, Mic, Location), DOM Global Privacy Control (navigator.globalPrivacyControl = true), and System WebView version inspector.\n- **Zero-Dependency Secure AI:** On-device prompt-injection defense with PII scrubbing, real-time scam and phishing risk score detector, grounded page summarizer (Explain Simply, Key Points), and intelligent semantic tab grouping.\n- **Strictly Under 2 MB Footprint:** Release APK remains strictly under 2 MB (~1.44 MB).\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
+          if gh release view v1.7.4 >/dev/null 2>&1; then
+            gh release upload v1.7.4 releases/Kai-v1.7.4.apk --clobber
+            gh release edit v1.7.4 --title "Kai v1.7.4 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.7.3 releases/Kai-v1.7.3.apk \
-              --title "Kai v1.7.3 (< 2 MB)" \
+            gh release create v1.7.4 releases/Kai-v1.7.4.apk \
+              --title "Kai v1.7.4 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

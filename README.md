@@ -70,7 +70,7 @@ Because no platform overrides were supplied prior to implementation, Kai targets
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Kai-v1.7.3.apk`](releases/Kai-v1.7.3.apk) and attached to GitHub Releases (`v1.7.3`).
+Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Kai-v1.7.4.apk`](releases/Kai-v1.7.4.apk) and attached to GitHub Releases (`v1.7.4`).
 
 ---
 
