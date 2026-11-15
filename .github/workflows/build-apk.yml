@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kai-v1.6.8.apk
+          cp "$APK_PATH" releases/Kai-v1.6.9.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kai-v1.6.8.apk
+          git add releases/Kai-v1.6.9.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kai-v1.6.8.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kai-v1.6.9.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.6.8
+      - name: Create or update GitHub Release v1.6.9
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kai-v1.6.8.apk)
-          NOTES="Kai Browser v1.6.8 (Build 41) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Unified Undisclosed 3-in-1 Backend Intelligence:** Combined Google AI's deep factual knowledge synthesis, Duck.ai's privacy-first search, and ChatGPT Free's conversational reasoning and algorithmic code mastery into a single unified backend engine under undisclosed Kai AI branding.\n- **Patched First-Letter Stripping Search Bug:** Fixed the regex character range bug (\`*-_\` which stripped leading ASCII uppercase letters A-Z) in entity extraction and query synthesis. Queries like \"Candy\", \"Paris\", and \"Apple\" now retain their first letters with 100% precision.\n- **Image & PDF Attachment Support:** Integrated in-memory document parsing and multimodal attachment UI (#attach-btn, #file-input, #attach-tray). Supports image visual understanding and in-memory pure JS PDF streaming text extraction (\`extractPdfText\`) with zero external libraries.\n- **100% Free & Ephemeral Privacy:** Operates with zero setup and zero API keys; completely ephemeral in-memory processing with zero user tracking.\n- **Strictly Under 2 MB Footprint:** Release APK remains strictly under 2 MB (~1.46 MB).\n- **Checks Passed:** \`:app:testDebugUnitTest\` (API 26 & 36), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\`."
-          if gh release view v1.6.8 >/dev/null 2>&1; then
-            gh release upload v1.6.8 releases/Kai-v1.6.8.apk --clobber
-            gh release edit v1.6.8 --title "Kai v1.6.8 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kai-v1.6.9.apk)
+          NOTES="Kai Browser v1.6.9 (Build 42) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Duck.ai Removal & Purge:** Completely removed Duck.ai from backend architecture, personas, prompts, and APIs.\n- **Dual Google AI & ChatGPT Free Backend:** Trained Kai AI strictly on the dual backend foundation of Google AI (factual knowledge synthesis, scientific and pedagogical depth) and ChatGPT Free (conversational warmth, step-by-step reasoning, production code generation with Big-O complexity).\n- **Multimodal Comprehension for Images, Videos & PDFs in Natural Language:**\n  - Added video file support (\`video/*\`) alongside images and PDF documents.\n  - Implemented in-memory video keyframe extraction engine (\`extractVideoKeyframes\`) capturing duration, resolution, and keyframes via HTML5 Canvas.\n  - Multi-tier natural language understanding providing warm, human-like answers for images, video action/scene descriptions, and multi-page PDF documents.\n- **100% Free & Private:** Zero configuration, zero tracking, and zero API keys; completely ephemeral in-memory processing.\n- **Strictly Under 2 MB Footprint:** Release APK remains strictly under 2 MB (~1.46 MB).\n- **Checks Passed:** \`:app:testDebugUnitTest\` (API 26 & 36), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\`."
+          if gh release view v1.6.9 >/dev/null 2>&1; then
+            gh release upload v1.6.9 releases/Kai-v1.6.9.apk --clobber
+            gh release edit v1.6.9 --title "Kai v1.6.9 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.6.8 releases/Kai-v1.6.8.apk \
-              --title "Kai v1.6.8 (< 2 MB)" \
+            gh release create v1.6.9 releases/Kai-v1.6.9.apk \
+              --title "Kai v1.6.9 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.6.8", BuildConfig.VERSION_NAME)
-    assertEquals(41, BuildConfig.VERSION_CODE)
+    assertEquals("1.6.9", BuildConfig.VERSION_NAME)
+    assertEquals(42, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -162,7 +162,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.6.8").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.6.9").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -374,6 +374,7 @@ class ExampleRobolectricTest {
     assertTrue(html.contains("attach-btn"))
     assertTrue(html.contains("file-input"))
     assertTrue(html.contains("attach-tray"))
+    assertTrue(html.contains("extractVideoKeyframes"))
     assertFalse(html.contains("id=\"mode-google-btn\""))
     assertFalse(html.contains("id=\"mode-duck-btn\""))
     assertFalse(html.contains("id=\"mode-chatgpt-btn\""))
@@ -382,13 +383,14 @@ class ExampleRobolectricTest {
     assertFalse(html.contains("camera-modal"))
     assertFalse(html.contains("shutter-btn"))
     assertFalse(html.contains("mic-btn"))
-    assertFalse(html.contains("extractVideoKeyframes"))
     assertFalse(html.contains("SpeechRecognition"))
     assertFalse(html.contains("gemini-3.5-flash-lite"))
     assertFalse(html.contains("gemini-3.8-flash"))
     assertTrue(html.contains("openai-fast"))
     assertTrue(html.contains("Google AI"))
-    assertTrue(html.contains("Duck.ai"))
+    assertFalse(html.contains("Duck.ai"))
+    assertFalse(html.contains("duck.ai"))
+    assertFalse(html.contains("api.duckduckgo.com"))
     assertTrue(html.contains("ChatGPT Free"))
     assertTrue(html.contains("thought-process"))
     assertTrue(html.contains("Söhne"))
@@ -466,6 +468,7 @@ class ExampleRobolectricTest {
     assertTrue(html.contains("id=\"attach-tray\""))
     assertTrue(html.contains("id=\"attach-preview-img\""))
     assertTrue(html.contains("extractPdfText"))
+    assertTrue(html.contains("extractVideoKeyframes"))
     assertTrue(html.contains("handleFileSelect"))
     assertTrue(html.contains("clearAttachment"))
 
@@ -486,6 +489,11 @@ class ExampleRobolectricTest {
     assertFalse(html.contains("id=\"mode-chatgpt-btn\""))
     assertFalse(html.contains("id=\"ai-mode-selector\""))
 
+    // Verify Duck.ai is properly and completely removed
+    assertFalse(html.contains("Duck.ai"))
+    assertFalse(html.contains("duck.ai"))
+    assertFalse(html.contains("api.duckduckgo.com"))
+
     // Verify voice mic options are completely removed
     assertFalse(html.contains("id=\"mic-btn\""))
     assertFalse(html.contains("id=\"voice-banner\""))
@@ -505,7 +513,6 @@ class ExampleRobolectricTest {
     assertTrue(html.contains("natural or everyday language"))
     assertTrue(html.contains("technical or machine language"))
     assertTrue(html.contains("Google AI"))
-    assertTrue(html.contains("Duck.ai"))
     assertTrue(html.contains("ChatGPT Free"))
     assertTrue(html.contains("synthesizeNeuralSearch"))
   }
@@ -582,13 +589,19 @@ class ExampleRobolectricTest {
     assertFalse("HTML must not contain key-settings-overlay", html.contains("key-settings-overlay"))
     assertFalse("HTML must not expose API key prompts to users", html.contains("API key"))
 
-    // 5. Verify free open-source multi-model AI architecture (Google AI, Duck.ai, ChatGPT Free)
+    // 5. Verify dual Google AI and ChatGPT Free backend architecture with Duck.ai removed
     assertFalse(scriptContent.contains("gemini-3.5-flash-lite"))
     assertFalse(scriptContent.contains("gemini-3.8-flash"))
+    assertFalse(scriptContent.contains("Duck.ai"))
+    assertFalse(scriptContent.contains("duck.ai"))
+    assertFalse(scriptContent.contains("api.duckduckgo.com"))
     assertTrue(scriptContent.contains("openai-fast"))
     assertTrue(scriptContent.contains("Google AI"))
-    assertTrue(scriptContent.contains("Duck.ai"))
     assertTrue(scriptContent.contains("ChatGPT Free"))
+    assertTrue(scriptContent.contains("extractVideoKeyframes"))
+    assertTrue(scriptContent.contains("extractPdfText"))
+    assertTrue(scriptContent.contains("formatVideoDuration"))
+    assertTrue(scriptContent.contains("video/*"))
     assertTrue(scriptContent.contains("window.switchAiMode = switchAiMode"))
     assertTrue(scriptContent.contains("https://text.pollinations.ai/openai/chat/completions"))
     assertTrue(scriptContent.contains("synthesizeNeuralSearch"))
