@@ -40,8 +40,6 @@ import com.example.model.UserAgentMode
 import com.example.model.WebPermissionKind
 import com.example.security.TrackerBlocker
 import com.example.security.UrlValidator
-import com.example.ui.ai.KaiAiApp
-import com.example.ui.ai.KaiVoiceBridge
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
@@ -325,13 +323,6 @@ class WebViewPool(
   }
 
   fun notifyAudioPermissionGranted() {
-    for ((_, wv) in liveViews) {
-      if (destroyedViews.contains(wv)) continue
-      try {
-        wv.evaluateJavascript("if(window.__kaiVoiceOnPermissionGranted){window.__kaiVoiceOnPermissionGranted();}", null)
-      } catch (_: Throwable) {
-      }
-    }
   }
 
   fun destroyTab(tabId: String) {
@@ -346,10 +337,6 @@ class WebViewPool(
   private fun safelyDestroyWebView(wv: WebView) {
     destroyedViews.add(wv)
     detachFromHost(wv)
-    try {
-      wv.removeJavascriptInterface(KaiVoiceBridge.JS_INTERFACE_NAME)
-    } catch (_: Throwable) {
-    }
     try {
       wv.setOnTouchListener(null)
       wv.setOnLongClickListener(null)
@@ -850,8 +837,6 @@ class WebViewPool(
    */
   private fun applyStealthPrivacyShield(webView: WebView) {
     if (!settingsProvider().javascriptEnabled || destroyedViews.contains(webView)) return
-    val currentUrl = webView.url ?: ""
-    if (currentUrl.startsWith("https://kai.ai") || currentUrl == "https://kai.ai") return
     val js = """
       (function() {
         if (window.__kai_stealth_privacy_shield_installed) return;
@@ -1070,15 +1055,6 @@ class WebViewPool(
     } catch (_: Throwable) {
     }
 
-    try {
-      val voiceBridge = KaiVoiceBridge(
-        java.lang.ref.WeakReference(webView),
-        onPermissionNeeded = { callbacks.onAudioPermissionNeeded() }
-      )
-      webView.addJavascriptInterface(voiceBridge, KaiVoiceBridge.JS_INTERFACE_NAME)
-    } catch (_: Throwable) {
-    }
-
     webView.setOnLongClickListener { v ->
       try {
         val wv = v as? WebView ?: return@setOnLongClickListener false
@@ -1152,18 +1128,6 @@ class WebViewPool(
           val reqUrl = request?.url?.toString() ?: return null
           if (!UrlValidator.isSafeWebUrl(reqUrl)) {
             return emptyBlockedResponse()
-          }
-          val reqHost = request.url?.host?.lowercase() ?: ""
-          if (reqHost == "kai.ai" || reqHost.endsWith(".kai.ai")) {
-            val path = request.url?.path ?: ""
-            if (path.endsWith(".ico") || path.endsWith(".png")) {
-              return WebResourceResponse("image/x-icon", "UTF-8", ByteArrayInputStream(ByteArray(0)))
-            }
-            return WebResourceResponse(
-              "text/html",
-              "UTF-8",
-              KaiAiApp.openHtmlStream(context)
-            )
           }
           val currentSettings = settingsProvider()
           if (currentSettings.dataSaverEnabled) {
@@ -1397,13 +1361,6 @@ class WebViewPool(
         if (request == null) return
         val origin = UrlValidator.sanitizeDisplayText(request.origin?.toString() ?: "unknown", 120)
         val resources = request.resources ?: emptyArray()
-        if (origin.startsWith("https://kai.ai") || origin == "https://kai.ai") {
-          try {
-            request.grant(resources)
-          } catch (_: Throwable) {
-          }
-          return
-        }
         val hasMedia = resources.any {
           it == PermissionRequest.RESOURCE_VIDEO_CAPTURE || it == PermissionRequest.RESOURCE_AUDIO_CAPTURE
         }

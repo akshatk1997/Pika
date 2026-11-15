@@ -172,7 +172,6 @@ enum class SearchEngine(
   val queryTemplate: String
 ) {
   DUCKDUCKGO("ddg", "DuckDuckGo", "https://duckduckgo.com/?q=%s"),
-  KAI_AI("kai_ai", "Kai AI", "https://kai.ai/?q=%s"),
   STARTPAGE("startpage", "Startpage", "https://www.startpage.com/do/dsearch?query=%s"),
   QWANT("qwant", "Qwant", "https://www.qwant.com/?q=%s"),
   BRAVE("brave", "Brave Search", "https://search.brave.com/search?q=%s"),
@@ -182,7 +181,6 @@ enum class SearchEngine(
 
   companion object {
     fun fromId(id: String): SearchEngine {
-      if (id == "duck_ai") return KAI_AI
       return entries.firstOrNull { it.id == id } ?: DUCKDUCKGO
     }
   }

@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.7.2", BuildConfig.VERSION_NAME)
-    assertEquals(45, BuildConfig.VERSION_CODE)
+    assertEquals("1.7.3", BuildConfig.VERSION_NAME)
+    assertEquals(46, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -162,7 +162,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.7.2").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.7.3").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -322,7 +322,7 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun homepageAiModeSwitchAndKaiAiIntegrationWorks() {
+  fun homepageStandardSearchOnlyAndKaiAiPermanentlyRemoved() {
     composeTestRule.waitForIdle()
     try {
       composeTestRule.onNodeWithTag("intro_get_started").performClick()
@@ -330,33 +330,25 @@ class ExampleRobolectricTest {
     } catch (_: Throwable) {
     }
 
-    composeTestRule.onNodeWithTag("home_mode_standard").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("home_mode_ai").assertIsDisplayed()
+    // Verify AI mode options and tabs do not exist on homepage
+    composeTestRule.onNodeWithTag("home_mode_ai").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("home_mode_standard").assertDoesNotExist()
 
-    // Tap on Kai AI mode -> immediately navigates to full Kai AI mode
-    composeTestRule.onNodeWithTag("home_mode_ai").performClick()
-    composeTestRule.waitForIdle()
-
-    // Verify active tab URL is loaded with https://kai.ai
-    assertEquals("https://kai.ai", composeTestRule.activity.viewModel.activeTab().url)
+    // Verify clean Kai home logo is displayed
+    composeTestRule.onNodeWithTag("kai_home_logo").assertIsDisplayed()
   }
 
   @Test
-  fun kaiAiSearchEngineQueryResolutionAndTrackerExemptionWorks() {
-    val res = com.example.security.UrlValidator.resolveInputToTarget("what is quantum computing", SearchEngine.KAI_AI, "", false)
-    assertTrue(res is com.example.security.ResolvedNavigation.LoadUrl)
-    val url = (res as com.example.security.ResolvedNavigation.LoadUrl).url
-    assertTrue(url.startsWith("https://kai.ai/?q="))
-    assertTrue(url.contains("quantum"))
+  fun searchEngineCompatibilityAndKaiAiFilesCleaned() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
 
-    // Test backward compatibility mapping
-    assertEquals(SearchEngine.KAI_AI, SearchEngine.fromId("duck_ai"))
-    assertEquals(SearchEngine.KAI_AI, SearchEngine.fromId("kai_ai"))
+    // Test backward compatibility mapping to DuckDuckGo
+    assertEquals(SearchEngine.DUCKDUCKGO, SearchEngine.fromId("duck_ai"))
+    assertEquals(SearchEngine.DUCKDUCKGO, SearchEngine.fromId("kai_ai"))
 
-    // Tracker exemption checks
-    assertFalse(com.example.security.TrackerBlocker.shouldBlockRequest("https://kai.ai/chat", "kai.ai", true))
-    assertFalse(com.example.security.TrackerBlocker.shouldBlockRequest("https://text.pollinations.ai/prompt", "kai.ai", true))
-    assertFalse(com.example.security.TrackerBlocker.shouldBlockRequest("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", "kai.ai", true))
+    // Verify SearchEngine enum does not contain KAI_AI
+    val engineIds = SearchEngine.entries.map { it.id }
+    assertFalse(engineIds.contains("kai_ai"))
 
     // Anti-tracking & fingerprinting protection verification
     assertTrue(com.example.security.TrackerBlocker.isTrackerHost("fingerprint.com"))
@@ -365,27 +357,9 @@ class ExampleRobolectricTest {
     val cleanedUrl = com.example.security.UrlValidator.stripTrackingParams("https://example.com/shop?fbclid=123&gbraid=456&item=shoes")
     assertEquals("https://example.com/shop?item=shoes", cleanedUrl)
 
-    // Built-in KaiAiApp verification with attachments, voice, camera removed, video keyframes, multimodal and ChatGPT fonts
-    val context = ApplicationProvider.getApplicationContext<Context>()
-    val html = com.example.ui.ai.KaiAiApp.getHtmlText(context)
-    assertTrue(html.contains("Kai AI"))
-    assertTrue(html.contains("Anonymous AI Workspace"))
-    assertFalse(html.contains("100% Anonymous"))
-    assertTrue(html.contains("attach-btn"))
-    assertFalse(html.contains("camera-btn"))
-    assertFalse(html.contains("camera-modal"))
-    assertFalse(html.contains("shutter-btn"))
-    assertFalse(html.contains("id=\"mic-btn\""))
-    assertTrue(html.contains("image_url"))
-    assertTrue(html.contains("extractVideoKeyframes"))
-    assertFalse(html.contains("SpeechRecognition"))
-    assertTrue(html.contains("gemini-3.5-flash-lite"))
-    assertTrue(html.contains("thought-process"))
-    assertTrue(html.contains("Söhne"))
-    assertTrue(html.contains("Söhne Mono"))
-    assertTrue(html.contains("#070B14"))
-    assertTrue(html.contains("#0E1626"))
-    assertTrue(html.contains("#00F2FE"))
+    // Verify kai.html is completely cleaned from assets
+    val assetsList = context.assets.list("")?.toList() ?: emptyList()
+    assertFalse(assetsList.contains("kai.html"))
   }
 
   @Test
@@ -427,97 +401,43 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun kaiVoiceBridgeAndMultimodalAttachmentsTest() {
+  fun kaiAiPermanentlyRemovedFromAssetsAndCodebase() {
     val context = ApplicationProvider.getApplicationContext<Context>()
 
-    // 1. Verify KaiVoiceBridge constants and instance behavior
-    assertEquals("KaiVoice", com.example.ui.ai.KaiVoiceBridge.JS_INTERFACE_NAME)
-    val testWv = android.webkit.WebView(context)
-    val bridge = com.example.ui.ai.KaiVoiceBridge(java.lang.ref.WeakReference(testWv))
-    // Under Robolectric, audio permission is not granted by default
-    assertFalse(bridge.hasPermission())
-    // Methods can be called safely without exceptions
-    bridge.requestPermission()
-    bridge.stopListening()
-    bridge.cancel()
-    bridge.cleanup()
+    // Verify kai.html is absent from assets
+    val assets = context.assets.list("")?.toList() ?: emptyList()
+    assertFalse(assets.contains("kai.html"))
 
-    // 2. Verify kai.html includes all required multimodal and voice elements
-    val html = com.example.ui.ai.KaiAiApp.getHtmlText(context)
-    // Voice mic removal verification & dormant bridge compatibility
-    assertFalse(html.contains("id=\"mic-btn\""))
-    assertFalse(html.contains("id=\"voice-banner\""))
-    assertTrue(html.contains("__kaiVoiceOnStart"))
-    assertTrue(html.contains("__kaiVoiceOnResult"))
-    assertTrue(html.contains("__kaiVoiceOnError"))
-    assertTrue(html.contains("__kaiVoiceOnEnd"))
+    try {
+      context.assets.open("kai.html").close()
+      fail("kai.html should not exist in assets")
+    } catch (_: java.io.IOException) {
+      // Expected
+    }
 
-    // Preserved model tier and search synthesis verification
-    assertTrue(html.contains("gemini-3.5-flash-lite"))
-    assertTrue(html.contains("gemini-3.8-flash"))
-    assertTrue(html.contains("openai-fast"))
-    assertTrue(html.contains("fetchSearchKnowledge"))
-    assertTrue(html.contains("synthesizeSearchResponse"))
-
-    // PPT & PPTX presentation analysis
-    assertTrue(html.contains("parsePresentationFile"))
-    assertTrue(html.contains("extractPptxSlides"))
-    assertTrue(html.contains("extractBinaryPptText"))
-    assertTrue(html.contains("PRESENTATION DECK"))
-    assertTrue(html.contains(".pptx"))
-    assertTrue(html.contains(".ppt"))
-    assertTrue(html.contains("msg-doc-chip ppt"))
-
-    // PDF document analysis
-    assertTrue(html.contains("parsePdfFile"))
-    assertTrue(html.contains("decompressPdfFlate"))
-    assertTrue(html.contains("extractPdfTextFromOperators"))
-    assertTrue(html.contains("PDF DOCUMENT"))
-    assertTrue(html.contains(".pdf"))
-    assertTrue(html.contains("msg-doc-chip pdf"))
-
-    // Audio file analysis & player
-    assertTrue(html.contains("parseAudioFile"))
-    assertTrue(html.contains("extractAudioMetadata"))
-    assertTrue(html.contains("AUDIO FILE"))
-    assertTrue(html.contains("msg-audio-player"))
-    assertTrue(html.contains("msg-doc-chip audio"))
-    assertTrue(html.contains(".mp3"))
-    assertTrue(html.contains(".wav"))
-    assertTrue(html.contains(".m4a"))
-
-    // Persona prompt training for PPT, PDF, Audio
-    assertTrue(html.contains("PowerPoint Presentations (.ppt, .pptx)"))
-    assertTrue(html.contains("PDF Documents (.pdf)"))
-    assertTrue(html.contains("Audio Files (.mp3, .wav, .m4a, .ogg, .aac)"))
-
-    // File input accept attribute includes all requested formats
-    assertTrue(html.contains("accept=\"image/*,video/*,audio/*,.pdf,.ppt,.pptx,.mp3,.wav,.m4a,.ogg,.aac,.flac"))
+    // Verify SearchEngine enum has no KAI_AI
+    assertTrue(SearchEngine.entries.none { it.id == "kai_ai" })
   }
 
   @Test
-  fun kaiAiLightModePaletteAndThemeToggleVerified() {
+  fun kaiAiDomainAndInferenceEndpointsNotExemptFromTrackerBlocking() {
     val context = ApplicationProvider.getApplicationContext<Context>()
-    val html = context.assets.open("kai.html").bufferedReader().use { it.readText() }
-
-    // Verify 100% Anonymous header label removed
-    assertFalse(html.contains("100% Anonymous"))
-
-    // Verify theme toggle button & SVG icons
-    assertTrue(html.contains("id=\"theme-toggle-btn\""))
-    assertTrue(html.contains("sun-icon"))
-    assertTrue(html.contains("moon-icon"))
-
-    // Verify light mode CSS palette
-    assertTrue(html.contains("[data-theme=\"light\"]"))
-    assertTrue(html.contains("--bg: #F8FAFC;"))
-    assertTrue(html.contains("--bubble-user: #E0F2FE;"))
-    assertTrue(html.contains("--bubble-ai: #FFFFFF;"))
-
-    // Verify JavaScript theme switching APIs
-    assertTrue(html.contains("function applyTheme("))
-    assertTrue(html.contains("window.__kaiSetTheme"))
-    assertTrue(html.contains("localStorage.setItem('kai_theme'"))
+    val pool = com.example.webview.WebViewPool(context, { com.example.model.SettingsState() }, object : com.example.webview.WebViewCallbacks {})
+    val webView = pool.getOrCreateWebView("tab_cleanup", false, com.example.model.UserAgentMode.MOBILE, emptySet())!!
+    
+    // Simulate request to kai.ai - should not be intercepted as special local HTML
+    val fakeRequest = object : android.webkit.WebResourceRequest {
+      override fun getUrl(): android.net.Uri = android.net.Uri.parse("https://kai.ai")
+      override fun isForMainFrame(): Boolean = true
+      override fun isRedirect(): Boolean = false
+      override fun hasGesture(): Boolean = false
+      override fun getMethod(): String = "GET"
+      override fun getRequestHeaders(): MutableMap<String, String> = mutableMapOf()
+    }
+    val response = webView.webViewClient.shouldInterceptRequest(webView, fakeRequest)
+    // Should NOT be intercepted as internal HTML stream
+    assertNull(response)
+    pool.destroyTab("tab_cleanup")
   }
 
   @Test

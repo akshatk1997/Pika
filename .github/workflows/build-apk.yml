@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kai-v1.7.2.apk
+          cp "$APK_PATH" releases/Kai-v1.7.3.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kai-v1.7.2.apk
+          git add releases/Kai-v1.7.3.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kai-v1.7.2.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kai-v1.7.3.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.7.2
+      - name: Create or update GitHub Release v1.7.3
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kai-v1.7.2.apk)
-          NOTES="Kai Browser v1.7.2 (Build 45) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Voice Mic Option Removed:** Cleanly removed mic button (#mic-btn), voice banner, and speech listeners from Kai AI while preserving dormant bridge stubs for zero native crashes.\n- **Search Connection Issue Patched:** Reconstructed search execution pipeline with tight 4s timeouts, direct GET fallback, and Wikipedia REST search knowledge synthesis, permanently resolving 'Connection issue with AI engine' errors during search queries.\n- **Preserved Existing Models:** Strictly kept all existing models intact without replacement (gemini-3.5-flash-lite, gemini-3.8-flash, openai-fast).\n- **Multimodal Comprehension Preserved:** Retained deep PPT/PPTX presentation analysis, multi-page PDF document parsing, audio acoustic profiling, and image understanding.\n- **Zero Browser Regressions:** All other core browser functionality, video playback shields, translation, and security hardening remain intact.\n- **Strictly Under 2 MB Footprint:** Release APK remains strictly under 2 MB (~1.46 MB).\n- **Checks Passed:** \`:app:testDebugUnitTest\` (API 26 & 36), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\`."
-          if gh release view v1.7.2 >/dev/null 2>&1; then
-            gh release upload v1.7.2 releases/Kai-v1.7.2.apk --clobber
-            gh release edit v1.7.2 --title "Kai v1.7.2 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kai-v1.7.3.apk)
+          NOTES="Kai Browser v1.7.3 (Build 46) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Permanent Removal of Kai AI:** Completely and permanently removed Kai AI from the browser, eliminating kai.html, KaiAiApp, and KaiVoiceBridge.\n- **Asset & Space Cleanup:** Deleted the ~90 KB kai.html web asset and ui/ai package, significantly reducing app storage footprint and release APK size.\n- **Clean Standard Search Homepage:** Restored a clutter-free homepage focused purely on privacy-first web search and bookmarks without AI mode switcher tabs.\n- **Zero Browser Regressions:** All other browser features, WebViewPool, ad/tracker blocker, background video/audio streaming, translation, and Keystore persistence remain 100% intact.\n- **Strictly Under 2 MB Footprint:** Release APK remains strictly under 2 MB (~1.4 MB).\n- **Checks Passed:** \`:app:testDebugUnitTest\` (API 26 & 36), \`:app:lintVitalRelease\`, and \`:app:assembleRelease\`."
+          if gh release view v1.7.3 >/dev/null 2>&1; then
+            gh release upload v1.7.3 releases/Kai-v1.7.3.apk --clobber
+            gh release edit v1.7.3 --title "Kai v1.7.3 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.7.2 releases/Kai-v1.7.2.apk \
-              --title "Kai v1.7.2 (< 2 MB)" \
+            gh release create v1.7.3 releases/Kai-v1.7.3.apk \
+              --title "Kai v1.7.3 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

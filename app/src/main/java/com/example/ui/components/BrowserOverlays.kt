@@ -113,28 +113,12 @@ fun NewTabHomeView(
   modifier: Modifier = Modifier
 ) {
   var homeSearch by remember { mutableStateOf("") }
-  var isEnteringAi by remember { mutableStateOf(false) }
-
-  if (isEnteringAi) {
-    LaunchedEffect(Unit) {
-      delay(260)
-      onSubmitQuery("https://kai.ai")
-      isEnteringAi = false
-    }
-  }
 
   val primaryAccent = if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.primary
-  val aiAccent = if (isPrivate) FeatherPrivateAccent else Color(0xFF00E5FF)
   val auraAccent = if (isPrivate) FeatherPrivateAccent else BatSignalGold
   val secondaryAccent = if (isPrivate) Color(0xFF6366F1) else FeatherMintDark
   val surfaceColor = MaterialTheme.colorScheme.surface
   val outlineColor = MaterialTheme.colorScheme.outline
-
-  val heroScale by animateFloatAsState(
-    targetValue = if (isEnteringAi) 1.12f else 1f,
-    animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
-    label = "heroScale"
-  )
 
   BoxWithConstraints(
     modifier = modifier
@@ -145,8 +129,8 @@ fun NewTabHomeView(
         drawCircle(
           brush = Brush.radialGradient(
             colors = listOf(
-              auraAccent.copy(alpha = if (isEnteringAi) 0.35f else 0.15f),
-              if (isEnteringAi) Color(0xFF00F2FE).copy(alpha = 0.20f) else secondaryAccent.copy(alpha = 0.05f),
+              auraAccent.copy(alpha = 0.15f),
+              secondaryAccent.copy(alpha = 0.05f),
               Color.Transparent
             ),
             center = center,
@@ -156,7 +140,7 @@ fun NewTabHomeView(
           center = center
         )
         drawCircle(
-          color = (if (isEnteringAi) Color(0xFF00F2FE) else auraAccent).copy(alpha = 0.08f),
+          color = auraAccent.copy(alpha = 0.08f),
           radius = size.minDimension * 0.34f,
           center = center,
           style = Stroke(width = 1.dp.toPx())
@@ -184,9 +168,7 @@ fun NewTabHomeView(
       // Hero Emblem (Aesthetic Animated Kai Emblem: Concentric Circle in Circle in Dot)
       val crestSize = if (isCompactHeight) 56.dp else 78.dp
       KaiLogo(
-        modifier = Modifier
-          .scale(heroScale)
-          .testTag("kai_home_logo"),
+        modifier = Modifier.testTag("kai_home_logo"),
         size = crestSize,
         isPrivate = isPrivate,
         animated = true,
@@ -230,108 +212,6 @@ fun NewTabHomeView(
       }
 
       Spacer(modifier = Modifier.height(18.dp))
-
-      // Search Mode Switcher: Standard Search (Default) vs Kai AI Mode
-      Surface(
-        shape = RoundedCornerShape(50),
-        color = surfaceColor.copy(alpha = 0.90f),
-        border = BorderStroke(0.8.dp, outlineColor.copy(alpha = 0.35f)),
-        shadowElevation = 2.dp
-      ) {
-        Row(
-          modifier = Modifier.padding(4.dp),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          // Standard Search Tab (Active by Default)
-          Surface(
-            shape = RoundedCornerShape(50),
-            color = if (!isEnteringAi) primaryAccent.copy(alpha = 0.16f) else Color.Transparent,
-            border = BorderStroke(1.dp, if (!isEnteringAi) primaryAccent.copy(alpha = 0.5f) else Color.Transparent),
-            modifier = Modifier
-              .clickable { isEnteringAi = false }
-              .testTag("home_mode_standard")
-          ) {
-            Row(
-              modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Icon(
-                imageVector = Icons.Filled.Search,
-                contentDescription = null,
-                tint = if (!isEnteringAi) primaryAccent else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(15.dp)
-              )
-              Spacer(modifier = Modifier.width(6.dp))
-              Text(
-                text = stringResource(R.string.home_mode_standard),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = if (!isEnteringAi) FontWeight.Bold else FontWeight.Medium,
-                color = if (!isEnteringAi) primaryAccent else MaterialTheme.colorScheme.onSurfaceVariant
-              )
-            }
-          }
-
-          // Kai AI Mode Tab - Instant 1-tap animated portal launch into full Kai AI
-          Surface(
-            shape = RoundedCornerShape(50),
-            color = if (isEnteringAi) aiAccent.copy(alpha = 0.25f) else Color.Transparent,
-            border = BorderStroke(1.dp, if (isEnteringAi) aiAccent.copy(alpha = 0.8f) else Color.Transparent),
-            modifier = Modifier
-              .clickable { isEnteringAi = true }
-              .testTag("home_mode_ai")
-          ) {
-            Row(
-              modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Icon(
-                imageVector = FeatherIcons.Sparkle,
-                contentDescription = null,
-                tint = aiAccent,
-                modifier = Modifier.size(15.dp)
-              )
-              Spacer(modifier = Modifier.width(6.dp))
-              Text(
-                text = stringResource(R.string.home_mode_ai),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = aiAccent
-              )
-            }
-          }
-        }
-      }
-
-      // Animated Kai AI entering transition indicator
-      AnimatedVisibility(
-        visible = isEnteringAi,
-        enter = fadeIn(animationSpec = tween(150)) + expandVertically(animationSpec = tween(200)),
-        exit = fadeOut(animationSpec = tween(150)) + shrinkVertically(animationSpec = tween(200))
-      ) {
-        Surface(
-          shape = RoundedCornerShape(20.dp),
-          color = Color(0xFF070B14).copy(alpha = 0.95f),
-          border = BorderStroke(1.dp, Color(0xFF00F2FE).copy(alpha = 0.7f)),
-          shadowElevation = 8.dp,
-          modifier = Modifier.padding(top = 10.dp)
-        ) {
-          Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            KaiLogo(size = 18.dp, animated = true)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-              text = stringResource(R.string.home_entering_ai),
-              style = MaterialTheme.typography.labelMedium,
-              fontWeight = FontWeight.SemiBold,
-              color = Color(0xFF00F2FE)
-            )
-          }
-        }
-      }
-
-      Spacer(modifier = Modifier.height(14.dp))
 
       // Clean Standard Search Box
       Surface(
