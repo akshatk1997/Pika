@@ -122,6 +122,16 @@ class FeatherSecurityAndDataTest {
   }
 
   @Test
+  fun mediaOrStreamRequestsNeverBlockedAndVstreamAllowed() {
+    assertFalse(TrackerBlocker.isTrackerHost("vstream.to"))
+    assertFalse(TrackerBlocker.shouldBlockRequest("https://vstream.to/video/123.mp4", "animewatch.com", true))
+    assertTrue(TrackerBlocker.isMediaOrStreamRequest("https://cdn.example.org/stream.m3u8"))
+    assertTrue(TrackerBlocker.isMediaOrStreamRequest("https://cdn.example.org/video.mp4"))
+    assertTrue(TrackerBlocker.isMediaOrStreamRequest("https://cdn.example.org/chunk.ts"))
+    assertTrue(TrackerBlocker.isMediaOrStreamRequest("https://rr3---sn-ab5sznzl.googlevideo.com/videoplayback?expire=123"))
+  }
+
+  @Test
   fun mediaSnifferClassifiesValidResourcesOnly() {
     val video = TrackerBlocker.inferSniffedResource("https://cdn.example.org/videos/clip.mp4?token=1")
     assertNotNull(video)

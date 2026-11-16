@@ -257,8 +257,7 @@ object TrackerBlocker {
     "popmyads.com",
     "propellerclick.com",
     "bidvertiser.net",
-    "vidoomy.com",
-    "vstream.to"
+    "vidoomy.com"
   )
 
   private val videoExts = setOf("mp4", "m3u8", "webm", "mov", "mkv", "ts", "mpd", "m4v", "flv", "avi", "3gp", "f4v", "wmv")
@@ -440,5 +439,15 @@ object TrackerBlocker {
       lowerUrl.contains("mime%3daudio") ||
       lowerUrl.contains("format=mp3") ||
       (lowerUrl.contains("/audio/") && (lowerUrl.contains("stream") || lowerUrl.contains("chunk")))
+  }
+
+  fun isMediaOrStreamRequest(requestUrl: String): Boolean {
+    if (requestUrl.isBlank()) return false
+    val lower = requestUrl.lowercase()
+    val uri = try { URI(requestUrl) } catch (_: Throwable) { null }
+    val path = uri?.path?.lowercase() ?: lower.substringBefore('?')
+    val ext = path.substringAfterLast('.', "")
+    if (ext in videoExts || ext in audioExts) return true
+    return isVideoUrlPattern(lower) || isAudioUrlPattern(lower)
   }
 }

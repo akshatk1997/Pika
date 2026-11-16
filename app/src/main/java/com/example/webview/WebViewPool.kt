@@ -967,12 +967,66 @@ class WebViewPool(
         if (window.__kai_video_engine_installed) return;
         window.__kai_video_engine_installed = true;
 
+        // 1. Polyfill canPlayType for HLS, DASH, and streaming formats to prevent "html5: video file not found"
+        try {
+          var origCanPlay = HTMLMediaElement.prototype.canPlayType;
+          HTMLMediaElement.prototype.canPlayType = function(type) {
+            if (!type) return '';
+            var t = String(type).toLowerCase();
+            if (t.indexOf('application/x-mpegurl') !== -1 ||
+                t.indexOf('application/vnd.apple.mpegurl') !== -1 ||
+                t.indexOf('audio/x-mpegurl') !== -1 ||
+                t.indexOf('audio/mpegurl') !== -1 ||
+                t.indexOf('video/mp2t') !== -1 ||
+                t.indexOf('application/dash+xml') !== -1) {
+              return 'maybe';
+            }
+            var res = origCanPlay.apply(this, arguments);
+            if (!res && (t.indexOf('mp4') !== -1 || t.indexOf('webm') !== -1 || t.indexOf('hls') !== -1 || t.indexOf('m3u8') !== -1)) {
+              return 'maybe';
+            }
+            return res;
+          };
+        } catch(e) {}
+
         function patchVideo(video) {
           if (!video) return;
           try {
             if (!video.hasAttribute('playsinline')) video.setAttribute('playsinline', '');
             if (!video.hasAttribute('webkit-playsinline')) video.setAttribute('webkit-playsinline', '');
             if (!video.hasAttribute('x5-playsinline')) video.setAttribute('x5-playsinline', '');
+
+            // If video has child <source> elements but no active src, populate src directly
+            if (!video.src && video.querySelector) {
+              var s = video.querySelector('source[src]');
+              if (s && s.src) {
+                video.src = s.src;
+                try { video.load(); } catch(err) {}
+              }
+            }
+
+            // Remove any failing crossorigin attribute on error and retry next source
+            if (!video.__kai_error_bound) {
+              video.__kai_error_bound = true;
+              video.addEventListener('error', function() {
+                try {
+                  if (video.hasAttribute('crossorigin')) {
+                    video.removeAttribute('crossorigin');
+                    try { video.load(); video.play(); } catch(err) {}
+                    return;
+                  }
+                  var allSources = video.querySelectorAll ? video.querySelectorAll('source[src]') : [];
+                  for (var i = 0; i < allSources.length; i++) {
+                    var candidate = allSources[i].src;
+                    if (candidate && candidate !== video.src) {
+                      video.src = candidate;
+                      try { video.load(); video.play(); } catch(err) {}
+                      break;
+                    }
+                  }
+                } catch(err) {}
+              }, true);
+            }
           } catch(e) {}
         }
 
@@ -1099,6 +1153,41 @@ class WebViewPool(
             }
           } catch(e) {}
         }, true);
+
+        // 7. Auto-recover HTML5 video player errors (Flowplayer, JW Player "html5: video file not found")
+        function recoverHtml5VideoErrors() {
+          try {
+            var errorContainers = document.querySelectorAll('.fp-message, .flowplayer.is-error, .jw-error, [class*="error-message"], [class*="player-error"]');
+            for (var i = 0; i < errorContainers.length; i++) {
+              var c = errorContainers[i];
+              var text = (c.innerText || c.textContent || '').toLowerCase();
+              if (text.indexOf('video file not found') !== -1 || text.indexOf('html5') !== -1 || text.indexOf('could not be played') !== -1) {
+                var root = c.closest ? (c.closest('.flowplayer') || c.closest('.jwplayer') || c.parentElement) : c.parentElement;
+                if (root) {
+                  root.classList.remove('is-error');
+                  if (c.classList.contains('fp-message')) {
+                    c.style.display = 'none';
+                  }
+                  var vid = root.querySelector('video');
+                  if (vid) {
+                    if (vid.hasAttribute('crossorigin')) vid.removeAttribute('crossorigin');
+                    var srcEl = root.querySelector('source[src]');
+                    if (srcEl && srcEl.src && srcEl.src !== vid.src) {
+                      vid.src = srcEl.src;
+                    }
+                    try {
+                      vid.load();
+                      var p = vid.play();
+                      if (p && p.catch) p.catch(function() {});
+                    } catch(err) {}
+                  }
+                }
+              }
+            }
+          } catch(e) {}
+        }
+
+        setInterval(recoverHtml5VideoErrors, 1000);
       })();
     """.trimIndent()
     try {
@@ -1136,17 +1225,7 @@ class WebViewPool(
           }
         } catch(e) {}
 
-        // 2. Strict Referrer Policy Injection (prevents path/query tracking leakage)
-        try {
-          if (!document.querySelector('meta[name="referrer"]')) {
-            var meta = document.createElement('meta');
-            meta.name = 'referrer';
-            meta.content = 'strict-origin-when-cross-origin';
-            (document.head || document.documentElement).appendChild(meta);
-          }
-        } catch(e) {}
-
-        // 3. Hardware & Battery Fingerprint Neutralization
+        // 2. Hardware & Battery Fingerprint Neutralization
         try {
           if (navigator.getBattery) {
             navigator.getBattery = function() {
@@ -1212,7 +1291,7 @@ class WebViewPool(
         allowUniversalAccessFromFileURLs = false
         @Suppress("DEPRECATION")
         saveFormData = false
-        mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+        mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         domStorageEnabled = true
         @Suppress("DEPRECATION")
         databaseEnabled = true
@@ -1368,6 +1447,10 @@ class WebViewPool(
       ): WebResourceResponse? {
         return try {
           val reqUrl = request?.url?.toString() ?: return null
+          // Allow internal browser schemes (blob:, data:) to be processed natively by Chromium (MediaSource MSE, inline assets)
+          if (reqUrl.startsWith("blob:", ignoreCase = true) || reqUrl.startsWith("data:", ignoreCase = true)) {
+            return null
+          }
           if (!UrlValidator.isSafeWebUrl(reqUrl)) {
             return emptyBlockedResponse()
           }
