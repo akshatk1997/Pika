@@ -104,7 +104,6 @@ import com.example.ui.theme.FeatherMintDark
 import com.example.ui.theme.FeatherPrivateAccent
 import com.example.ui.theme.FeatherSecureGreen
 import com.example.ui.theme.FeatherWarningAmber
-import com.example.ai.SmartSearchAssistant
 import java.net.URLEncoder
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -285,76 +284,7 @@ fun NewTabHomeView(
         }
       }
 
-      // AI Smart Search & Inspiration Sparks
-      val suggestions = remember(homeSearch) { SmartSearchAssistant.getSuggestions(homeSearch) }
-      FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-        modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
-      ) {
-        suggestions.forEach { sugg ->
-          Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = surfaceColor.copy(alpha = 0.85f),
-            border = BorderStroke(0.8.dp, primaryAccent.copy(alpha = 0.35f)),
-            modifier = Modifier.clickable {
-              onSubmitQuery(sugg.query)
-            }
-          ) {
-            Text(
-              text = sugg.label,
-              style = MaterialTheme.typography.labelSmall,
-              color = MaterialTheme.colorScheme.onSurface,
-              modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-            )
-          }
-        }
-      }
-
-      Spacer(modifier = Modifier.height(14.dp))
-
-      // Real-Time Privacy Shield Widget
-      Surface(
-        shape = RoundedCornerShape(18.dp),
-        color = surfaceColor.copy(alpha = 0.65f),
-        border = BorderStroke(0.8.dp, outlineColor.copy(alpha = 0.45f)),
-        modifier = Modifier.fillMaxWidth()
-      ) {
-        Row(
-          modifier = Modifier.padding(14.dp),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Box(
-            modifier = Modifier
-              .size(36.dp)
-              .clip(RoundedCornerShape(10.dp))
-              .background(FeatherSecureGreen.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center
-          ) {
-            Icon(
-              imageVector = FeatherIcons.Shield,
-              contentDescription = null,
-              tint = FeatherSecureGreen,
-              modifier = Modifier.size(20.dp)
-            )
-          }
-          Spacer(modifier = Modifier.width(12.dp))
-          Column {
-            Text(
-              text = "Protected by Kai Shield",
-              style = MaterialTheme.typography.labelMedium,
-              fontWeight = FontWeight.Bold
-            )
-            Text(
-              text = "HTTPS-First · Ad/Tracker Block · GPC Active · Zero Leak",
-              style = MaterialTheme.typography.labelSmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-          }
-        }
-      }
-
-      Spacer(modifier = Modifier.height(18.dp))
+      Spacer(modifier = Modifier.height(20.dp))
 
       // Bookmarks Section Header
       Row(

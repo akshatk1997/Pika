@@ -15,9 +15,11 @@ import android.webkit.WebChromeClient
 import android.webkit.WebView
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.ai.GlossaryTerm
 import com.example.ai.PageActionItemsResult
 import com.example.ai.PageAnswerResult
 import com.example.ai.PageAssistantEngine
+import com.example.ai.PageFactsResult
 import com.example.ai.PageInsightsResult
 import com.example.ai.PageSummaryResult
 import com.example.ai.PhishingRiskAssessment
@@ -225,6 +227,12 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   private val _pageInsights = MutableStateFlow<PageInsightsResult?>(null)
   val pageInsights: StateFlow<PageInsightsResult?> = _pageInsights.asStateFlow()
 
+  private val _pageFacts = MutableStateFlow<PageFactsResult?>(null)
+  val pageFacts: StateFlow<PageFactsResult?> = _pageFacts.asStateFlow()
+
+  private val _pageGlossary = MutableStateFlow<List<GlossaryTerm>>(emptyList())
+  val pageGlossary: StateFlow<List<GlossaryTerm>> = _pageGlossary.asStateFlow()
+
   data class TtsUiState(
     val isPlaying: Boolean = false,
     val isPaused: Boolean = false,
@@ -258,6 +266,12 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
     if (_pageInsights.value == null) {
       fetchPageInsights()
+    }
+    if (_pageFacts.value == null) {
+      fetchPageFacts()
+    }
+    if (_pageGlossary.value.isEmpty()) {
+      fetchPageGlossary()
     }
   }
 
@@ -296,6 +310,28 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         val text = article?.paragraphs?.joinToString("\n\n") ?: ""
         val insights = PageAssistantEngine.analyzePageInsights(text)
         _pageInsights.value = insights
+      }
+    }
+  }
+
+  fun fetchPageFacts() {
+    val tab = activeTab()
+    webViewPool.extractReaderArticle(tab.id, tab.url) { article ->
+      viewModelScope.launch(Dispatchers.Default) {
+        val text = article?.paragraphs?.joinToString("\n\n") ?: ""
+        val facts = PageAssistantEngine.extractFactsAndClaims(text)
+        _pageFacts.value = facts
+      }
+    }
+  }
+
+  fun fetchPageGlossary() {
+    val tab = activeTab()
+    webViewPool.extractReaderArticle(tab.id, tab.url) { article ->
+      viewModelScope.launch(Dispatchers.Default) {
+        val text = article?.paragraphs?.joinToString("\n\n") ?: ""
+        val glossary = PageAssistantEngine.extractGlossary(text)
+        _pageGlossary.value = glossary
       }
     }
   }
@@ -375,6 +411,10 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         }
         if (tabId == _activeTabId.value) {
           _pageSummary.value = null
+          _pageActionItems.value = null
+          _pageInsights.value = null
+          _pageFacts.value = null
+          _pageGlossary.value = emptyList()
           _chatQas.value = emptyList()
           if (url.isNotBlank() && !_dismissedPhishingUrls.contains(url)) {
             val assessment = PhishingScamDetector.analyzeUrl(url)

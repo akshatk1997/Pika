@@ -167,6 +167,8 @@ fun BrowserScreen(
   val pageSummary by viewModel.pageSummary.collectAsStateWithLifecycle()
   val pageActionItems by viewModel.pageActionItems.collectAsStateWithLifecycle()
   val pageInsights by viewModel.pageInsights.collectAsStateWithLifecycle()
+  val pageFacts by viewModel.pageFacts.collectAsStateWithLifecycle()
+  val pageGlossary by viewModel.pageGlossary.collectAsStateWithLifecycle()
   val ttsState by viewModel.ttsState.collectAsStateWithLifecycle()
   val chatQas by viewModel.chatQas.collectAsStateWithLifecycle()
   val isAiLoading by viewModel.isAiLoading.collectAsStateWithLifecycle()
@@ -1318,6 +1320,8 @@ fun BrowserScreen(
       summary = pageSummary,
       actionItems = pageActionItems,
       insights = pageInsights,
+      facts = pageFacts,
+      glossary = pageGlossary,
       ttsState = ttsState,
       chatQas = chatQas,
       isLoading = isAiLoading,
@@ -1326,6 +1330,7 @@ fun BrowserScreen(
       onReadAloud = { viewModel.readAloudCurrentPage() },
       onStopReadAloud = { viewModel.stopReadAloud() },
       onSetSpeechRate = { viewModel.setReadAloudRate(it) },
+      onCopyText = { viewModel.copyTextToClipboard(it, "Copied to clipboard") },
       onDismiss = { viewModel.dismissAiAssistant() }
     )
   }

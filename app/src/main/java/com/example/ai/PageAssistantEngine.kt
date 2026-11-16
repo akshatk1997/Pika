@@ -6,6 +6,24 @@ enum class SummaryMode(val label: String) {
   EXECUTIVE("Quick Summary")
 }
 
+data class FactItem(
+  val value: String,
+  val category: String,
+  val context: String
+)
+
+data class PageFactsResult(
+  val facts: List<FactItem>,
+  val dates: List<String>,
+  val citations: List<String>
+)
+
+data class GlossaryTerm(
+  val term: String,
+  val definition: String,
+  val context: String
+)
+
 data class PageActionItemsResult(
   val actionItems: List<String>,
   val keyTakeaways: List<String>,
@@ -262,6 +280,106 @@ object PageAssistantEngine {
     for ((complex, simple) in replacements) {
       result = result.replace(Regex("""(?i)\b$complex\b"""), simple)
     }
+    return result
+  }
+
+  fun extractFactsAndClaims(rawPageText: String): PageFactsResult {
+    val sanitized = PromptInjectionDefense.sanitizeUntrustedContent(rawPageText, maxChars = 15000)
+    if (sanitized.isBlank()) {
+      return PageFactsResult(emptyList(), emptyList(), emptyList())
+    }
+
+    val sentences = extractSentences(sanitized)
+    val metricRegex = Regex("""(?i)\b([\$€£¥]?\d+(?:[.,]\d+)?\s*(?:%|percent|billion|million|trillion|thousand|users|downloads|km|kg|mph|mb|gb|fps|ms|sec|seconds|minutes|hours|days|years|times|x))\b""")
+    val dateRegex = Regex("""\b(?:in|on|by|since|during)?\s*(?:(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+)?\b(19\d{2}|20\d{2})\b""")
+    val citationKeywords = listOf("according to", "study found", "researchers discovered", "reported that", "survey revealed", "data demonstrates", "concluded that", "published in")
+
+    val facts = mutableListOf<FactItem>()
+    val dates = mutableListOf<String>()
+    val citations = mutableListOf<String>()
+
+    for (s in sentences) {
+      val clean = cleanSentenceForDisplay(s)
+      val lower = clean.lowercase()
+
+      val metricMatch = metricRegex.find(clean)
+      if (metricMatch != null && facts.size < 6) {
+        val valStr = metricMatch.value.trim()
+        facts.add(FactItem(value = valStr, category = "Metric", context = clean))
+      }
+
+      val dateMatch = dateRegex.find(clean)
+      if (dateMatch != null && dates.size < 5) {
+        dates.add(clean)
+      }
+
+      if (citationKeywords.any { lower.contains(it) } && citations.size < 5) {
+        citations.add(clean)
+      }
+    }
+
+    return PageFactsResult(
+      facts = if (facts.isNotEmpty()) facts else listOf(FactItem("Verified Content", "General", sentences.firstOrNull() ?: sanitized.take(120))),
+      dates = dates,
+      citations = citations
+    )
+  }
+
+  fun extractGlossary(rawPageText: String): List<GlossaryTerm> {
+    val sanitized = PromptInjectionDefense.sanitizeUntrustedContent(rawPageText, maxChars = 15000)
+    if (sanitized.isBlank()) return emptyList()
+
+    val builtInDefs = mapOf(
+      "AI" to "Artificial Intelligence: Machine intelligence simulating human cognition and problem-solving.",
+      "API" to "Application Programming Interface: A standardized protocol for software services to communicate.",
+      "GPU" to "Graphics Processing Unit: Specialized processor designed for high-throughput parallel computation.",
+      "CPU" to "Central Processing Unit: The primary logic core executing program instructions.",
+      "HTTPS" to "Hypertext Transfer Protocol Secure: Encrypted communication protocol protecting web traffic.",
+      "DNS" to "Domain Name System: The internet directory translating human domain names to IP addresses.",
+      "URL" to "Uniform Resource Locator: Web address specifying the location of a resource.",
+      "SDK" to "Software Development Kit: A collection of development tools, libraries, and documentation.",
+      "RAM" to "Random Access Memory: High-speed temporary working memory utilized by running apps.",
+      "VPN" to "Virtual Private Network: Encrypted network tunnel shielding browsing data and IP identity.",
+      "HTML" to "HyperText Markup Language: The standard structural markup code behind web pages.",
+      "CSS" to "Cascading Style Sheets: The presentation rules defining web typography and visual layout.",
+      "JS" to "JavaScript: High-level language enabling dynamic client-side interactivity on web pages.",
+      "SEO" to "Search Engine Optimization: Techniques used to increase visibility in search results.",
+      "LLM" to "Large Language Model: Deep neural network trained to comprehend and generate natural language.",
+      "UI" to "User Interface: The visual and tactile elements through which humans control software.",
+      "UX" to "User Experience: The overall ease, clarity, and satisfaction of interacting with a system.",
+      "JSON" to "JavaScript Object Notation: Standard lightweight text format for structured data exchange.",
+      "DOM" to "Document Object Model: The structured tree representation of HTML elements in memory.",
+      "TTS" to "Text-To-Speech: Synthesis of written text into spoken audio.",
+      "DASH" to "Dynamic Adaptive Streaming over HTTP: Adaptive bitrate streaming protocol for multimedia.",
+      "HLS" to "HTTP Live Streaming: Media streaming communications protocol implemented by Apple."
+    )
+
+    val sentences = extractSentences(sanitized)
+    val result = mutableListOf<GlossaryTerm>()
+    val seenTerms = mutableSetOf<String>()
+
+    for ((acronym, def) in builtInDefs) {
+      if (Regex("""\b$acronym\b""").containsMatchIn(sanitized)) {
+        val contextSentence = sentences.firstOrNull { it.contains(acronym) } ?: ""
+        result.add(GlossaryTerm(term = acronym, definition = def, context = contextSentence))
+        seenTerms.add(acronym)
+        if (result.size >= 6) break
+      }
+    }
+
+    val defRegex = Regex("""\b([A-Z][a-zA-Z]{2,20})\s+(?:is defined as|refers to|is a type of|is known as)\s+([^.!?]+)""")
+    for (s in sentences) {
+      val match = defRegex.find(s)
+      if (match != null) {
+        val term = match.groupValues[1].trim()
+        val expl = match.groupValues[2].trim()
+        if (term !in seenTerms && term.length > 2 && result.size < 8) {
+          result.add(GlossaryTerm(term = term, definition = "${term}: $expl", context = s))
+          seenTerms.add(term)
+        }
+      }
+    }
+
     return result
   }
 

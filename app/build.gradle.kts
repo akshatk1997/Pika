@@ -16,14 +16,14 @@ android {
     applicationId = "com.aistudio.featherbrowser.fwkmpz"
     minSdk = 26
     targetSdk = 36
-    versionCode = 49
-    versionName = "1.7.6"
+    versionCode = 50
+    versionName = "1.7.7"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
   androidResources {
-    localeFilters += listOf("en", "ar")
+    localeFilters += listOf("en")
   }
 
   // Do not remove or modify these signingConfigs. They are necessary for building, installing,
@@ -86,7 +86,12 @@ android {
         "META-INF/LICENSE*",
         "META-INF/NOTICE*",
         "META-INF/*.kotlin_module",
-        "DebugProbesKt.bin"
+        "META-INF/*.version",
+        "META-INF/*.properties",
+        "META-INF/DEPENDENCIES",
+        "META-INF/INDEX.LIST",
+        "DebugProbesKt.bin",
+        "kotlin-tooling-metadata.json"
       )
     }
   }

@@ -79,4 +79,30 @@ class PageAssistantEngineTest {
     assertTrue(simplified.contains("help"))
     assertTrue(simplified.contains("before"))
   }
+
+  @Test
+  fun extractsFactsAndClaimsCorrectly() {
+    val article = """
+      In 2024, the global web browsing population reached 5.4 billion users.
+      According to research, security hardening reduced vulnerabilities by 85 percent.
+      Total venture investment in on-device AI reached $12 million across early-stage startups.
+    """.trimIndent()
+    val factsResult = PageAssistantEngine.extractFactsAndClaims(article)
+    assertTrue(factsResult.facts.isNotEmpty())
+    assertTrue(factsResult.facts.any { it.value.contains("85 percent") || it.value.contains("5.4 billion") || it.value.contains("12 million") })
+    assertTrue(factsResult.dates.any { it.contains("2024") })
+    assertTrue(factsResult.citations.any { it.contains("According to") })
+  }
+
+  @Test
+  fun extractsGlossaryAndTerminologyAccurately() {
+    val techText = """
+      Modern browsers implement a secure sandbox with HTTPS and DNS over HTTPS.
+      An API is used by web applications to communicate with remote backend services.
+      The GPU accelerates vector graphics and compositing operations.
+    """.trimIndent()
+    val glossary = PageAssistantEngine.extractGlossary(techText)
+    assertTrue(glossary.isNotEmpty())
+    assertTrue(glossary.any { it.term == "HTTPS" || it.term == "API" || it.term == "GPU" })
+  }
 }

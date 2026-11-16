@@ -41,6 +41,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -62,8 +63,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ai.FactItem
+import com.example.ai.GlossaryTerm
 import com.example.ai.PageActionItemsResult
 import com.example.ai.PageAnswerResult
+import com.example.ai.PageFactsResult
 import com.example.ai.PageInsightsResult
 import com.example.ai.PageSummaryResult
 import com.example.ai.SummaryMode
@@ -80,6 +84,8 @@ fun AiAssistantSheet(
   summary: PageSummaryResult?,
   actionItems: PageActionItemsResult? = null,
   insights: PageInsightsResult? = null,
+  facts: PageFactsResult? = null,
+  glossary: List<GlossaryTerm> = emptyList(),
   ttsState: BrowserViewModel.TtsUiState? = null,
   chatQas: List<PageAnswerResult>,
   isLoading: Boolean,
@@ -88,6 +94,7 @@ fun AiAssistantSheet(
   onReadAloud: () -> Unit = {},
   onStopReadAloud: () -> Unit = {},
   onSetSpeechRate: (Float) -> Unit = {},
+  onCopyText: (String) -> Unit = {},
   onDismiss: () -> Unit
 ) {
   val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -107,7 +114,7 @@ fun AiAssistantSheet(
         .padding(horizontal = 16.dp)
         .navigationBarsPadding()
         .verticalScroll(rememberScrollState()),
-      verticalArrangement = Arrangement.spacedBy(14.dp)
+      verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
       // Modern Glass Header
       Row(
@@ -118,8 +125,8 @@ fun AiAssistantSheet(
         Row(verticalAlignment = Alignment.CenterVertically) {
           Box(
             modifier = Modifier
-              .size(36.dp)
-              .clip(RoundedCornerShape(10.dp))
+              .size(38.dp)
+              .clip(RoundedCornerShape(12.dp))
               .background(
                 Brush.linearGradient(listOf(KaiAiPurple, KaiAiIndigo, KaiAiCyan))
               ),
@@ -132,7 +139,7 @@ fun AiAssistantSheet(
               modifier = Modifier.size(20.dp)
             )
           }
-          Spacer(modifier = Modifier.width(10.dp))
+          Spacer(modifier = Modifier.width(12.dp))
           Column {
             Text(
               text = "Kai AI Intelligence",
@@ -148,7 +155,7 @@ fun AiAssistantSheet(
               )
               Spacer(modifier = Modifier.width(6.dp))
               Text(
-                text = "On-Device · Private · Zero Cloud Leak",
+                text = "100% On-Device · Private · Zero Cloud Leak",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
               )
@@ -160,39 +167,66 @@ fun AiAssistantSheet(
         }
       }
 
+      // Quick Reading Overview Banner
+      Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+        modifier = Modifier.fillMaxWidth()
+      ) {
+        Row(
+          modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+              text = "⏱️ ${summary?.readingTimeMinutes ?: insights?.estimatedReadTimeMinutes ?: 1} min read",
+              style = MaterialTheme.typography.labelSmall
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+              text = "📝 ${insights?.wordCount ?: 0} words",
+              style = MaterialTheme.typography.labelSmall
+            )
+          }
+          Text(
+            text = insights?.readingLevel?.substringBefore(" ") ?: "Standard",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary
+          )
+        }
+      }
+
       // Modern Navigation Tabs
-      TabRow(
+      ScrollableTabRow(
         selectedTabIndex = selectedTab,
-        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+        edgePadding = 0.dp,
+        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+        divider = {},
         modifier = Modifier
           .fillMaxWidth()
-          .clip(RoundedCornerShape(12.dp))
+          .clip(RoundedCornerShape(14.dp))
       ) {
-        Tab(
-          selected = selectedTab == 0,
-          onClick = { selectedTab = 0 },
-          text = { Text("Summary", style = MaterialTheme.typography.labelMedium) }
-        )
-        Tab(
-          selected = selectedTab == 1,
-          onClick = { selectedTab = 1 },
-          text = { Text("Actions", style = MaterialTheme.typography.labelMedium) }
-        )
-        Tab(
-          selected = selectedTab == 2,
-          onClick = { selectedTab = 2 },
-          text = { Text("Insights", style = MaterialTheme.typography.labelMedium) }
-        )
-        Tab(
-          selected = selectedTab == 3,
-          onClick = { selectedTab = 3 },
-          text = { Text("Ask", style = MaterialTheme.typography.labelMedium) }
-        )
+        val tabTitles = listOf("Summary", "Actions", "Facts", "Glossary", "Insights", "Ask")
+        tabTitles.forEachIndexed { index, title ->
+          Tab(
+            selected = selectedTab == index,
+            onClick = { selectedTab = index },
+            text = {
+              Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
+              )
+            }
+          )
+        }
       }
 
       // TAB 0: SUMMARY & READ ALOUD
       if (selectedTab == 0) {
-        // Summary Mode Chips
         Row(
           horizontalArrangement = Arrangement.spacedBy(8.dp),
           modifier = Modifier.fillMaxWidth()
@@ -225,17 +259,18 @@ fun AiAssistantSheet(
               modifier = Modifier.fillMaxWidth()
             ) {
               Text(
-                text = "Key Takeaways",
+                text = selectedMode.label,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
               )
               if (summary != null) {
-                Text(
-                  text = "⚡ ${summary.readingTimeMinutes} min read",
-                  style = MaterialTheme.typography.labelSmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                IconButton(
+                  onClick = { onCopyText(summary.summaryText) },
+                  modifier = Modifier.size(28.dp)
+                ) {
+                  Icon(FeatherIcons.Copy, contentDescription = "Copy Summary", modifier = Modifier.size(16.dp))
+                }
               }
             }
 
@@ -266,48 +301,70 @@ fun AiAssistantSheet(
             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
           )
         ) {
-          Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-          ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(
-                imageVector = FeatherIcons.Play,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
-              )
-              Spacer(modifier = Modifier.width(8.dp))
-              Column {
-                Text(
-                  text = "Read Aloud",
-                  style = MaterialTheme.typography.labelMedium,
-                  fontWeight = FontWeight.Bold
+          Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                  imageVector = FeatherIcons.Play,
+                  contentDescription = null,
+                  tint = MaterialTheme.colorScheme.primary,
+                  modifier = Modifier.size(20.dp)
                 )
-                Text(
-                  text = if (ttsState?.isPlaying == true) "Playing via on-device audio" else "Listen to summary",
-                  style = MaterialTheme.typography.labelSmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                  Text(
+                    text = "Read Aloud (TTS)",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold
+                  )
+                  Text(
+                    text = if (ttsState?.isPlaying == true) "Playing on-device audio" else "Listen to summary",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                  )
+                }
+              }
+
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                if (ttsState?.isPlaying == true) {
+                  Button(
+                    onClick = onStopReadAloud,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    modifier = Modifier.height(34.dp)
+                  ) {
+                    Text("Stop", style = MaterialTheme.typography.labelSmall)
+                  }
+                } else {
+                  Button(
+                    onClick = onReadAloud,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
+                    modifier = Modifier.height(34.dp)
+                  ) {
+                    Text("Play", style = MaterialTheme.typography.labelSmall)
+                  }
+                }
               }
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              if (ttsState?.isPlaying == true) {
-                Button(
-                  onClick = onStopReadAloud,
-                  colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                  Text("Stop", style = MaterialTheme.typography.labelSmall)
-                }
-              } else {
-                Button(
-                  onClick = onReadAloud,
-                  colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                  Text("Play", style = MaterialTheme.typography.labelSmall)
-                }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+              horizontalArrangement = Arrangement.spacedBy(6.dp),
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Text("Speed:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+              val currentRate = ttsState?.speechRate ?: 1.0f
+              listOf(0.75f, 1.0f, 1.25f, 1.5f).forEach { rate ->
+                FilterChip(
+                  selected = kotlin.math.abs(currentRate - rate) < 0.05f,
+                  onClick = { onSetSpeechRate(rate) },
+                  label = { Text("${rate}x", style = MaterialTheme.typography.labelSmall) }
+                )
               }
             }
           }
@@ -346,7 +403,7 @@ fun AiAssistantSheet(
         if (takeaways.isNotEmpty()) {
           Spacer(modifier = Modifier.height(6.dp))
           Text(
-            text = "📊 Key Findings & Metrics",
+            text = "📊 Key Findings & Takeaways",
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
@@ -396,8 +453,166 @@ fun AiAssistantSheet(
         }
       }
 
-      // TAB 2: PAGE INSIGHTS & TONE
+      // TAB 2: FACTS & KEY CLAIMS (NEW)
       if (selectedTab == 2) {
+        val factItems = facts?.facts ?: emptyList()
+        val timeline = facts?.dates ?: emptyList()
+        val citations = facts?.citations ?: emptyList()
+
+        Text(
+          text = "📊 Hard Numbers & Statistical Claims",
+          style = MaterialTheme.typography.labelMedium,
+          fontWeight = FontWeight.Bold,
+          color = MaterialTheme.colorScheme.primary
+        )
+
+        if (factItems.isEmpty()) {
+          Text(
+            text = "No statistical numbers detected on this page.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+          )
+        } else {
+          factItems.forEach { fact ->
+            Card(
+              modifier = Modifier.fillMaxWidth(),
+              shape = RoundedCornerShape(12.dp),
+              colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+            ) {
+              Column(modifier = Modifier.padding(10.dp)) {
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer
+                  ) {
+                    Text(
+                      text = fact.value,
+                      style = MaterialTheme.typography.labelSmall,
+                      fontWeight = FontWeight.Bold,
+                      color = MaterialTheme.colorScheme.onPrimaryContainer,
+                      modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                  }
+                  IconButton(
+                    onClick = { onCopyText(fact.context) },
+                    modifier = Modifier.size(24.dp)
+                  ) {
+                    Icon(FeatherIcons.Copy, contentDescription = "Copy", modifier = Modifier.size(14.dp))
+                  }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(text = fact.context, style = MaterialTheme.typography.bodySmall)
+              }
+            }
+          }
+        }
+
+        if (timeline.isNotEmpty()) {
+          Spacer(modifier = Modifier.height(6.dp))
+          Text(
+            text = "🗓️ Timeline & Dates",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+          )
+          timeline.forEach { dt ->
+            Card(
+              modifier = Modifier.fillMaxWidth(),
+              shape = RoundedCornerShape(10.dp),
+              colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+            ) {
+              Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.Top) {
+                Text("📅", style = MaterialTheme.typography.bodySmall)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(dt, style = MaterialTheme.typography.bodySmall)
+              }
+            }
+          }
+        }
+
+        if (citations.isNotEmpty()) {
+          Spacer(modifier = Modifier.height(6.dp))
+          Text(
+            text = "📜 Research Citations",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+          )
+          citations.forEach { cite ->
+            Card(
+              modifier = Modifier.fillMaxWidth(),
+              shape = RoundedCornerShape(10.dp),
+              colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+            ) {
+              Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.Top) {
+                Text("🔗", style = MaterialTheme.typography.bodySmall)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(cite, style = MaterialTheme.typography.bodySmall)
+              }
+            }
+          }
+        }
+      }
+
+      // TAB 3: KEY TERMS & GLOSSARY (NEW)
+      if (selectedTab == 3) {
+        Text(
+          text = "📖 Technical Terms & Jargon Explainer",
+          style = MaterialTheme.typography.labelMedium,
+          fontWeight = FontWeight.Bold,
+          color = MaterialTheme.colorScheme.primary
+        )
+
+        if (glossary.isEmpty()) {
+          Text(
+            text = "No specialized acronyms or terminology detected on this page.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+          )
+        } else {
+          glossary.forEach { item ->
+            Card(
+              modifier = Modifier.fillMaxWidth(),
+              shape = RoundedCornerShape(12.dp),
+              colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+            ) {
+              Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Surface(
+                  shape = RoundedCornerShape(6.dp),
+                  color = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                  Text(
+                    text = item.term,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                  )
+                }
+                Text(
+                  text = item.definition,
+                  style = MaterialTheme.typography.bodySmall,
+                  fontWeight = FontWeight.Medium
+                )
+                if (item.context.isNotBlank()) {
+                  Text(
+                    text = "Context: \"${item.context}\"",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                  )
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // TAB 4: PAGE INSIGHTS & TONE
+      if (selectedTab == 4) {
         val pageScore = insights?.readingEaseScore ?: 70
         val readingLevel = insights?.readingLevel ?: "Standard"
         val tone = insights?.toneLabel ?: "Objective & Factual"
@@ -444,7 +659,7 @@ fun AiAssistantSheet(
           )
         ) {
           Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("⚖️ Tone & Bias Analysis", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+            Text("⚖️ Tone & Sentiment Analysis", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
             Surface(
               shape = RoundedCornerShape(8.dp),
               color = if (tone.contains("Sensational")) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
@@ -465,8 +680,8 @@ fun AiAssistantSheet(
         }
       }
 
-      // TAB 3: GROUNDED ASK THIS PAGE
-      if (selectedTab == 3) {
+      // TAB 5: GROUNDED ASK THIS PAGE
+      if (selectedTab == 5) {
         OutlinedTextField(
           value = questionText,
           onValueChange = { questionText = it },
@@ -502,7 +717,7 @@ fun AiAssistantSheet(
           horizontalArrangement = Arrangement.spacedBy(6.dp),
           verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-          listOf("Who wrote this?", "What is the main finding?", "Summarize conclusions").forEach { prompt ->
+          listOf("Who is mentioned?", "What is the main finding?", "Summarize conclusions").forEach { prompt ->
             Surface(
               shape = RoundedCornerShape(20.dp),
               border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
@@ -528,12 +743,25 @@ fun AiAssistantSheet(
             )
           ) {
             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-              Text(
-                text = "Q: ${qa.question}",
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary
-              )
+              Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                Text(
+                  text = "Q: ${qa.question}",
+                  style = MaterialTheme.typography.bodySmall,
+                  fontWeight = FontWeight.SemiBold,
+                  color = MaterialTheme.colorScheme.primary,
+                  modifier = Modifier.weight(1f)
+                )
+                IconButton(
+                  onClick = { onCopyText(qa.answer) },
+                  modifier = Modifier.size(24.dp)
+                ) {
+                  Icon(FeatherIcons.Copy, contentDescription = "Copy", modifier = Modifier.size(13.dp))
+                }
+              }
               Text(
                 text = qa.answer,
                 style = MaterialTheme.typography.bodySmall,
