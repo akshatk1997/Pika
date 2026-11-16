@@ -999,7 +999,7 @@ class WebViewPool(
             var origSetLocalDesc = RTCPeerConnection.prototype.setLocalDescription;
             RTCPeerConnection.prototype.setLocalDescription = function(desc) {
               if (desc && desc.sdp) {
-                desc.sdp = desc.sdp.replace(/a=candidate:[^\r\n]+ typ host [^\r\n]+\r\n/g, '');
+                desc.sdp = desc.sdp.replace(/a=candidate:[^\r\n]*\btyp host\b[^\r\n]*(\r\n|\n)?/g, '');
               }
               return origSetLocalDesc.apply(this, arguments);
             };
