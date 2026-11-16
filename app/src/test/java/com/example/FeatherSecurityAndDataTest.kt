@@ -114,6 +114,22 @@ class FeatherSecurityAndDataTest {
     assertEquals(SniffedMediaType.VIDEO, video?.type)
     assertEquals("clip.mp4", video?.fileName)
 
+    // Streaming formats (m3u8, webm, mpd)
+    val hls = TrackerBlocker.inferSniffedResource("https://stream.example.org/live/playlist.m3u8?auth=token")
+    assertNotNull(hls)
+    assertEquals(SniffedMediaType.VIDEO, hls?.type)
+    assertEquals("playlist.m3u8", hls?.fileName)
+
+    val webm = TrackerBlocker.inferSniffedResource("https://media.example.com/assets/sample.webm")
+    assertNotNull(webm)
+    assertEquals(SniffedMediaType.VIDEO, webm?.type)
+
+    // Query-based video stream without static extension in path
+    val ytStream = TrackerBlocker.inferSniffedResource("https://rr3---sn-ab5sznzl.googlevideo.com/videoplayback?expire=12345&mime=video%2Fmp4")
+    assertNotNull(ytStream)
+    assertEquals(SniffedMediaType.VIDEO, ytStream?.type)
+    assertTrue(ytStream?.fileName?.endsWith(".mp4") == true)
+
     val pdf = TrackerBlocker.inferSniffedResource("https://docs.example.org/manual.pdf")
     assertNotNull(pdf)
     assertEquals(SniffedMediaType.DOCUMENT, pdf?.type)

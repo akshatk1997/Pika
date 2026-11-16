@@ -219,6 +219,96 @@ class WebViewPool(
     sniffedResourcesByTab.remove(tabId)
   }
 
+  fun scanDomMedia(tabId: String, callback: ((List<SniffedResource>) -> Unit)? = null) {
+    val webView = getLiveWebView(tabId) ?: run {
+      callback?.invoke(emptyList())
+      return
+    }
+    val js = """
+      (function() {
+        var found = [];
+        function add(u) {
+          if (u && typeof u === 'string') {
+            var trimmed = u.trim();
+            if (trimmed.indexOf('http://') === 0 || trimmed.indexOf('https://') === 0) {
+              if (found.indexOf(trimmed) === -1) found.push(trimmed);
+            }
+          }
+        }
+        try {
+          var vids = document.querySelectorAll('video, audio');
+          for (var i = 0; i < vids.length; i++) {
+            var v = vids[i];
+            add(v.currentSrc);
+            add(v.src);
+            var sources = v.querySelectorAll('source');
+            for (var j = 0; j < sources.length; j++) {
+              add(sources[j].src);
+            }
+          }
+          var iframes = document.querySelectorAll('iframe');
+          for (var k = 0; k < iframes.length; k++) {
+            var isrc = iframes[k].src;
+            if (isrc && (isrc.indexOf('/embed/') !== -1 || isrc.indexOf('player.') !== -1 || isrc.indexOf('video') !== -1)) {
+              add(isrc);
+            }
+          }
+        } catch(e) {}
+        return JSON.stringify(found);
+      })();
+    """.trimIndent()
+
+    try {
+      webView.evaluateJavascript(js) { jsonResult ->
+        if (jsonResult.isNullOrBlank() || jsonResult == "null" || jsonResult == "\"[]\"" || jsonResult == "[]") {
+          callback?.invoke(getSniffedResources(tabId))
+          return@evaluateJavascript
+        }
+        try {
+          val rawJson = if (jsonResult.startsWith("\"") && jsonResult.endsWith("\"")) {
+            org.json.JSONTokener(jsonResult).nextValue().toString()
+          } else {
+            jsonResult
+          }
+          val array = org.json.JSONArray(rawJson)
+          val map = sniffedResourcesByTab.getOrPut(tabId) { LinkedHashMap() }
+          var added = 0
+          for (i in 0 until array.length()) {
+            val url = array.optString(i).trim()
+            if (url.isNotEmpty() && UrlValidator.isSafeWebUrl(url)) {
+              val res = TrackerBlocker.inferSniffedResource(url) ?: run {
+                val host = UrlValidator.extractHost(url)
+                val cleanHost = host.replace(Regex("[^a-zA-Z0-9]"), "_").trim('_')
+                val hash = kotlin.math.abs(url.hashCode() % 10000)
+                SniffedResource(
+                  url = url,
+                  host = host,
+                  fileName = "video_${cleanHost}_$hash.mp4",
+                  type = SniffedMediaType.VIDEO
+                )
+              }
+              synchronized(map) {
+                if (!map.containsKey(res.url) && map.size < MAX_SNIFFED_PER_TAB) {
+                  map[res.url] = res
+                  added++
+                }
+              }
+            }
+          }
+          if (added > 0) {
+            val currentSize = synchronized(map) { map.size }
+            callbacks.onResourceSniffed(tabId, currentSize)
+          }
+          callback?.invoke(getSniffedResources(tabId))
+        } catch (_: Throwable) {
+          callback?.invoke(getSniffedResources(tabId))
+        }
+      }
+    } catch (_: Throwable) {
+      callback?.invoke(getSniffedResources(tabId))
+    }
+  }
+
   fun loadUrl(tabId: String, url: String) {
     val webView = getLiveWebView(tabId) ?: return
     sniffedResourcesByTab.remove(tabId)
@@ -1227,6 +1317,7 @@ class WebViewPool(
             canGoBack = canBack,
             canGoForward = canFwd
           )
+          scanDomMedia(tabId)
         }
       }
 

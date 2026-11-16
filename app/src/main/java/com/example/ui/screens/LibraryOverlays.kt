@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -511,10 +513,14 @@ fun ResourcesScreen(
   resources: List<SniffedResource>,
   onDownloadResource: (SniffedResource) -> Unit,
   onCopyUrl: (String) -> Unit,
+  onScanVideos: (() -> Unit)? = null,
   onClose: () -> Unit
 ) {
   BackHandler { onClose() }
   var selectedType by remember { mutableStateOf<SniffedMediaType?>(null) }
+  val videoResources = remember(resources) {
+    resources.filter { it.type == SniffedMediaType.VIDEO }
+  }
   val filtered = remember(resources, selectedType) {
     if (selectedType == null) resources else resources.filter { it.type == selectedType }
   }
@@ -528,6 +534,16 @@ fun ResourcesScreen(
           IconButton(onClick = onClose, modifier = Modifier.minimumInteractiveComponentSize()) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
           }
+        },
+        actions = {
+          if (onScanVideos != null) {
+            IconButton(
+              onClick = { onScanVideos() },
+              modifier = Modifier.minimumInteractiveComponentSize()
+            ) {
+              Icon(Icons.Filled.Refresh, contentDescription = "Scan page for media")
+            }
+          }
         }
       )
     }
@@ -537,6 +553,174 @@ fun ResourcesScreen(
       horizontalAlignment = Alignment.CenterHorizontally
     ) {
       Column(modifier = Modifier.widthIn(max = 960.dp).fillMaxSize()) {
+        // Dedicated Video Downloader Card
+        Card(
+          shape = RoundedCornerShape(18.dp),
+          colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+          ),
+          border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+          modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+        ) {
+          Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+              Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                Surface(
+                  shape = RoundedCornerShape(12.dp),
+                  color = MaterialTheme.colorScheme.primaryContainer,
+                  modifier = Modifier.size(38.dp)
+                ) {
+                  Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                      FeatherIcons.Play,
+                      contentDescription = "Video Downloader",
+                      tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                      modifier = Modifier.size(18.dp)
+                    )
+                  }
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                  Text(
+                    text = "Video Downloader",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                  )
+                  Text(
+                    text = if (videoResources.isNotEmpty()) {
+                      "${videoResources.size} video${if (videoResources.size == 1) "" else "s"} detected"
+                    } else {
+                      "Identifies & downloads video streams"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                  )
+                }
+              }
+              if (onScanVideos != null) {
+                OutlinedButton(
+                  onClick = { onScanVideos() },
+                  contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                  modifier = Modifier.height(32.dp)
+                ) {
+                  Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(14.dp))
+                  Spacer(modifier = Modifier.width(4.dp))
+                  Text("Scan", style = MaterialTheme.typography.labelSmall)
+                }
+              }
+            }
+
+            if (videoResources.isNotEmpty()) {
+              Spacer(modifier = Modifier.height(10.dp))
+              Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                videoResources.forEach { video ->
+                  Card(
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                    modifier = Modifier.fillMaxWidth()
+                  ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                      Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                      ) {
+                        Surface(
+                          shape = RoundedCornerShape(6.dp),
+                          color = MaterialTheme.colorScheme.primaryContainer,
+                        ) {
+                          val ext = video.fileName.substringAfterLast('.', "MP4").uppercase()
+                          Text(
+                            text = ext,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                          )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                          Text(
+                            text = video.fileName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                          )
+                          Text(
+                            text = video.host,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                          )
+                        }
+                      }
+                      Spacer(modifier = Modifier.height(8.dp))
+                      Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                      ) {
+                        OutlinedButton(
+                          onClick = { onCopyUrl(video.url) },
+                          modifier = Modifier.height(34.dp),
+                          contentPadding = PaddingValues(horizontal = 10.dp)
+                        ) {
+                          Icon(FeatherIcons.Copy, contentDescription = null, modifier = Modifier.size(13.dp))
+                          Spacer(modifier = Modifier.width(4.dp))
+                          Text("Copy", style = MaterialTheme.typography.labelSmall)
+                        }
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Button(
+                          onClick = { onDownloadResource(video) },
+                          modifier = Modifier.height(34.dp),
+                          contentPadding = PaddingValues(horizontal = 12.dp)
+                        ) {
+                          Icon(FeatherIcons.Download, contentDescription = null, modifier = Modifier.size(14.dp))
+                          Spacer(modifier = Modifier.width(4.dp))
+                          Text("Download Video", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            } else {
+              Spacer(modifier = Modifier.height(8.dp))
+              Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                modifier = Modifier.fillMaxWidth()
+              ) {
+                Row(
+                  modifier = Modifier.padding(10.dp),
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Icon(
+                    FeatherIcons.Sparkle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                  )
+                  Spacer(modifier = Modifier.width(8.dp))
+                  Text(
+                    text = "Play a video on the page or tap Scan to identify downloadable streams.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                  )
+                }
+              }
+            }
+          }
+        }
+
+        // Filter chips for all sniffed resources
         FlowRow(
           horizontalArrangement = Arrangement.spacedBy(8.dp),
           verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -545,19 +729,20 @@ fun ResourcesScreen(
           FilterChip(
             selected = selectedType == null,
             onClick = { selectedType = null },
-            label = { Text("All") }
+            label = { Text("All (${resources.size})") }
           )
           SniffedMediaType.entries.forEach { t ->
+            val count = resources.count { it.type == t }
             FilterChip(
               selected = selectedType == t,
               onClick = { selectedType = if (selectedType == t) null else t },
-              label = { Text(t.label) }
+              label = { Text("${t.label} ($count)") }
             )
           }
         }
 
         if (filtered.isEmpty()) {
-          Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+          Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
             Text("No media or files detected on this page", color = MaterialTheme.colorScheme.onSurfaceVariant)
           }
         } else {

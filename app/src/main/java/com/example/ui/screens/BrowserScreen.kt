@@ -171,6 +171,7 @@ fun BrowserScreen(
   val chatQas by viewModel.chatQas.collectAsStateWithLifecycle()
   val isAiLoading by viewModel.isAiLoading.collectAsStateWithLifecycle()
   val phishingAssessment by viewModel.phishingAssessment.collectAsStateWithLifecycle()
+  val sniffedRevision by viewModel.sniffedResourcesRevision.collectAsStateWithLifecycle()
 
   var showSiteInfoDialog by remember { mutableStateOf(false) }
   var showQuickSheet by remember { mutableStateOf(false) }
@@ -752,13 +753,21 @@ fun BrowserScreen(
             )
           }
           activeOverlay == ActiveOverlay.RESOURCES -> {
+            val sniffedList = remember(activeTab.id, activeTab.sniffedResourcesCount, sniffedRevision) {
+              viewModel.getActiveSniffedResources()
+            }
             ResourcesScreen(
-              resources = viewModel.getActiveSniffedResources(),
+              resources = sniffedList,
               onDownloadResource = { res ->
                 viewModel.setOverlay(ActiveOverlay.NONE)
                 viewModel.downloadUrlWithConsent(res.url)
               },
               onCopyUrl = { viewModel.copyTextToClipboard(it, "Link copied") },
+              onScanVideos = {
+                viewModel.scanActiveTabForVideos { count ->
+                  viewModel.showToast(if (count > 0) "$count video(s) detected" else "No videos detected on page")
+                }
+              },
               onClose = { viewModel.setOverlay(ActiveOverlay.NONE) }
             )
           }

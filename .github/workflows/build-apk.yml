@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kai-v1.7.5.apk
+          cp "$APK_PATH" releases/Kai-v1.7.6.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kai-v1.7.5.apk
+          git add releases/Kai-v1.7.6.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kai-v1.7.5.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kai-v1.7.6.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.7.5
+      - name: Create or update GitHub Release v1.7.6
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kai-v1.7.5.apk)
-          NOTES="Kai Browser v1.7.5 (Build 48) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Modernized UI Aesthetics:** Redesigned floating frosted omnibox with instant AI Sparkle launcher, redesigned Start Page with animated Kai ambient glow, smart search inspiration chips, and live privacy shield widget.\n- **Expanded Secure AI Intelligence:** On-device Text-to-Speech (Read Aloud) audio player with speed controls, AI Action Items & Key Takeaways extractor, Readability index & sentence simplifier, Tone/Sensationalism detector, and semantic tab category filtering.\n- **Privacy & Security First:** Zero cloud leak, 100% on-device AI processing, strict network isolation, hardened intent parsing, and Google Safe Browsing.\n- **Strictly Under 2 MB Footprint:** Release APK remains strictly under 2 MB (~1.46 MB).\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
-          if gh release view v1.7.5 >/dev/null 2>&1; then
-            gh release upload v1.7.5 releases/Kai-v1.7.5.apk --clobber
-            gh release edit v1.7.5 --title "Kai v1.7.5 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kai-v1.7.6.apk)
+          NOTES="Kai Browser v1.7.6 (Build 49) — Minimal, privacy-first Android browser shell powered by Android System WebView.\n\n- **Dedicated Video Downloader in Resources:** Sniffs and identifies embedded web videos, media streams (MP4, WebM, MKV, M3U8 HLS, MPD DASH, query-based streams like videoplayback), and DOM media tags directly on loaded web pages.\n- **1-Tap Direct Video Download:** Download identified videos immediately with download consent validation, safe filename sanitization, and scoped storage download.\n- **Active DOM Media Scanner:** Tap 'Scan' anytime to dynamically scan the page DOM and running video elements.\n- **Modernized UI Aesthetics:** Redesigned floating frosted omnibox with instant AI Sparkle launcher, redesigned Start Page with animated Kai ambient glow, smart search inspiration chips, and live privacy shield widget.\n- **Privacy & Security First:** Zero cloud leak, 100% on-device processing, strict network isolation, hardened intent parsing, and Google Safe Browsing.\n- **Strictly Under 2 MB Footprint:** Release APK remains strictly under 2 MB (~1.47 MB).\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
+          if gh release view v1.7.6 >/dev/null 2>&1; then
+            gh release upload v1.7.6 releases/Kai-v1.7.6.apk --clobber
+            gh release edit v1.7.6 --title "Kai v1.7.6 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.7.5 releases/Kai-v1.7.5.apk \
-              --title "Kai v1.7.5 (< 2 MB)" \
+            gh release create v1.7.6 releases/Kai-v1.7.6.apk \
+              --title "Kai v1.7.6 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

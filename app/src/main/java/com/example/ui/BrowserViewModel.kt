@@ -124,6 +124,9 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   private val _activeOverlay = MutableStateFlow(ActiveOverlay.NONE)
   val activeOverlay: StateFlow<ActiveOverlay> = _activeOverlay.asStateFlow()
 
+  private val _sniffedResourcesRevision = MutableStateFlow(0L)
+  val sniffedResourcesRevision: StateFlow<Long> = _sniffedResourcesRevision.asStateFlow()
+
   private val _findState = MutableStateFlow(FindState())
   val findState: StateFlow<FindState> = _findState.asStateFlow()
 
@@ -454,6 +457,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     override fun onResourceSniffed(tabId: String, count: Int) {
       runOnMain {
+        _sniffedResourcesRevision.value++
         updateTab(tabId) { it.copy(sniffedResourcesCount = count) }
       }
     }
@@ -739,6 +743,18 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   fun getActiveSniffedResources(): List<SniffedResource> =
     webViewPool.getSniffedResources(activeTab().id)
+
+  fun scanActiveTabForVideos(onComplete: ((Int) -> Unit)? = null) {
+    val tabId = activeTab().id
+    webViewPool.scanDomMedia(tabId) { list ->
+      runOnMain {
+        _sniffedResourcesRevision.value++
+        updateTab(tabId) { it.copy(sniffedResourcesCount = list.size) }
+        val videoCount = list.count { it.type == SniffedMediaType.VIDEO }
+        onComplete?.invoke(videoCount)
+      }
+    }
+  }
 
   fun activeTab(): TabInfo {
     val currentId = _activeTabId.value
@@ -1901,6 +1917,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     _activeOverlay.value = overlay
     if (overlay == ActiveOverlay.BOOKMARKS) refreshBookmarks("")
     if (overlay == ActiveOverlay.HISTORY) refreshHistory("")
+    if (overlay == ActiveOverlay.RESOURCES) scanActiveTabForVideos()
   }
 
   fun showToast(message: String) {

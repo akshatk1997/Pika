@@ -231,10 +231,10 @@ object TrackerBlocker {
     "trafficstars.com"
   )
 
-  private val videoExts = setOf("mp4", "m3u8", "webm", "mov", "mkv", "ts")
-  private val audioExts = setOf("mp3", "m4a", "aac", "wav", "ogg", "flac", "opus")
-  private val imageExts = setOf("jpg", "jpeg", "png", "webp", "gif")
-  private val docExts = setOf("pdf", "zip", "apk", "epub", "csv", "json", "txt")
+  private val videoExts = setOf("mp4", "m3u8", "webm", "mov", "mkv", "ts", "mpd", "m4v", "flv", "avi", "3gp", "f4v", "wmv")
+  private val audioExts = setOf("mp3", "m4a", "aac", "wav", "ogg", "flac", "opus", "wma", "weba")
+  private val imageExts = setOf("jpg", "jpeg", "png", "webp", "gif", "svg", "ico", "bmp")
+  private val docExts = setOf("pdf", "zip", "apk", "epub", "csv", "json", "txt", "doc", "docx", "xls", "xlsx", "tar", "gz")
 
   private val adUrlPathSignatures = listOf(
     "/api/stats/ads",
@@ -324,23 +324,73 @@ object TrackerBlocker {
       return null
     }
     val host = uri.host?.lowercase() ?: return null
-    val path = uri.path ?: return null
+    val path = uri.path ?: ""
+    val lowerUrl = requestUrl.lowercase()
     val lastSeg = path.substringAfterLast('/')
     val ext = lastSeg.substringAfterLast('.', "").lowercase()
-    if (ext.isEmpty()) return null
-    val type = when (ext) {
+
+    var type = when (ext) {
       in videoExts -> SniffedMediaType.VIDEO
       in audioExts -> SniffedMediaType.AUDIO
       in imageExts -> SniffedMediaType.IMAGE
       in docExts -> SniffedMediaType.DOCUMENT
-      else -> return null
+      else -> null
     }
-    val fileName = UrlValidator.sanitizeFilename(lastSeg.ifBlank { "media.$ext" })
+
+    var resolvedExt = ext
+    if (type == null) {
+      if (isVideoUrlPattern(lowerUrl)) {
+        type = SniffedMediaType.VIDEO
+        resolvedExt = when {
+          lowerUrl.contains(".m3u8") -> "m3u8"
+          lowerUrl.contains(".mpd") -> "mpd"
+          lowerUrl.contains("webm") -> "webm"
+          lowerUrl.contains(".mov") -> "mov"
+          else -> "mp4"
+        }
+      } else if (isAudioUrlPattern(lowerUrl)) {
+        type = SniffedMediaType.AUDIO
+        resolvedExt = "mp3"
+      }
+    }
+
+    if (type == null) return null
+
+    val baseName = if (lastSeg.isNotBlank() && lastSeg.contains('.') && !lastSeg.contains('?') && lastSeg.length <= 60 && lastSeg != "videoplayback") {
+      lastSeg
+    } else {
+      val cleanHost = host.replace(Regex("[^a-zA-Z0-9]"), "_").trim('_')
+      val hashSnippet = kotlin.math.abs(requestUrl.hashCode() % 10000)
+      "${type.label.lowercase()}_${cleanHost}_$hashSnippet.$resolvedExt"
+    }
+
+    val fileName = UrlValidator.sanitizeFilename(baseName)
     return SniffedResource(
       url = requestUrl,
       host = host,
       fileName = fileName,
       type = type
     )
+  }
+
+  private fun isVideoUrlPattern(lowerUrl: String): Boolean {
+    return lowerUrl.contains("videoplayback") ||
+      lowerUrl.contains("mime=video") ||
+      lowerUrl.contains("mime%2fvideo") ||
+      lowerUrl.contains("mime%3dvideo") ||
+      lowerUrl.contains(".m3u8") ||
+      lowerUrl.contains(".mpd") ||
+      lowerUrl.contains("format=mp4") ||
+      lowerUrl.contains("video/mp4") ||
+      lowerUrl.contains("ext_tw_video") ||
+      (lowerUrl.contains("/video/") && (lowerUrl.contains("stream") || lowerUrl.contains("play") || lowerUrl.contains("chunk")))
+  }
+
+  private fun isAudioUrlPattern(lowerUrl: String): Boolean {
+    return lowerUrl.contains("mime=audio") ||
+      lowerUrl.contains("mime%2faudio") ||
+      lowerUrl.contains("mime%3daudio") ||
+      lowerUrl.contains("format=mp3") ||
+      (lowerUrl.contains("/audio/") && (lowerUrl.contains("stream") || lowerUrl.contains("chunk")))
   }
 }
