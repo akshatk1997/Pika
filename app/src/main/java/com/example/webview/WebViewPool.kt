@@ -429,7 +429,6 @@ class WebViewPool(
           @Suppress("DEPRECATION")
           wv.clearFormData()
           wv.clearSslPreferences()
-          wv.clearHttpAuthUsernamePassword()
         } catch (_: Throwable) {
         }
       }
@@ -469,7 +468,6 @@ class WebViewPool(
         @Suppress("DEPRECATION")
         wv.clearFormData()
         wv.clearSslPreferences()
-        wv.clearHttpAuthUsernamePassword()
       } catch (_: Throwable) {
       }
     }
@@ -487,7 +485,10 @@ class WebViewPool(
     }
     try {
       @Suppress("DEPRECATION")
-      WebViewDatabase.getInstance(appContext).clearFormData()
+      WebViewDatabase.getInstance(appContext).apply {
+        clearFormData()
+        clearHttpAuthUsernamePassword()
+      }
     } catch (_: Throwable) {
     }
   }
