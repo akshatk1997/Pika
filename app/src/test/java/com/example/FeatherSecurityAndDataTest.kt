@@ -240,4 +240,19 @@ class FeatherSecurityAndDataTest {
     val emptyVastXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"3.0\"/>"
     assertTrue(emptyVastXml.contains("<VAST version=\"3.0\"/>"))
   }
+
+  @Test
+  fun newTabUrlValidationAndAdBlocking() {
+    val cleanVideoUrl = "https://example.com/watch?v=abcdef123"
+    assertTrue(UrlValidator.isSafeWebUrl(cleanVideoUrl))
+    assertFalse(TrackerBlocker.isTrackerHost(UrlValidator.extractHost(cleanVideoUrl)))
+    assertFalse(TrackerBlocker.isAdPathOrQuery(cleanVideoUrl))
+
+    val adPopupUrl = "https://tsyndicate.com/ad/popunder?zone=123"
+    assertTrue(UrlValidator.isSafeWebUrl(adPopupUrl))
+    assertTrue(TrackerBlocker.isTrackerHost(UrlValidator.extractHost(adPopupUrl)))
+
+    val dangerousSchemeUrl = "javascript:window.open('https://malicious.com')"
+    assertFalse(UrlValidator.isSafeWebUrl(dangerousSchemeUrl))
+  }
 }

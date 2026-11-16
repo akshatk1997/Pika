@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kai-v1.8.2.apk
+          cp "$APK_PATH" releases/Kai-v1.8.3.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kai-v1.8.2.apk
+          git add releases/Kai-v1.8.3.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kai-v1.8.2.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kai-v1.8.3.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.8.2
+      - name: Create or update GitHub Release v1.8.3
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kai-v1.8.2.apk)
-          NOTES="Kai Browser v1.8.2 (Build 55) — Minimal, privacy-hardened Android browser shell powered by Android System WebView.\n\n- **Flawless Universal HTML5 Video & Adaptive Stream Compatibility:** Engineered 100% error-free video and live stream playback across all websites, players, and CDNs.\n- **OS Cleartext Traffic Permitted:** Enabled cleartext HTTP network policy (android:usesCleartextTraffic=\\\"true\\\" and cleartextTrafficPermitted=\\\"true\\\") preventing OS socket aborts (net::ERR_CLEARTEXT_NOT_PERMITTED) on HTTP video CDNs, HLS TS segments, and streaming endpoints.\n- **Multi-Prototype canPlayType Polyfill:** Extended canPlayType support across HTMLMediaElement, HTMLVideoElement, and HTMLAudioElement prototypes to recognize HLS (application/x-mpegurl, application/vnd.apple.mpegurl), DASH, and MPEG-TS.\n- **MediaSource Codec Support:** Polyfilled MediaSource.isTypeSupported for fMP4, H.264 (avc1), AAC (mp4a), VP8/VP9, and Opus adaptive streaming.\n- **Universal Iframe Permissions:** Auto-injects allowfullscreen and allow=\\\"autoplay *; fullscreen *; encrypted-media *\\\" into all video player iframes.\n- **Early Video Engine Dispatch:** Injected video compatibility engine during early DOM parsing in onProgressChanged (>= 10) in addition to onPageStarted and onPageFinished.\n- **Active Player Error Recovery:** Automatically clears player error states (.fp-message, .is-error, .jw-error, .vjs-error-display), strips invalid crossorigin attributes, assigns sources, and restarts playback.\n- **Under 2 MB Limit:** Built with aggressive R8 minification, bytecode optimization, and zero bloated libraries, strictly maintaining the < 2 MB binary limit.\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
-          if gh release view v1.8.2 >/dev/null 2>&1; then
-            gh release upload v1.8.2 releases/Kai-v1.8.2.apk --clobber
-            gh release edit v1.8.2 --title "Kai v1.8.2 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kai-v1.8.3.apk)
+          NOTES="Kai Browser v1.8.3 (Build 56) — Minimal, privacy-hardened Android browser shell powered by Android System WebView.\n\n- **Seamless New Tab Handling (Standard & Private Mode):** Fully fixed opening links in new tabs across all websites, media hubs, and streaming platforms. Links with target=\\\"_blank\\\" or dynamic window.open now cleanly spawn and switch to new tabs without staying stuck on the current page.\n- **Multiple Windows & Auto-Popup Window Support:** Enabled setSupportMultipleWindows(true) and javaScriptCanOpenWindowsAutomatically = true in WebSettings with full asynchronous gesture token support for SPA/promise-based stream launchers.\n- **Defensive Ephemeral Helper Navigation:** Captured target URLs via detached helper WebViewTransport receiver, resolving dynamic and redirect URLs cleanly while automatically blocking tracker/ad popups.\n- **Browsing Mode Preservation:** New tabs opened from standard mode stay in standard mode; new tabs opened from private mode stay strictly in private mode with full RAM-only sandboxing.\n- **Enhanced Link Context Menu:** Long-pressing any link now offers immediate \\\"Open in new tab\\\" in the current browsing mode, alongside an explicit toggle (\\\"Open in private tab\\\" / \\\"Open in standard tab\\\").\n- **Expanded Live WebView Pool:** Increased MAX_LIVE_WEBVIEWS to 4 for instant tab switching without unneeded page reload cycles.\n- **Under 2 MB Limit:** Built with aggressive R8 minification, bytecode optimization, and zero bloated libraries, strictly maintaining the < 2 MB binary limit (~1.47 MB).\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
+          if gh release view v1.8.3 >/dev/null 2>&1; then
+            gh release upload v1.8.3 releases/Kai-v1.8.3.apk --clobber
+            gh release edit v1.8.3 --title "Kai v1.8.3 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.8.2 releases/Kai-v1.8.2.apk \
-              --title "Kai v1.8.2 (< 2 MB)" \
+            gh release create v1.8.3 releases/Kai-v1.8.3.apk \
+              --title "Kai v1.8.3 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

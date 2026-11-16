@@ -9,6 +9,8 @@ import android.net.NetworkCapabilities
 import android.net.http.SslError
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.Message
 import android.print.PrintAttributes
 import android.print.PrintManager
@@ -52,6 +54,7 @@ import java.util.Collections
 import java.util.LinkedHashMap
 import java.util.WeakHashMap
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 interface WebViewCallbacks {
   fun onPageStarted(tabId: String, url: String)
@@ -72,6 +75,7 @@ interface WebViewCallbacks {
   fun onFullscreenChanged(tabId: String, customView: View?, callback: WebChromeClient.CustomViewCallback?)
   fun onLongPressLink(tabId: String, url: String, isImage: Boolean)
   fun onAudioPermissionNeeded() {}
+  fun onNewTabRequested(parentTabId: String, url: String, isPrivate: Boolean) {}
 }
 
 /**
@@ -122,7 +126,7 @@ class WebViewPool(
 ) {
 
   companion object {
-    private const val MAX_LIVE_WEBVIEWS = 2
+    private const val MAX_LIVE_WEBVIEWS = 4
     private const val MAX_SNIFFED_PER_TAB = 50
     private const val DESKTOP_USER_AGENT =
       "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
@@ -1317,7 +1321,7 @@ class WebViewPool(
     try {
       webView.settings.apply {
         javaScriptEnabled = settingsState.javascriptEnabled
-        javaScriptCanOpenWindowsAutomatically = false
+        javaScriptCanOpenWindowsAutomatically = true
         mediaPlaybackRequiresUserGesture = false
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
           try {
@@ -1325,8 +1329,8 @@ class WebViewPool(
           } catch (_: Throwable) {
           }
         }
-        // In-tab navigation for window.open / target="_blank" so logins, OAuth, and links work smoothly
-        setSupportMultipleWindows(false)
+        // Enable multiple windows so target="_blank" and window.open trigger onCreateWindow
+        setSupportMultipleWindows(true)
         setGeolocationEnabled(!isPrivate)
         allowFileAccess = false
         allowContentAccess = false
@@ -1752,26 +1756,110 @@ class WebViewPool(
         isUserGesture: Boolean,
         resultMsg: Message?
       ): Boolean {
-        val targetUrl = try { view?.hitTestResult?.extra } catch (_: Throwable) { null } ?: return false
-        if (!isUserGesture || !UrlValidator.isSafeWebUrl(targetUrl)) return false
+        if (resultMsg == null) return false
         val currentSettings = settingsProvider()
-        if (currentSettings.trackerBlockingEnabled &&
-          (TrackerBlocker.isTrackerHost(UrlValidator.extractHost(targetUrl)) || TrackerBlocker.isAdPathOrQuery(targetUrl))) {
-          callbacks.onTrackerBlocked(tabId)
-          return false
-        }
-        val origin = try { UrlValidator.extractOrigin(view?.url) } catch (_: Throwable) { "" }
-        callbacks.onPermissionPrompt(
-          tabId = tabId,
-          origin = origin.ifEmpty { "current page" },
-          kind = WebPermissionKind.POPUP,
-          detail = targetUrl
-        ) { allowed ->
-          if (allowed) {
-            loadUrl(tabId, targetUrl)
+
+        val hitUrl = try { view?.hitTestResult?.extra } catch (_: Throwable) { null }
+        if (!hitUrl.isNullOrBlank()) {
+          val host = UrlValidator.extractHost(hitUrl)
+          if (currentSettings.trackerBlockingEnabled &&
+            (TrackerBlocker.isTrackerHost(host) || TrackerBlocker.isAdPathOrQuery(hitUrl))) {
+            callbacks.onTrackerBlocked(tabId)
+            return false
           }
         }
-        return false
+
+        val transport = try { resultMsg.obj as? WebView.WebViewTransport } catch (_: Throwable) { null }
+        if (transport == null) {
+          if (!hitUrl.isNullOrBlank() && UrlValidator.isSafeWebUrl(hitUrl)) {
+            callbacks.onNewTabRequested(tabId, hitUrl, isPrivate)
+            return true
+          }
+          return false
+        }
+
+        val tempWebView = try {
+          WebView(view?.context ?: appContext).apply {
+            settings.javaScriptEnabled = currentSettings.javascriptEnabled
+            settings.setSupportMultipleWindows(false)
+          }
+        } catch (_: Throwable) {
+          if (!hitUrl.isNullOrBlank() && UrlValidator.isSafeWebUrl(hitUrl)) {
+            callbacks.onNewTabRequested(tabId, hitUrl, isPrivate)
+            return true
+          }
+          return false
+        }
+
+        val handled = AtomicBoolean(false)
+        val mainHandler = Handler(Looper.getMainLooper())
+
+        fun dispatchAndCleanup(targetUrl: String) {
+          if (handled.compareAndSet(false, true)) {
+            val safeUrl = targetUrl.trim()
+            if (safeUrl.isNotBlank() && safeUrl != "about:blank" && UrlValidator.isSafeWebUrl(safeUrl)) {
+              val host = UrlValidator.extractHost(safeUrl)
+              if (currentSettings.trackerBlockingEnabled &&
+                (TrackerBlocker.isTrackerHost(host) || TrackerBlocker.isAdPathOrQuery(safeUrl))) {
+                callbacks.onTrackerBlocked(tabId)
+              } else {
+                callbacks.onNewTabRequested(tabId, safeUrl, isPrivate)
+              }
+            }
+            mainHandler.post {
+              try {
+                tempWebView.stopLoading()
+                tempWebView.destroy()
+              } catch (_: Throwable) {
+              }
+            }
+          }
+        }
+
+        tempWebView.webViewClient = object : WebViewClient() {
+          override fun shouldOverrideUrlLoading(v: WebView?, request: WebResourceRequest?): Boolean {
+            val url = request?.url?.toString()
+            if (!url.isNullOrBlank()) {
+              dispatchAndCleanup(url)
+            }
+            return true
+          }
+
+          override fun onPageStarted(v: WebView?, url: String?, favicon: Bitmap?) {
+            if (!url.isNullOrBlank() && url != "about:blank") {
+              dispatchAndCleanup(url)
+            }
+          }
+        }
+
+        if (!hitUrl.isNullOrBlank() && UrlValidator.isSafeWebUrl(hitUrl)) {
+          mainHandler.postDelayed({
+            if (!handled.get()) {
+              dispatchAndCleanup(hitUrl)
+            }
+          }, 300)
+        } else {
+          mainHandler.postDelayed({
+            if (handled.compareAndSet(false, true)) {
+              try {
+                tempWebView.stopLoading()
+                tempWebView.destroy()
+              } catch (_: Throwable) {
+              }
+            }
+          }, 5000)
+        }
+
+        transport.webView = tempWebView
+        try {
+          resultMsg.sendToTarget()
+        } catch (_: Throwable) {
+          if (!hitUrl.isNullOrBlank() && UrlValidator.isSafeWebUrl(hitUrl)) {
+            dispatchAndCleanup(hitUrl)
+          }
+          return false
+        }
+        return true
       }
 
       override fun onGeolocationPermissionsShowPrompt(

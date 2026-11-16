@@ -279,7 +279,7 @@ fun BrowserScreen(
               onOpenBookmarks = { viewModel.setOverlay(ActiveOverlay.BOOKMARKS) },
               onOpenDownloads = { viewModel.setOverlay(ActiveOverlay.DOWNLOADS) },
               onOpenAi = { viewModel.openAiAssistant() },
-              onNewTab = { viewModel.openNewTab(isPrivate = false) }
+              onNewTab = { viewModel.openNewTab(isPrivate = activeTab.isPrivate) }
             )
           }
 
@@ -1194,11 +1194,18 @@ fun BrowserScreen(
           )
           ContextActionRow("Open in new tab") {
             viewModel.dismissLinkContext()
-            viewModel.openNewTab(isPrivate = false, initialUrl = target.url)
+            viewModel.openNewTab(isPrivate = activeTab.isPrivate, initialUrl = target.url)
           }
-          ContextActionRow("Open in private tab") {
-            viewModel.dismissLinkContext()
-            viewModel.openNewTab(isPrivate = true, initialUrl = target.url)
+          if (activeTab.isPrivate) {
+            ContextActionRow("Open in standard tab") {
+              viewModel.dismissLinkContext()
+              viewModel.openNewTab(isPrivate = false, initialUrl = target.url)
+            }
+          } else {
+            ContextActionRow("Open in private tab") {
+              viewModel.dismissLinkContext()
+              viewModel.openNewTab(isPrivate = true, initialUrl = target.url)
+            }
           }
           ContextActionRow("Copy URL") {
             viewModel.dismissLinkContext()

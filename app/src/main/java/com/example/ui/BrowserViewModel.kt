@@ -685,6 +685,12 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         onAudioPermissionRequested?.invoke()
       }
     }
+
+    override fun onNewTabRequested(parentTabId: String, url: String, isPrivate: Boolean) {
+      runOnMain {
+        openNewTab(isPrivate = isPrivate, initialUrl = url)
+      }
+    }
   }
 
   val webViewPool = WebViewPool(
@@ -908,11 +914,24 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   }
 
   fun openNewTab(isPrivate: Boolean = false, initialUrl: String = "") {
+    val target = initialUrl.ifBlank { if (!isPrivate) _settings.value.homepageUrl else "" }
     val newTab = TabInfo(
       id = UUID.randomUUID().toString(),
-      title = if (isPrivate) "Private Tab" else "New Tab",
+      url = target,
+      title = if (isPrivate) {
+        if (target.isNotBlank()) UrlValidator.extractHost(target).ifEmpty { "Private Tab" } else "Private Tab"
+      } else {
+        if (target.isNotBlank()) UrlValidator.extractHost(target).ifEmpty { "New Tab" } else "New Tab"
+      },
       isPrivate = isPrivate,
-      securityState = if (isPrivate) SecurityState.PRIVATE else SecurityState.HOME
+      securityState = when {
+        isPrivate -> SecurityState.PRIVATE
+        UrlValidator.isHttpsUrl(target) -> SecurityState.SECURE_HTTPS
+        UrlValidator.isHttpUrl(target) -> SecurityState.INSECURE_HTTP
+        else -> SecurityState.HOME
+      },
+      isLoading = target.isNotBlank(),
+      progress = if (target.isNotBlank()) 10 else 0
     )
     _tabs.update { it + newTab }
     _activeTabId.value = newTab.id
@@ -921,7 +940,6 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     _pageSource.value = null
     closeFindInPage()
 
-    val target = initialUrl.ifBlank { if (!isPrivate) _settings.value.homepageUrl else "" }
     if (target.isNotBlank() && UrlValidator.isSafeWebUrl(target)) {
       navigateActiveTab(target)
     } else {
