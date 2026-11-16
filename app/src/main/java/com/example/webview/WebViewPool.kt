@@ -967,28 +967,52 @@ class WebViewPool(
         if (window.__kai_video_engine_installed) return;
         window.__kai_video_engine_installed = true;
 
-        // 1. Polyfill canPlayType for HLS, DASH, and streaming formats to prevent "html5: video file not found"
+        // 1. Comprehensive canPlayType polyfill across all media element prototypes
         try {
-          var origCanPlay = HTMLMediaElement.prototype.canPlayType;
-          HTMLMediaElement.prototype.canPlayType = function(type) {
-            if (!type) return '';
-            var t = String(type).toLowerCase();
-            if (t.indexOf('application/x-mpegurl') !== -1 ||
-                t.indexOf('application/vnd.apple.mpegurl') !== -1 ||
-                t.indexOf('audio/x-mpegurl') !== -1 ||
-                t.indexOf('audio/mpegurl') !== -1 ||
-                t.indexOf('video/mp2t') !== -1 ||
-                t.indexOf('application/dash+xml') !== -1) {
-              return 'maybe';
-            }
-            var res = origCanPlay.apply(this, arguments);
-            if (!res && (t.indexOf('mp4') !== -1 || t.indexOf('webm') !== -1 || t.indexOf('hls') !== -1 || t.indexOf('m3u8') !== -1)) {
-              return 'maybe';
-            }
-            return res;
+          var patchCanPlay = function(proto) {
+            if (!proto || !proto.canPlayType) return;
+            var orig = proto.canPlayType;
+            proto.canPlayType = function(type) {
+              if (!type) return '';
+              var t = String(type).toLowerCase();
+              if (t.indexOf('application/x-mpegurl') !== -1 ||
+                  t.indexOf('application/vnd.apple.mpegurl') !== -1 ||
+                  t.indexOf('audio/x-mpegurl') !== -1 ||
+                  t.indexOf('audio/mpegurl') !== -1 ||
+                  t.indexOf('video/mp2t') !== -1 ||
+                  t.indexOf('application/dash+xml') !== -1) {
+                return 'maybe';
+              }
+              var res = orig.apply(this, arguments);
+              if (!res && (t.indexOf('mp4') !== -1 || t.indexOf('webm') !== -1 || t.indexOf('hls') !== -1 || t.indexOf('m3u8') !== -1 || t.indexOf('ogg') !== -1 || t.indexOf('mkv') !== -1)) {
+                return 'maybe';
+              }
+              return res;
+            };
           };
+          patchCanPlay(HTMLMediaElement.prototype);
+          if (window.HTMLVideoElement && HTMLVideoElement.prototype) patchCanPlay(HTMLVideoElement.prototype);
+          if (window.HTMLAudioElement && HTMLAudioElement.prototype) patchCanPlay(HTMLAudioElement.prototype);
         } catch(e) {}
 
+        // 2. MediaSource.isTypeSupported polyfill for adaptive streaming codecs
+        try {
+          if (window.MediaSource && MediaSource.isTypeSupported) {
+            var origIsTypeSupported = MediaSource.isTypeSupported;
+            MediaSource.isTypeSupported = function(type) {
+              if (!type) return false;
+              var res = origIsTypeSupported.apply(this, arguments);
+              if (res) return true;
+              var t = String(type).toLowerCase();
+              if (t.indexOf('avc1') !== -1 || t.indexOf('mp4a') !== -1 || t.indexOf('video/mp4') !== -1 || t.indexOf('video/webm') !== -1 || t.indexOf('vp9') !== -1 || t.indexOf('vp8') !== -1 || t.indexOf('opus') !== -1) {
+                return true;
+              }
+              return res;
+            };
+          }
+        } catch(e) {}
+
+        // 3. Patch video elements (inline playback, source resolution, and CORS error recovery)
         function patchVideo(video) {
           if (!video) return;
           try {
@@ -1005,7 +1029,7 @@ class WebViewPool(
               }
             }
 
-            // Remove any failing crossorigin attribute on error and retry next source
+            // Remove any failing crossorigin attribute on error and retry fallback sources
             if (!video.__kai_error_bound) {
               video.__kai_error_bound = true;
               video.addEventListener('error', function() {
@@ -1030,6 +1054,7 @@ class WebViewPool(
           } catch(e) {}
         }
 
+        // 4. Universal play() wrapper catching autoplay restrictions
         try {
           var origPlay = HTMLMediaElement.prototype.play;
           HTMLMediaElement.prototype.play = function() {
@@ -1038,7 +1063,7 @@ class WebViewPool(
             var res = origPlay.apply(self, arguments);
             if (res && typeof res.catch === 'function') {
               res.catch(function(err) {
-                if (err && err.name === 'NotAllowedError' && !self.muted && self.hasAttribute('autoplay')) {
+                if (err && err.name === 'NotAllowedError' && !self.muted) {
                   self.muted = true;
                   try { origPlay.apply(self, arguments); } catch(e) {}
                 }
@@ -1048,16 +1073,33 @@ class WebViewPool(
           };
         } catch(e) {}
 
-        function patchAllVideos() {
+        // 5. Ensure all iframes permit fullscreen, autoplay, and encrypted media (EME/Widevine DRM)
+        function patchIframes() {
           try {
-            var vids = document.querySelectorAll('video');
-            for (var i = 0; i < vids.length; i++) {
-              patchVideo(vids[i]);
+            var iframes = document.querySelectorAll('iframe');
+            for (var i = 0; i < iframes.length; i++) {
+              var f = iframes[i];
+              if (!f.hasAttribute('allowfullscreen')) f.setAttribute('allowfullscreen', 'true');
+              if (!f.hasAttribute('webkitallowfullscreen')) f.setAttribute('webkitallowfullscreen', 'true');
+              var allow = f.getAttribute('allow') || '';
+              var updated = allow;
+              if (updated.indexOf('autoplay') === -1) updated += '; autoplay *';
+              if (updated.indexOf('fullscreen') === -1) updated += '; fullscreen *';
+              if (updated.indexOf('encrypted-media') === -1) updated += '; encrypted-media *';
+              if (updated !== allow) f.setAttribute('allow', updated.replace(/^;\s*/, ''));
             }
           } catch(e) {}
         }
 
-        patchAllVideos();
+        function patchAllMedia() {
+          try {
+            var vids = document.querySelectorAll('video');
+            for (var i = 0; i < vids.length; i++) patchVideo(vids[i]);
+            patchIframes();
+          } catch(e) {}
+        }
+
+        patchAllMedia();
 
         if (window.MutationObserver) {
           var obs = new MutationObserver(function(mutations) {
@@ -1067,9 +1109,11 @@ class WebViewPool(
                 var node = added[j];
                 if (node.nodeType === 1) {
                   if (node.tagName === 'VIDEO') patchVideo(node);
+                  else if (node.tagName === 'IFRAME') patchIframes();
                   else if (node.querySelectorAll) {
                     var subVids = node.querySelectorAll('video');
                     for (var k = 0; k < subVids.length; k++) patchVideo(subVids[k]);
+                    if (node.querySelector('iframe')) patchIframes();
                   }
                 }
               }
@@ -1078,7 +1122,7 @@ class WebViewPool(
           obs.observe(document.documentElement || document.body, { childList: true, subtree: true });
         }
 
-        // 5. Intercept and drop window.open calls to ad popunder and syndicate networks (e.g. tsyndicate)
+        // 6. Intercept and drop window.open calls to ad popunder and syndicate networks
         try {
           var origOpen = window.open;
           window.open = function(url, target, features) {
@@ -1106,13 +1150,12 @@ class WebViewPool(
           };
         } catch(e) {}
 
-        // 6. Neutralize transparent clickjacking overlays & ad links hovering over video players
+        // 7. Neutralize transparent clickjacking overlays & ad links hovering over video players
         document.addEventListener('click', function(e) {
           try {
             var target = e.target;
             if (!target) return;
 
-            // Catch and drop clicks on ad anchors that try to open popunders
             var anchor = target.closest ? target.closest('a') : null;
             if (anchor && anchor.href) {
               var hrefLower = anchor.href.toLowerCase();
@@ -1145,7 +1188,9 @@ class WebViewPool(
                           target.offsetWidth >= 200 && target.offsetHeight >= 150;
             if (isCover) {
               var parent = target.parentElement;
-              var under = parent ? parent.querySelector('video') : null;
+              var under = (parent && parent.querySelector('video')) ||
+                          (target.closest && target.closest('[class*="player"], [id*="player"]') ? target.closest('[class*="player"], [id*="player"]').querySelector('video') : null) ||
+                          document.querySelector('video');
               if (under) {
                 target.style.pointerEvents = 'none';
                 try { under.play(); } catch(err) {}
@@ -1154,18 +1199,18 @@ class WebViewPool(
           } catch(e) {}
         }, true);
 
-        // 7. Auto-recover HTML5 video player errors (Flowplayer, JW Player "html5: video file not found")
+        // 8. Auto-recover HTML5 video player errors (Flowplayer, JW Player, Video.js)
         function recoverHtml5VideoErrors() {
           try {
-            var errorContainers = document.querySelectorAll('.fp-message, .flowplayer.is-error, .jw-error, [class*="error-message"], [class*="player-error"]');
+            var errorContainers = document.querySelectorAll('.fp-message, .flowplayer.is-error, .jw-error, .vjs-error-display, [class*="error-message"], [class*="player-error"]');
             for (var i = 0; i < errorContainers.length; i++) {
               var c = errorContainers[i];
               var text = (c.innerText || c.textContent || '').toLowerCase();
-              if (text.indexOf('video file not found') !== -1 || text.indexOf('html5') !== -1 || text.indexOf('could not be played') !== -1) {
-                var root = c.closest ? (c.closest('.flowplayer') || c.closest('.jwplayer') || c.parentElement) : c.parentElement;
+              if (text.indexOf('video file not found') !== -1 || text.indexOf('html5') !== -1 || text.indexOf('could not be played') !== -1 || text.indexOf('no compatible source') !== -1) {
+                var root = c.closest ? (c.closest('.flowplayer') || c.closest('.jwplayer') || c.closest('.video-js') || c.parentElement) : c.parentElement;
                 if (root) {
                   root.classList.remove('is-error');
-                  if (c.classList.contains('fp-message')) {
+                  if (c.classList.contains('fp-message') || c.classList.contains('vjs-error-display')) {
                     c.style.display = 'none';
                   }
                   var vid = root.querySelector('video');
@@ -1678,6 +1723,9 @@ class WebViewPool(
     webView.webChromeClient = object : WebChromeClient() {
       override fun onProgressChanged(view: WebView?, newProgress: Int) {
         callbacks.onProgressChanged(tabId, newProgress)
+        if (view != null && newProgress >= 10 && !destroyedViews.contains(view)) {
+          applyVideoCompatibilityEngine(view)
+        }
         if (view != null && newProgress >= 15 && !destroyedViews.contains(view)) {
           applyStealthPrivacyShield(view)
         }
