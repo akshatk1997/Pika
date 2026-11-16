@@ -35,6 +35,7 @@ import com.example.model.PageError
 import com.example.model.PageErrorType
 import com.example.model.ReaderArticle
 import com.example.model.SettingsState
+import com.example.model.SniffedMediaType
 import com.example.model.SniffedResource
 import com.example.model.ThemeMode
 import com.example.model.UserAgentMode

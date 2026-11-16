@@ -45,6 +45,7 @@ import com.example.model.ReaderArticle
 import com.example.model.SecurityState
 import com.example.model.SettingsState
 import com.example.model.SitePermissionRule
+import com.example.model.SniffedMediaType
 import com.example.model.SniffedResource
 import com.example.model.TabInfo
 import com.example.model.UserAgentMode
