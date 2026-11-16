@@ -417,11 +417,22 @@ class WebViewPool(
   fun notifyAudioPermissionGranted() {
   }
 
-  fun destroyTab(tabId: String) {
+  fun destroyTab(tabId: String, isPrivate: Boolean = false) {
     savedStates.remove(tabId)
     sniffedResourcesByTab.remove(tabId)
     currentPageHosts.remove(tabId)
     liveViews.remove(tabId)?.let { wv ->
+      if (isPrivate) {
+        try {
+          wv.clearCache(true)
+          wv.clearHistory()
+          @Suppress("DEPRECATION")
+          wv.clearFormData()
+          wv.clearSslPreferences()
+          wv.clearHttpAuthUsernamePassword()
+        } catch (_: Throwable) {
+        }
+      }
       safelyDestroyWebView(wv)
     }
   }
@@ -449,7 +460,7 @@ class WebViewPool(
   }
 
   fun wipePrivateSessionData(privateTabIds: List<String>) {
-    privateTabIds.forEach { destroyTab(it) }
+    privateTabIds.forEach { destroyTab(it, isPrivate = true) }
     for ((_, wv) in liveViews.toMap()) {
       if (destroyedViews.contains(wv)) continue
       try {
@@ -457,11 +468,14 @@ class WebViewPool(
         wv.clearHistory()
         @Suppress("DEPRECATION")
         wv.clearFormData()
+        wv.clearSslPreferences()
+        wv.clearHttpAuthUsernamePassword()
       } catch (_: Throwable) {
       }
     }
     try {
       CookieManager.getInstance().apply {
+        removeSessionCookies(null)
         removeAllCookies(null)
         flush()
       }
@@ -925,7 +939,7 @@ class WebViewPool(
 
   /**
    * Industry-leading anti-tracking & anti-fingerprinting shield injected into web pages.
-   * Protects against Canvas, WebGL, AudioContext, Battery, Hardware, and WebRTC fingerprinting.
+   * Protects against GPC/DNT privacy violations, referrer leaks, battery sniffing, and WebRTC IP exposure.
    */
   private fun applyStealthPrivacyShield(webView: WebView) {
     if (!settingsProvider().javascriptEnabled || destroyedViews.contains(webView)) return
@@ -934,73 +948,35 @@ class WebViewPool(
         if (window.__kai_stealth_privacy_shield_installed) return;
         window.__kai_stealth_privacy_shield_installed = true;
 
-        // 1. Canvas Fingerprinting Poisoning / Masking
+        // 1. Global Privacy Control (GPC) & Do Not Track (W3C / CCPA / GDPR)
         try {
-          var origToDataURL = HTMLCanvasElement.prototype.toDataURL;
-          HTMLCanvasElement.prototype.toDataURL = function() {
-            try {
-              var ctx = this.getContext('2d');
-              if (ctx && this.width > 16 && this.height > 16) {
-                var imgData = ctx.getImageData(0, 0, Math.min(16, this.width), Math.min(16, this.height));
-                for (var i = 0; i < imgData.data.length; i += 4) {
-                  imgData.data[i] = imgData.data[i] ^ 1;
-                }
-                ctx.putImageData(imgData, 0, 0);
-              }
-            } catch(e) {}
-            return origToDataURL.apply(this, arguments);
-          };
-
-          var origGetImageData = CanvasRenderingContext2D.prototype.getImageData;
-          CanvasRenderingContext2D.prototype.getImageData = function() {
-            var data = origGetImageData.apply(this, arguments);
-            try {
-              if (data && data.data && data.data.length >= 8) {
-                data.data[0] = data.data[0] ^ 1;
-                data.data[4] = data.data[4] ^ 1;
-              }
-            } catch(e) {}
-            return data;
-          };
-        } catch(e) {}
-
-        // 2. WebGL GPU Architecture Masking
-        try {
-          function maskWebGL(proto) {
-            if (!proto) return;
-            var origGetParam = proto.getParameter;
-            proto.getParameter = function(param) {
-              if (param === 0x9245) return 'Google Inc. (Intel)';
-              if (param === 0x9246) return 'ANGLE (Intel, Generic Direct3D11 vs_5_0 ps_5_0)';
-              return origGetParam.apply(this, arguments);
-            };
+          if (!('globalPrivacyControl' in navigator)) {
+            Object.defineProperty(navigator, 'globalPrivacyControl', {
+              get: function() { return true; },
+              configurable: false,
+              enumerable: true
+            });
           }
-          if (window.WebGLRenderingContext) maskWebGL(WebGLRenderingContext.prototype);
-          if (window.WebGL2RenderingContext) maskWebGL(WebGL2RenderingContext.prototype);
-        } catch(e) {}
-
-        // 3. AudioContext Fingerprint Noise Shield
-        try {
-          if (window.AudioBuffer) {
-            var origGetChannelData = AudioBuffer.prototype.getChannelData;
-            AudioBuffer.prototype.getChannelData = function() {
-              var buf = origGetChannelData.apply(this, arguments);
-              if (buf && buf.length > 0) {
-                buf[0] = buf[0] + 0.00000001;
-              }
-              return buf;
-            };
-          }
-          if (window.AnalyserNode) {
-            var origGetFloatData = AnalyserNode.prototype.getFloatFrequencyData;
-            AnalyserNode.prototype.getFloatFrequencyData = function(arr) {
-              origGetFloatData.apply(this, arguments);
-              if (arr && arr.length > 0) arr[0] += 0.00001;
-            };
+          if (!('doNotTrack' in navigator)) {
+            Object.defineProperty(navigator, 'doNotTrack', {
+              get: function() { return '1'; },
+              configurable: false,
+              enumerable: true
+            });
           }
         } catch(e) {}
 
-        // 4. Hardware & Battery Masking
+        // 2. Strict Referrer Policy Injection (prevents path/query tracking leakage)
+        try {
+          if (!document.querySelector('meta[name="referrer"]')) {
+            var meta = document.createElement('meta');
+            meta.name = 'referrer';
+            meta.content = 'strict-origin-when-cross-origin';
+            (document.head || document.documentElement).appendChild(meta);
+          }
+        } catch(e) {}
+
+        // 3. Hardware & Battery Fingerprint Neutralization
         try {
           if (navigator.getBattery) {
             navigator.getBattery = function() {
@@ -1014,29 +990,18 @@ class WebViewPool(
               });
             };
           }
-          Object.defineProperty(navigator, 'hardwareConcurrency', { get: function() { return 4; } });
-          Object.defineProperty(navigator, 'deviceMemory', { get: function() { return 8; } });
-          Object.defineProperty(navigator, 'maxTouchPoints', { get: function() { return 5; } });
         } catch(e) {}
 
-        // 5. Strict Referrer Policy Injection
+        // 4. WebRTC Local IP Leak Protection (strips LAN host ICE candidates in SDP)
         try {
-          if (!document.querySelector('meta[name="referrer"]')) {
-            var meta = document.createElement('meta');
-            meta.name = 'referrer';
-            meta.content = 'strict-origin-when-cross-origin';
-            (document.head || document.documentElement).appendChild(meta);
-          }
-        } catch(e) {}
-
-        // 6. Global Privacy Control (GPC) DOM standard (W3C / CCPA / GDPR)
-        try {
-          if (!('globalPrivacyControl' in navigator)) {
-            Object.defineProperty(navigator, 'globalPrivacyControl', {
-              get: function() { return true; },
-              configurable: false,
-              enumerable: true
-            });
+          if (window.RTCPeerConnection) {
+            var origSetLocalDesc = RTCPeerConnection.prototype.setLocalDescription;
+            RTCPeerConnection.prototype.setLocalDescription = function(desc) {
+              if (desc && desc.sdp) {
+                desc.sdp = desc.sdp.replace(/a=candidate:[^\r\n]+ typ host [^\r\n]+\r\n/g, '');
+              }
+              return origSetLocalDesc.apply(this, arguments);
+            };
           }
         } catch(e) {}
       })();
@@ -1066,8 +1031,9 @@ class WebViewPool(
           } catch (_: Throwable) {
           }
         }
-        setSupportMultipleWindows(true)
-        setGeolocationEnabled(false)
+        // In-tab navigation for window.open / target="_blank" so logins, OAuth, and links work smoothly
+        setSupportMultipleWindows(false)
+        setGeolocationEnabled(!isPrivate)
         allowFileAccess = false
         allowContentAccess = false
         @Suppress("DEPRECATION")
@@ -1119,7 +1085,9 @@ class WebViewPool(
 
     try {
       val cookieMgr = CookieManager.getInstance()
-      cookieMgr.setAcceptCookie(!isPrivate)
+      // First-party cookies are accepted so websites, sessions, and Cloudflare/auth challenges work
+      cookieMgr.setAcceptCookie(true)
+      // Third-party tracking cookies are strictly blocked in private mode or when user setting is enabled
       cookieMgr.setAcceptThirdPartyCookies(webView, !isPrivate && !settingsState.blockThirdPartyCookies)
     } catch (_: Throwable) {
     }

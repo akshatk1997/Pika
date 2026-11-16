@@ -57,6 +57,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -85,6 +87,7 @@ fun TabsSheet(
 ) {
   BackHandler { onCloseSheet() }
 
+  val haptic = LocalHapticFeedback.current
   val activeIsPrivate = tabs.firstOrNull { it.id == activeTabId }?.isPrivate == true
   var showPrivate by remember(activeIsPrivate) { mutableStateOf(activeIsPrivate) }
   var searchQuery by remember { mutableStateOf("") }
@@ -154,13 +157,19 @@ fun TabsSheet(
         ) {
           FilterChip(
             selected = !showPrivate,
-            onClick = { showPrivate = false },
+            onClick = {
+              haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+              showPrivate = false
+            },
             label = { Text("${stringResource(R.string.tabs_normal)} (${tabs.count { !it.isPrivate }})") },
             modifier = Modifier.testTag("tabs_filter_normal")
           )
           FilterChip(
             selected = showPrivate,
-            onClick = { showPrivate = true },
+            onClick = {
+              haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+              showPrivate = true
+            },
             leadingIcon = {
               Icon(FeatherIcons.PrivateMask, contentDescription = null, modifier = Modifier.size(16.dp))
             },
@@ -170,7 +179,10 @@ fun TabsSheet(
           Spacer(modifier = Modifier.weight(1f))
           if (showPrivate && tabs.any { it.isPrivate }) {
             TextButton(
-              onClick = onEndPrivateSession,
+              onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onEndPrivateSession()
+              },
               modifier = Modifier.testTag("tabs_end_private")
             ) {
               Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -254,7 +266,10 @@ fun TabsSheet(
                 modifier = Modifier
                   .fillMaxWidth()
                   .clip(RoundedCornerShape(16.dp))
-                  .clickable { onSelectTab(tab.id) }
+                  .clickable {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onSelectTab(tab.id)
+                  }
                   .testTag("tab_card_${tab.id}")
               ) {
                 Row(
@@ -320,7 +335,10 @@ fun TabsSheet(
                   }
 
                   IconButton(
-                    onClick = { onCloseTab(tab.id) },
+                    onClick = {
+                      haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                      onCloseTab(tab.id)
+                    },
                     modifier = Modifier.minimumInteractiveComponentSize().testTag("close_tab_${tab.id}")
                   ) {
                     Icon(Icons.Filled.Close, contentDescription = "Close tab ${tab.title}")

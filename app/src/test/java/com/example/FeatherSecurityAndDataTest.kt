@@ -197,4 +197,12 @@ class FeatherSecurityAndDataTest {
     assertTrue(isOutdated80)
     assertFalse(isOutdated120)
   }
+
+  @Test
+  fun privateModeWebRtcSdpCandidateStripping() {
+    val sampleSdp = "v=0\r\no=- 123 2 IN IP4 127.0.0.1\r\na=candidate:1 1 UDP 2130706431 192.168.1.105 50000 typ host\r\na=candidate:2 1 UDP 1694498815 203.0.113.1 50000 typ srflx raddr 192.168.1.105 rport 50000\r\n"
+    val stripped = sampleSdp.replace(Regex("a=candidate:[^\r\n]+ typ host [^\r\n]+\r\n"), "")
+    assertFalse(stripped.contains("192.168.1.105 50000 typ host"))
+    assertTrue(stripped.contains("typ srflx"))
+  }
 }

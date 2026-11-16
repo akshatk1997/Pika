@@ -10,6 +10,7 @@
 
 | Version | Version Code | Target Platforms & OS | Key Highlights |
 |---|---:|---|---|
+| **v1.7.8** | `51` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Private Mode Website Compatibility Fix & Tough Security Vault: Restored first-party in-memory cookie compatibility so sites requiring logins, sessions, CSRF, and Cloudflare Turnstile anti-bot checks load seamlessly without loops or crashes; strictly blocked third-party tracking cookies; zero disk persistence (`LOAD_NO_CACHE`); WebRTC local IP leak protection; Android 13+ sensitive clipboard protection; purged 27 obsolete APKs (>41 MB reclaimed); modern 2026-era UI with deep obsidian & amethyst private browsing theme, animated loading sweep, and snappy tactile haptics; strictly under 2 MB |
 | **v1.7.7** | `50` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Clean Homepage Restored & Modernized AI Intelligence: Completely clean, distraction-free start page; modernized Kai AI assistant with reading overview banner, scrollable segmented tabs, hard numbers & statistical claims extractor, technical terms & jargon explainer, and adjustable speech rate controls; aggressive R8 shrink optimization; strictly under 2 MB |
 | **v1.7.6** | `49` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Dedicated Video Downloader in Resources: Stream sniffing & DOM extraction identifying embedded web videos (MP4, WebM, MKV, M3U8 HLS, MPD DASH, query streams like videoplayback) with 1-tap direct video download, active page DOM scanner button, and safe scoped storage saving; strictly under 2 MB |
 | **v1.7.5** | `48` | Android 8.0–17 (Phone, Tablet, Foldable, Desktop Windowing) | Modernized UI Aesthetics & Expanded On-Device AI: Complete modern visual redesign with frosted glass surfaces, ambient Kai hero glow, smart search inspiration chips, and live privacy shield widget; expanded 100% on-device AI suite with Read Aloud (Text-to-Speech) audio player bar, Action Items & Key Takeaways extractor, Readability index & sentence simplifier ("Explain Simply"), Tone/Clickbait detector, and semantic tab category filtering; strictly under 2 MB |
@@ -73,7 +74,7 @@ Because no platform overrides were supplied prior to implementation, Kai targets
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Kai-v1.7.4.apk`](releases/Kai-v1.7.4.apk) and attached to GitHub Releases (`v1.7.4`).
+Pre-built signed release APK (< 2 MB) is tracked directly in this repository at [`releases/Kai-v1.7.8.apk`](releases/Kai-v1.7.8.apk) and attached to GitHub Releases (`v1.7.8`).
 
 ---
 

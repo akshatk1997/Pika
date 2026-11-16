@@ -2,6 +2,7 @@ package com.example.ui
 
 import android.app.Application
 import android.content.ClipData
+import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
@@ -9,6 +10,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.PersistableBundle
 import android.view.View
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -954,7 +956,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     if (!closing.isPrivate && closing.url.isNotBlank()) {
       _closedTabs.update { (listOf(ClosedTabRecord(closing.title, closing.url)) + it).take(15) }
     }
-    webViewPool.destroyTab(tabId)
+    webViewPool.destroyTab(tabId, isPrivate = closing.isPrivate)
     val remaining = _tabs.value.filterNot { it.id == tabId }
     if (remaining.isEmpty()) {
       val fresh = TabInfo(id = UUID.randomUUID().toString(), title = "New Tab")
@@ -1185,7 +1187,16 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     if (text.isBlank()) return
     try {
       val cm = appContext.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
-      cm.setPrimaryClip(ClipData.newPlainText("Text", text))
+      val clipData = ClipData.newPlainText("Text", text)
+      if (activeTab().isPrivate && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        try {
+          clipData.description.extras = PersistableBundle().apply {
+            putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
+          }
+        } catch (_: Throwable) {
+        }
+      }
+      cm.setPrimaryClip(clipData)
       // Android 13+ automatically shows a system clipboard confirmation overlay
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
         showToast(toastMessage)

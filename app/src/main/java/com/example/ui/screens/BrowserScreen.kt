@@ -7,6 +7,9 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -94,9 +97,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -319,22 +324,28 @@ fun BrowserScreen(
             }
 
             if (activeTab.isLoading && activeTab.progress in 1..99) {
+              val animatedProgress by animateFloatAsState(
+                targetValue = (activeTab.progress / 100f).coerceIn(0.05f, 1f),
+                animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing),
+                label = "page_progress"
+              )
               Box(
                 modifier = Modifier
                   .fillMaxWidth()
-                  .height(2.5.dp)
-                  .background(MaterialTheme.colorScheme.surfaceVariant)
+                  .height(3.dp)
+                  .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
               ) {
                 Box(
                   modifier = Modifier
-                    .fillMaxWidth(fraction = (activeTab.progress / 100f).coerceIn(0.05f, 1f))
+                    .fillMaxWidth(fraction = animatedProgress)
                     .fillMaxHeight()
                     .background(
                       Brush.horizontalGradient(
-                        listOf(
-                          if (activeTab.isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.primary,
-                          FeatherMintDark
-                        )
+                        if (activeTab.isPrivate) {
+                          listOf(FeatherPrivateAccent, Color(0xFFC084FC), FeatherPrivateAccent)
+                        } else {
+                          listOf(MaterialTheme.colorScheme.primary, FeatherMintDark)
+                        }
                       )
                     )
                 )
@@ -1386,7 +1397,9 @@ private fun BrowserToolbar(
   var isFocused by remember { mutableStateOf(false) }
   var clipboardCandidate by remember { mutableStateOf<String?>(null) }
   val focusManager = LocalFocusManager.current
+  val haptic = LocalHapticFeedback.current
   val isHomePage = activeTab.url.isBlank()
+  val isPrivate = activeTab.isPrivate
 
   val (secIcon, secTint, secDesc) = when (activeTab.securityState) {
     SecurityState.PRIVATE -> Triple(FeatherIcons.PrivateMask, FeatherPrivateAccent, stringResource(R.string.cd_security_private))
@@ -1401,19 +1414,28 @@ private fun BrowserToolbar(
 
   val omniboxPill: @Composable (Modifier) -> Unit = { pillModifier ->
     var swipeAccum by remember { mutableFloatStateOf(0f) }
+    val isSystemDark = isSystemInDarkTheme()
+    val pillBg = if (isPrivate) {
+      if (isSystemDark) Color(0xFF14121F) else Color(0xFF231D33)
+    } else {
+      MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.82f)
+    }
+    val pillBorder = when {
+      isFocused -> MaterialTheme.colorScheme.primary
+      isPrivate -> FeatherPrivateAccent.copy(alpha = 0.75f)
+      else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+    }
     Surface(
-      shape = RoundedCornerShape(24.dp),
-      color = MaterialTheme.colorScheme.surfaceVariant,
+      shape = RoundedCornerShape(26.dp),
+      color = pillBg,
+      tonalElevation = if (isFocused) 6.dp else 2.dp,
+      shadowElevation = if (isFocused) 4.dp else 1.dp,
       border = BorderStroke(
-        width = 0.9.dp,
-        color = when {
-          isFocused -> MaterialTheme.colorScheme.primary
-          activeTab.isPrivate -> FeatherPrivateAccent.copy(alpha = 0.65f)
-          else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
-        }
+        width = if (isFocused || isPrivate) 1.2.dp else 0.8.dp,
+        color = pillBorder
       ),
       modifier = pillModifier
-        .height(46.dp)
+        .height(48.dp)
         .pointerInput(tabCount) {
           detectHorizontalDragGestures(
             onDragStart = { swipeAccum = 0f },
@@ -1461,15 +1483,15 @@ private fun BrowserToolbar(
               text = "$displayHost$modeTag",
               style = MaterialTheme.typography.bodyMedium,
               fontWeight = FontWeight.Medium,
-              color = MaterialTheme.colorScheme.onSurface,
+              color = if (isPrivate) Color(0xFFF3E8FF) else MaterialTheme.colorScheme.onSurface,
               maxLines = 1,
               overflow = TextOverflow.Ellipsis
             )
           } else if (omniboxValue.text.isEmpty()) {
             Text(
-              text = stringResource(R.string.omnibox_hint),
+              text = if (isPrivate) "Search or enter URL · Zero Tracking" else stringResource(R.string.omnibox_hint),
               style = MaterialTheme.typography.bodyMedium,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              color = if (isPrivate) FeatherPrivateAccent.copy(alpha = 0.75f) else MaterialTheme.colorScheme.onSurfaceVariant,
               maxLines = 1,
               overflow = TextOverflow.Ellipsis
             )
@@ -1479,9 +1501,9 @@ private fun BrowserToolbar(
             onValueChange = { omniboxValue = it },
             singleLine = true,
             textStyle = MaterialTheme.typography.bodyMedium.copy(
-              color = MaterialTheme.colorScheme.onSurface
+              color = if (isPrivate) Color.White else MaterialTheme.colorScheme.onSurface
             ),
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            cursorBrush = SolidColor(if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.primary),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
             keyboardActions = KeyboardActions(onGo = {
               if (omniboxValue.text.isNotBlank()) {
@@ -1513,7 +1535,10 @@ private fun BrowserToolbar(
           }
         } else if (activeTab.url.isNotBlank()) {
           IconButton(
-            onClick = onCopyUrl,
+            onClick = {
+              haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+              onCopyUrl()
+            },
             modifier = Modifier.minimumInteractiveComponentSize().testTag("address_copy_button")
           ) {
             Icon(FeatherIcons.Copy, contentDescription = stringResource(R.string.cd_copy_url), modifier = Modifier.size(17.dp))
@@ -1530,21 +1555,26 @@ private fun BrowserToolbar(
         if (activeTab.trackersBlockedCount > 0) {
           Surface(
             shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.primaryContainer,
-            border = BorderStroke(0.6.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+            color = if (isPrivate) FeatherPrivateAccent.copy(alpha = 0.2f) else MaterialTheme.colorScheme.primaryContainer,
+            border = BorderStroke(0.6.dp, (if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.primary).copy(alpha = 0.4f)),
             modifier = Modifier.clickable { onOpenSiteInfo() }
           ) {
             Row(
               modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
               verticalAlignment = Alignment.CenterVertically
             ) {
-              Icon(FeatherIcons.Shield, contentDescription = "Blocked", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(12.dp))
+              Icon(
+                FeatherIcons.Shield,
+                contentDescription = "Blocked",
+                tint = if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(12.dp)
+              )
               Spacer(modifier = Modifier.width(3.dp))
               Text(
                 text = activeTab.trackersBlockedCount.toString(),
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                color = if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.onPrimaryContainer
               )
             }
           }
@@ -1587,21 +1617,30 @@ private fun BrowserToolbar(
             Spacer(modifier = Modifier.width(4.dp))
           }
           IconButton(
-            onClick = onBack,
+            onClick = {
+              haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+              onBack()
+            },
             enabled = activeTab.canGoBack || activeTab.httpWarning != null || activeTab.errorState != null,
             modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_back_button")
           ) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
           }
           IconButton(
-            onClick = onForward,
+            onClick = {
+              haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+              onForward()
+            },
             enabled = activeTab.canGoForward,
             modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_forward_button")
           ) {
             Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = stringResource(R.string.cd_forward))
           }
           IconButton(
-            onClick = onReloadOrStop,
+            onClick = {
+              haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+              onReloadOrStop()
+            },
             enabled = activeTab.url.isNotBlank() || activeTab.errorState != null,
             modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_reload_button")
           ) {
@@ -1648,7 +1687,10 @@ private fun BrowserToolbar(
             )
           }
           IconButton(
-            onClick = onNewTab,
+            onClick = {
+              haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+              onNewTab()
+            },
             modifier = Modifier.minimumInteractiveComponentSize().testTag("tablet_new_tab_button")
           ) {
             Icon(
@@ -1658,27 +1700,37 @@ private fun BrowserToolbar(
             )
           }
           Surface(
-            shape = RoundedCornerShape(10.dp),
-            border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(
+              1.5.dp,
+              if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+            ),
+            color = if (isPrivate) FeatherPrivateAccent.copy(alpha = 0.16f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
             modifier = Modifier
               .minimumInteractiveComponentSize()
-              .clickable { onOpenTabs() }
+              .clickable {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onOpenTabs()
+              }
               .testTag("nav_tabs_button")
           ) {
             Box(
               contentAlignment = Alignment.Center,
-              modifier = Modifier.padding(horizontal = 11.dp, vertical = 4.dp)
+              modifier = Modifier.padding(horizontal = 11.dp, vertical = 5.dp)
             ) {
               Text(
                 text = tabCount.toString(),
                 style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.onSurface
               )
             }
           }
           IconButton(
-            onClick = onOpenQuickMenu,
+            onClick = {
+              haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+              onOpenQuickMenu()
+            },
             modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_menu_button")
           ) {
             Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.cd_menu))
@@ -1711,14 +1763,20 @@ private fun BrowserToolbar(
               }
               Spacer(modifier = Modifier.width(4.dp))
               IconButton(
-                onClick = onBack,
+                onClick = {
+                  haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                  onBack()
+                },
                 enabled = activeTab.canGoBack || activeTab.httpWarning != null || activeTab.errorState != null,
                 modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_back_button")
               ) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
               }
               IconButton(
-                onClick = onForward,
+                onClick = {
+                  haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                  onForward()
+                },
                 enabled = activeTab.canGoForward,
                 modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_forward_button")
               ) {
@@ -1728,28 +1786,38 @@ private fun BrowserToolbar(
 
             Row(verticalAlignment = Alignment.CenterVertically) {
               Surface(
-                shape = RoundedCornerShape(10.dp),
-                border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(
+                  1.5.dp,
+                  if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+                ),
+                color = if (isPrivate) FeatherPrivateAccent.copy(alpha = 0.16f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier
                   .minimumInteractiveComponentSize()
-                  .clickable { onOpenTabs() }
+                  .clickable {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onOpenTabs()
+                  }
                   .testTag("nav_tabs_button")
               ) {
                 Box(
                   contentAlignment = Alignment.Center,
-                  modifier = Modifier.padding(horizontal = 11.dp, vertical = 4.dp)
+                  modifier = Modifier.padding(horizontal = 11.dp, vertical = 5.dp)
                 ) {
                   Text(
                     text = tabCount.toString(),
                     style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.onSurface
                   )
                 }
               }
 
               IconButton(
-                onClick = onOpenQuickMenu,
+                onClick = {
+                  haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                  onOpenQuickMenu()
+                },
                 modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_menu_button")
               ) {
                 Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.cd_menu))
@@ -1766,21 +1834,30 @@ private fun BrowserToolbar(
               verticalAlignment = Alignment.CenterVertically
             ) {
               IconButton(
-                onClick = onBack,
+                onClick = {
+                  haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                  onBack()
+                },
                 enabled = activeTab.canGoBack || activeTab.httpWarning != null || activeTab.errorState != null,
                 modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_back_button")
               ) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
               }
               IconButton(
-                onClick = onForward,
+                onClick = {
+                  haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                  onForward()
+                },
                 enabled = activeTab.canGoForward,
                 modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_forward_button")
               ) {
                 Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = stringResource(R.string.cd_forward))
               }
               IconButton(
-                onClick = onReloadOrStop,
+                onClick = {
+                  haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                  onReloadOrStop()
+                },
                 enabled = activeTab.url.isNotBlank() || activeTab.errorState != null,
                 modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_reload_button")
               ) {
@@ -1792,7 +1869,10 @@ private fun BrowserToolbar(
 
               if (activeTab.url.isNotBlank()) {
                 IconButton(
-                  onClick = onOpenAi,
+                  onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onOpenAi()
+                  },
                   modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_ai_button")
                 ) {
                   Icon(
@@ -1805,28 +1885,38 @@ private fun BrowserToolbar(
               }
 
               Surface(
-                shape = RoundedCornerShape(10.dp),
-                border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(
+                  1.5.dp,
+                  if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+                ),
+                color = if (isPrivate) FeatherPrivateAccent.copy(alpha = 0.16f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier
                   .minimumInteractiveComponentSize()
-                  .clickable { onOpenTabs() }
+                  .clickable {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onOpenTabs()
+                  }
                   .testTag("nav_tabs_button")
               ) {
                 Box(
                   contentAlignment = Alignment.Center,
-                  modifier = Modifier.padding(horizontal = 11.dp, vertical = 4.dp)
+                  modifier = Modifier.padding(horizontal = 11.dp, vertical = 5.dp)
                 ) {
                   Text(
                     text = tabCount.toString(),
                     style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.onSurface
                   )
                 }
               }
 
               IconButton(
-                onClick = onOpenQuickMenu,
+                onClick = {
+                  haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                  onOpenQuickMenu()
+                },
                 modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_menu_button")
               ) {
                 Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.cd_menu))
