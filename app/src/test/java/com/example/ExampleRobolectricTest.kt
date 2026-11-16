@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.7.8", BuildConfig.VERSION_NAME)
-    assertEquals(51, BuildConfig.VERSION_CODE)
+    assertEquals("1.7.9", BuildConfig.VERSION_NAME)
+    assertEquals(52, BuildConfig.VERSION_CODE)
   }
 
   @Test

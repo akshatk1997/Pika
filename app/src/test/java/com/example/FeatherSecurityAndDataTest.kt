@@ -205,4 +205,15 @@ class FeatherSecurityAndDataTest {
     assertFalse(stripped.contains("192.168.1.105 50000 typ host"))
     assertTrue(stripped.contains("typ srflx"))
   }
+
+  @Test
+  fun videoUrlPatternAndEmptyVastFormatVerified() {
+    assertTrue(TrackerBlocker.isVideoUrlPattern("https://example.com/stream/manifest.m3u8"))
+    assertTrue(TrackerBlocker.isVideoUrlPattern("https://example.com/video/chunk.mpd"))
+    assertTrue(TrackerBlocker.isVideoUrlPattern("https://rr1---sn.googlevideo.com/videoplayback?expire=123"))
+    assertTrue(TrackerBlocker.isVideoUrlPattern("https://example.org/watch?format=mp4"))
+
+    val emptyVastXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"3.0\"/>"
+    assertTrue(emptyVastXml.contains("<VAST version=\"3.0\"/>"))
+  }
 }

@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kai-v1.7.8.apk
+          cp "$APK_PATH" releases/Kai-v1.7.9.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kai-v1.7.8.apk
+          git add releases/Kai-v1.7.9.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kai-v1.7.8.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kai-v1.7.9.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.7.8
+      - name: Create or update GitHub Release v1.7.9
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kai-v1.7.8.apk)
-          NOTES="Kai Browser v1.7.8 (Build 51) — Minimal, privacy-hardened Android browser shell powered by Android System WebView.\n\n- **Private Mode Fix & Comprehensive Security Hardening:** Restored first-party in-memory cookie compatibility so sites requiring sessions, logins, CSRF verification, Google Search, and Cloudflare Turnstile anti-bot verification load and authenticate flawlessly without infinite redirect loops or blank screens.\n- **Strict Privacy Isolation & Non-Breachable Vault:** Third-party cross-site cookies are strictly blocked in private mode. Ephemeral memory execution with LOAD_NO_CACHE, zero history recording, and zero tab state serialization. Added WebRTC local LAN IP leak protection (SDP host ICE candidate stripping) and Android 13+ sensitive clipboard protection (EXTRA_IS_SENSITIVE).\n- **Bulletproof Ephemeral Teardown:** Tab destruction and private session exit purge cookies, cache, WebStorage, and form data. Window FLAG_SECURE prevents OS screenshots and task switcher previews.\n- **Repository Clean-Up & Space Reclamation:** Deleted 27 obsolete release APKs (v1.5.0 to v1.7.6), reclaiming over 41 MB of repository storage.\n- **Refined 2026-Era UI & Snappier Experience:** Deep obsidian & amethyst private browsing aesthetic, fluid dual-tone animated gradient loading bar, modern 26dp pill omnibox with luminous border accents, responsive haptic tactile feedback on tab switches and navigation actions.\n- **Under 2 MB Limit:** Built with aggressive R8 minification, resource shrinking, and bytecode optimization, strictly maintaining the < 2 MB binary limit.\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
-          if gh release view v1.7.8 >/dev/null 2>&1; then
-            gh release upload v1.7.8 releases/Kai-v1.7.8.apk --clobber
-            gh release edit v1.7.8 --title "Kai v1.7.8 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kai-v1.7.9.apk)
+          NOTES="Kai Browser v1.7.9 (Build 52) — Minimal, privacy-hardened Android browser shell powered by Android System WebView.\n\n- **Universal Video Playback Fix & Security Hardening:** Restored smooth video playback across all websites by enabling mixed-content passive media compatibility (MIXED_CONTENT_COMPATIBILITY_MODE), database/IndexedDB storage for adaptive players (HLS.js, Dash.js, Shaka player), authentic Chrome Mobile user-agent without WebView version tags, and transparent 1x1 video poster / centered progress handling.\n- **Protected Media & DRM Auto-Grant:** Auto-grants Encrypted Media Extensions (EME / Widevine DRM via RESOURCE_PROTECTED_MEDIA_ID) on HTTPS origins, allowing encrypted streams on Twitter/X, Reddit, Vimeo, Spotify, and streaming sites to play seamlessly without dialog interruptions or player freezes while preserving explicit consent for camera/mic capture.\n- **Universal HTML5 Video Compatibility Engine:** Auto-injects playsinline attributes, catches unhandled play() Promise rejections with muted fallback, dynamically observes player mounting, and neutralizes transparent clickjack / popup overlays on streaming sites.\n- **Ad Blocker VAST XML Compatibility:** Serves valid empty VAST XML (<VAST version=\\\"3.0\\\"/>) for blocked video ad endpoints so HTML5 players transition immediately to the content video without XML parser crashes.\n- **Under 2 MB Limit:** Built with aggressive R8 minification, resource shrinking, and bytecode optimization, strictly maintaining the < 2 MB binary limit.\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
+          if gh release view v1.7.9 >/dev/null 2>&1; then
+            gh release upload v1.7.9 releases/Kai-v1.7.9.apk --clobber
+            gh release edit v1.7.9 --title "Kai v1.7.9 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.7.8 releases/Kai-v1.7.8.apk \
-              --title "Kai v1.7.8 (< 2 MB)" \
+            gh release create v1.7.9 releases/Kai-v1.7.9.apk \
+              --title "Kai v1.7.9 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

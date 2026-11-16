@@ -97,6 +97,14 @@ class MainActivity : ComponentActivity() {
     enableEdgeToEdge()
 
     try {
+      window.setFlags(
+        WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+        WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
+      )
+    } catch (_: Throwable) {
+    }
+
+    try {
       WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)
     } catch (_: Throwable) {
     }

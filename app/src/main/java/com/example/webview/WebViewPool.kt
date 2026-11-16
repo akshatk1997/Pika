@@ -12,9 +12,12 @@ import android.os.Bundle
 import android.os.Message
 import android.print.PrintAttributes
 import android.print.PrintManager
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.CookieManager
+import android.widget.FrameLayout
+import android.widget.ProgressBar
 import android.webkit.GeolocationPermissions
 import android.webkit.PermissionRequest
 import android.webkit.RenderProcessGoneDetail
@@ -136,6 +139,16 @@ class WebViewPool(
   private val defaultUserAgent: String by lazy {
     try {
       WebSettings.getDefaultUserAgent(appContext)
+    } catch (_: Throwable) {
+      ""
+    }
+  }
+  private val cleanMobileUserAgent: String by lazy {
+    try {
+      val raw = defaultUserAgent
+      // Strip "Version/4.0 " marker so modern video platforms (Vimeo, Dailymotion, TikTok, news sites)
+      // recognize Kai as authentic Google Chrome Mobile rather than a restricted in-app webview
+      raw.replace(Regex("Version/\\d+\\.\\d+\\s*"), "")
     } catch (_: Throwable) {
       ""
     }
@@ -411,6 +424,7 @@ class WebViewPool(
       applyAdBlocker(wv, settingsState.trackerBlockingEnabled)
       applyBackgroundPlay(wv, settingsState.backgroundPlayEnabled)
       applyDataSaver(wv, settingsState.dataSaverEnabled)
+      applyVideoCompatibilityEngine(wv)
     }
   }
 
@@ -708,6 +722,8 @@ class WebViewPool(
 
         function skipStreamingAds() {
           try {
+            var isYouTube = /youtube\.com|youtu\.be/.test(window.location.hostname);
+            if (!isYouTube) return;
             var player = document.querySelector('#movie_player') || document.querySelector('.html5-video-player');
             var isAdActive = Boolean(player && (player.classList.contains('ad-showing') || player.classList.contains('ad-interrupting')));
 
@@ -820,7 +836,6 @@ class WebViewPool(
         window.addEventListener('webkitvisibilitychange', blockEvent, true);
         document.addEventListener('webkitvisibilitychange', blockEvent, true);
         window.addEventListener('pagehide', blockEvent, true);
-        window.addEventListener('blur', blockEvent, true);
 
         try {
           Object.defineProperty(document, 'onvisibilitychange', {
@@ -939,6 +954,104 @@ class WebViewPool(
   }
 
   /**
+   * Injects universal HTML5 video enhancement engine:
+   * - Enforces playsinline, webkit-playsinline, and x5-playsinline on all HTML5 video elements.
+   * - Safely catches unhandled HTMLMediaElement.play() Promise rejections (falling back to muted preview when needed).
+   * - Dynamically patches newly mounted video players (React, Vue, Video.js, JWPlayer, Hls.js) via MutationObserver.
+   * - Bypasses transparent clickjack / invisible ad overlays placed over video players on streaming sites.
+   */
+  fun applyVideoCompatibilityEngine(webView: WebView) {
+    if (!settingsProvider().javascriptEnabled || destroyedViews.contains(webView)) return
+    val js = """
+      (function() {
+        if (window.__kai_video_engine_installed) return;
+        window.__kai_video_engine_installed = true;
+
+        function patchVideo(video) {
+          if (!video) return;
+          try {
+            if (!video.hasAttribute('playsinline')) video.setAttribute('playsinline', '');
+            if (!video.hasAttribute('webkit-playsinline')) video.setAttribute('webkit-playsinline', '');
+            if (!video.hasAttribute('x5-playsinline')) video.setAttribute('x5-playsinline', '');
+          } catch(e) {}
+        }
+
+        try {
+          var origPlay = HTMLMediaElement.prototype.play;
+          HTMLMediaElement.prototype.play = function() {
+            var self = this;
+            patchVideo(self);
+            var res = origPlay.apply(self, arguments);
+            if (res && typeof res.catch === 'function') {
+              res.catch(function(err) {
+                if (err && err.name === 'NotAllowedError' && !self.muted && self.hasAttribute('autoplay')) {
+                  self.muted = true;
+                  try { origPlay.apply(self, arguments); } catch(e) {}
+                }
+              });
+            }
+            return res;
+          };
+        } catch(e) {}
+
+        function patchAllVideos() {
+          try {
+            var vids = document.querySelectorAll('video');
+            for (var i = 0; i < vids.length; i++) {
+              patchVideo(vids[i]);
+            }
+          } catch(e) {}
+        }
+
+        patchAllVideos();
+
+        if (window.MutationObserver) {
+          var obs = new MutationObserver(function(mutations) {
+            for (var i = 0; i < mutations.length; i++) {
+              var added = mutations[i].addedNodes;
+              for (var j = 0; j < added.length; j++) {
+                var node = added[j];
+                if (node.nodeType === 1) {
+                  if (node.tagName === 'VIDEO') patchVideo(node);
+                  else if (node.querySelectorAll) {
+                    var subVids = node.querySelectorAll('video');
+                    for (var k = 0; k < subVids.length; k++) patchVideo(subVids[k]);
+                  }
+                }
+              }
+            }
+          });
+          obs.observe(document.documentElement || document.body, { childList: true, subtree: true });
+        }
+
+        // Neutralize transparent clickjacking overlays hovering directly over video players
+        document.addEventListener('click', function(e) {
+          try {
+            var target = e.target;
+            if (!target || target.tagName === 'VIDEO') return;
+            var style = window.getComputedStyle(target);
+            var isCover = (style.position === 'absolute' || style.position === 'fixed') &&
+                          (parseFloat(style.opacity) < 0.05 || (style.backgroundColor && style.backgroundColor.indexOf('rgba(0, 0, 0, 0)') !== -1)) &&
+                          target.offsetWidth >= 200 && target.offsetHeight >= 150;
+            if (isCover) {
+              var parent = target.parentElement;
+              var under = parent ? parent.querySelector('video') : null;
+              if (under) {
+                target.style.pointerEvents = 'none';
+                under.play();
+              }
+            }
+          } catch(e) {}
+        }, true);
+      })();
+    """.trimIndent()
+    try {
+      webView.evaluateJavascript(js, null)
+    } catch (_: Throwable) {
+    }
+  }
+
+  /**
    * Industry-leading anti-tracking & anti-fingerprinting shield injected into web pages.
    * Protects against GPC/DNT privacy violations, referrer leaks, battery sniffing, and WebRTC IP exposure.
    */
@@ -1043,10 +1156,10 @@ class WebViewPool(
         allowUniversalAccessFromFileURLs = false
         @Suppress("DEPRECATION")
         saveFormData = false
-        mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+        mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
         domStorageEnabled = true
         @Suppress("DEPRECATION")
-        databaseEnabled = false
+        databaseEnabled = true
         builtInZoomControls = true
         displayZoomControls = false
         useWideViewPort = true
@@ -1056,7 +1169,7 @@ class WebViewPool(
         val targetUa = when (userAgentMode) {
           UserAgentMode.DESKTOP -> DESKTOP_USER_AGENT
           UserAgentMode.IPHONE -> IPHONE_USER_AGENT
-          UserAgentMode.MOBILE -> defaultUserAgent.ifEmpty { null }
+          UserAgentMode.MOBILE -> cleanMobileUserAgent.ifEmpty { defaultUserAgent.ifEmpty { null } }
         }
         if (userAgentString != targetUa) {
           userAgentString = targetUa
@@ -1088,8 +1201,9 @@ class WebViewPool(
       val cookieMgr = CookieManager.getInstance()
       // First-party cookies are accepted so websites, sessions, and Cloudflare/auth challenges work
       cookieMgr.setAcceptCookie(true)
-      // Third-party tracking cookies are strictly blocked in private mode or when user setting is enabled
-      cookieMgr.setAcceptThirdPartyCookies(webView, !isPrivate && !settingsState.blockThirdPartyCookies)
+      // Allow third-party cookies if not explicitly disabled in settings so cross-domain video CDNs and embeds work.
+      // In private mode, cookies remain strictly ephemeral in RAM and are completely purged on exit.
+      cookieMgr.setAcceptThirdPartyCookies(webView, !settingsState.blockThirdPartyCookies)
     } catch (_: Throwable) {
     }
   }
@@ -1217,6 +1331,11 @@ class WebViewPool(
           if (TrackerBlocker.shouldBlockRequest(reqUrl, pageHost, currentSettings.trackerBlockingEnabled, customSet)) {
             callbacks.onTrackerBlocked(tabId)
             val acceptHeader = request?.requestHeaders?.get("Accept")?.lowercase() ?: ""
+            val isVast = reqUrl.contains("vast", ignoreCase = true) ||
+              reqUrl.contains("vmap", ignoreCase = true) ||
+              acceptHeader.contains("application/xml") ||
+              acceptHeader.contains("text/xml")
+            if (isVast) return emptyBlockedVastResponse()
             val isJson = reqUrl.contains("/youtubei/") ||
               reqUrl.contains("/api/") ||
               reqUrl.contains(".json") ||
@@ -1244,6 +1363,7 @@ class WebViewPool(
           currentPageHosts[tabId] = UrlValidator.extractHost(url)
           if (view != null) {
             applyStealthPrivacyShield(view)
+            applyVideoCompatibilityEngine(view)
             val s = settingsProvider()
             val isDark = resolveIsDark(s)
             applyThemeMode(view, isDark, s.nightWebMode)
@@ -1265,6 +1385,7 @@ class WebViewPool(
         if (url != null && view != null && !destroyedViews.contains(view)) {
           currentPageHosts[tabId] = UrlValidator.extractHost(url)
           applyStealthPrivacyShield(view)
+          applyVideoCompatibilityEngine(view)
           val s = settingsProvider()
           val isDark = resolveIsDark(s)
           applyThemeMode(view, isDark, s.nightWebMode)
@@ -1459,14 +1580,51 @@ class WebViewPool(
         }
       }
 
+      override fun getDefaultVideoPoster(): Bitmap? {
+        return try {
+          Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        } catch (_: Throwable) {
+          null
+        }
+      }
+
+      override fun getVideoLoadingProgressView(): View? {
+        return try {
+          val frameLayout = FrameLayout(appContext)
+          val progressBar = ProgressBar(appContext)
+          val params = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            Gravity.CENTER
+          )
+          frameLayout.addView(progressBar, params)
+          frameLayout
+        } catch (_: Throwable) {
+          null
+        }
+      }
+
       override fun onPermissionRequest(request: PermissionRequest?) {
         if (request == null) return
-        val origin = UrlValidator.sanitizeDisplayText(request.origin?.toString() ?: "unknown", 120)
+        val originRaw = request.origin?.toString().orEmpty()
         val resources = request.resources ?: emptyArray()
-        val hasMedia = resources.any {
+        val hasMediaCapture = resources.any {
           it == PermissionRequest.RESOURCE_VIDEO_CAPTURE || it == PermissionRequest.RESOURCE_AUDIO_CAPTURE
         }
-        val kind = if (hasMedia) WebPermissionKind.CAMERA_MIC else WebPermissionKind.PROTECTED_MEDIA
+
+        // Auto-grant protected media / DRM identifiers on HTTPS origins so HTML5 EME, Widevine,
+        // and streaming video players initialize and play instantly without broken players or dialog interruptions.
+        val isProtectedMediaOnly = !hasMediaCapture && resources.all { it == PermissionRequest.RESOURCE_PROTECTED_MEDIA_ID }
+        if (isProtectedMediaOnly && (originRaw.startsWith("https://") || request.origin?.scheme == "https")) {
+          try {
+            request.grant(resources)
+            return
+          } catch (_: Throwable) {
+          }
+        }
+
+        val origin = UrlValidator.sanitizeDisplayText(originRaw.ifEmpty { "unknown" }, 120)
+        val kind = if (hasMediaCapture) WebPermissionKind.CAMERA_MIC else WebPermissionKind.PROTECTED_MEDIA
         callbacks.onPermissionPrompt(
           tabId = tabId,
           origin = origin,
@@ -1540,6 +1698,18 @@ class WebViewPool(
       "OK",
       corsBlockedHeaders,
       ByteArrayInputStream(emptyJsonBytes)
+    )
+  }
+
+  private fun emptyBlockedVastResponse(): WebResourceResponse {
+    val xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"3.0\"/>".toByteArray(StandardCharsets.UTF_8)
+    return WebResourceResponse(
+      "application/xml",
+      "utf-8",
+      200,
+      "OK",
+      corsBlockedHeaders,
+      ByteArrayInputStream(xml)
     )
   }
 

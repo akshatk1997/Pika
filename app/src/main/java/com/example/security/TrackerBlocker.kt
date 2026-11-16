@@ -373,7 +373,7 @@ object TrackerBlocker {
     )
   }
 
-  private fun isVideoUrlPattern(lowerUrl: String): Boolean {
+  fun isVideoUrlPattern(lowerUrl: String): Boolean {
     return lowerUrl.contains("videoplayback") ||
       lowerUrl.contains("mime=video") ||
       lowerUrl.contains("mime%2fvideo") ||

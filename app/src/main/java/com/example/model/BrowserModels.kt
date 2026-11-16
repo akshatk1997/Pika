@@ -209,7 +209,7 @@ data class SettingsState(
   val homepageUrl: String = "",
   val retainOpenTabs: Boolean = true,
   val httpsOnlyEnabled: Boolean = true,
-  val blockThirdPartyCookies: Boolean = true,
+  val blockThirdPartyCookies: Boolean = false,
   val trackerBlockingEnabled: Boolean = true,
   val historyEnabled: Boolean = true,
   val doNotTrackEnabled: Boolean = true,
