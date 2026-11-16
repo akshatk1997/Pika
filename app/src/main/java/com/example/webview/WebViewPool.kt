@@ -1024,11 +1024,67 @@ class WebViewPool(
           obs.observe(document.documentElement || document.body, { childList: true, subtree: true });
         }
 
-        // Neutralize transparent clickjacking overlays hovering directly over video players
+        // 5. Intercept and drop window.open calls to ad popunder and syndicate networks (e.g. tsyndicate)
+        try {
+          var origOpen = window.open;
+          window.open = function(url, target, features) {
+            if (!url) return null;
+            var u = String(url).toLowerCase();
+            if (u.indexOf('tsyndicate') !== -1 ||
+                u.indexOf('popunder') !== -1 ||
+                u.indexOf('popads') !== -1 ||
+                u.indexOf('popcash') !== -1 ||
+                u.indexOf('exosrv') !== -1 ||
+                u.indexOf('realsrv') !== -1 ||
+                u.indexOf('traffichaus') !== -1 ||
+                u.indexOf('trafficjunky') !== -1 ||
+                u.indexOf('adsterra') !== -1 ||
+                u.indexOf('exoclick') !== -1 ||
+                u.indexOf('monetag') !== -1 ||
+                u.indexOf('admaven') !== -1 ||
+                u.indexOf('hilltopads') !== -1 ||
+                u.indexOf('rollerads') !== -1 ||
+                u.indexOf('propeller') !== -1 ||
+                u.indexOf('clickadu') !== -1) {
+              return null;
+            }
+            return origOpen.apply(this, arguments);
+          };
+        } catch(e) {}
+
+        // 6. Neutralize transparent clickjacking overlays & ad links hovering over video players
         document.addEventListener('click', function(e) {
           try {
             var target = e.target;
-            if (!target || target.tagName === 'VIDEO') return;
+            if (!target) return;
+
+            // Catch and drop clicks on ad anchors that try to open popunders
+            var anchor = target.closest ? target.closest('a') : null;
+            if (anchor && anchor.href) {
+              var hrefLower = anchor.href.toLowerCase();
+              if (hrefLower.indexOf('tsyndicate') !== -1 ||
+                  hrefLower.indexOf('popunder') !== -1 ||
+                  hrefLower.indexOf('popads') !== -1 ||
+                  hrefLower.indexOf('exosrv') !== -1 ||
+                  hrefLower.indexOf('realsrv') !== -1 ||
+                  hrefLower.indexOf('traffichaus') !== -1 ||
+                  hrefLower.indexOf('adsterra') !== -1 ||
+                  hrefLower.indexOf('exoclick') !== -1 ||
+                  hrefLower.indexOf('monetag') !== -1 ||
+                  hrefLower.indexOf('admaven') !== -1 ||
+                  hrefLower.indexOf('propeller') !== -1) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                var vids = document.querySelectorAll('video');
+                for (var i = 0; i < vids.length; i++) {
+                  if (vids[i].paused) try { vids[i].play(); } catch(err) {}
+                }
+                return;
+              }
+            }
+
+            if (target.tagName === 'VIDEO') return;
             var style = window.getComputedStyle(target);
             var isCover = (style.position === 'absolute' || style.position === 'fixed') &&
                           (parseFloat(style.opacity) < 0.05 || (style.backgroundColor && style.backgroundColor.indexOf('rgba(0, 0, 0, 0)') !== -1)) &&
@@ -1038,7 +1094,7 @@ class WebViewPool(
               var under = parent ? parent.querySelector('video') : null;
               if (under) {
                 target.style.pointerEvents = 'none';
-                under.play();
+                try { under.play(); } catch(err) {}
               }
             }
           } catch(e) {}
@@ -1422,6 +1478,19 @@ class WebViewPool(
         } catch (_: Throwable) {
         }
         val failingUrl = error?.url ?: try { view?.url } catch (_: Throwable) { null } ?: ""
+        val host = UrlValidator.extractHost(failingUrl)
+        // If an ad network or pop-under redirect failed (e.g. tsyndicate.com SSL error),
+        // do not display a full-page error overlay. Revert back to the video page cleanly.
+        if (TrackerBlocker.isTrackerHost(host) || TrackerBlocker.isAdPathOrQuery(failingUrl)) {
+          callbacks.onTrackerBlocked(tabId)
+          try {
+            if (view?.canGoBack() == true) {
+              view.goBack()
+            }
+          } catch (_: Throwable) {
+          }
+          return
+        }
         val primaryError = when (error?.primaryError) {
           SslError.SSL_EXPIRED -> "Certificate expired"
           SslError.SSL_NOTYETVALID -> "Certificate not yet valid"
@@ -1436,7 +1505,7 @@ class WebViewPool(
           PageError(
             type = PageErrorType.CERTIFICATE_ERROR,
             failingUrl = failingUrl,
-            host = UrlValidator.extractHost(failingUrl),
+            host = host,
             reason = primaryError,
             certificateDetail = certDetail
           )
@@ -1453,6 +1522,18 @@ class WebViewPool(
         if (reason.contains("ERR_ABORTED", ignoreCase = true)) return
         val failingUrl = request.url?.toString() ?: ""
         val host = UrlValidator.extractHost(failingUrl)
+        // If an ad network or pop-under redirect failed (e.g. tsyndicate.com net::ERR_SSL_PROTOCOL_ERROR),
+        // do not display a full-page error overlay. Revert back to the video page cleanly.
+        if (TrackerBlocker.isTrackerHost(host) || TrackerBlocker.isAdPathOrQuery(failingUrl)) {
+          callbacks.onTrackerBlocked(tabId)
+          try {
+            if (view?.canGoBack() == true) {
+              view.goBack()
+            }
+          } catch (_: Throwable) {
+          }
+          return
+        }
         val offline = !isNetworkConnected()
         val errorCode = try { error?.errorCode ?: 0 } catch (_: Throwable) { 0 }
         val errorType = when {

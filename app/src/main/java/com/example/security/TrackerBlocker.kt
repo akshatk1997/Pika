@@ -228,7 +228,37 @@ object TrackerBlocker {
     "admaven.com",
     "yell-ad.com",
     "ero-advertising.com",
-    "trafficstars.com"
+    "trafficstars.com",
+    // Streaming Pop-unders, Ad Syndicates & High-Volume Video Redirect Networks
+    "tsyndicate.com",
+    "tsyndicate.net",
+    "traffichaus.com",
+    "syndication.traffichaus.com",
+    "syndication.exoclick.com",
+    "exosrv.com",
+    "realsrv.com",
+    "etahub.com",
+    "mainstreamtraffic.com",
+    "trafficfactory.biz",
+    "trafficjunky.com",
+    "adtng.com",
+    "stripchatads.com",
+    "bongacash.com",
+    "clickaine.com",
+    "plugrush.com",
+    "rollerads.com",
+    "richpush.co",
+    "richads.com",
+    "evadav.com",
+    "galaksion.com",
+    "adsterra.net",
+    "ad-maven.com",
+    "pushame.com",
+    "popmyads.com",
+    "propellerclick.com",
+    "bidvertiser.net",
+    "vidoomy.com",
+    "vstream.to"
   )
 
   private val videoExts = setOf("mp4", "m3u8", "webm", "mov", "mkv", "ts", "mpd", "m4v", "flv", "avi", "3gp", "f4v", "wmv")
@@ -276,7 +306,25 @@ object TrackerBlocker {
     return false
   }
 
-  fun isTrackerHost(host: String): Boolean = isHostMatchingSet(host, blockedDomains)
+  fun isTrackerHost(host: String): Boolean {
+    if (isHostMatchingSet(host, blockedDomains)) return true
+    val clean = host.lowercase().trimEnd('.')
+    return clean.contains("tsyndicate") ||
+      clean.contains("popunder") ||
+      clean.contains("adserver") ||
+      clean.contains("exosrv") ||
+      clean.contains("realsrv") ||
+      clean.contains("traffichaus") ||
+      clean.contains("trafficjunky") ||
+      clean.contains("adsterra") ||
+      clean.contains("admaven") ||
+      clean.contains("clickadu") ||
+      clean.contains("monetag") ||
+      clean.contains("hilltopads") ||
+      clean.contains("rollerads") ||
+      clean.contains("propellerads") ||
+      clean.contains("propellerclick")
+  }
 
   fun shouldBlockRequest(
     requestUrl: String,

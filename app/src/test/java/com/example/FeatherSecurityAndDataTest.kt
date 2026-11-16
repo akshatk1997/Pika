@@ -108,6 +108,20 @@ class FeatherSecurityAndDataTest {
   }
 
   @Test
+  fun tsyndicateAndPopunderAdsBlocked() {
+    assertTrue(TrackerBlocker.isTrackerHost("tsyndicate.com"))
+    assertTrue(TrackerBlocker.isTrackerHost("s.tsyndicate.net"))
+    assertTrue(TrackerBlocker.isTrackerHost("syndication.traffichaus.com"))
+    assertTrue(TrackerBlocker.isTrackerHost("adsterra.net"))
+    assertTrue(TrackerBlocker.isTrackerHost("propellerclick.com"))
+
+    assertTrue(TrackerBlocker.shouldBlockRequest("https://tsyndicate.com/out?ad=1", "streamingsite.com", true))
+    assertTrue(TrackerBlocker.shouldBlockRequest("https://s.tsyndicate.net/tag.js", "streamingsite.com", true))
+    assertTrue(TrackerBlocker.shouldBlockRequest("https://engine.tsyndicate.com/delivery/ajs.php", "streamingsite.com", true))
+    assertTrue(TrackerBlocker.shouldBlockRequest("https://adsterra.net/popunder.js", "streamingsite.com", true))
+  }
+
+  @Test
   fun mediaSnifferClassifiesValidResourcesOnly() {
     val video = TrackerBlocker.inferSniffedResource("https://cdn.example.org/videos/clip.mp4?token=1")
     assertNotNull(video)
