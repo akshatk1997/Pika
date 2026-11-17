@@ -691,6 +691,43 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         openNewTab(isPrivate = isPrivate, initialUrl = url)
       }
     }
+
+    override fun onNewTabCreated(newTabId: String, isPrivate: Boolean, initialUrl: String) {
+      runOnMain {
+        val target = initialUrl.trim()
+        val newTab = TabInfo(
+          id = newTabId,
+          url = target,
+          title = if (isPrivate) {
+            if (target.isNotBlank()) UrlValidator.extractHost(target).ifEmpty { "Private Tab" } else "Private Tab"
+          } else {
+            if (target.isNotBlank()) UrlValidator.extractHost(target).ifEmpty { "New Tab" } else "New Tab"
+          },
+          isPrivate = isPrivate,
+          securityState = when {
+            isPrivate -> SecurityState.PRIVATE
+            UrlValidator.isHttpsUrl(target) -> SecurityState.SECURE_HTTPS
+            UrlValidator.isHttpUrl(target) -> SecurityState.INSECURE_HTTP
+            else -> SecurityState.HOME
+          },
+          isLoading = true,
+          progress = 15
+        )
+        _tabs.update { it + newTab }
+        _activeTabId.value = newTabId
+        _activeOverlay.value = ActiveOverlay.NONE
+        _readerArticle.value = null
+        _pageSource.value = null
+        closeFindInPage()
+        persistOpenTabs()
+      }
+    }
+
+    override fun onCloseTabRequested(tabId: String) {
+      runOnMain {
+        closeTab(tabId)
+      }
+    }
   }
 
   val webViewPool = WebViewPool(

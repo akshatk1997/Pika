@@ -255,4 +255,29 @@ class FeatherSecurityAndDataTest {
     val dangerousSchemeUrl = "javascript:window.open('https://malicious.com')"
     assertFalse(UrlValidator.isSafeWebUrl(dangerousSchemeUrl))
   }
+
+  @Test
+  fun resolveRelativeUrlResolvesAnchorAndImageTargetsCorrectly() {
+    val base = "https://example.com/section/index.html"
+
+    // Absolute URLs remain intact
+    assertEquals("https://anothersite.org/watch", UrlValidator.resolveRelativeUrl(base, "https://anothersite.org/watch"))
+    assertEquals("http://anothersite.org/stream", UrlValidator.resolveRelativeUrl(base, "http://anothersite.org/stream"))
+
+    // Relative root paths
+    assertEquals("https://example.com/next-page", UrlValidator.resolveRelativeUrl(base, "/next-page"))
+
+    // Relative directory paths
+    assertEquals("https://example.com/section/page2.html", UrlValidator.resolveRelativeUrl(base, "page2.html"))
+
+    // Query parameters
+    assertEquals("https://example.com/section/index.html?page=2", UrlValidator.resolveRelativeUrl(base, "?page=2"))
+
+    // Protocol-relative URLs
+    assertEquals("https://cdn.example.org/player.js", UrlValidator.resolveRelativeUrl(base, "//cdn.example.org/player.js"))
+
+    // Empty or blank target
+    assertEquals("", UrlValidator.resolveRelativeUrl(base, ""))
+    assertEquals("", UrlValidator.resolveRelativeUrl(base, null))
+  }
 }

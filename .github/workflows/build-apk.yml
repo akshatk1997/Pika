@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kai-v1.8.3.apk
+          cp "$APK_PATH" releases/Kai-v1.8.4.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kai-v1.8.3.apk
+          git add releases/Kai-v1.8.4.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kai-v1.8.3.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kai-v1.8.4.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.8.3
+      - name: Create or update GitHub Release v1.8.4
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kai-v1.8.3.apk)
-          NOTES="Kai Browser v1.8.3 (Build 56) — Minimal, privacy-hardened Android browser shell powered by Android System WebView.\n\n- **Seamless New Tab Handling (Standard & Private Mode):** Fully fixed opening links in new tabs across all websites, media hubs, and streaming platforms. Links with target=\\\"_blank\\\" or dynamic window.open now cleanly spawn and switch to new tabs without staying stuck on the current page.\n- **Multiple Windows & Auto-Popup Window Support:** Enabled setSupportMultipleWindows(true) and javaScriptCanOpenWindowsAutomatically = true in WebSettings with full asynchronous gesture token support for SPA/promise-based stream launchers.\n- **Defensive Ephemeral Helper Navigation:** Captured target URLs via detached helper WebViewTransport receiver, resolving dynamic and redirect URLs cleanly while automatically blocking tracker/ad popups.\n- **Browsing Mode Preservation:** New tabs opened from standard mode stay in standard mode; new tabs opened from private mode stay strictly in private mode with full RAM-only sandboxing.\n- **Enhanced Link Context Menu:** Long-pressing any link now offers immediate \\\"Open in new tab\\\" in the current browsing mode, alongside an explicit toggle (\\\"Open in private tab\\\" / \\\"Open in standard tab\\\").\n- **Expanded Live WebView Pool:** Increased MAX_LIVE_WEBVIEWS to 4 for instant tab switching without unneeded page reload cycles.\n- **Under 2 MB Limit:** Built with aggressive R8 minification, bytecode optimization, and zero bloated libraries, strictly maintaining the < 2 MB binary limit (~1.47 MB).\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
-          if gh release view v1.8.3 >/dev/null 2>&1; then
-            gh release upload v1.8.3 releases/Kai-v1.8.3.apk --clobber
-            gh release edit v1.8.3 --title "Kai v1.8.3 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kai-v1.8.4.apk)
+          NOTES="Kai Browser v1.8.4 (Build 57) — Minimal, privacy-hardened Android browser shell powered by Android System WebView.\n\n- **Target Website Navigation in New Tabs:** Permanently fixed new tabs loading the current site instead of the requested destination website. Connected Chromium's native WebViewTransport directly to the newly allocated secured WebView instance, ensuring target URLs load completely without intermediate opener URL contamination.\n- **Accurate Anchor Link & DOM Extraction:** Enhanced long-press context handling with requestFocusNodeHref to accurately extract destination link URLs even when wrapping images (SRC_IMAGE_ANCHOR_TYPE) or relative paths, resolving them to absolute URLs via UrlValidator.resolveRelativeUrl.\n- **Instant AndroidView Mounting:** Mounted newly created loading tabs directly into the view hierarchy, eliminating Start Page flicker and providing immediate visual feedback during multi-window navigation.\n- **JavaScript Window Closure Support:** Added WebChromeClient.onCloseWindow support communicating window.close() events back to the tab manager cleanly.\n- **Full Browsing Mode Isolation:** Guaranteed independent private and standard tab sandboxing across all new tab lifecycles.\n- **Under 2 MB Limit:** Built with aggressive R8 minification, bytecode optimization, and zero bloated libraries, strictly maintaining the < 2 MB binary limit (~1.47 MB).\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
+          if gh release view v1.8.4 >/dev/null 2>&1; then
+            gh release upload v1.8.4 releases/Kai-v1.8.4.apk --clobber
+            gh release edit v1.8.4 --title "Kai v1.8.4 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.8.3 releases/Kai-v1.8.3.apk \
-              --title "Kai v1.8.3 (< 2 MB)" \
+            gh release create v1.8.4 releases/Kai-v1.8.4.apk \
+              --title "Kai v1.8.4 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

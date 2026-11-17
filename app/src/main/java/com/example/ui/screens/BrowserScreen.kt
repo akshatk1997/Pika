@@ -429,7 +429,7 @@ fun BrowserScreen(
                     onGoHome = { viewModel.goBack() }
                   )
                 }
-                activeTab.url.isBlank() -> {
+                activeTab.url.isBlank() && !activeTab.isLoading -> {
                   NewTabHomeView(
                     isPrivate = activeTab.isPrivate,
                     searchEngineName = settings.searchEngine.label,

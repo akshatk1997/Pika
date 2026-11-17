@@ -190,6 +190,32 @@ object UrlValidator {
     }
   }
 
+  fun resolveRelativeUrl(baseUrl: String?, target: String?): String {
+    if (target.isNullOrBlank()) return ""
+    val trimmed = sanitizeControlChars(target).trim()
+    if (trimmed.startsWith("http://", ignoreCase = true) ||
+      trimmed.startsWith("https://", ignoreCase = true) ||
+      trimmed == "about:blank"
+    ) {
+      return trimmed
+    }
+    if (baseUrl.isNullOrBlank() ||
+      (!baseUrl.startsWith("http://", ignoreCase = true) && !baseUrl.startsWith("https://", ignoreCase = true))
+    ) {
+      return trimmed
+    }
+    return try {
+      val baseUri = URI(sanitizeControlChars(baseUrl).trim())
+      baseUri.resolve(trimmed).toString()
+    } catch (_: Throwable) {
+      try {
+        java.net.URL(java.net.URL(baseUrl.trim()), trimmed).toString()
+      } catch (_: Throwable) {
+        trimmed
+      }
+    }
+  }
+
   fun stripTrackingParams(url: String): String {
     return try {
       val uri = URI(url)

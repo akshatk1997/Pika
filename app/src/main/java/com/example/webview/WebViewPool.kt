@@ -76,6 +76,8 @@ interface WebViewCallbacks {
   fun onLongPressLink(tabId: String, url: String, isImage: Boolean)
   fun onAudioPermissionNeeded() {}
   fun onNewTabRequested(parentTabId: String, url: String, isPrivate: Boolean) {}
+  fun onNewTabCreated(newTabId: String, isPrivate: Boolean, initialUrl: String = "") {}
+  fun onCloseTabRequested(tabId: String) {}
 }
 
 /**
@@ -175,6 +177,24 @@ class WebViewPool(
 
   fun isWebViewAlive(webView: WebView): Boolean = !destroyedViews.contains(webView)
 
+  private fun evictExcessLiveViews(targetLimit: Int = MAX_LIVE_WEBVIEWS) {
+    while (liveViews.size >= targetLimit) {
+      val eldestKey = liveViews.keys.firstOrNull() ?: break
+      val eldestView = liveViews.remove(eldestKey)
+      if (eldestView != null) {
+        try {
+          val bundle = Bundle()
+          val savedList = eldestView.saveState(bundle)
+          if (savedList != null && savedList.size > 0) {
+            savedStates[eldestKey] = bundle
+          }
+        } catch (_: Throwable) {
+        }
+        safelyDestroyWebView(eldestView)
+      }
+    }
+  }
+
   fun getOrCreateWebView(
     tabId: String,
     isPrivate: Boolean,
@@ -192,21 +212,7 @@ class WebViewPool(
       }
     }
 
-    while (liveViews.size >= MAX_LIVE_WEBVIEWS) {
-      val eldestKey = liveViews.keys.firstOrNull() ?: break
-      val eldestView = liveViews.remove(eldestKey)
-      if (eldestView != null) {
-        try {
-          val bundle = Bundle()
-          val savedList = eldestView.saveState(bundle)
-          if (savedList != null && savedList.size > 0) {
-            savedStates[eldestKey] = bundle
-          }
-        } catch (_: Throwable) {
-        }
-        safelyDestroyWebView(eldestView)
-      }
-    }
+    evictExcessLiveViews()
 
     val webView = createSecuredWebView(tabId, isPrivate, userAgentMode, approvedHttpHosts) ?: return null
     liveViews[tabId] = webView
@@ -1429,17 +1435,29 @@ class WebViewPool(
       try {
         val wv = v as? WebView ?: return@setOnLongClickListener false
         val result = wv.hitTestResult
+        val type = result.type
         val extra = result.extra
-        val isLinkOrImage = result.type == WebView.HitTestResult.SRC_ANCHOR_TYPE ||
-          result.type == WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE ||
-          result.type == WebView.HitTestResult.IMAGE_TYPE
-        if (isLinkOrImage && !extra.isNullOrBlank() && UrlValidator.isSafeWebUrl(extra)) {
-          val isImg = result.type == WebView.HitTestResult.IMAGE_TYPE
-          callbacks.onLongPressLink(tabId, extra, isImg)
-          true
-        } else {
-          false
+        val isLinkOrImage = type == WebView.HitTestResult.SRC_ANCHOR_TYPE ||
+          type == WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE ||
+          type == WebView.HitTestResult.IMAGE_TYPE
+        if (!isLinkOrImage) return@setOnLongClickListener false
+
+        val currentUrl = wv.url.orEmpty()
+        val handler = object : Handler(Looper.getMainLooper()) {
+          override fun handleMessage(msg: Message) {
+            val href = msg.data?.getString("url")
+            val src = msg.data?.getString("src")
+            val candidate = if (!href.isNullOrBlank()) href else if (!src.isNullOrBlank()) src else extra
+            val resolvedUrl = UrlValidator.resolveRelativeUrl(currentUrl, candidate)
+            if (resolvedUrl.isNotBlank() && UrlValidator.isSafeWebUrl(resolvedUrl) && resolvedUrl != "about:blank") {
+              val isImg = href.isNullOrBlank() && (!src.isNullOrBlank() || type == WebView.HitTestResult.IMAGE_TYPE)
+              callbacks.onLongPressLink(tabId, resolvedUrl, isImg)
+            }
+          }
         }
+        val msg = handler.obtainMessage()
+        wv.requestFocusNodeHref(msg)
+        true
       } catch (_: Throwable) {
         false
       }
@@ -1763,103 +1781,75 @@ class WebViewPool(
         if (!hitUrl.isNullOrBlank()) {
           val host = UrlValidator.extractHost(hitUrl)
           if (currentSettings.trackerBlockingEnabled &&
-            (TrackerBlocker.isTrackerHost(host) || TrackerBlocker.isAdPathOrQuery(hitUrl))) {
+            (TrackerBlocker.isTrackerHost(host) || TrackerBlocker.isAdPathOrQuery(hitUrl))
+          ) {
             callbacks.onTrackerBlocked(tabId)
             return false
           }
         }
 
         val transport = try { resultMsg.obj as? WebView.WebViewTransport } catch (_: Throwable) { null }
+        val currentUrl = view?.url.orEmpty()
+        val resolvedHitUrl = if (!hitUrl.isNullOrBlank()) UrlValidator.resolveRelativeUrl(currentUrl, hitUrl) else ""
+
         if (transport == null) {
-          if (!hitUrl.isNullOrBlank() && UrlValidator.isSafeWebUrl(hitUrl)) {
-            callbacks.onNewTabRequested(tabId, hitUrl, isPrivate)
+          if (resolvedHitUrl.isNotBlank() && UrlValidator.isSafeWebUrl(resolvedHitUrl) && resolvedHitUrl != "about:blank") {
+            callbacks.onNewTabRequested(tabId, resolvedHitUrl, isPrivate)
             return true
           }
           return false
         }
 
-        val tempWebView = try {
-          WebView(view?.context ?: appContext).apply {
-            settings.javaScriptEnabled = currentSettings.javascriptEnabled
-            settings.setSupportMultipleWindows(false)
-          }
-        } catch (_: Throwable) {
-          if (!hitUrl.isNullOrBlank() && UrlValidator.isSafeWebUrl(hitUrl)) {
-            callbacks.onNewTabRequested(tabId, hitUrl, isPrivate)
+        val newTabId = java.util.UUID.randomUUID().toString()
+        evictExcessLiveViews()
+
+        val newWebView = createSecuredWebView(
+          tabId = newTabId,
+          isPrivate = isPrivate,
+          userAgentMode = userAgentMode,
+          approvedHttpHosts = approvedHttpHosts
+        ) ?: run {
+          if (resolvedHitUrl.isNotBlank() && UrlValidator.isSafeWebUrl(resolvedHitUrl)) {
+            callbacks.onNewTabRequested(tabId, resolvedHitUrl, isPrivate)
             return true
           }
           return false
         }
 
-        val handled = AtomicBoolean(false)
-        val mainHandler = Handler(Looper.getMainLooper())
+        liveViews[newTabId] = newWebView
+        transport.webView = newWebView
 
-        fun dispatchAndCleanup(targetUrl: String) {
-          if (handled.compareAndSet(false, true)) {
-            val safeUrl = targetUrl.trim()
-            if (safeUrl.isNotBlank() && safeUrl != "about:blank" && UrlValidator.isSafeWebUrl(safeUrl)) {
-              val host = UrlValidator.extractHost(safeUrl)
-              if (currentSettings.trackerBlockingEnabled &&
-                (TrackerBlocker.isTrackerHost(host) || TrackerBlocker.isAdPathOrQuery(safeUrl))) {
-                callbacks.onTrackerBlocked(tabId)
-              } else {
-                callbacks.onNewTabRequested(tabId, safeUrl, isPrivate)
-              }
-            }
-            mainHandler.post {
-              try {
-                tempWebView.stopLoading()
-                tempWebView.destroy()
-              } catch (_: Throwable) {
-              }
-            }
-          }
-        }
-
-        tempWebView.webViewClient = object : WebViewClient() {
-          override fun shouldOverrideUrlLoading(v: WebView?, request: WebResourceRequest?): Boolean {
-            val url = request?.url?.toString()
-            if (!url.isNullOrBlank()) {
-              dispatchAndCleanup(url)
-            }
-            return true
-          }
-
-          override fun onPageStarted(v: WebView?, url: String?, favicon: Bitmap?) {
-            if (!url.isNullOrBlank() && url != "about:blank") {
-              dispatchAndCleanup(url)
-            }
-          }
-        }
-
-        if (!hitUrl.isNullOrBlank() && UrlValidator.isSafeWebUrl(hitUrl)) {
-          mainHandler.postDelayed({
-            if (!handled.get()) {
-              dispatchAndCleanup(hitUrl)
-            }
-          }, 300)
-        } else {
-          mainHandler.postDelayed({
-            if (handled.compareAndSet(false, true)) {
-              try {
-                tempWebView.stopLoading()
-                tempWebView.destroy()
-              } catch (_: Throwable) {
-              }
-            }
-          }, 5000)
-        }
-
-        transport.webView = tempWebView
         try {
           resultMsg.sendToTarget()
         } catch (_: Throwable) {
-          if (!hitUrl.isNullOrBlank() && UrlValidator.isSafeWebUrl(hitUrl)) {
-            dispatchAndCleanup(hitUrl)
+          liveViews.remove(newTabId)
+          safelyDestroyWebView(newWebView)
+          if (resolvedHitUrl.isNotBlank() && UrlValidator.isSafeWebUrl(resolvedHitUrl)) {
+            callbacks.onNewTabRequested(tabId, resolvedHitUrl, isPrivate)
+            return true
           }
           return false
         }
+
+        callbacks.onNewTabCreated(newTabId, isPrivate, resolvedHitUrl)
+
+        // Safety fallback: if Chromium does not commence navigation on the new window within 800ms
+        if (resolvedHitUrl.isNotBlank() && UrlValidator.isSafeWebUrl(resolvedHitUrl) && resolvedHitUrl != "about:blank") {
+          Handler(Looper.getMainLooper()).postDelayed({
+            if (isWebViewAlive(newWebView)) {
+              val current = newWebView.url
+              if (current.isNullOrBlank() || current == "about:blank") {
+                loadUrl(newTabId, resolvedHitUrl)
+              }
+            }
+          }, 800)
+        }
+
         return true
+      }
+
+      override fun onCloseWindow(window: WebView?) {
+        callbacks.onCloseTabRequested(tabId)
       }
 
       override fun onGeolocationPermissionsShowPrompt(
