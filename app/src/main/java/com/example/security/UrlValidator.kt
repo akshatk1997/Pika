@@ -204,6 +204,14 @@ object UrlValidator {
     ) {
       return trimmed
     }
+    if (trimmed.startsWith("?")) {
+      val baseWithoutQuery = baseUrl.substringBefore("?").substringBefore("#")
+      return "$baseWithoutQuery$trimmed"
+    }
+    if (trimmed.startsWith("#")) {
+      val baseWithoutHash = baseUrl.substringBefore("#")
+      return "$baseWithoutHash$trimmed"
+    }
     return try {
       val baseUri = URI(sanitizeControlChars(baseUrl).trim())
       baseUri.resolve(trimmed).toString()
