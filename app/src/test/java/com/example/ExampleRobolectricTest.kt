@@ -705,12 +705,12 @@ class ExampleRobolectricTest {
 
     val bookmarksBefore = vm.bookmarks.value.size
     composeTestRule.runOnUiThread {
-      vm.setOverlay(com.example.model.ActiveOverlay.BOOKMARKS)
-      assertEquals(com.example.model.ActiveOverlay.NONE, vm.activeOverlay.value)
-      vm.setOverlay(com.example.model.ActiveOverlay.HISTORY)
-      assertEquals(com.example.model.ActiveOverlay.NONE, vm.activeOverlay.value)
-      vm.setOverlay(com.example.model.ActiveOverlay.EXTENSIONS)
-      assertEquals(com.example.model.ActiveOverlay.NONE, vm.activeOverlay.value)
+      vm.setOverlay(com.example.ui.ActiveOverlay.BOOKMARKS)
+      assertEquals(com.example.ui.ActiveOverlay.NONE, vm.activeOverlay.value)
+      vm.setOverlay(com.example.ui.ActiveOverlay.HISTORY)
+      assertEquals(com.example.ui.ActiveOverlay.NONE, vm.activeOverlay.value)
+      vm.setOverlay(com.example.ui.ActiveOverlay.EXTENSIONS)
+      assertEquals(com.example.ui.ActiveOverlay.NONE, vm.activeOverlay.value)
       vm.toggleCurrentBookmark()
     }
     composeTestRule.waitForIdle()
