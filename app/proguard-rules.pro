@@ -24,4 +24,9 @@
 -keepclassmembers class * extends android.webkit.WebChromeClient {
     <methods>;
 }
+# Preserve @JavascriptInterface methods for the Chrome Extension runtime bridge
+-keepattributes *Annotation*
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
 -dontwarn android.webkit.**

@@ -1,7 +1,7 @@
 package com.example
 
-import com.example.ai.PhishingRiskLevel
-import com.example.ai.PhishingScamDetector
+import com.example.security.PhishingRiskLevel
+import com.example.security.PhishingScamDetector
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

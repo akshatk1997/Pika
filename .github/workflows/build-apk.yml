@@ -1,4 +1,4 @@
-name: Build & Package Kai APK (< 2 MB)
+name: Build & Package Kio APK (< 2 MB)
 
 on:
   push:
@@ -36,15 +36,15 @@ jobs:
         run: |
           keytool -genkeypair -v -keystore "${{ runner.temp }}/release.jks" \
             -storetype PKCS12 -alias upload -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass kai-ci-release-pass -keypass kai-ci-release-pass \
-            -dname "CN=Kai Browser, OU=Mobile, O=Kai, L=Unknown, S=Unknown, C=US"
+            -storepass kio-ci-release-pass -keypass kio-ci-release-pass \
+            -dname "CN=Kio Browser, OU=Mobile, O=Kio, L=Unknown, S=Unknown, C=US"
           keytool -genkeypair -v -keystore debug.keystore \
             -storetype PKCS12 -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass android -keypass android \
             -dname "CN=Android Debug,O=Android,C=US"
           echo "KEYSTORE_PATH=${{ runner.temp }}/release.jks" >> "$GITHUB_ENV"
-          echo "STORE_PASSWORD=kai-ci-release-pass" >> "$GITHUB_ENV"
-          echo "KEY_PASSWORD=kai-ci-release-pass" >> "$GITHUB_ENV"
+          echo "STORE_PASSWORD=kio-ci-release-pass" >> "$GITHUB_ENV"
+          echo "KEY_PASSWORD=kio-ci-release-pass" >> "$GITHUB_ENV"
 
       - name: Run unit & Robolectric tests
         run: gradle :app:testDebugUnitTest --no-daemon
@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kai-v1.8.8.apk
+          cp "$APK_PATH" releases/Kio-v1.9.0.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kai-v1.8.8.apk
+          git add releases/Kio-v1.9.0.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kai-v1.8.8.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kio-v1.9.0.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.8.8
+      - name: Create or update GitHub Release v1.9.0
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kai-v1.8.8.apk)
-          NOTES="Kai Browser v1.8.8 (Build 61) — Minimal, privacy-hardened Android browser shell powered by Android System WebView.\n\n- **Real Website Logos Across Bookmarks, History & Recent Tabs:** Built a zero-dependency SiteFaviconCache & SiteFavicon component capturing native WebView favicons (onReceivedIcon) plus compact memory/disk caching and privacy-first icon lookup so saved bookmarks (homepage & bookmarks list), history entries, open tabs, and recently closed tabs display each website's actual logo for instant visual recognition. Private tabs never persist favicons to disk.\n- **Unified Pure Pitch-Black Search Header:** Styled the active browsing header and omnibox search bar in seamless pure OLED black (#000000) with dark obsidian search pill (#0E1016) and crisp white status bar icons matching the homepage.\n- **Category-Wise Settings Folders, About & Help/Feedback:** Re-architected Settings into clean, professional category folders (General & Search, Appearance & Display, Privacy & Security, Data Saver & Bandwidth, Media & Playback, Tabs & Session, Data & Storage) with live status summaries, plus dedicated Help & Feedback (interactive FAQ, feedback composer, diagnostics copy) and About Kai (version, rendering engine, encryption, privacy policy, security architecture, and open-source licenses) folders.\n- **Under 2 MB Limit:** Strictly maintained under 2 MB (~1.50 MB) with zero new dependencies.\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
-          if gh release view v1.8.8 >/dev/null 2>&1; then
-            gh release upload v1.8.8 releases/Kai-v1.8.8.apk --clobber
-            gh release edit v1.8.8 --title "Kai v1.8.8 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kio-v1.9.0.apk)
+          NOTES="Kio Browser v1.9.0 (Build 62) — Lightning-fast, privacy-hardened Android browser with Desktop Chrome Extensions & pure on-device NLP narration strictly under 2 MB.\n\n- **Complete Rebrand to Kio & Creative 'K' App Launcher Icon:** Renamed the entire browser to **Kio** with all previous naming removed; crafted a creative geometric **K** launcher icon denoting Kio (adaptive + Material You monochrome) while preserving the homepage emblem 100% untouched.\n- **AI Assistant Removed & Replaced by Desktop Chrome Extensions (Kiwi-Style):** Completely removed the old AI Assistant suite and replaced it across the toolbar, quick menu, and Settings with a full Desktop Chrome Extension engine supporting direct Chrome Web Store URL/ID installation (CRX2/CRX3 binary unpacker), local .crx/.zip/.user.js packages, Manifest V2/V3 content scripts & CSS, static declarative_net_request rules, persistent chrome.storage/runtime/i18n/tabs bridges, interactive extension popups/options, and 1-tap Chrome Web Store auto-detection.\n- **Content Announcer & Reader Mode (Pure On-Device NLP, Zero Data Copy/Save):** Replaced Resources in the 3-dot menu with an on-device NLP Reader & Voice Announcer featuring natural speech normalization, abbreviation-aware sentence segmentation, live sentence highlighting with auto-scroll, speed/prev/next/play-pause controls, and strict volatile RAM-only processing (non-selectable, zero copy, zero disk save, instant RAM wipe on close).\n- **True Edge-to-Edge Full Screen Mode:** Replaced New Tab in the 3-dot menu with Full Screen mode hiding toolbar, status bar, and navigation bar edge-to-edge with zero inset gutters and instant Exit pill / Back support.\n- **Performance & Size Cleanup:** Removed obsolete AI files, Resources sniffer overhead, and 10 unused legacy raster mipmap PNGs; deduplicated early WebView script injections per page load for lightning-fast browsing strictly under 2 MB.\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
+          if gh release view v1.9.0 >/dev/null 2>&1; then
+            gh release upload v1.9.0 releases/Kio-v1.9.0.apk --clobber
+            gh release edit v1.9.0 --title "Kio v1.9.0 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.8.8 releases/Kai-v1.8.8.apk \
-              --title "Kai v1.8.8 (< 2 MB)" \
+            gh release create v1.9.0 releases/Kio-v1.9.0.apk \
+              --title "Kio v1.9.0 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

@@ -66,6 +66,34 @@ class MainActivity : ComponentActivity() {
     }
   }
 
+  private val importExtensionLauncher = registerForActivityResult(
+    ActivityResultContracts.OpenDocument()
+  ) { uri ->
+    if (uri != null) {
+      try {
+        val fileName = queryDisplayName(uri) ?: uri.lastPathSegment ?: "extension.crx"
+        val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
+        if (bytes != null && bytes.isNotEmpty()) {
+          viewModel.installExtensionFromBytes(bytes, fileName)
+        } else {
+          viewModel.showToast("Selected extension file is empty")
+        }
+      } catch (_: Throwable) {
+        viewModel.showToast("Failed to read extension file")
+      }
+    }
+  }
+
+  private fun queryDisplayName(uri: Uri): String? {
+    return try {
+      contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+        if (c.moveToFirst()) c.getString(0) else null
+      }
+    } catch (_: Throwable) {
+      null
+    }
+  }
+
   private val webFileChooserLauncher = registerForActivityResult(
     ActivityResultContracts.OpenMultipleDocuments()
   ) { uris ->
@@ -279,7 +307,7 @@ class MainActivity : ComponentActivity() {
           viewModel = viewModel,
           onExportBookmarks = {
             try {
-              exportBookmarksLauncher.launch("kai-bookmarks.html")
+              exportBookmarksLauncher.launch("kio-bookmarks.html")
             } catch (_: Throwable) {
               viewModel.showToast("Export failed")
             }
@@ -289,6 +317,13 @@ class MainActivity : ComponentActivity() {
               importBookmarksLauncher.launch(arrayOf("text/html", "application/json", "text/plain"))
             } catch (_: Throwable) {
               viewModel.showToast("Import failed")
+            }
+          },
+          onPickLocalExtensionFile = {
+            try {
+              importExtensionLauncher.launch(arrayOf("*/*"))
+            } catch (_: Throwable) {
+              viewModel.showToast("No file picker available")
             }
           },
           onSavePdf = {
@@ -454,7 +489,7 @@ class MainActivity : ComponentActivity() {
       val safeLabel = UrlValidator.sanitizeDisplayText(title, 32)
         .ifEmpty { UrlValidator.extractHost(url).ifEmpty { "Web link" } }
       val launchIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url), this, MainActivity::class.java)
-      val shortcut = ShortcutInfo.Builder(this, "kai_${url.hashCode()}")
+      val shortcut = ShortcutInfo.Builder(this, "kio_${url.hashCode()}")
         .setShortLabel(safeLabel)
         .setLongLabel(safeLabel)
         .setIcon(Icon.createWithResource(this, R.mipmap.ic_launcher))

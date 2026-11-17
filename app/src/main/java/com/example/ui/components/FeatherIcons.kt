@@ -443,32 +443,119 @@ object FeatherIcons {
     }.build()
   }
 
-  val MediaSniff: ImageVector by lazy {
-    ImageVector.Builder("MediaSniff", 24.dp, 24.dp, 24f, 24f).apply {
+  val Extension: ImageVector by lazy {
+    ImageVector.Builder("Extension", 24.dp, 24.dp, 24f, 24f).apply {
       path(fill = SolidColor(Color.Black)) {
-        moveTo(4f, 6f)
+        moveTo(20.5f, 11f)
+        horizontalLineTo(19f)
+        verticalLineTo(7f)
+        curveTo(19f, 5.9f, 18.1f, 5f, 17f, 5f)
+        horizontalLineTo(13f)
+        verticalLineTo(3.5f)
+        curveTo(13f, 2.12f, 11.88f, 1f, 10.5f, 1f)
+        curveTo(9.12f, 1f, 8f, 2.12f, 8f, 3.5f)
+        verticalLineTo(5f)
+        horizontalLineTo(4f)
+        curveTo(2.9f, 5f, 2.01f, 5.9f, 2.01f, 7f)
+        verticalLineTo(10.8f)
+        horizontalLineTo(3.5f)
+        curveTo(4.99f, 10.8f, 6.2f, 12.01f, 6.2f, 13.5f)
+        curveTo(6.2f, 14.99f, 4.99f, 16.2f, 3.5f, 16.2f)
         horizontalLineTo(2f)
         verticalLineTo(20f)
         curveTo(2f, 21.1f, 2.9f, 22f, 4f, 22f)
+        horizontalLineTo(7.8f)
+        verticalLineTo(20.5f)
+        curveTo(7.8f, 19.01f, 9.01f, 17.8f, 10.5f, 17.8f)
+        curveTo(11.99f, 17.8f, 13.2f, 19.01f, 13.2f, 20.5f)
+        verticalLineTo(22f)
+        horizontalLineTo(17f)
+        curveTo(18.1f, 22f, 19f, 21.1f, 19f, 20f)
+        verticalLineTo(16f)
+        horizontalLineTo(20.5f)
+        curveTo(21.88f, 16f, 23f, 14.88f, 23f, 13.5f)
+        curveTo(23f, 12.12f, 21.88f, 11f, 20.5f, 11f)
+        close()
+      }
+    }.build()
+  }
+
+  val Announcer: ImageVector by lazy {
+    ImageVector.Builder("Announcer", 24.dp, 24.dp, 24f, 24f).apply {
+      path(fill = SolidColor(Color.Black)) {
+        moveTo(3f, 9f)
+        verticalLineTo(15f)
+        horizontalLineTo(7f)
+        lineTo(12f, 20f)
+        verticalLineTo(4f)
+        lineTo(7f, 9f)
+        horizontalLineTo(3f)
+        close()
+        moveTo(16.5f, 12f)
+        curveTo(16.5f, 10.23f, 15.48f, 8.71f, 14f, 7.97f)
+        verticalLineTo(16.02f)
+        curveTo(15.48f, 15.29f, 16.5f, 13.77f, 16.5f, 12f)
+        close()
+        moveTo(14f, 3.23f)
+        verticalLineTo(5.29f)
+        curveTo(16.89f, 6.15f, 19f, 8.83f, 19f, 12f)
+        curveTo(19f, 15.17f, 16.89f, 17.85f, 14f, 18.71f)
+        verticalLineTo(20.77f)
+        curveTo(18.01f, 19.86f, 21f, 16.28f, 21f, 12f)
+        curveTo(21f, 7.72f, 18.01f, 4.14f, 14f, 3.23f)
+        close()
+      }
+    }.build()
+  }
+
+  val Pause: ImageVector by lazy {
+    ImageVector.Builder("Pause", 24.dp, 24.dp, 24f, 24f).apply {
+      path(fill = SolidColor(Color.Black)) {
+        moveTo(6f, 19f)
+        horizontalLineTo(10f)
+        verticalLineTo(5f)
+        horizontalLineTo(6f)
+        verticalLineTo(19f)
+        close()
+        moveTo(14f, 5f)
+        verticalLineTo(19f)
         horizontalLineTo(18f)
-        verticalLineTo(20f)
-        horizontalLineTo(4f)
+        verticalLineTo(5f)
+        horizontalLineTo(14f)
+        close()
+      }
+    }.build()
+  }
+
+  val SkipPrev: ImageVector by lazy {
+    ImageVector.Builder("SkipPrev", 24.dp, 24.dp, 24f, 24f).apply {
+      path(fill = SolidColor(Color.Black)) {
+        moveTo(6f, 6f)
+        horizontalLineTo(8f)
+        verticalLineTo(18f)
+        horizontalLineTo(6f)
+        close()
+        moveTo(9.5f, 12f)
+        lineTo(18f, 18f)
         verticalLineTo(6f)
         close()
-        moveTo(20f, 2f)
-        horizontalLineTo(8f)
-        curveTo(6.9f, 2f, 6f, 2.9f, 6f, 4f)
-        verticalLineTo(16f)
-        curveTo(6f, 17.1f, 6.9f, 18f, 8f, 18f)
-        horizontalLineTo(20f)
-        curveTo(21.1f, 18f, 22f, 17.1f, 22f, 16f)
-        verticalLineTo(4f)
-        curveTo(22f, 2.9f, 21.1f, 2f, 20f, 2f)
+      }
+    }.build()
+  }
+
+  val SkipNext: ImageVector by lazy {
+    ImageVector.Builder("SkipNext", 24.dp, 24.dp, 24f, 24f).apply {
+      path(fill = SolidColor(Color.Black)) {
+        moveTo(6f, 18f)
+        lineTo(14.5f, 12f)
+        lineTo(6f, 6f)
+        verticalLineTo(18f)
         close()
-        moveTo(12f, 14.5f)
-        verticalLineTo(5.5f)
-        lineTo(18f, 10f)
-        lineTo(12f, 14.5f)
+        moveTo(16f, 6f)
+        verticalLineTo(18f)
+        horizontalLineTo(18f)
+        verticalLineTo(6f)
+        horizontalLineTo(16f)
         close()
       }
     }.build()
@@ -588,7 +675,7 @@ object FeatherIcons {
   }
 
   val FeatherLogo: ImageVector by lazy {
-    ImageVector.Builder("KaiLogo", 24.dp, 24.dp, 24f, 24f).apply {
+    ImageVector.Builder("KioLogo", 24.dp, 24.dp, 24f, 24f).apply {
       path(
         stroke = SolidColor(Color.Black),
         strokeLineWidth = 1.6f,
@@ -626,20 +713,35 @@ object FeatherIcons {
     }.build()
   }
 
-  val Sparkle: ImageVector by lazy {
-    ImageVector.Builder("Sparkle", 24.dp, 24.dp, 24f, 24f).apply {
+  val Help: ImageVector by lazy {
+    ImageVector.Builder("Help", 24.dp, 24.dp, 24f, 24f).apply {
       path(fill = SolidColor(Color.Black)) {
         moveTo(12f, 2f)
-        curveTo(12f, 7.52f, 16.48f, 12f, 22f, 12f)
-        curveTo(16.48f, 12f, 12f, 16.48f, 12f, 22f)
-        curveTo(12f, 16.48f, 7.52f, 12f, 2f, 12f)
-        curveTo(7.52f, 12f, 12f, 7.52f, 12f, 2f)
+        curveTo(6.48f, 2f, 2f, 6.48f, 2f, 12f)
+        curveTo(2f, 17.52f, 6.48f, 22f, 12f, 22f)
+        curveTo(17.52f, 22f, 22f, 17.52f, 22f, 12f)
+        curveTo(22f, 6.48f, 17.52f, 2f, 12f, 2f)
         close()
-        moveTo(19f, 2f)
-        curveTo(19f, 3.66f, 20.34f, 5f, 22f, 5f)
-        curveTo(20.34f, 5f, 19f, 6.34f, 19f, 8f)
-        curveTo(19f, 6.34f, 17.66f, 5f, 16f, 5f)
-        curveTo(17.66f, 5f, 19f, 3.66f, 19f, 2f)
+        moveTo(13f, 19f)
+        horizontalLineTo(11f)
+        verticalLineTo(17f)
+        horizontalLineTo(13f)
+        verticalLineTo(19f)
+        close()
+        moveTo(15.07f, 11.25f)
+        lineTo(14.17f, 12.17f)
+        curveTo(13.45f, 12.9f, 13f, 13.5f, 13f, 15f)
+        horizontalLineTo(11f)
+        verticalLineTo(14.5f)
+        curveTo(11f, 13.4f, 11.45f, 12.4f, 12.17f, 11.67f)
+        lineTo(13.41f, 10.41f)
+        curveTo(13.78f, 10.05f, 14f, 9.55f, 14f, 9f)
+        curveTo(14f, 7.9f, 13.1f, 7f, 12f, 7f)
+        curveTo(10.9f, 7f, 10f, 7.9f, 10f, 9f)
+        horizontalLineTo(8f)
+        curveTo(8f, 6.79f, 9.79f, 5f, 12f, 5f)
+        curveTo(14.21f, 5f, 16f, 6.79f, 16f, 9f)
+        curveTo(16f, 9.88f, 15.64f, 10.68f, 15.07f, 11.25f)
         close()
       }
     }.build()

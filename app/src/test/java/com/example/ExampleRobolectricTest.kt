@@ -37,12 +37,12 @@ class ExampleRobolectricTest {
   val composeTestRule = createAndroidComposeRule<MainActivity>()
 
   @Test
-  fun appNameMatchesKaiAndVersionIsUpdated() {
+  fun appNameMatchesKioAndVersionIsUpdated() {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
-    assertEquals("Kai", appName)
-    assertEquals("1.8.8", BuildConfig.VERSION_NAME)
-    assertEquals(61, BuildConfig.VERSION_CODE)
+    assertEquals("Kio", appName)
+    assertEquals("1.9.0", BuildConfig.VERSION_NAME)
+    assertEquals(62, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -130,11 +130,20 @@ class ExampleRobolectricTest {
     } catch (_: Throwable) {
     }
 
-    composeTestRule.onNodeWithText("Kai").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("kai_home_logo").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Kio").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("kio_home_logo").assertIsDisplayed()
     composeTestRule.onNodeWithTag("home_search_input").performTextInput("privacy")
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("home_search_go").assertIsDisplayed()
+
+    // Open Extensions directly from the toolbar puzzle icon (replaces removed AI Assistant)
+    composeTestRule.onNodeWithTag("nav_extensions_button").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("extensions_store_input").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("extensions_open_webstore_button").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("extensions_pick_file_button").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("extensions_back_button").performClick()
+    composeTestRule.waitForIdle()
 
     // Open Tab Switcher and create a Private Tab
     composeTestRule.onNodeWithTag("nav_tabs_button").performClick()
@@ -155,14 +164,18 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Done").performClick()
     composeTestRule.waitForIdle()
 
-    // Open Quick Action Grid Menu and navigate to Settings
+    // Open Quick Action Grid Menu and verify Extensions, Full screen (replaces New tab), Narrate (replaces Resources)
     composeTestRule.onNodeWithTag("nav_menu_button").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("Data Saver").assertIsDisplayed()
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Full screen").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Narrate").assertIsDisplayed()
+    composeTestRule.onNodeWithText("AI Assistant").assertDoesNotExist()
+    composeTestRule.onNodeWithText("Resources").assertDoesNotExist()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.8.8").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.9.0").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
 
     // Navigate into Data Saver folder
@@ -194,10 +207,10 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithTag("settings_back_button").performClick()
     composeTestRule.waitForIdle()
 
-    // Navigate into About Kai folder
+    // Navigate into About Kio folder
     composeTestRule.onNodeWithTag("settings_folder_about").performScrollTo().performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Kai Browser").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Kio Browser").assertIsDisplayed()
     composeTestRule.onNodeWithText("Privacy Policy").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("settings_back_button").performClick()
     composeTestRule.waitForIdle()
@@ -218,8 +231,8 @@ class ExampleRobolectricTest {
       composeTestRule.waitForIdle()
     } catch (_: Throwable) {
     }
-    composeTestRule.onNodeWithText("Kai").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("kai_home_logo").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Kio").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("kio_home_logo").assertIsDisplayed()
 
     // Header tab strip is removed from tablet devices
     composeTestRule.onNodeWithTag("tablet_tab_new_button").assertDoesNotExist()
@@ -228,6 +241,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithTag("tablet_desktop_mode_button").assertIsDisplayed()
     composeTestRule.onNodeWithTag("tablet_bookmarks_button").assertIsDisplayed()
     composeTestRule.onNodeWithTag("tablet_downloads_button").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("tablet_extensions_button").assertIsDisplayed()
     composeTestRule.onNodeWithTag("tablet_new_tab_button").assertIsDisplayed()
 
     // Open a new tab directly from the toolbar '+' button
@@ -262,7 +276,6 @@ class ExampleRobolectricTest {
       override fun onProgressChanged(tabId: String, progress: Int) {}
       override fun onTitleReceived(tabId: String, title: String) {}
       override fun onTrackerBlocked(tabId: String) { blockedCount++ }
-      override fun onResourceSniffed(tabId: String, count: Int) {}
       override fun onHttpBlockedByHttpsOnly(tabId: String, url: String) {}
       override fun onBlockedScheme(tabId: String, url: String, scheme: String) {}
       override fun onExternalSchemePrompt(tabId: String, url: String, scheme: String) {}
@@ -305,7 +318,7 @@ class ExampleRobolectricTest {
 
   @Test
   fun pageTranslationServiceSafelyTranslatesOrFallbacksWithoutThrowing() = kotlinx.coroutines.runBlocking {
-    val inputs = listOf("Welcome to Kai", "Privacy first browser")
+    val inputs = listOf("Welcome to Kio", "Privacy first browser")
     val result = com.example.service.PageTranslationService.translateBatch(inputs, "es", "Spanish")
     assertNotNull(result)
     assertEquals(inputs.size, result.size)
@@ -357,7 +370,7 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun homepageStandardSearchOnlyAndKaiAiPermanentlyRemoved() {
+  fun homepageStandardSearchOnlyAndAiAssistantPermanentlyRemoved() {
     composeTestRule.runOnUiThread {
       composeTestRule.activity.viewModel.dismissIntro()
       composeTestRule.activity.viewModel.openNewTab(false)
@@ -367,33 +380,44 @@ class ExampleRobolectricTest {
     // Verify AI mode options and tabs do not exist on homepage
     composeTestRule.onNodeWithTag("home_mode_ai").assertDoesNotExist()
     composeTestRule.onNodeWithTag("home_mode_standard").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("nav_ai_button").assertDoesNotExist()
 
-    // Verify clean Kai home logo is displayed
-    composeTestRule.onNodeWithTag("kai_home_logo").assertIsDisplayed()
+    // Verify clean Kio home logo and Extensions button are displayed
+    composeTestRule.onNodeWithTag("kio_home_logo").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("nav_extensions_button").assertIsDisplayed()
   }
 
   @Test
-  fun searchEngineCompatibilityAndKaiAiFilesCleaned() {
+  fun extensionManagerLocalInstallToggleAndRemoveLifecycle() {
     val context = ApplicationProvider.getApplicationContext<Context>()
+    val mgr = com.example.extensions.ChromeExtensionManager(context)
+    val sampleUserscript = """
+      // ==UserScript==
+      // @name         Kio Test Helper
+      // @version      1.2.3
+      // @description  Verifies extension install and injection
+      // @match        https://example.org/*
+      // ==/UserScript==
+      window.__kio_test_ext_ran = true;
+    """.trimIndent().toByteArray(Charsets.UTF_8)
 
-    // Test backward compatibility mapping to DuckDuckGo
-    assertEquals(SearchEngine.DUCKDUCKGO, SearchEngine.fromId("duck_ai"))
-    assertEquals(SearchEngine.DUCKDUCKGO, SearchEngine.fromId("kai_ai"))
+    val result = mgr.installFromBytes(sampleUserscript, "kio_helper.user.js", preferredId = "testext001")
+    assertTrue(result is com.example.extensions.ExtensionInstallResult.Success)
+    val ext = (result as com.example.extensions.ExtensionInstallResult.Success).extension
+    assertEquals("Kio Test Helper", ext.name)
+    assertEquals("1.2.3", ext.version)
+    assertTrue(ext.enabled)
 
-    // Verify SearchEngine enum does not contain KAI_AI
-    val engineIds = SearchEngine.entries.map { it.id }
-    assertFalse(engineIds.contains("kai_ai"))
+    val injected = mgr.buildPageInjectionScript("https://example.org/page", "end")
+    assertNotNull(injected)
+    assertTrue(injected!!.contains("__kio_test_ext_ran"))
+    assertNull(mgr.buildPageInjectionScript("https://other-site.com/", "end"))
 
-    // Anti-tracking & fingerprinting protection verification
-    assertTrue(com.example.security.TrackerBlocker.isTrackerHost("fingerprint.com"))
-    assertTrue(com.example.security.TrackerBlocker.isTrackerHost("clarity.ms"))
-    assertTrue(com.example.security.TrackerBlocker.isTrackerHost("datadoghq.com"))
-    val cleanedUrl = com.example.security.UrlValidator.stripTrackingParams("https://example.com/shop?fbclid=123&gbraid=456&item=shoes")
-    assertEquals("https://example.com/shop?item=shoes", cleanedUrl)
+    mgr.setExtensionEnabled("testext001", false)
+    assertNull(mgr.buildPageInjectionScript("https://example.org/page", "end"))
 
-    // Verify kai.html is completely cleaned from assets
-    val assetsList = context.assets.list("")?.toList() ?: emptyList()
-    assertFalse(assetsList.contains("kai.html"))
+    mgr.removeExtension("testext001")
+    assertNull(mgr.getExtension("testext001"))
   }
 
   @Test
@@ -411,7 +435,6 @@ class ExampleRobolectricTest {
       override fun onProgressChanged(tabId: String, progress: Int) {}
       override fun onTitleReceived(tabId: String, title: String) {}
       override fun onTrackerBlocked(tabId: String) {}
-      override fun onResourceSniffed(tabId: String, count: Int) {}
       override fun onHttpBlockedByHttpsOnly(tabId: String, url: String) {}
       override fun onBlockedScheme(tabId: String, url: String, scheme: String) {}
       override fun onExternalSchemePrompt(tabId: String, url: String, scheme: String) {}
@@ -435,42 +458,50 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun kaiAiPermanentlyRemovedFromAssetsAndCodebase() {
-    val context = ApplicationProvider.getApplicationContext<Context>()
+  fun browserFullscreenModeHidesSystemBarsAndRestoresCleanly() {
+    val activity = composeTestRule.activity
+    val vm = activity.viewModel
+    composeTestRule.waitForIdle()
 
-    // Verify kai.html is absent from assets
-    val assets = context.assets.list("")?.toList() ?: emptyList()
-    assertFalse(assets.contains("kai.html"))
-
-    val hasKaiHtml = try {
-      context.assets.open("kai.html").use { true }
-    } catch (_: java.io.IOException) {
-      false
+    assertFalse(vm.isBrowserFullscreen.value)
+    composeTestRule.runOnUiThread {
+      vm.toggleBrowserFullscreen()
     }
-    assertFalse(hasKaiHtml)
+    composeTestRule.waitForIdle()
 
-    // Verify SearchEngine enum has no KAI_AI
-    assertTrue(SearchEngine.entries.none { it.id == "kai_ai" })
+    assertTrue(vm.isBrowserFullscreen.value)
+    val fsFlags = activity.window.attributes.flags
+    assertTrue((fsFlags and WindowManager.LayoutParams.FLAG_FULLSCREEN) != 0)
+
+    composeTestRule.runOnUiThread {
+      vm.exitBrowserFullscreen()
+    }
+    composeTestRule.waitForIdle()
+
+    assertFalse(vm.isBrowserFullscreen.value)
+    val restoredFlags = activity.window.attributes.flags
+    assertFalse((restoredFlags and WindowManager.LayoutParams.FLAG_FULLSCREEN) != 0)
   }
 
   @Test
-  fun kaiAiDomainAndInferenceEndpointsNotExemptFromTrackerBlocking() {
-    val pool = composeTestRule.activity.viewModel.webViewPool
-    val webView = pool.getOrCreateWebView("tab_cleanup", false, com.example.model.UserAgentMode.MOBILE, emptySet())!!
-    
-    // Simulate request to kai.ai - should not be intercepted as special local HTML
-    val fakeRequest = object : android.webkit.WebResourceRequest {
-      override fun getUrl(): android.net.Uri = android.net.Uri.parse("https://kai.ai")
-      override fun isForMainFrame(): Boolean = true
-      override fun isRedirect(): Boolean = false
-      override fun hasGesture(): Boolean = false
-      override fun getMethod(): String = "GET"
-      override fun getRequestHeaders(): MutableMap<String, String> = mutableMapOf()
+  fun readerAnnouncerWipesAllVolatileRamDataOnClose() {
+    val vm = composeTestRule.activity.viewModel
+    composeTestRule.waitForIdle()
+
+    // Verify no stale AI assistant assets or search engines exist
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val assets = context.assets.list("")?.toList() ?: emptyList()
+    assertTrue(assets.none { it.endsWith(".html") })
+    assertTrue(SearchEngine.entries.none { it.id.contains("ai") })
+
+    // Verify closeReaderMode clears all volatile reader/narrator state cleanly
+    composeTestRule.runOnUiThread {
+      vm.closeReaderMode()
     }
-    val response = webView.webViewClient.shouldInterceptRequest(webView, fakeRequest)
-    // Should NOT be intercepted as internal HTML stream
-    assertNull(response)
-    pool.destroyTab("tab_cleanup")
+    composeTestRule.waitForIdle()
+    assertNull(vm.readerArticle.value)
+    assertTrue(vm.readerSegments.value.isEmpty())
+    assertFalse(vm.narratorState.value.isSpeaking)
   }
 
   @Test
@@ -482,7 +513,6 @@ class ExampleRobolectricTest {
       override fun onProgressChanged(tabId: String, progress: Int) {}
       override fun onTitleReceived(tabId: String, title: String) {}
       override fun onTrackerBlocked(tabId: String) {}
-      override fun onResourceSniffed(tabId: String, count: Int) {}
       override fun onHttpBlockedByHttpsOnly(tabId: String, url: String) {}
       override fun onBlockedScheme(tabId: String, url: String, scheme: String) {}
       override fun onExternalSchemePrompt(tabId: String, url: String, scheme: String) {}
@@ -581,7 +611,7 @@ class ExampleRobolectricTest {
     assertFalse("Should not force currentTime to duration as it causes black screens", content.contains("v.currentTime = v.duration"))
     // Assert safe playbackRate fast-forward and mute during ads
     assertTrue(content.contains("v.playbackRate = 16.0"))
-    assertTrue(content.contains("v.__kai_ad_muted = true"))
+    assertTrue(content.contains("v.__kio_ad_muted = true"))
     // Assert native player skipAd call is attempted
     assertTrue(content.contains("player.skipAd()"))
     // Assert CORS headers are present on blocked responses

@@ -104,7 +104,7 @@ private enum class SettingsFolder(val title: String) {
   TABS("Tabs & Session"),
   STORAGE("Data & Storage"),
   HELP_FEEDBACK("Help & Feedback"),
-  ABOUT("About Kai")
+  ABOUT("About Kio")
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -113,7 +113,9 @@ fun SettingsScreen(
   settings: SettingsState,
   currentUrl: String = "",
   sitePermissions: List<SitePermissionRule>,
+  installedExtensionsCount: Int = 0,
   systemWebViewInfo: String? = null,
+  onOpenExtensions: () -> Unit = {},
   onUpdateSettings: ((SettingsState) -> SettingsState) -> Unit,
   onAddCustomBlockedHost: (String) -> Boolean,
   onRemoveCustomBlockedHost: (String) -> Unit,
@@ -248,6 +250,15 @@ fun SettingsScreen(
             modifier = Modifier.widthIn(max = 720.dp).fillMaxWidth()
           ) {
             Column(modifier = Modifier.fillMaxWidth()) {
+              SettingsFolderRow(
+                icon = FeatherIcons.Extension,
+                iconTint = Color(0xFF38BDF8),
+                title = "Extensions",
+                subtitle = if (installedExtensionsCount > 0) "$installedExtensionsCount desktop Chrome extension(s) installed" else "Install Chrome Web Store, .crx, .zip & .user.js",
+                tag = "settings_folder_extensions",
+                onClick = onOpenExtensions
+              )
+              FolderDivider()
               val homeSummary = if (settings.homepageUrl.isBlank()) "Start page" else UrlValidator.extractHost(settings.homepageUrl).ifEmpty { "Custom" }
               SettingsFolderRow(
                 icon = Icons.Filled.Search,
@@ -317,7 +328,7 @@ fun SettingsScreen(
 
           SettingsFolderGroupHeader("Support & Info", Modifier.widthIn(max = 720.dp))
 
-          // Help & Feedback + About Kai Folders Card
+          // Help & Feedback + About Kio Folders Card
           Card(
             shape = RoundedCornerShape(18.dp),
             border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
@@ -326,7 +337,7 @@ fun SettingsScreen(
           ) {
             Column(modifier = Modifier.fillMaxWidth()) {
               SettingsFolderRow(
-                icon = FeatherIcons.Sparkle,
+                icon = FeatherIcons.Help,
                 iconTint = MaterialTheme.colorScheme.primary,
                 title = SettingsFolder.HELP_FEEDBACK.title,
                 subtitle = "Quick guide, troubleshooting & send feedback",
@@ -713,16 +724,18 @@ fun SettingsScreen(
         SettingsFolder.HELP_FEEDBACK -> {
           val faqs = remember {
             listOf(
-              "How do I open links in a background or private tab?" to
-                "Tap and hold any link or picture-link on a website to open the link menu. Choose 'Open in background tab', 'Open in new tab', or 'Open in private tab'.",
+              "How do I install desktop Chrome extensions?" to
+                "Tap the Extensions puzzle button in the toolbar or open the menu (⋮) → Extensions. You can install directly from the Chrome Web Store, paste an Extension ID/URL, or load local .crx, .zip, and .user.js packages.",
+              "How does the Content Announcer / Reader Mode protect my privacy?" to
+                "Open the menu (⋮) → Narrate to read and listen to any page with pure on-device NLP narration. Text exists only in volatile RAM while open, cannot be copied or exported, and is wiped immediately when closed.",
+              "How do I toggle Full Screen mode?" to
+                "Open the menu (⋮) and tap Full screen to hide the toolbar and system bars edge-to-edge. Tap the floating Exit pill or press Back to return.",
               "How do I view the full Desktop version of a site?" to
-                "Tap the menu button (⋮) and select Desktop. Kai switches to a Windows Chrome User-Agent, rewrites mobile URLs (like m.youtube.com), and renders a full 1280px desktop layout.",
-              "How do I download videos from a page?" to
-                "While on a page with a video, open the menu (⋮) → Resources and tap 'Scan Videos' to detect and download playable streams.",
+                "Tap the menu button (⋮) and select Desktop. Kio switches to a Windows Chrome User-Agent, rewrites mobile URLs (like m.youtube.com), and renders a full 1280px desktop layout.",
               "How does Private Mode keep my browsing safe?" to
                 "Private tabs run in RAM with zero disk caching, block OS task-switcher screenshots via FLAG_SECURE, never store history or favicons to disk, and purge all session data on exit.",
               "Why are streaming popups and ad redirects blocked?" to
-                "Kai intercepts popunder ad redirects (including tsyndicate, ad.* subdomains, and click-hijack overlays) before they can open spam tabs or interrupt video playback."
+                "Kio intercepts popunder ad redirects (including tsyndicate, ad.* subdomains, and click-hijack overlays) before they can open spam tabs or interrupt video playback."
             )
           }
 
@@ -770,7 +783,7 @@ fun SettingsScreen(
           var feedbackTopic by remember { mutableStateOf("Bug Report") }
           var feedbackMessage by remember { mutableStateOf("") }
           val diagnosticsSummary = remember(systemWebViewInfo) {
-            "Kai v${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})\n" +
+            "Kio v${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})\n" +
               "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})\n" +
               "Device: ${Build.MANUFACTURER} ${Build.MODEL}\n" +
               "Engine: ${systemWebViewInfo ?: "Android System WebView"}"
@@ -819,7 +832,7 @@ fun SettingsScreen(
                   try {
                     val shareIntent = Intent(Intent.ACTION_SEND).apply {
                       type = "text/plain"
-                      putExtra(Intent.EXTRA_SUBJECT, "Kai Browser Feedback: $feedbackTopic")
+                      putExtra(Intent.EXTRA_SUBJECT, "Kio Browser Feedback: $feedbackTopic")
                       putExtra(Intent.EXTRA_TEXT, fullReport)
                       addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
@@ -875,7 +888,7 @@ fun SettingsScreen(
               }
               Spacer(modifier = Modifier.height(10.dp))
               Text(
-                text = "Kai Browser",
+                text = "Kio Browser",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
               )
@@ -886,7 +899,7 @@ fun SettingsScreen(
               )
               Spacer(modifier = Modifier.height(8.dp))
               Text(
-                text = "Minimal, privacy-hardened Android web browser engineered to stay ultra-lightweight (< 2 MB) with zero telemetry and OS-maintained WebView security.",
+                text = "Lightning-fast, privacy-hardened Android web browser with Desktop Chrome Extensions and pure on-device NLP narration — engineered strictly under 2 MB.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
               )
@@ -908,7 +921,7 @@ fun SettingsScreen(
           SettingsSectionCard("Policies & Licenses", Modifier.widthIn(max = 720.dp)) {
             AboutPolicyRow("Privacy Policy") {
               infoDialogContent = "Privacy Policy" to
-                "Kai collects zero analytics, zero telemetry, and zero personal data. Bookmarks, history, and preferences stay strictly on your device. Private tabs run in ephemeral RAM, block screenshots, and wipe all cookies, cache, and storage when closed."
+                "Kio collects zero analytics, zero telemetry, and zero personal data. Bookmarks, history, extensions, and preferences stay strictly on your device. Content Announcer & Reader Mode processes text exclusively in volatile RAM with zero saving or copying. Private tabs run in RAM, block screenshots, and wipe all cookies, cache, and storage on exit."
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
             AboutPolicyRow("Security Architecture") {
@@ -916,12 +929,13 @@ fun SettingsScreen(
                 "• Powered by the OS-maintained Android System WebView with Google Safe Browsing.\n" +
                 "• Local settings encrypted via Android Keystore AES-256-GCM.\n" +
                 "• Strict URL scheme filtering, intent sanitization, and HTTPS-Only warnings.\n" +
+                "• Zip-Slip hardened CRX/ZIP extension unpacker and sandboxed virtual origin serving.\n" +
                 "• Built-in ad, tracker, popunder, and WebRTC LAN IP leak protection."
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
             AboutPolicyRow("Open-Source Components") {
               infoDialogContent = "Open-Source Components" to
-                "Kai is built with Kotlin, AndroidX Jetpack Compose, Material 3, and AndroidX Lifecycle under Apache 2.0 licenses, with zero proprietary tracking SDKs or bloated third-party libraries."
+                "Kio is built with Kotlin, AndroidX Jetpack Compose, Material 3, and AndroidX Lifecycle under Apache 2.0 licenses, with zero proprietary tracking SDKs or bloated third-party libraries."
             }
           }
         }

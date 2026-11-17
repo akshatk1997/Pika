@@ -39,21 +39,22 @@ import kotlin.math.min
 import kotlin.math.sin
 
 /**
- * Aesthetic modern Kai emblem: concentric outer circle, inner circle, and luminous center dot.
- * Features kinetic orbital rotation, harmonic breathing pulse, radiant gradients, and luxury finish.
+ * Aesthetic modern Kio homepage emblem: concentric outer circle, inner circle, and luminous center dot.
+ * Preserved identically in visual design with kinetic orbital rotation, harmonic breathing pulse,
+ * radiant gradients, and luxury finish.
  */
 @Composable
-fun KaiLogo(
+fun KioLogo(
   modifier: Modifier = Modifier,
   size: Dp = 80.dp,
   isPrivate: Boolean = false,
   animated: Boolean = true,
-  contentDescription: String? = "Kai Logo"
+  contentDescription: String? = "Kio Logo"
 ) {
   val reduceMotion = LocalReduceMotion.current
   val runAnimation = animated && !reduceMotion
 
-  val infiniteTransition = rememberInfiniteTransition(label = "KaiLogoAnimation")
+  val infiniteTransition = rememberInfiniteTransition(label = "KioLogoAnimation")
 
   val rawOuterRotation = infiniteTransition.animateFloat(
     initialValue = 0f,
@@ -106,18 +107,18 @@ fun KaiLogo(
 
   val outerGradientColors = if (isPrivate) {
     listOf(
-      Color(0xFFC084FC), // Lavender Neon
-      Color(0xFFE879F9), // Fuchsia
-      Color(0xFF7C3AED), // Royal Purple
-      Color(0xFFFFFFFF), // Highlight
+      Color(0xFFC084FC),
+      Color(0xFFE879F9),
+      Color(0xFF7C3AED),
+      Color(0xFFFFFFFF),
       Color(0xFFC084FC)
     )
   } else {
     listOf(
-      Color(0xFF00F2FE), // Electric Cyan
-      Color(0xFF38BDF8), // Sky Azure
-      Color(0xFF6366F1), // Royal Indigo
-      Color(0xFFFFFFFF), // Highlight
+      Color(0xFF00F2FE),
+      Color(0xFF38BDF8),
+      Color(0xFF6366F1),
+      Color(0xFFFFFFFF),
       Color(0xFF00F2FE)
     )
   }
@@ -183,7 +184,6 @@ fun KaiLogo(
           style = Stroke(width = strokeOuter, cap = StrokeCap.Round)
         )
 
-        // Orbital Satellite Pip at 0 degrees
         val satAngleRad = Math.toRadians(0.0)
         val satX = centerOffset.x + (outerRadius * cos(satAngleRad)).toFloat()
         val satY = centerOffset.y + (outerRadius * sin(satAngleRad)).toFloat()
@@ -199,7 +199,7 @@ fun KaiLogo(
         )
       }
 
-      // 3. Inner Circle: Precision concentric arcs with counter-rotation & subtle pulse
+      // 3. Inner Circle: Precision concentric arcs with counter-rotation
       rotate(degrees = innerRotation, pivot = centerOffset) {
         val arcRectTopLeft = Offset(centerOffset.x - innerRadius, centerOffset.y - innerRadius)
         val arcRectSize = Size(innerRadius * 2f, innerRadius * 2f)
@@ -213,7 +213,6 @@ fun KaiLogo(
           center = centerOffset
         )
 
-        // Symmetrical dual arcs with micro gaps for modernist horology precision look
         drawArc(
           brush = innerSweepBrush,
           startAngle = 18f,
@@ -236,7 +235,6 @@ fun KaiLogo(
 
       // 4. Center Dot: Luminous Quantum Core with breathing glow halo
       scale(scale = pulseScale, pivot = centerOffset) {
-        // Soft aura halo behind core dot
         drawCircle(
           brush = Brush.radialGradient(
             colors = listOf(
@@ -251,7 +249,6 @@ fun KaiLogo(
           center = centerOffset
         )
 
-        // Core solid dot with radial diamond highlight
         drawCircle(
           brush = Brush.radialGradient(
             colors = listOf(

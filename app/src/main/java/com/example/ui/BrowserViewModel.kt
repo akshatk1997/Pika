@@ -17,22 +17,14 @@ import android.webkit.WebChromeClient
 import android.webkit.WebView
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.ai.GlossaryTerm
-import com.example.ai.PageActionItemsResult
-import com.example.ai.PageAnswerResult
-import com.example.ai.PageAssistantEngine
-import com.example.ai.PageFactsResult
-import com.example.ai.PageInsightsResult
-import com.example.ai.PageSummaryResult
-import com.example.ai.PhishingRiskAssessment
-import com.example.ai.PhishingRiskLevel
-import com.example.ai.PhishingScamDetector
-import com.example.ai.SummaryMode
-import com.example.ai.TtsReader
 import com.example.data.BookmarkImportExport
 import com.example.data.LocalBrowserDatabase
 import com.example.data.SettingsRepository
 import com.example.download.DownloadController
+import com.example.extensions.ChromeExtensionManager
+import com.example.extensions.CrxUnpacker
+import com.example.extensions.ExtensionInstallResult
+import com.example.extensions.InstalledExtension
 import com.example.media.MediaPlaybackService
 import com.example.model.BookmarkItem
 import com.example.model.ClearDataOptions
@@ -49,12 +41,16 @@ import com.example.model.ReaderArticle
 import com.example.model.SecurityState
 import com.example.model.SettingsState
 import com.example.model.SitePermissionRule
-import com.example.model.SniffedMediaType
-import com.example.model.SniffedResource
 import com.example.model.TabInfo
 import com.example.model.UserAgentMode
 import com.example.model.WebPermissionKind
 import com.example.model.WebPermissionPrompt
+import com.example.reader.NarrationSegment
+import com.example.reader.NarratorState
+import com.example.reader.NlpContentAnnouncer
+import com.example.security.PhishingRiskAssessment
+import com.example.security.PhishingRiskLevel
+import com.example.security.PhishingScamDetector
 import com.example.security.ResolvedNavigation
 import com.example.security.TrackerBlocker
 import com.example.security.UrlValidator
@@ -84,7 +80,7 @@ enum class ActiveOverlay {
   BOOKMARKS,
   HISTORY,
   DOWNLOADS,
-  RESOURCES,
+  EXTENSIONS,
   SETTINGS
 }
 
@@ -129,14 +125,29 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   private val _activeOverlay = MutableStateFlow(ActiveOverlay.NONE)
   val activeOverlay: StateFlow<ActiveOverlay> = _activeOverlay.asStateFlow()
 
-  private val _sniffedResourcesRevision = MutableStateFlow(0L)
-  val sniffedResourcesRevision: StateFlow<Long> = _sniffedResourcesRevision.asStateFlow()
-
   private val _findState = MutableStateFlow(FindState())
   val findState: StateFlow<FindState> = _findState.asStateFlow()
 
   private val _readerArticle = MutableStateFlow<ReaderArticle?>(null)
   val readerArticle: StateFlow<ReaderArticle?> = _readerArticle.asStateFlow()
+
+  private val _readerSegments = MutableStateFlow<List<NarrationSegment>>(emptyList())
+  val readerSegments: StateFlow<List<NarrationSegment>> = _readerSegments.asStateFlow()
+
+  private val _narratorState = MutableStateFlow(NarratorState())
+  val narratorState: StateFlow<NarratorState> = _narratorState.asStateFlow()
+
+  private val contentAnnouncer = NlpContentAnnouncer(appContext) { state ->
+    _narratorState.value = state
+  }
+
+  val extensionManager = ChromeExtensionManager(appContext)
+
+  private val _installedExtensions = MutableStateFlow<List<InstalledExtension>>(extensionManager.listExtensions())
+  val installedExtensions: StateFlow<List<InstalledExtension>> = _installedExtensions.asStateFlow()
+
+  private val _isInstallingExtension = MutableStateFlow(false)
+  val isInstallingExtension: StateFlow<Boolean> = _isInstallingExtension.asStateFlow()
 
   private val _pageSource = MutableStateFlow<Pair<String, String>?>(null)
   val pageSource: StateFlow<Pair<String, String>?> = _pageSource.asStateFlow()
@@ -214,178 +225,95 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
   }
 
-  // AI Assistant & Scam Detector
+  // On-Device Phishing & Scam URL Detector
   private val _phishingAssessment = MutableStateFlow<PhishingRiskAssessment?>(null)
   val phishingAssessment: StateFlow<PhishingRiskAssessment?> = _phishingAssessment.asStateFlow()
 
   private val _dismissedPhishingUrls = ConcurrentHashMap.newKeySet<String>()
 
-  private val _pageSummary = MutableStateFlow<PageSummaryResult?>(null)
-  val pageSummary: StateFlow<PageSummaryResult?> = _pageSummary.asStateFlow()
-
-  private val _pageActionItems = MutableStateFlow<PageActionItemsResult?>(null)
-  val pageActionItems: StateFlow<PageActionItemsResult?> = _pageActionItems.asStateFlow()
-
-  private val _pageInsights = MutableStateFlow<PageInsightsResult?>(null)
-  val pageInsights: StateFlow<PageInsightsResult?> = _pageInsights.asStateFlow()
-
-  private val _pageFacts = MutableStateFlow<PageFactsResult?>(null)
-  val pageFacts: StateFlow<PageFactsResult?> = _pageFacts.asStateFlow()
-
-  private val _pageGlossary = MutableStateFlow<List<GlossaryTerm>>(emptyList())
-  val pageGlossary: StateFlow<List<GlossaryTerm>> = _pageGlossary.asStateFlow()
-
-  data class TtsUiState(
-    val isPlaying: Boolean = false,
-    val isPaused: Boolean = false,
-    val speechRate: Float = 1.0f,
-    val errorMessage: String? = null
-  )
-
-  private val _ttsState = MutableStateFlow(TtsUiState())
-  val ttsState: StateFlow<TtsUiState> = _ttsState.asStateFlow()
-
-  private val ttsReader = TtsReader(appContext) { isPlaying, isPaused, err ->
-    _ttsState.update { it.copy(isPlaying = isPlaying, isPaused = isPaused, errorMessage = err) }
-  }
-
-  private val _chatQas = MutableStateFlow<List<PageAnswerResult>>(emptyList())
-  val chatQas: StateFlow<List<PageAnswerResult>> = _chatQas.asStateFlow()
-
-  private val _isAiLoading = MutableStateFlow(false)
-  val isAiLoading: StateFlow<Boolean> = _isAiLoading.asStateFlow()
-
-  private val _showAiAssistantSheet = MutableStateFlow(false)
-  val showAiAssistantSheet: StateFlow<Boolean> = _showAiAssistantSheet.asStateFlow()
-
-  fun openAiAssistant() {
-    _showAiAssistantSheet.value = true
-    if (_pageSummary.value == null) {
-      generatePageSummary(SummaryMode.EXPLAIN_SIMPLY)
-    }
-    if (_pageActionItems.value == null) {
-      fetchPageActionItems()
-    }
-    if (_pageInsights.value == null) {
-      fetchPageInsights()
-    }
-    if (_pageFacts.value == null) {
-      fetchPageFacts()
-    }
-    if (_pageGlossary.value.isEmpty()) {
-      fetchPageGlossary()
-    }
-  }
-
-  fun dismissAiAssistant() {
-    _showAiAssistantSheet.value = false
-  }
-
-  fun generatePageSummary(mode: SummaryMode) {
-    val tab = activeTab()
-    _isAiLoading.value = true
-    webViewPool.extractReaderArticle(tab.id, tab.url) { article ->
-      viewModelScope.launch(Dispatchers.Default) {
-        val text = article?.paragraphs?.joinToString("\n\n") ?: ""
-        val summary = PageAssistantEngine.summarize(text, mode)
-        _pageSummary.value = summary
-        _isAiLoading.value = false
-      }
-    }
-  }
-
-  fun fetchPageActionItems() {
-    val tab = activeTab()
-    webViewPool.extractReaderArticle(tab.id, tab.url) { article ->
-      viewModelScope.launch(Dispatchers.Default) {
-        val text = article?.paragraphs?.joinToString("\n\n") ?: ""
-        val items = PageAssistantEngine.extractActionItems(text)
-        _pageActionItems.value = items
-      }
-    }
-  }
-
-  fun fetchPageInsights() {
-    val tab = activeTab()
-    webViewPool.extractReaderArticle(tab.id, tab.url) { article ->
-      viewModelScope.launch(Dispatchers.Default) {
-        val text = article?.paragraphs?.joinToString("\n\n") ?: ""
-        val insights = PageAssistantEngine.analyzePageInsights(text)
-        _pageInsights.value = insights
-      }
-    }
-  }
-
-  fun fetchPageFacts() {
-    val tab = activeTab()
-    webViewPool.extractReaderArticle(tab.id, tab.url) { article ->
-      viewModelScope.launch(Dispatchers.Default) {
-        val text = article?.paragraphs?.joinToString("\n\n") ?: ""
-        val facts = PageAssistantEngine.extractFactsAndClaims(text)
-        _pageFacts.value = facts
-      }
-    }
-  }
-
-  fun fetchPageGlossary() {
-    val tab = activeTab()
-    webViewPool.extractReaderArticle(tab.id, tab.url) { article ->
-      viewModelScope.launch(Dispatchers.Default) {
-        val text = article?.paragraphs?.joinToString("\n\n") ?: ""
-        val glossary = PageAssistantEngine.extractGlossary(text)
-        _pageGlossary.value = glossary
-      }
-    }
-  }
-
-  fun readAloudCurrentPage() {
-    val summary = _pageSummary.value?.summaryText
-    if (!summary.isNullOrBlank()) {
-      readAloudText(summary)
-      return
-    }
-    val tab = activeTab()
-    webViewPool.extractReaderArticle(tab.id, tab.url) { article ->
-      val text = article?.paragraphs?.joinToString(". ") ?: ""
-      if (text.isNotBlank()) {
-        readAloudText(text.take(3000))
-      } else {
-        showToast("No readable text to read aloud")
-      }
-    }
-  }
-
-  fun readAloudText(text: String) {
-    ttsReader.speak(text)
-  }
-
-  fun stopReadAloud() {
-    ttsReader.stop()
-  }
-
-  fun setReadAloudRate(rate: Float) {
-    ttsReader.setSpeechRate(rate)
-    _ttsState.update { it.copy(speechRate = rate) }
-  }
-
-  fun askPageQuestion(question: String) {
-    if (question.isBlank()) return
-    val tab = activeTab()
-    _isAiLoading.value = true
-    webViewPool.extractReaderArticle(tab.id, tab.url) { article ->
-      viewModelScope.launch(Dispatchers.Default) {
-        val text = article?.paragraphs?.joinToString("\n\n") ?: ""
-        val answer = PageAssistantEngine.answerQuestion(text, question)
-        _chatQas.update { it + answer }
-        _isAiLoading.value = false
-      }
-    }
-  }
-
   fun dismissPhishingWarning(url: String) {
     _dismissedPhishingUrls.add(url)
     _phishingAssessment.value = null
   }
+
+  // Desktop Chrome Extensions Manager Actions
+  fun installExtensionFromStore(urlOrId: String) {
+    if (_isInstallingExtension.value) return
+    _isInstallingExtension.value = true
+    viewModelScope.launch(Dispatchers.IO) {
+      val result = extensionManager.installFromChromeWebStore(urlOrId)
+      withContext(Dispatchers.Main) {
+        _isInstallingExtension.value = false
+        when (result) {
+          is ExtensionInstallResult.Success -> {
+            _installedExtensions.value = extensionManager.listExtensions()
+            webViewPool.applyExtensionsToLiveTabs()
+            showToast("Installed ${result.extension.name}")
+          }
+          is ExtensionInstallResult.Failure -> {
+            showToast(result.reason)
+          }
+        }
+      }
+    }
+  }
+
+  fun installExtensionFromBytes(bytes: ByteArray, fileNameHint: String) {
+    if (_isInstallingExtension.value) return
+    _isInstallingExtension.value = true
+    viewModelScope.launch(Dispatchers.IO) {
+      val result = extensionManager.installFromBytes(bytes, fileNameHint)
+      withContext(Dispatchers.Main) {
+        _isInstallingExtension.value = false
+        when (result) {
+          is ExtensionInstallResult.Success -> {
+            _installedExtensions.value = extensionManager.listExtensions()
+            webViewPool.applyExtensionsToLiveTabs()
+            showToast("Installed ${result.extension.name}")
+          }
+          is ExtensionInstallResult.Failure -> {
+            showToast(result.reason)
+          }
+        }
+      }
+    }
+  }
+
+  fun toggleExtensionEnabled(extId: String, enabled: Boolean) {
+    _installedExtensions.value = extensionManager.setExtensionEnabled(extId, enabled)
+    if (enabled) {
+      webViewPool.applyExtensionsToLiveTabs()
+      showToast("Extension enabled")
+    } else {
+      showToast("Extension disabled · reload page to clear active scripts")
+    }
+  }
+
+  fun removeExtension(extId: String) {
+    _installedExtensions.value = extensionManager.removeExtension(extId)
+    showToast("Extension removed")
+  }
+
+  fun openChromeWebStore() {
+    _activeOverlay.value = ActiveOverlay.NONE
+    val tab = activeTab()
+    updateTab(tab.id) { it.copy(userAgentMode = UserAgentMode.DESKTOP) }
+    webViewPool.applyUserAgentMode(tab.id, tab.isPrivate, UserAgentMode.DESKTOP)
+    navigateActiveTab(ChromeExtensionManager.CHROME_WEB_STORE_URL)
+  }
+
+  fun detectChromeWebStoreExtensionId(url: String): String? = CrxUnpacker.extractChromeStoreId(url)
+
+  // Pure On-Device NLP Content Announcer Controls (Zero Copy / Zero Persistence)
+  fun toggleNarratorPlayPause() = contentAnnouncer.togglePlayPause()
+
+  fun nextNarratorSegment() = contentAnnouncer.nextSegment()
+
+  fun prevNarratorSegment() = contentAnnouncer.previousSegment()
+
+  fun selectNarratorSegment(index: Int) = contentAnnouncer.speakFromIndex(index)
+
+  fun setNarratorSpeechRate(rate: Float) = contentAnnouncer.setSpeechRate(rate)
 
   private val webCallbacks = object : WebViewCallbacks {
     override fun onPageStarted(tabId: String, url: String) {
@@ -404,7 +332,6 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             securityState = sec,
             errorState = null,
             httpWarning = null,
-            sniffedResourcesCount = 0,
             faviconInitial = UrlValidator.extractHost(url).firstOrNull()?.uppercase() ?: ""
           )
         }
@@ -412,12 +339,6 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
           persistOpenTabs()
         }
         if (tabId == _activeTabId.value) {
-          _pageSummary.value = null
-          _pageActionItems.value = null
-          _pageInsights.value = null
-          _pageFacts.value = null
-          _pageGlossary.value = emptyList()
-          _chatQas.value = emptyList()
           if (url.isNotBlank() && !_dismissedPhishingUrls.contains(url)) {
             val assessment = PhishingScamDetector.analyzeUrl(url)
             _phishingAssessment.value = if (assessment.level != PhishingRiskLevel.LOW) assessment else null
@@ -495,13 +416,6 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     override fun onTrackerBlocked(tabId: String) {
       runOnMain {
         updateTab(tabId) { it.copy(trackersBlockedCount = it.trackersBlockedCount + 1) }
-      }
-    }
-
-    override fun onResourceSniffed(tabId: String, count: Int) {
-      runOnMain {
-        _sniffedResourcesRevision.value++
-        updateTab(tabId) { it.copy(sniffedResourcesCount = count) }
       }
     }
 
@@ -722,7 +636,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         _tabs.update { it + newTab }
         _activeTabId.value = newTabId
         _activeOverlay.value = ActiveOverlay.NONE
-        _readerArticle.value = null
+        closeReaderMode()
         _pageSource.value = null
         closeFindInPage()
         persistOpenTabs()
@@ -739,7 +653,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   val webViewPool = WebViewPool(
     context = appContext,
     settingsProvider = { _settings.value },
-    callbacks = webCallbacks
+    callbacks = webCallbacks,
+    extensionManager = extensionManager
   )
 
   init {
@@ -835,21 +750,6 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   fun getOrCreateActiveWebView(): WebView? = getOrCreateWebView(activeTab().id)
 
-  fun getActiveSniffedResources(): List<SniffedResource> =
-    webViewPool.getSniffedResources(activeTab().id)
-
-  fun scanActiveTabForVideos(onComplete: ((Int) -> Unit)? = null) {
-    val tabId = activeTab().id
-    webViewPool.scanDomMedia(tabId) { list ->
-      runOnMain {
-        _sniffedResourcesRevision.value++
-        updateTab(tabId) { it.copy(sniffedResourcesCount = list.size) }
-        val videoCount = list.count { it.type == SniffedMediaType.VIDEO }
-        onComplete?.invoke(videoCount)
-      }
-    }
-  }
-
   fun activeTab(): TabInfo {
     val currentId = _activeTabId.value
     return _tabs.value.firstOrNull { it.id == currentId } ?: _tabs.value.first()
@@ -896,7 +796,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
           }
           return
         }
-        _readerArticle.value = null
+        closeReaderMode()
         _pageSource.value = null
         closeFindInPage()
         val originalHttp = if (res.upgradedFromHttp && res.url.startsWith("https://")) {
@@ -911,8 +811,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             isLoading = true,
             progress = 10,
             errorState = null,
-            httpWarning = null,
-            sniffedResourcesCount = 0
+            httpWarning = null
           )
         }
         webViewPool.getOrCreateWebView(tab.id, tab.isPrivate, tab.userAgentMode, approvedHttpHosts)
@@ -992,7 +891,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     if (switchToNewTab) {
       _activeTabId.value = newTab.id
       _activeOverlay.value = ActiveOverlay.NONE
-      _readerArticle.value = null
+      closeReaderMode()
       _pageSource.value = null
       closeFindInPage()
 
@@ -1015,7 +914,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     _activeTabId.value = tabId
     updateTab(tabId) { it.copy(lastActiveAt = System.currentTimeMillis()) }
     _activeOverlay.value = ActiveOverlay.NONE
-    _readerArticle.value = null
+    closeReaderMode()
     _pageSource.value = null
     closeFindInPage()
     persistOpenTabs()
@@ -1136,7 +1035,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       return true
     }
     if (_readerArticle.value != null) {
-      _readerArticle.value = null
+      closeReaderMode()
       return true
     }
     if (_findState.value.isVisible) {
@@ -1333,16 +1232,16 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     val extractJs = """
       (function() {
         // 1. If currently on a translated page, restore original DOM text nodes immediately
-        if (window.__kai_is_translated) {
+        if (window.__kio_is_translated) {
           try {
-            if (window.__kai_orig_text_nodes) {
-              for (var i = 0; i < window.__kai_orig_text_nodes.length; i++) {
-                var it = window.__kai_orig_text_nodes[i];
+            if (window.__kio_orig_text_nodes) {
+              for (var i = 0; i < window.__kio_orig_text_nodes.length; i++) {
+                var it = window.__kio_orig_text_nodes[i];
                 if (it.node && it.text != null) it.node.nodeValue = it.text;
               }
             }
-            window.__kai_is_translated = false;
-            var banner = document.getElementById('kai-translate-banner');
+            window.__kio_is_translated = false;
+            var banner = document.getElementById('kio-translate-banner');
             if (banner) banner.remove();
             return JSON.stringify({ action: 'restored' });
           } catch(e) {
@@ -1367,7 +1266,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                   tag === 'IFRAME') {
                 return NodeFilter.FILTER_REJECT;
               }
-              if (parent.closest && parent.closest('[translate="no"], .notranslate, #kai-translate-banner')) {
+              if (parent.closest && parent.closest('[translate="no"], .notranslate, #kio-translate-banner')) {
                 return NodeFilter.FILTER_REJECT;
               }
               return NodeFilter.FILTER_ACCEPT;
@@ -1390,13 +1289,13 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
           return JSON.stringify({ action: 'no_content' });
         }
 
-        window.__kai_orig_text_nodes = origNodes;
+        window.__kio_orig_text_nodes = origNodes;
 
         // 3. Create non-intrusive floating status banner
-        var oldBanner = document.getElementById('kai-translate-banner');
+        var oldBanner = document.getElementById('kio-translate-banner');
         if (oldBanner) oldBanner.remove();
         var banner = document.createElement('div');
-        banner.id = 'kai-translate-banner';
+        banner.id = 'kio-translate-banner';
         banner.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:999999;background:rgba(15,23,42,0.94);color:#F1F5F9;font-family:system-ui,-apple-system,sans-serif;font-size:12px;padding:8px 18px;border-radius:24px;border:1px solid rgba(0,242,254,0.35);box-shadow:0 6px 20px rgba(0,0,0,0.4);display:flex;align-items:center;gap:10px;pointer-events:auto;backdrop-filter:blur(10px);';
         banner.innerHTML = '<span style="color:#00F2FE;">🌐</span> Translating page in real time...';
         document.body.appendChild(banner);
@@ -1446,11 +1345,11 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                     (function() {
                       var offset = $currentOffset;
                       var translations = $chunkJsonArray;
-                      if (window.__kai_orig_text_nodes) {
+                      if (window.__kio_orig_text_nodes) {
                         for (var k = 0; k < translations.length; k++) {
                           var targetIndex = offset + k;
-                          if (targetIndex < window.__kai_orig_text_nodes.length) {
-                            var item = window.__kai_orig_text_nodes[targetIndex];
+                          if (targetIndex < window.__kio_orig_text_nodes.length) {
+                            var item = window.__kio_orig_text_nodes[targetIndex];
                             if (item && item.node && translations[k]) {
                               item.node.nodeValue = translations[k];
                             }
@@ -1469,20 +1368,20 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                 val liveWv = webViewPool.getLiveWebView(tab.id)
                 val finalizeJs = """
                   (function() {
-                    window.__kai_is_translated = true;
-                    var banner = document.getElementById('kai-translate-banner');
+                    window.__kio_is_translated = true;
+                    var banner = document.getElementById('kio-translate-banner');
                     if (banner) {
-                      banner.innerHTML = '<span style="color:#00F2FE;">🌐</span> Translated to $targetLangName (Real-Time Translate) <button id="kai-restore-btn" style="background:rgba(255,255,255,0.18);border:none;color:#FFF;padding:3px 10px;border-radius:12px;cursor:pointer;margin-left:8px;font-size:11px;font-weight:600;">Restore</button>';
-                      var btn = document.getElementById('kai-restore-btn');
+                      banner.innerHTML = '<span style="color:#00F2FE;">🌐</span> Translated to $targetLangName (Real-Time Translate) <button id="kio-restore-btn" style="background:rgba(255,255,255,0.18);border:none;color:#FFF;padding:3px 10px;border-radius:12px;cursor:pointer;margin-left:8px;font-size:11px;font-weight:600;">Restore</button>';
+                      var btn = document.getElementById('kio-restore-btn');
                       if (btn) {
                         btn.onclick = function() {
-                          if (window.__kai_orig_text_nodes) {
-                            for (var m = 0; m < window.__kai_orig_text_nodes.length; m++) {
-                              var it = window.__kai_orig_text_nodes[m];
+                          if (window.__kio_orig_text_nodes) {
+                            for (var m = 0; m < window.__kio_orig_text_nodes.length; m++) {
+                              var it = window.__kio_orig_text_nodes[m];
                               if (it.node && it.text != null) it.node.nodeValue = it.text;
                             }
                           }
-                          window.__kai_is_translated = false;
+                          window.__kio_is_translated = false;
                           banner.remove();
                         };
                       }
@@ -1526,7 +1425,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
           }
           var media = document.querySelectorAll('video, audio');
           for (var i = 0; i < media.length; i++) {
-            media[i].__kai_user_paused = false;
+            media[i].__kio_user_paused = false;
             if (media[i].paused) {
               media[i].play().catch(function() {});
             }
@@ -1541,7 +1440,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
           }
           var media = document.querySelectorAll('video, audio');
           for (var i = 0; i < media.length; i++) {
-            media[i].__kai_user_paused = true;
+            media[i].__kio_user_paused = true;
             if (!media[i].paused) {
               media[i].pause();
             }
@@ -1591,7 +1490,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
           }
           var media = document.querySelectorAll('video, audio');
           for (var i = 0; i < media.length; i++) {
-            media[i].__kai_user_paused = true;
+            media[i].__kio_user_paused = true;
             media[i].pause();
           }
         })();
@@ -1875,24 +1774,31 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
   }
 
-  // Reader Mode & Page Source
+  // Pure On-Device NLP Content Announcer / Reader Mode (Volatile RAM only — zero copy/save)
   fun toggleReaderMode() {
     if (_readerArticle.value != null) {
-      _readerArticle.value = null
+      closeReaderMode()
       return
     }
     val tab = activeTab()
-    if (tab.url.isBlank()) return
+    if (tab.url.isBlank()) {
+      showToast("Open a web page to narrate")
+      return
+    }
     webViewPool.extractReaderArticle(tab.id, tab.url) { article ->
       if (article == null) {
         showToast("No readable text found")
       } else {
+        val segments = contentAnnouncer.startArticle(article, autoSpeak = true)
+        _readerSegments.value = segments
         _readerArticle.value = article
       }
     }
   }
 
   fun closeReaderMode() {
+    contentAnnouncer.wipeAndStop()
+    _readerSegments.value = emptyList()
     _readerArticle.value = null
   }
 
@@ -2059,7 +1965,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     _activeOverlay.value = overlay
     if (overlay == ActiveOverlay.BOOKMARKS) refreshBookmarks("")
     if (overlay == ActiveOverlay.HISTORY) refreshHistory("")
-    if (overlay == ActiveOverlay.RESOURCES) scanActiveTabForVideos()
+    if (overlay == ActiveOverlay.EXTENSIONS) _installedExtensions.value = extensionManager.listExtensions()
   }
 
   fun showToast(message: String) {
@@ -2072,7 +1978,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   override fun onCleared() {
     super.onCleared()
-    ttsReader.shutdown()
+    contentAnnouncer.shutdown()
     MediaPlaybackService.mediaControlListener = null
     MediaPlaybackService.stop(appContext)
     webViewPool.destroyAll()

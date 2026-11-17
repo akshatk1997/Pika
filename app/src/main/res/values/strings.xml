@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Kai</string>
+    <string name="app_name">Kio</string>
 
     <!-- Navigation & Omnibox -->
     <string name="omnibox_hint">Search or enter URL</string>
@@ -33,7 +33,10 @@
     <string name="action_open_external">Open externally</string>
     <string name="action_share">Share</string>
     <string name="action_settings">Settings</string>
-    <string name="action_resources">Resources</string>
+    <string name="action_announcer">Narrate</string>
+    <string name="action_extensions">Extensions</string>
+    <string name="action_fullscreen">Full screen</string>
+    <string name="action_exit_fullscreen">Exit full</string>
     <string name="action_save_pdf">Save PDF</string>
     <string name="action_view_source">Page source</string>
     <string name="action_translate">Translate</string>

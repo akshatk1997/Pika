@@ -21,6 +21,7 @@ import android.webkit.CookieManager
 import android.widget.FrameLayout
 import android.widget.ProgressBar
 import android.webkit.GeolocationPermissions
+import android.webkit.JavascriptInterface
 import android.webkit.PermissionRequest
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.SafeBrowsingResponse
@@ -35,13 +36,12 @@ import android.webkit.WebStorage
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.webkit.WebViewDatabase
+import com.example.extensions.ChromeExtensionManager
 import com.example.model.ClearDataOptions
 import com.example.model.PageError
 import com.example.model.PageErrorType
 import com.example.model.ReaderArticle
 import com.example.model.SettingsState
-import com.example.model.SniffedMediaType
-import com.example.model.SniffedResource
 import com.example.model.ThemeMode
 import com.example.model.UserAgentMode
 import com.example.model.WebPermissionKind
@@ -63,7 +63,6 @@ interface WebViewCallbacks {
   fun onProgressChanged(tabId: String, progress: Int)
   fun onTitleReceived(tabId: String, title: String)
   fun onTrackerBlocked(tabId: String)
-  fun onResourceSniffed(tabId: String, count: Int)
   fun onHttpBlockedByHttpsOnly(tabId: String, url: String)
   fun onBlockedScheme(tabId: String, url: String, scheme: String)
   fun onExternalSchemePrompt(tabId: String, url: String, scheme: String)
@@ -128,12 +127,12 @@ open class BackgroundMediaWebView(
 class WebViewPool(
   private val context: Context,
   private val settingsProvider: () -> SettingsState,
-  private val callbacks: WebViewCallbacks
+  private val callbacks: WebViewCallbacks,
+  private val extensionManager: ChromeExtensionManager? = null
 ) {
 
   companion object {
     private const val MAX_LIVE_WEBVIEWS = 4
-    private const val MAX_SNIFFED_PER_TAB = 50
     private const val DESKTOP_USER_AGENT =
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
     private const val IPHONE_USER_AGENT =
@@ -143,9 +142,11 @@ class WebViewPool(
   private val appContext: Context = context.applicationContext
   private val liveViews = object : LinkedHashMap<String, WebView>(4, 0.75f, true) {}
   private val savedStates = HashMap<String, Bundle>()
-  private val sniffedResourcesByTab = ConcurrentHashMap<String, LinkedHashMap<String, SniffedResource>>()
   private val currentPageHosts = ConcurrentHashMap<String, String>()
+  private val currentPageUrls = ConcurrentHashMap<String, String>()
+  private val currentPageTitles = ConcurrentHashMap<String, String>()
   private val tabUserAgentModes = ConcurrentHashMap<String, UserAgentMode>()
+  private val pageEarlyInjectedStage = ConcurrentHashMap<String, Int>()
   private val destroyedViews = Collections.newSetFromMap(WeakHashMap<WebView, Boolean>())
   private val defaultUserAgent: String by lazy {
     try {
@@ -158,7 +159,7 @@ class WebViewPool(
     try {
       val raw = defaultUserAgent
       // Strip "; wv" and "Version/4.0 " markers so modern websites and video platforms
-      // recognize Kai as authentic Google Chrome Mobile rather than a stripped in-app WebView
+      // recognize Kio as authentic Google Chrome Mobile rather than a stripped in-app WebView
       raw.replace(Regex(";\\s*wv\\b"), "")
         .replace(Regex("Version/\\d+\\.\\d+\\s*"), "")
         .replace(Regex("\\s{2,}"), " ")
@@ -243,109 +244,26 @@ class WebViewPool(
 
   fun getLiveWebView(tabId: String): WebView? = liveViews[tabId]?.takeIf { !destroyedViews.contains(it) }
 
-  fun getSniffedResources(tabId: String): List<SniffedResource> {
-    val map = sniffedResourcesByTab[tabId] ?: return emptyList()
-    return synchronized(map) { map.values.toList().reversed() }
-  }
-
-  fun clearSniffedResources(tabId: String) {
-    sniffedResourcesByTab.remove(tabId)
-  }
-
-  fun scanDomMedia(tabId: String, callback: ((List<SniffedResource>) -> Unit)? = null) {
-    val webView = getLiveWebView(tabId) ?: run {
-      callback?.invoke(emptyList())
-      return
-    }
-    val js = """
-      (function() {
-        var found = [];
-        function add(u) {
-          if (u && typeof u === 'string') {
-            var trimmed = u.trim();
-            if (trimmed.indexOf('http://') === 0 || trimmed.indexOf('https://') === 0) {
-              if (found.indexOf(trimmed) === -1) found.push(trimmed);
-            }
-          }
-        }
-        try {
-          var vids = document.querySelectorAll('video, audio');
-          for (var i = 0; i < vids.length; i++) {
-            var v = vids[i];
-            add(v.currentSrc);
-            add(v.src);
-            var sources = v.querySelectorAll('source');
-            for (var j = 0; j < sources.length; j++) {
-              add(sources[j].src);
-            }
-          }
-          var iframes = document.querySelectorAll('iframe');
-          for (var k = 0; k < iframes.length; k++) {
-            var isrc = iframes[k].src;
-            if (isrc && (isrc.indexOf('/embed/') !== -1 || isrc.indexOf('player.') !== -1 || isrc.indexOf('video') !== -1)) {
-              add(isrc);
-            }
-          }
-        } catch(e) {}
-        return JSON.stringify(found);
-      })();
-    """.trimIndent()
-
-    try {
-      webView.evaluateJavascript(js) { jsonResult ->
-        if (jsonResult.isNullOrBlank() || jsonResult == "null" || jsonResult == "\"[]\"" || jsonResult == "[]") {
-          callback?.invoke(getSniffedResources(tabId))
-          return@evaluateJavascript
-        }
-        try {
-          val rawJson = if (jsonResult.startsWith("\"") && jsonResult.endsWith("\"")) {
-            org.json.JSONTokener(jsonResult).nextValue().toString()
-          } else {
-            jsonResult
-          }
-          val array = org.json.JSONArray(rawJson)
-          val map = sniffedResourcesByTab.getOrPut(tabId) { LinkedHashMap() }
-          var added = 0
-          for (i in 0 until array.length()) {
-            val url = array.optString(i).trim()
-            if (url.isNotEmpty() && UrlValidator.isSafeWebUrl(url)) {
-              val res = TrackerBlocker.inferSniffedResource(url) ?: run {
-                val host = UrlValidator.extractHost(url)
-                val cleanHost = host.replace(Regex("[^a-zA-Z0-9]"), "_").trim('_')
-                val hash = kotlin.math.abs(url.hashCode() % 10000)
-                SniffedResource(
-                  url = url,
-                  host = host,
-                  fileName = "video_${cleanHost}_$hash.mp4",
-                  type = SniffedMediaType.VIDEO
-                )
-              }
-              synchronized(map) {
-                if (!map.containsKey(res.url) && map.size < MAX_SNIFFED_PER_TAB) {
-                  map[res.url] = res
-                  added++
-                }
-              }
-            }
-          }
-          if (added > 0) {
-            val currentSize = synchronized(map) { map.size }
-            callbacks.onResourceSniffed(tabId, currentSize)
-          }
-          callback?.invoke(getSniffedResources(tabId))
-        } catch (_: Throwable) {
-          callback?.invoke(getSniffedResources(tabId))
-        }
+  fun applyExtensionsToLiveTabs() {
+    val extMgr = extensionManager ?: return
+    if (!settingsProvider().javascriptEnabled) return
+    for ((id, wv) in liveViews.toMap()) {
+      if (destroyedViews.contains(wv)) continue
+      val url = currentPageUrls[id].orEmpty()
+      if (url.isBlank()) continue
+      val script = extMgr.buildPageInjectionScript(url, "end") ?: continue
+      try {
+        wv.evaluateJavascript(script, null)
+      } catch (_: Throwable) {
       }
-    } catch (_: Throwable) {
-      callback?.invoke(getSniffedResources(tabId))
     }
   }
 
   fun loadUrl(tabId: String, url: String) {
     val webView = getLiveWebView(tabId) ?: return
-    sniffedResourcesByTab.remove(tabId)
+    pageEarlyInjectedStage[tabId] = 0
     currentPageHosts[tabId] = UrlValidator.extractHost(url)
+    currentPageUrls[tabId] = url
     val s = settingsProvider()
     val headers = mutableMapOf(
       "Sec-GPC" to "1",
@@ -402,10 +320,10 @@ class WebViewPool(
     val js = if (enabled) {
       """
       (function() {
-        window.__kai_desktop_mode = true;
+        window.__kio_desktop_mode = true;
         function enforceDesktopViewport() {
           try {
-            if (!window.__kai_desktop_mode) return;
+            if (!window.__kio_desktop_mode) return;
             var head = document.head || document.documentElement;
             if (!head) return;
             var meta = document.querySelector('meta[name="viewport"]');
@@ -451,14 +369,14 @@ class WebViewPool(
             });
           }
         } catch(e) {}
-        if (!window.__kai_desktop_observer && window.MutationObserver) {
+        if (!window.__kio_desktop_observer && window.MutationObserver) {
           var target = document.head || document.documentElement;
           if (target) {
             var obs = new MutationObserver(function() {
-              if (window.__kai_desktop_mode) enforceDesktopViewport();
+              if (window.__kio_desktop_mode) enforceDesktopViewport();
             });
             obs.observe(target, { childList: true, subtree: true, attributes: true, attributeFilter: ['content'] });
-            window.__kai_desktop_observer = obs;
+            window.__kio_desktop_observer = obs;
           }
         }
       })();
@@ -466,10 +384,10 @@ class WebViewPool(
     } else {
       """
       (function() {
-        window.__kai_desktop_mode = false;
-        if (window.__kai_desktop_observer) {
-          try { window.__kai_desktop_observer.disconnect(); } catch(e) {}
-          window.__kai_desktop_observer = null;
+        window.__kio_desktop_mode = false;
+        if (window.__kio_desktop_observer) {
+          try { window.__kio_desktop_observer.disconnect(); } catch(e) {}
+          window.__kio_desktop_observer = null;
         }
       })();
       """.trimIndent()
@@ -494,7 +412,7 @@ class WebViewPool(
           } catch(e) {}
         }
         clearBlankTargets(document);
-        if (!window.__kai_search_sametab_observer && window.MutationObserver) {
+        if (!window.__kio_search_sametab_observer && window.MutationObserver) {
           var obs = new MutationObserver(function(mutations) {
             for (var i = 0; i < mutations.length; i++) {
               var added = mutations[i].addedNodes;
@@ -513,7 +431,7 @@ class WebViewPool(
           var root = document.body || document.documentElement;
           if (root) {
             obs.observe(root, { childList: true, subtree: true });
-            window.__kai_search_sametab_observer = obs;
+            window.__kio_search_sametab_observer = obs;
           }
         }
       })();
@@ -528,9 +446,9 @@ class WebViewPool(
     if (!settingsProvider().javascriptEnabled || destroyedViews.contains(webView)) return
     val js = """
       (function() {
-        if (window.__kai_link_tracker_installed) return;
-        window.__kai_link_tracker_installed = true;
-        window.__kai_touch_ctx = { link: '', image: '', ts: 0 };
+        if (window.__kio_link_tracker_installed) return;
+        window.__kio_link_tracker_installed = true;
+        window.__kio_touch_ctx = { link: '', image: '', ts: 0 };
 
         function isValidHref(u) {
           if (!u || typeof u !== 'string') return false;
@@ -598,7 +516,7 @@ class WebViewPool(
               }
             }
 
-            window.__kai_touch_ctx = { link: link, image: img, ts: Date.now() };
+            window.__kio_touch_ctx = { link: link, image: img, ts: Date.now() };
           } catch(e) {}
         }
 
@@ -606,8 +524,8 @@ class WebViewPool(
         document.addEventListener('pointerdown', function(e) { captureTarget(e.target); }, { capture: true, passive: true });
         document.addEventListener('contextmenu', function(e) { captureTarget(e.target); }, { capture: true, passive: true });
 
-        window.__kai_get_touch_ctx = function() {
-          var ctx = window.__kai_touch_ctx || { link: '', image: '', ts: 0 };
+        window.__kio_get_touch_ctx = function() {
+          var ctx = window.__kio_touch_ctx || { link: '', image: '', ts: 0 };
           if (Date.now() - (ctx.ts || 0) > 6000) {
             return JSON.stringify({ link: '', image: '' });
           }
@@ -639,10 +557,10 @@ class WebViewPool(
       (function() {
         var isDark = $isDark;
         var mode = '$modeStr';
-        if (window.__kaiSetTheme) {
-          window.__kaiSetTheme(mode);
+        if (window.__kioSetTheme) {
+          window.__kioSetTheme(mode);
         }
-        var id = 'kai-theme-mode-style';
+        var id = 'kio-theme-mode-style';
         var s = document.getElementById(id);
         if (!s) {
           s = document.createElement('style');
@@ -658,7 +576,7 @@ class WebViewPool(
         }
         meta.content = mode;
         if (!isDark) {
-          var nightStyle = document.getElementById('kai-night-style');
+          var nightStyle = document.getElementById('kio-night-style');
           if (nightStyle) nightStyle.remove();
         }
       })();
@@ -694,9 +612,11 @@ class WebViewPool(
 
   fun destroyTab(tabId: String, isPrivate: Boolean = false) {
     savedStates.remove(tabId)
-    sniffedResourcesByTab.remove(tabId)
     currentPageHosts.remove(tabId)
+    currentPageUrls.remove(tabId)
+    currentPageTitles.remove(tabId)
     tabUserAgentModes.remove(tabId)
+    pageEarlyInjectedStage.remove(tabId)
     liveViews.remove(tabId)?.let { wv ->
       if (isPrivate) {
         try {
@@ -807,7 +727,7 @@ class WebViewPool(
     val webView = getLiveWebView(tabId) ?: return false
     return try {
       val printManager = activityContext.getSystemService(Context.PRINT_SERVICE) as? PrintManager ?: return false
-      val jobName = UrlValidator.sanitizeDisplayText(title, 64).ifEmpty { "Kai_Page" }
+      val jobName = UrlValidator.sanitizeDisplayText(title, 64).ifEmpty { "Kio_Page" }
       val adapter = webView.createPrintDocumentAdapter(jobName)
       printManager.print(jobName, adapter, PrintAttributes.Builder().build())
       true
@@ -912,9 +832,11 @@ class WebViewPool(
 
   fun destroyAll() {
     savedStates.clear()
-    sniffedResourcesByTab.clear()
     currentPageHosts.clear()
+    currentPageUrls.clear()
+    currentPageTitles.clear()
     tabUserAgentModes.clear()
+    pageEarlyInjectedStage.clear()
     val ids = liveViews.keys.toList()
     ids.forEach { destroyTab(it) }
   }
@@ -924,7 +846,7 @@ class WebViewPool(
     val js = if (enabled) {
       """
       (function(){
-        var id='kai-night-style';
+        var id='kio-night-style';
         if(document.getElementById(id))return;
         var s=document.createElement('style');
         s.id=id;
@@ -933,7 +855,7 @@ class WebViewPool(
       })();
       """.trimIndent()
     } else {
-      "(function(){var s=document.getElementById('kai-night-style');if(s)s.remove();})();"
+      "(function(){var s=document.getElementById('kio-night-style');if(s)s.remove();})();"
     }
     try {
       webView.evaluateJavascript(js, null)
@@ -946,11 +868,11 @@ class WebViewPool(
     val js = if (enabled) {
       """
       (function() {
-        if (window.__kai_adblock_installed) return;
-        window.__kai_adblock_installed = true;
+        if (window.__kio_adblock_installed) return;
+        window.__kio_adblock_installed = true;
 
         try {
-          var styleId = 'kai-adblock-shield-style';
+          var styleId = 'kio-adblock-shield-style';
           if (!document.getElementById(styleId)) {
             var s = document.createElement('style');
             s.id = styleId;
@@ -1012,7 +934,7 @@ class WebViewPool(
               for (var i = 0; i < videos.length; i++) {
                 var v = videos[i];
                 if (!v.muted) {
-                  v.__kai_ad_muted = true;
+                  v.__kio_ad_muted = true;
                   v.muted = true;
                 }
                 v.playbackRate = 16.0;
@@ -1025,9 +947,9 @@ class WebViewPool(
                 if (cv.playbackRate > 2.0) {
                   cv.playbackRate = 1.0;
                 }
-                if (cv.__kai_ad_muted) {
+                if (cv.__kio_ad_muted) {
                   cv.muted = false;
-                  delete cv.__kai_ad_muted;
+                  delete cv.__kio_ad_muted;
                 }
               }
             }
@@ -1052,8 +974,8 @@ class WebViewPool(
     } else {
       """
       (function() {
-        window.__kai_adblock_installed = false;
-        var s = document.getElementById('kai-adblock-shield-style');
+        window.__kio_adblock_installed = false;
+        var s = document.getElementById('kio-adblock-shield-style');
         if (s) s.remove();
       })();
       """.trimIndent()
@@ -1069,8 +991,8 @@ class WebViewPool(
     val js = if (enabled) {
       """
       (function() {
-        if (window.__kai_bg_play_installed) return;
-        window.__kai_bg_play_installed = true;
+        if (window.__kio_bg_play_installed) return;
+        window.__kio_bg_play_installed = true;
 
         function spoofVisibility() {
           try {
@@ -1142,7 +1064,7 @@ class WebViewPool(
     } else {
       """
       (function() {
-        window.__kai_bg_play_installed = false;
+        window.__kio_bg_play_installed = false;
       })();
       """.trimIndent()
     }
@@ -1157,9 +1079,9 @@ class WebViewPool(
     if (!enabled) {
       val cleanupJs = """
         (function(){
-          var s = document.getElementById('kai-data-saver-style');
+          var s = document.getElementById('kio-data-saver-style');
           if (s) s.remove();
-          window.__kai_data_saver_active = false;
+          window.__kio_data_saver_active = false;
         })();
       """.trimIndent()
       try { webView.evaluateJavascript(cleanupJs, null) } catch (_: Throwable) {}
@@ -1167,7 +1089,7 @@ class WebViewPool(
     }
     val js = """
       (function() {
-        window.__kai_data_saver_active = true;
+        window.__kio_data_saver_active = true;
         var host = (window.location && window.location.hostname) || '';
         var isStreamingSite = host.indexOf('youtube.com') !== -1 ||
                               host.indexOf('youtu.be') !== -1 ||
@@ -1175,7 +1097,7 @@ class WebViewPool(
                               host.indexOf('twitch.tv') !== -1 ||
                               host.indexOf('dailymotion.com') !== -1;
 
-        var id = 'kai-data-saver-style';
+        var id = 'kio-data-saver-style';
         var s = document.getElementById(id);
         if (!s) {
           s = document.createElement('style');
@@ -1230,8 +1152,8 @@ class WebViewPool(
     if (!settingsProvider().javascriptEnabled || destroyedViews.contains(webView)) return
     val js = """
       (function() {
-        if (window.__kai_video_engine_installed) return;
-        window.__kai_video_engine_installed = true;
+        if (window.__kio_video_engine_installed) return;
+        window.__kio_video_engine_installed = true;
 
         // 1. Comprehensive canPlayType polyfill across all media element prototypes
         try {
@@ -1296,8 +1218,8 @@ class WebViewPool(
             }
 
             // Remove any failing crossorigin attribute on error and retry fallback sources
-            if (!video.__kai_error_bound) {
-              video.__kai_error_bound = true;
+            if (!video.__kio_error_bound) {
+              video.__kio_error_bound = true;
               video.addEventListener('error', function() {
                 try {
                   if (video.hasAttribute('crossorigin')) {
@@ -1492,8 +1414,8 @@ class WebViewPool(
     if (!settingsProvider().javascriptEnabled || destroyedViews.contains(webView)) return
     val js = """
       (function() {
-        if (window.__kai_stealth_privacy_shield_installed) return;
-        window.__kai_stealth_privacy_shield_installed = true;
+        if (window.__kio_stealth_privacy_shield_installed) return;
+        window.__kio_stealth_privacy_shield_installed = true;
 
         // 1. Global Privacy Control (GPC) & Do Not Track (W3C / CCPA / GDPR)
         try {
@@ -1676,6 +1598,35 @@ class WebViewPool(
     } catch (_: Throwable) {
     }
 
+    if (extensionManager != null) {
+      try {
+        webView.addJavascriptInterface(
+          object {
+            @JavascriptInterface
+            fun storageGetAll(extId: String): String = extensionManager.readStorageJson(extId)
+
+            @JavascriptInterface
+            fun storageSetAll(extId: String, json: String) = extensionManager.writeStorageJson(extId, json)
+
+            @JavascriptInterface
+            fun openTab(url: String) {
+              if (UrlValidator.isSafeWebUrl(url) && url != "about:blank") {
+                callbacks.onNewTabRequested(tabId, url, isPrivate)
+              }
+            }
+
+            @JavascriptInterface
+            fun getActiveUrl(): String = currentPageUrls[tabId].orEmpty()
+
+            @JavascriptInterface
+            fun getActiveTitle(): String = currentPageTitles[tabId].orEmpty()
+          },
+          "__KioExtBridge"
+        )
+      } catch (_: Throwable) {
+      }
+    }
+
     webView.setOnLongClickListener { v ->
       try {
         val wv = v as? WebView ?: return@setOnLongClickListener false
@@ -1711,7 +1662,7 @@ class WebViewPool(
             val nativeSrc = msg.data?.getString("src")
             if (settingsProvider().javascriptEnabled && !destroyedViews.contains(wv)) {
               try {
-                wv.evaluateJavascript("(function(){return window.__kai_get_touch_ctx?window.__kai_get_touch_ctx():'{}';})();") { rawJson ->
+                wv.evaluateJavascript("(function(){return window.__kio_get_touch_ctx?window.__kio_get_touch_ctx():'{}';})();") { rawJson ->
                   var domLink: String? = null
                   var domImg: String? = null
                   try {
@@ -1789,6 +1740,8 @@ class WebViewPool(
       ): WebResourceResponse? {
         return try {
           val reqUrl = request?.url?.toString() ?: return null
+          // Serve local Chrome Extension virtual assets cleanly via https://kio-ext.invalid/<extId>/...
+          extensionManager?.serveVirtualExtensionResource(reqUrl)?.let { return it }
           // Allow internal browser schemes (blob:, data:) to be processed natively by Chromium (MediaSource MSE, inline assets)
           if (reqUrl.startsWith("blob:", ignoreCase = true) || reqUrl.startsWith("data:", ignoreCase = true)) {
             return null
@@ -1809,7 +1762,8 @@ class WebViewPool(
           }
           val pageHost = currentPageHosts[tabId].orEmpty()
           val customSet = currentSettings.customBlockedHosts.toSet()
-          if (TrackerBlocker.shouldBlockRequest(reqUrl, pageHost, currentSettings.trackerBlockingEnabled, customSet)) {
+          val blockedByDnr = extensionManager?.shouldBlockByDnrRules(reqUrl, pageHost) == true
+          if (blockedByDnr || TrackerBlocker.shouldBlockRequest(reqUrl, pageHost, currentSettings.trackerBlockingEnabled, customSet)) {
             callbacks.onTrackerBlocked(tabId)
             val acceptHeader = request?.requestHeaders?.get("Accept")?.lowercase() ?: ""
             val isVast = reqUrl.contains("vast", ignoreCase = true) ||
@@ -1823,16 +1777,6 @@ class WebViewPool(
               acceptHeader.contains("application/json")
             return if (isJson) emptyBlockedJsonResponse() else emptyBlockedResponse()
           }
-          TrackerBlocker.inferSniffedResource(reqUrl)?.let { res ->
-            val map = sniffedResourcesByTab.getOrPut(tabId) { LinkedHashMap() }
-            val newCount = synchronized(map) {
-              if (!map.containsKey(res.url) && map.size < MAX_SNIFFED_PER_TAB) {
-                map[res.url] = res
-              }
-              map.size
-            }
-            callbacks.onResourceSniffed(tabId, newCount)
-          }
           null
         } catch (_: Throwable) {
           null
@@ -1841,7 +1785,9 @@ class WebViewPool(
 
       override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
         if (url != null) {
+          pageEarlyInjectedStage[tabId] = 0
           currentPageHosts[tabId] = UrlValidator.extractHost(url)
+          currentPageUrls[tabId] = url
           if (view != null) {
             if (tabUserAgentModes[tabId] == UserAgentMode.DESKTOP) {
               applyDesktopModeEngine(view, true)
@@ -1862,6 +1808,11 @@ class WebViewPool(
             if (s.dataSaverEnabled) {
               applyDataSaver(view, true)
             }
+            if (s.javascriptEnabled) {
+              extensionManager?.buildPageInjectionScript(url, "start")?.let { extJs ->
+                try { view.evaluateJavascript(extJs, null) } catch (_: Throwable) {}
+              }
+            }
           }
           callbacks.onPageStarted(tabId, url)
         }
@@ -1870,6 +1821,7 @@ class WebViewPool(
       override fun onPageFinished(view: WebView?, url: String?) {
         if (url != null && view != null && !destroyedViews.contains(view)) {
           currentPageHosts[tabId] = UrlValidator.extractHost(url)
+          currentPageUrls[tabId] = url
           if (tabUserAgentModes[tabId] == UserAgentMode.DESKTOP) {
             applyDesktopModeEngine(view, true)
           }
@@ -1889,7 +1841,15 @@ class WebViewPool(
           if (s.dataSaverEnabled) {
             applyDataSaver(view, true)
           }
+          if (s.javascriptEnabled) {
+            extensionManager?.buildPageInjectionScript(url, "end")?.let { extJs ->
+              try { view.evaluateJavascript(extJs, null) } catch (_: Throwable) {}
+            }
+          }
           val safeTitle = try { view.title } catch (_: Throwable) { null }
+          if (!safeTitle.isNullOrBlank()) {
+            currentPageTitles[tabId] = safeTitle
+          }
           val canBack = try { view.canGoBack() } catch (_: Throwable) { false }
           val canFwd = try { view.canGoForward() } catch (_: Throwable) { false }
           callbacks.onPageFinished(
@@ -1899,7 +1859,6 @@ class WebViewPool(
             canGoBack = canBack,
             canGoForward = canFwd
           )
-          scanDomMedia(tabId)
         }
       }
 
@@ -2030,23 +1989,23 @@ class WebViewPool(
     webView.webChromeClient = object : WebChromeClient() {
       override fun onProgressChanged(view: WebView?, newProgress: Int) {
         callbacks.onProgressChanged(tabId, newProgress)
-        if (view != null && newProgress >= 10 && !destroyedViews.contains(view)) {
+        if (view == null || destroyedViews.contains(view)) return
+        val stage = pageEarlyInjectedStage[tabId] ?: 0
+        if (newProgress >= 15 && stage < 1) {
+          pageEarlyInjectedStage[tabId] = 1
           if (tabUserAgentModes[tabId] == UserAgentMode.DESKTOP) {
             applyDesktopModeEngine(view, true)
           }
           applyLinkTargetTrackerEngine(view)
           applyVideoCompatibilityEngine(view)
-        }
-        if (view != null && newProgress >= 15 && !destroyedViews.contains(view)) {
           applyStealthPrivacyShield(view)
         }
-        if (view != null && newProgress >= 25 && !destroyedViews.contains(view)) {
+        if (newProgress >= 35 && stage < 2) {
+          pageEarlyInjectedStage[tabId] = 2
           val liveUrl = try { view.url.orEmpty() } catch (_: Throwable) { "" }
           if (liveUrl.isNotBlank()) {
             applySearchSameTabEngine(view, liveUrl)
           }
-        }
-        if (view != null && newProgress >= 30 && !destroyedViews.contains(view)) {
           val s = settingsProvider()
           if (s.trackerBlockingEnabled) {
             applyAdBlocker(view, true)
@@ -2059,7 +2018,9 @@ class WebViewPool(
 
       override fun onReceivedTitle(view: WebView?, title: String?) {
         if (!title.isNullOrBlank()) {
-          callbacks.onTitleReceived(tabId, UrlValidator.sanitizeDisplayText(title, 180))
+          val clean = UrlValidator.sanitizeDisplayText(title, 180)
+          currentPageTitles[tabId] = clean
+          callbacks.onTitleReceived(tabId, clean)
         }
       }
 
@@ -2107,7 +2068,7 @@ class WebViewPool(
           }
           if (view != null && currentSettings.javascriptEnabled && !destroyedViews.contains(view)) {
             try {
-              view.evaluateJavascript("(function(){return window.__kai_get_touch_ctx?window.__kai_get_touch_ctx():'{}';})();") { rawJson ->
+              view.evaluateJavascript("(function(){return window.__kio_get_touch_ctx?window.__kio_get_touch_ctx():'{}';})();") { rawJson ->
                 try {
                   if (!rawJson.isNullOrBlank() && rawJson != "null") {
                     val unwrapped = JSONObject("{\"v\":$rawJson}").getString("v")

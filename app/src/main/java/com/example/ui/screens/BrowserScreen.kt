@@ -125,7 +125,6 @@ import com.example.model.WebPermissionKind
 import com.example.security.UrlValidator
 import com.example.ui.ActiveOverlay
 import com.example.ui.BrowserViewModel
-import com.example.ui.components.AiAssistantSheet
 import com.example.ui.components.FeatherIcons
 import com.example.ui.components.FindInPageBar
 import com.example.ui.components.HttpWarningOverlay
@@ -146,6 +145,7 @@ fun BrowserScreen(
   viewModel: BrowserViewModel,
   onExportBookmarks: () -> Unit,
   onImportBookmarks: () -> Unit,
+  onPickLocalExtensionFile: () -> Unit = {},
   onSavePdf: () -> Unit,
   onPinHomeShortcut: (String, String) -> Unit
 ) {
@@ -160,6 +160,10 @@ fun BrowserScreen(
   val activeOverlay by viewModel.activeOverlay.collectAsStateWithLifecycle()
   val findState by viewModel.findState.collectAsStateWithLifecycle()
   val readerArticle by viewModel.readerArticle.collectAsStateWithLifecycle()
+  val readerSegments by viewModel.readerSegments.collectAsStateWithLifecycle()
+  val narratorState by viewModel.narratorState.collectAsStateWithLifecycle()
+  val installedExtensions by viewModel.installedExtensions.collectAsStateWithLifecycle()
+  val isInstallingExtension by viewModel.isInstallingExtension.collectAsStateWithLifecycle()
   val pageSource by viewModel.pageSource.collectAsStateWithLifecycle()
   val isBrowserFullscreen by viewModel.isBrowserFullscreen.collectAsStateWithLifecycle()
   val pendingDownload by viewModel.pendingDownloadConsent.collectAsStateWithLifecycle()
@@ -169,17 +173,7 @@ fun BrowserScreen(
   val fullscreenView by viewModel.fullscreenView.collectAsStateWithLifecycle()
   val statusToast by viewModel.statusToast.collectAsStateWithLifecycle()
   val showIntro by viewModel.showIntro.collectAsStateWithLifecycle()
-  val showAiSheet by viewModel.showAiAssistantSheet.collectAsStateWithLifecycle()
-  val pageSummary by viewModel.pageSummary.collectAsStateWithLifecycle()
-  val pageActionItems by viewModel.pageActionItems.collectAsStateWithLifecycle()
-  val pageInsights by viewModel.pageInsights.collectAsStateWithLifecycle()
-  val pageFacts by viewModel.pageFacts.collectAsStateWithLifecycle()
-  val pageGlossary by viewModel.pageGlossary.collectAsStateWithLifecycle()
-  val ttsState by viewModel.ttsState.collectAsStateWithLifecycle()
-  val chatQas by viewModel.chatQas.collectAsStateWithLifecycle()
-  val isAiLoading by viewModel.isAiLoading.collectAsStateWithLifecycle()
   val phishingAssessment by viewModel.phishingAssessment.collectAsStateWithLifecycle()
-  val sniffedRevision by viewModel.sniffedResourcesRevision.collectAsStateWithLifecycle()
 
   var showSiteInfoDialog by remember { mutableStateOf(false) }
   var showQuickSheet by remember { mutableStateOf(false) }
@@ -245,13 +239,13 @@ fun BrowserScreen(
 
       Scaffold(
         containerColor = Color.Black,
-        contentWindowInsets = WindowInsets.statusBars
+        contentWindowInsets = if (isBrowserFullscreen) WindowInsets(0, 0, 0, 0) else WindowInsets.statusBars
       ) { innerPadding ->
         Column(
           modifier = Modifier
             .fillMaxSize()
             .padding(innerPadding)
-            .navigationBarsPadding()
+            .let { if (isBrowserFullscreen) it else it.navigationBarsPadding() }
             .imePadding()
         ) {
           AnimatedVisibility(
@@ -262,6 +256,7 @@ fun BrowserScreen(
             BrowserToolbar(
               activeTab = activeTab,
               tabCount = tabs.size,
+              extensionsCount = installedExtensions.count { it.enabled },
               settings = settings,
               compactSingleRow = isWideWidth,
               readClipboard = { viewModel.readClipboardText() },
@@ -280,46 +275,60 @@ fun BrowserScreen(
               onToggleDesktopMode = { viewModel.toggleDesktopMode() },
               onOpenBookmarks = { viewModel.setOverlay(ActiveOverlay.BOOKMARKS) },
               onOpenDownloads = { viewModel.setOverlay(ActiveOverlay.DOWNLOADS) },
-              onOpenAi = { viewModel.openAiAssistant() },
+              onOpenExtensions = { viewModel.setOverlay(ActiveOverlay.EXTENSIONS) },
               onNewTab = { viewModel.openNewTab(isPrivate = activeTab.isPrivate) }
             )
           }
 
+            // Kiwi-style 1-tap Chrome Web Store Extension Installer Banner when browsing a store item
+            val detectedStoreExtId = remember(activeTab.url, installedExtensions) {
+              val id = viewModel.detectChromeWebStoreExtensionId(activeTab.url)
+              if (id != null && installedExtensions.none { it.id == id }) id else null
+            }
             AnimatedVisibility(
-              visible = ttsState.isPlaying,
+              visible = !isBrowserFullscreen && detectedStoreExtId != null,
               enter = expandVertically() + fadeIn(),
               exit = shrinkVertically() + fadeOut()
             ) {
               Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
-                shadowElevation = 6.dp,
+                shape = RoundedCornerShape(14.dp),
+                color = Color(0xFF0E1A2B),
+                border = BorderStroke(1.dp, Color(0xFF38BDF8).copy(alpha = 0.45f)),
                 modifier = Modifier
                   .fillMaxWidth()
-                  .padding(horizontal = 14.dp, vertical = 6.dp)
+                  .padding(horizontal = 12.dp, vertical = 6.dp)
               ) {
                 Row(
-                  modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                  modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                   verticalAlignment = Alignment.CenterVertically,
                   horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                  Row(verticalAlignment = Alignment.CenterVertically) {
+                  Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                     Icon(
-                      FeatherIcons.Play,
+                      FeatherIcons.Extension,
                       contentDescription = null,
-                      tint = MaterialTheme.colorScheme.primary,
+                      tint = Color(0xFF38BDF8),
                       modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                      "🎧 Reading page aloud...",
+                      text = "Chrome extension detected",
                       style = MaterialTheme.typography.labelMedium,
-                      fontWeight = FontWeight.Bold
+                      color = Color(0xFFF8FAFC),
+                      fontWeight = FontWeight.SemiBold,
+                      maxLines = 1,
+                      overflow = TextOverflow.Ellipsis
                     )
                   }
-                  TextButton(onClick = { viewModel.stopReadAloud() }) {
-                    Text("Stop", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall)
+                  TextButton(
+                    enabled = !isInstallingExtension,
+                    onClick = { detectedStoreExtId?.let { viewModel.installExtensionFromStore(it) } }
+                  ) {
+                    Text(
+                      if (isInstallingExtension) "Installing..." else "Add to Kio",
+                      color = Color(0xFF38BDF8),
+                      fontWeight = FontWeight.Bold
+                    )
                   }
                 }
               }
@@ -731,8 +740,15 @@ fun BrowserScreen(
           activeReaderArticle != null -> {
             ReaderModeOverlay(
               article = activeReaderArticle,
+              segments = readerSegments,
+              narratorState = narratorState,
               fontSizeSp = settings.readerFontSizeSp,
               darkReading = settings.readerDarkMode,
+              onTogglePlayPause = { viewModel.toggleNarratorPlayPause() },
+              onPrevSegment = { viewModel.prevNarratorSegment() },
+              onNextSegment = { viewModel.nextNarratorSegment() },
+              onSelectSegment = { viewModel.selectNarratorSegment(it) },
+              onChangeSpeechRate = { viewModel.setNarratorSpeechRate(it) },
               onChangeFontSize = { sz -> viewModel.updateSettings { it.copy(readerFontSizeSp = sz) } },
               onToggleDark = { dark -> viewModel.updateSettings { it.copy(readerDarkMode = dark) } },
               onClose = { viewModel.closeReaderMode() }
@@ -791,22 +807,19 @@ fun BrowserScreen(
               onClose = { viewModel.setOverlay(ActiveOverlay.NONE) }
             )
           }
-          activeOverlay == ActiveOverlay.RESOURCES -> {
-            val sniffedList = remember(activeTab.id, activeTab.sniffedResourcesCount, sniffedRevision) {
-              viewModel.getActiveSniffedResources()
-            }
-            ResourcesScreen(
-              resources = sniffedList,
-              onDownloadResource = { res ->
-                viewModel.setOverlay(ActiveOverlay.NONE)
-                viewModel.downloadUrlWithConsent(res.url)
-              },
-              onCopyUrl = { viewModel.copyTextToClipboard(it, "Link copied") },
-              onScanVideos = {
-                viewModel.scanActiveTabForVideos { count ->
-                  viewModel.showToast(if (count > 0) "$count video(s) detected" else "No videos detected on page")
-                }
-              },
+          activeOverlay == ActiveOverlay.EXTENSIONS -> {
+            ExtensionsScreen(
+              extensions = installedExtensions,
+              isInstalling = isInstallingExtension,
+              extensionManager = viewModel.extensionManager,
+              activePageUrl = activeTab.url,
+              activePageTitle = activeTab.title,
+              onInstallFromStoreInput = { viewModel.installExtensionFromStore(it) },
+              onPickLocalExtensionFile = onPickLocalExtensionFile,
+              onOpenChromeWebStore = { viewModel.openChromeWebStore() },
+              onToggleEnabled = { id, enabled -> viewModel.toggleExtensionEnabled(id, enabled) },
+              onRemoveExtension = { viewModel.removeExtension(it) },
+              onOpenUrlInNewTab = { url -> viewModel.openNewTab(isPrivate = activeTab.isPrivate, initialUrl = url) },
               onClose = { viewModel.setOverlay(ActiveOverlay.NONE) }
             )
           }
@@ -823,7 +836,9 @@ fun BrowserScreen(
               settings = settings,
               currentUrl = shareableUrl,
               sitePermissions = sitePermissions,
+              installedExtensionsCount = installedExtensions.size,
               systemWebViewInfo = viewModel.systemWebViewPackageInfo,
+              onOpenExtensions = { viewModel.setOverlay(ActiveOverlay.EXTENSIONS) },
               onUpdateSettings = { viewModel.updateSettings(it) },
               onAddCustomBlockedHost = { host -> viewModel.addCustomBlockedHost(host) },
               onRemoveCustomBlockedHost = { host -> viewModel.removeCustomBlockedHost(host) },
@@ -874,14 +889,16 @@ fun BrowserScreen(
           modifier = Modifier.fillMaxWidth()
         ) {
           FilterChip(
-            selected = false,
+            selected = installedExtensions.any { it.enabled },
             onClick = {
               showQuickSheet = false
-              viewModel.openAiAssistant()
+              viewModel.setOverlay(ActiveOverlay.EXTENSIONS)
             },
-            enabled = hasUrl,
-            leadingIcon = { Icon(FeatherIcons.Sparkle, contentDescription = null, modifier = Modifier.size(16.dp)) },
-            label = { Text("AI Assistant") }
+            leadingIcon = { Icon(FeatherIcons.Extension, contentDescription = null, modifier = Modifier.size(16.dp)) },
+            label = {
+              val activeExtCount = installedExtensions.count { it.enabled }
+              Text(if (activeExtCount > 0) "Extensions ($activeExtCount)" else "Extensions")
+            }
           )
           FilterChip(
             selected = activeTab.userAgentMode == UserAgentMode.DESKTOP,
@@ -938,15 +955,6 @@ fun BrowserScreen(
             leadingIcon = { Icon(FeatherIcons.NoImage, contentDescription = null, modifier = Modifier.size(16.dp)) },
             label = { Text("Block images") }
           )
-          FilterChip(
-            selected = isBrowserFullscreen,
-            onClick = {
-              showQuickSheet = false
-              viewModel.toggleBrowserFullscreen()
-            },
-            leadingIcon = { Icon(FeatherIcons.Fullscreen, contentDescription = null, modifier = Modifier.size(16.dp)) },
-            label = { Text("Fullscreen") }
-          )
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -955,9 +963,13 @@ fun BrowserScreen(
 
         // 4-Column Crisp Grid Actions
         val gridActions = listOf(
-          QuickActionItem(Icons.Filled.Add, stringResource(R.string.action_new_tab), true) {
+          QuickActionItem(
+            FeatherIcons.Fullscreen,
+            if (isBrowserFullscreen) stringResource(R.string.action_exit_fullscreen) else stringResource(R.string.action_fullscreen),
+            true
+          ) {
             showQuickSheet = false
-            viewModel.openNewTab(isPrivate = false)
+            viewModel.toggleBrowserFullscreen()
           },
           QuickActionItem(FeatherIcons.PrivateMask, stringResource(R.string.action_new_private_tab), true) {
             showQuickSheet = false
@@ -988,17 +1000,20 @@ fun BrowserScreen(
             viewModel.setOverlay(ActiveOverlay.DOWNLOADS)
           },
           QuickActionItem(
-            FeatherIcons.MediaSniff,
-            if (activeTab.sniffedResourcesCount > 0) "${stringResource(R.string.action_resources)} (${activeTab.sniffedResourcesCount})"
-            else stringResource(R.string.action_resources),
+            FeatherIcons.Announcer,
+            stringResource(R.string.action_announcer),
             hasUrl
           ) {
             showQuickSheet = false
-            viewModel.setOverlay(ActiveOverlay.RESOURCES)
-          },
-          QuickActionItem(FeatherIcons.Reader, stringResource(R.string.action_reader_mode), hasUrl) {
-            showQuickSheet = false
             viewModel.toggleReaderMode()
+          },
+          QuickActionItem(
+            FeatherIcons.Extension,
+            stringResource(R.string.action_extensions),
+            true
+          ) {
+            showQuickSheet = false
+            viewModel.setOverlay(ActiveOverlay.EXTENSIONS)
           },
           QuickActionItem(FeatherIcons.PrintPdf, stringResource(R.string.action_save_pdf), hasUrl) {
             showQuickSheet = false
@@ -1370,26 +1385,6 @@ fun BrowserScreen(
       }
     )
   }
-
-  if (showAiSheet) {
-    AiAssistantSheet(
-      summary = pageSummary,
-      actionItems = pageActionItems,
-      insights = pageInsights,
-      facts = pageFacts,
-      glossary = pageGlossary,
-      ttsState = ttsState,
-      chatQas = chatQas,
-      isLoading = isAiLoading,
-      onModeSelected = { viewModel.generatePageSummary(it) },
-      onAskQuestion = { viewModel.askPageQuestion(it) },
-      onReadAloud = { viewModel.readAloudCurrentPage() },
-      onStopReadAloud = { viewModel.stopReadAloud() },
-      onSetSpeechRate = { viewModel.setReadAloudRate(it) },
-      onCopyText = { viewModel.copyTextToClipboard(it, "Copied to clipboard") },
-      onDismiss = { viewModel.dismissAiAssistant() }
-    )
-  }
 }
 
 private data class QuickActionItem(
@@ -1417,6 +1412,7 @@ private fun ContextActionRow(label: String, onClick: () -> Unit) {
 private fun BrowserToolbar(
   activeTab: TabInfo,
   tabCount: Int,
+  extensionsCount: Int = 0,
   settings: SettingsState,
   compactSingleRow: Boolean,
   readClipboard: () -> String?,
@@ -1432,7 +1428,7 @@ private fun BrowserToolbar(
   onToggleDesktopMode: () -> Unit = {},
   onOpenBookmarks: () -> Unit = {},
   onOpenDownloads: () -> Unit = {},
-  onOpenAi: () -> Unit = {},
+  onOpenExtensions: () -> Unit = {},
   onNewTab: () -> Unit = {},
   modifier: Modifier = Modifier
 ) {
@@ -1734,6 +1730,19 @@ private fun BrowserToolbar(
           IconButton(
             onClick = {
               haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+              onOpenExtensions()
+            },
+            modifier = Modifier.minimumInteractiveComponentSize().testTag("tablet_extensions_button")
+          ) {
+            Icon(
+              imageVector = FeatherIcons.Extension,
+              contentDescription = stringResource(R.string.action_extensions),
+              tint = if (extensionsCount > 0) headerAccent else headerTextMuted
+            )
+          }
+          IconButton(
+            onClick = {
+              haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
               onNewTab()
             },
             modifier = Modifier.minimumInteractiveComponentSize().testTag("tablet_new_tab_button")
@@ -1830,6 +1839,21 @@ private fun BrowserToolbar(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
+              IconButton(
+                onClick = {
+                  haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                  onOpenExtensions()
+                },
+                modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_extensions_button")
+              ) {
+                Icon(
+                  FeatherIcons.Extension,
+                  contentDescription = stringResource(R.string.action_extensions),
+                  tint = if (extensionsCount > 0) headerAccent else headerTextMuted,
+                  modifier = Modifier.size(19.dp)
+                )
+              }
+
               Surface(
                 shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(
@@ -1912,21 +1936,19 @@ private fun BrowserToolbar(
                 )
               }
 
-              if (activeTab.url.isNotBlank()) {
-                IconButton(
-                  onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onOpenAi()
-                  },
-                  modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_ai_button")
-                ) {
-                  Icon(
-                    FeatherIcons.Sparkle,
-                    contentDescription = "AI Assistant",
-                    tint = headerAccent,
-                    modifier = Modifier.size(19.dp)
-                  )
-                }
+              IconButton(
+                onClick = {
+                  haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                  onOpenExtensions()
+                },
+                modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_extensions_button")
+              ) {
+                Icon(
+                  FeatherIcons.Extension,
+                  contentDescription = stringResource(R.string.action_extensions),
+                  tint = if (extensionsCount > 0) headerAccent else headerTextPrimary,
+                  modifier = Modifier.size(19.dp)
+                )
               }
 
               Surface(

@@ -34,6 +34,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -54,6 +56,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -95,6 +98,8 @@ import com.example.model.HttpWarningState
 import com.example.model.PageError
 import com.example.model.PageErrorType
 import com.example.model.ReaderArticle
+import com.example.reader.NarrationSegment
+import com.example.reader.NarratorState
 import com.example.security.UrlValidator
 import com.example.ui.FindState
 import com.example.ui.theme.BatMidnight
@@ -118,7 +123,7 @@ fun NewTabHomeView(
 ) {
   var homeSearch by remember { mutableStateOf("") }
 
-  // Pure OLED dark homepage palette (premium pitch-black vibe without touching the Kai icon)
+  // Pure OLED dark homepage palette (premium pitch-black vibe without touching the homepage logo)
   val pureBlackBg = Color(0xFF000000)
   val cardSurfaceDark = Color(0xFF0B0C10)
   val searchSurfaceDark = Color(0xFF0E1016)
@@ -174,10 +179,10 @@ fun NewTabHomeView(
     ) {
       Spacer(modifier = Modifier.height(if (isCompactHeight) 4.dp else 18.dp))
 
-      // Hero Emblem (Aesthetic Animated Kai Emblem: Concentric Circle in Circle in Dot)
+      // Hero Emblem (Preserved Kio Homepage Emblem: Concentric Circle in Circle in Dot)
       val crestSize = if (isCompactHeight) 56.dp else 78.dp
-      KaiLogo(
-        modifier = Modifier.testTag("kai_home_logo"),
+      KioLogo(
+        modifier = Modifier.testTag("kio_home_logo"),
         size = crestSize,
         isPrivate = isPrivate,
         animated = true,
@@ -657,22 +662,45 @@ fun FindInPageBar(
 @Composable
 fun ReaderModeOverlay(
   article: ReaderArticle,
+  segments: List<NarrationSegment>,
+  narratorState: NarratorState,
   fontSizeSp: Int,
   darkReading: Boolean,
+  onTogglePlayPause: () -> Unit,
+  onPrevSegment: () -> Unit,
+  onNextSegment: () -> Unit,
+  onSelectSegment: (Int) -> Unit,
+  onChangeSpeechRate: (Float) -> Unit,
   onChangeFontSize: (Int) -> Unit,
   onToggleDark: (Boolean) -> Unit,
   onClose: () -> Unit
 ) {
   BackHandler { onClose() }
-  val bgColor = if (darkReading) Color(0xFF0B0E14) else Color(0xFFFDFBF6)
+  val bgColor = if (darkReading) Color(0xFF000000) else Color(0xFFFDFBF6)
+  val surfaceColor = if (darkReading) Color(0xFF0B0E14) else Color(0xFFF3EFE6)
   val textColor = if (darkReading) Color(0xFFE2E8F0) else Color(0xFF1E293B)
   val subColor = if (darkReading) Color(0xFF94A3B8) else Color(0xFF64748B)
+  val highlightBg = if (darkReading) Color(0xFF0E293B) else Color(0xFFDBEAFE)
+  val highlightBorder = Color(0xFF38BDF8)
 
-  Surface(color = bgColor, modifier = Modifier.fillMaxSize()) {
+  val listState = rememberLazyListState()
+  val speedSteps = remember { listOf(0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f) }
+
+  LaunchedEffect(narratorState.currentIndex, narratorState.isSpeaking) {
+    if (narratorState.isSpeaking && segments.isNotEmpty()) {
+      val target = (narratorState.currentIndex + 1).coerceIn(0, segments.size)
+      try {
+        listState.animateScrollToItem(target)
+      } catch (_: Throwable) {
+      }
+    }
+  }
+
+  Surface(color = bgColor, modifier = Modifier.fillMaxSize().testTag("reader_announcer_overlay")) {
     Column(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
       Surface(
-        color = bgColor,
-        tonalElevation = 1.dp,
+        color = surfaceColor,
+        tonalElevation = 0.dp,
         modifier = Modifier.fillMaxWidth()
       ) {
         Row(
@@ -681,14 +709,25 @@ fun ReaderModeOverlay(
             .padding(horizontal = 14.dp, vertical = 8.dp),
           verticalAlignment = Alignment.CenterVertically
         ) {
-          Icon(FeatherIcons.Reader, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+          Icon(FeatherIcons.Announcer, contentDescription = null, tint = highlightBorder)
           Spacer(modifier = Modifier.width(8.dp))
-          Text(
-            text = stringResource(R.string.reader_title),
-            style = MaterialTheme.typography.titleMedium,
-            color = textColor,
-            modifier = Modifier.weight(1f)
-          )
+          Column(modifier = Modifier.weight(1f)) {
+            Text(
+              text = "Content Announcer & Reader",
+              style = MaterialTheme.typography.titleSmall,
+              fontWeight = FontWeight.SemiBold,
+              color = textColor,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis
+            )
+            Text(
+              text = "Pure On-Device NLP · Zero Data Saved or Copied",
+              style = MaterialTheme.typography.labelSmall,
+              color = FeatherSecureGreen,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis
+            )
+          }
           TextButton(
             onClick = { onChangeFontSize((fontSizeSp - 2).coerceAtLeast(14)) },
             modifier = Modifier.minimumInteractiveComponentSize()
@@ -711,39 +750,163 @@ fun ReaderModeOverlay(
         }
       }
 
+      // Strictly non-selectable volatile RAM article display (never copies or saves text)
       LazyColumn(
-        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.widthIn(max = 680.dp).align(Alignment.CenterHorizontally).weight(1f).fillMaxWidth()
+        state = listState,
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.widthIn(max = 700.dp).align(Alignment.CenterHorizontally).weight(1f).fillMaxWidth()
       ) {
         item {
           Text(
             text = article.siteHost.uppercase(),
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary
+            color = highlightBorder
           )
-          Spacer(modifier = Modifier.height(6.dp))
+          Spacer(modifier = Modifier.height(4.dp))
           Text(
             text = article.title,
-            style = MaterialTheme.typography.headlineMedium,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
             color = textColor
           )
-          Spacer(modifier = Modifier.height(10.dp))
+          Spacer(modifier = Modifier.height(8.dp))
           Box(
             modifier = Modifier
               .width(48.dp)
               .height(2.dp)
-              .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+              .background(highlightBorder.copy(alpha = 0.6f))
           )
-          Spacer(modifier = Modifier.height(4.dp))
+          Spacer(modifier = Modifier.height(6.dp))
         }
-        items(article.paragraphs) { paragraph ->
-          Text(
-            text = paragraph,
-            fontSize = fontSizeSp.sp,
-            lineHeight = (fontSizeSp * 1.6f).sp,
-            color = textColor
+
+        if (segments.isEmpty()) {
+          items(article.paragraphs) { paragraph ->
+            Text(
+              text = paragraph,
+              fontSize = fontSizeSp.sp,
+              lineHeight = (fontSizeSp * 1.6f).sp,
+              color = textColor
+            )
+          }
+        } else {
+          itemsIndexed(segments, key = { _, seg -> seg.index }) { idx, seg ->
+            val isCurrent = idx == narratorState.currentIndex && (narratorState.isSpeaking || narratorState.isPaused)
+            Surface(
+              shape = RoundedCornerShape(12.dp),
+              color = if (isCurrent) highlightBg else Color.Transparent,
+              border = if (isCurrent) BorderStroke(1.dp, highlightBorder.copy(alpha = 0.55f)) else null,
+              modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .clickable { onSelectSegment(idx) }
+            ) {
+              Text(
+                text = seg.displayText,
+                fontSize = if (seg.isHeading) (fontSizeSp + 2).sp else fontSizeSp.sp,
+                fontWeight = if (seg.isHeading || isCurrent) FontWeight.SemiBold else FontWeight.Normal,
+                lineHeight = (fontSizeSp * 1.6f).sp,
+                color = if (isCurrent) (if (darkReading) Color.White else Color(0xFF0F172A)) else textColor,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+              )
+            }
+          }
+        }
+      }
+
+      // Bottom Pure NLP Narration Controller Bar
+      Surface(
+        color = surfaceColor,
+        border = BorderStroke(0.8.dp, highlightBorder.copy(alpha = 0.3f)),
+        modifier = Modifier.fillMaxWidth()
+      ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp)) {
+          val total = narratorState.totalSegments.coerceAtLeast(1)
+          val progress = ((narratorState.currentIndex + 1).toFloat() / total.toFloat()).coerceIn(0f, 1f)
+          LinearProgressIndicator(
+            progress = { progress },
+            color = highlightBorder,
+            trackColor = subColor.copy(alpha = 0.25f),
+            modifier = Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(4.dp))
           )
+          Spacer(modifier = Modifier.height(8.dp))
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+          ) {
+            // Speed cycling pill
+            val nextSpeed = remember(narratorState.speechRate) {
+              val idx = speedSteps.indexOfFirst { kotlin.math.abs(it - narratorState.speechRate) < 0.08f }
+              speedSteps[(idx + 1) % speedSteps.size]
+            }
+            Surface(
+              shape = RoundedCornerShape(10.dp),
+              color = highlightBorder.copy(alpha = 0.14f),
+              border = BorderStroke(0.8.dp, highlightBorder.copy(alpha = 0.45f)),
+              modifier = Modifier
+                .clip(RoundedCornerShape(10.dp))
+                .clickable { onChangeSpeechRate(nextSpeed) }
+                .testTag("announcer_speed_button")
+            ) {
+              Text(
+                text = "${narratorState.speechRate}x",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = highlightBorder,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+              )
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+              IconButton(
+                onClick = onPrevSegment,
+                modifier = Modifier.minimumInteractiveComponentSize().testTag("announcer_prev_button")
+              ) {
+                Icon(FeatherIcons.SkipPrev, contentDescription = "Previous sentence", tint = textColor)
+              }
+              Surface(
+                shape = CircleShape,
+                color = highlightBorder,
+                modifier = Modifier
+                  .size(46.dp)
+                  .clip(CircleShape)
+                  .clickable { onTogglePlayPause() }
+                  .testTag("announcer_play_pause_button")
+              ) {
+                Box(contentAlignment = Alignment.Center) {
+                  Icon(
+                    imageVector = if (narratorState.isSpeaking && !narratorState.isPaused) FeatherIcons.Pause else FeatherIcons.Play,
+                    contentDescription = if (narratorState.isSpeaking && !narratorState.isPaused) "Pause narration" else "Play narration",
+                    tint = Color.Black,
+                    modifier = Modifier.size(22.dp)
+                  )
+                }
+              }
+              IconButton(
+                onClick = onNextSegment,
+                modifier = Modifier.minimumInteractiveComponentSize().testTag("announcer_next_button")
+              ) {
+                Icon(FeatherIcons.SkipNext, contentDescription = "Next sentence", tint = textColor)
+              }
+            }
+
+            Text(
+              text = "${(narratorState.currentIndex + 1).coerceAtMost(total)} / $total",
+              style = MaterialTheme.typography.labelMedium,
+              color = subColor
+            )
+          }
+          narratorState.statusNote?.let { note ->
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+              text = note,
+              style = MaterialTheme.typography.labelSmall,
+              color = subColor,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis
+            )
+          }
         }
       }
     }

@@ -1,11 +1,9 @@
 package com.example.security
 
-import com.example.model.SniffedMediaType
-import com.example.model.SniffedResource
 import java.net.URI
 
 /**
- * Compact, zero-dependency ad, popup & third-party tracker blocker + media resource classifier.
+ * Compact, zero-dependency ad, popup & third-party tracker blocker.
  * Checked inside WebViewClient.shouldInterceptRequest for subresource requests.
  */
 object TrackerBlocker {
@@ -473,63 +471,6 @@ object TrackerBlocker {
       .substringBefore(':')
       .trim('.', ' ')
     return if (cleaned.contains('.') && !cleaned.contains(' ')) cleaned else ""
-  }
-
-  fun inferSniffedResource(requestUrl: String): SniffedResource? {
-    if (!UrlValidator.isSafeWebUrl(requestUrl)) return null
-    val uri = try {
-      URI(requestUrl)
-    } catch (_: Throwable) {
-      return null
-    }
-    val host = uri.host?.lowercase() ?: return null
-    val path = uri.path ?: ""
-    val lowerUrl = requestUrl.lowercase()
-    val lastSeg = path.substringAfterLast('/')
-    val ext = lastSeg.substringAfterLast('.', "").lowercase()
-
-    var type = when (ext) {
-      in videoExts -> SniffedMediaType.VIDEO
-      in audioExts -> SniffedMediaType.AUDIO
-      in imageExts -> SniffedMediaType.IMAGE
-      in docExts -> SniffedMediaType.DOCUMENT
-      else -> null
-    }
-
-    var resolvedExt = ext
-    if (type == null) {
-      if (isVideoUrlPattern(lowerUrl)) {
-        type = SniffedMediaType.VIDEO
-        resolvedExt = when {
-          lowerUrl.contains(".m3u8") -> "m3u8"
-          lowerUrl.contains(".mpd") -> "mpd"
-          lowerUrl.contains("webm") -> "webm"
-          lowerUrl.contains(".mov") -> "mov"
-          else -> "mp4"
-        }
-      } else if (isAudioUrlPattern(lowerUrl)) {
-        type = SniffedMediaType.AUDIO
-        resolvedExt = "mp3"
-      }
-    }
-
-    if (type == null) return null
-
-    val baseName = if (lastSeg.isNotBlank() && lastSeg.contains('.') && !lastSeg.contains('?') && lastSeg.length <= 60 && lastSeg != "videoplayback") {
-      lastSeg
-    } else {
-      val cleanHost = host.replace(Regex("[^a-zA-Z0-9]"), "_").trim('_')
-      val hashSnippet = kotlin.math.abs(requestUrl.hashCode() % 10000)
-      "${type.label.lowercase()}_${cleanHost}_$hashSnippet.$resolvedExt"
-    }
-
-    val fileName = UrlValidator.sanitizeFilename(baseName)
-    return SniffedResource(
-      url = requestUrl,
-      host = host,
-      fileName = fileName,
-      type = type
-    )
   }
 
   fun isVideoUrlPattern(lowerUrl: String): Boolean {

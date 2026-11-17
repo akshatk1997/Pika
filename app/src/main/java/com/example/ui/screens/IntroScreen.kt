@@ -46,7 +46,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.ui.components.FeatherIcons
-import com.example.ui.components.KaiLogo
+import com.example.ui.components.KioLogo
 import com.example.ui.theme.BatMidnight
 
 @Composable
@@ -76,11 +76,11 @@ fun IntroScreen(
       ) {
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Hero Emblem (Aesthetic Animated Kai Emblem)
-        KaiLogo(
+        // Hero Emblem (Aesthetic Animated Kio Emblem)
+        KioLogo(
           modifier = Modifier
             .size(92.dp)
-            .testTag("kai_intro_logo"),
+            .testTag("kio_intro_logo"),
           isPrivate = false,
           animated = true,
           contentDescription = stringResource(R.string.app_name)
@@ -97,7 +97,7 @@ fun IntroScreen(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // One-liner thought process behind the name "Kai"
+        // One-liner thought process behind the name "Kio"
         Surface(
           shape = RoundedCornerShape(16.dp),
           color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
@@ -105,7 +105,7 @@ fun IntroScreen(
           modifier = Modifier.fillMaxWidth().testTag("intro_thought_process")
         ) {
           Text(
-            text = "Kai: Pure speed, stealth privacy, and zero nonsense — simply the real deal.",
+            text = "Kio: Pure speed, desktop Chrome extensions, stealth privacy, and zero nonsense.",
             style = MaterialTheme.typography.bodyMedium,
             fontStyle = FontStyle.Italic,
             fontWeight = FontWeight.Medium,
@@ -119,25 +119,25 @@ fun IntroScreen(
 
         // Key Pillars
         IntroPillarCard(
-          icon = FeatherIcons.FeatherLogo,
-          title = "Pure Speed (< 2 MB)",
-          subtitle = "Built on native System WebView with zero bloat and instant startup."
+          icon = FeatherIcons.Extension,
+          title = "Desktop Chrome Extensions (< 2 MB)",
+          subtitle = "Install .crx, .zip, or Chrome Web Store extensions inside a lightning-fast engine."
         )
 
         Spacer(modifier = Modifier.height(10.dp))
 
         IntroPillarCard(
-          icon = FeatherIcons.Shield,
-          title = "Total Ad & Video Shield",
-          subtitle = "Pure ad-free browsing and automated video streaming ad skip."
+          icon = FeatherIcons.Announcer,
+          title = "Pure NLP Reader & Voice Announcer",
+          subtitle = "Narrate any page on-device with zero data copied or saved."
         )
 
         Spacer(modifier = Modifier.height(10.dp))
 
         IntroPillarCard(
           icon = Icons.Filled.Lock,
-          title = "Stealth Privacy",
-          subtitle = "Zero telemetry, zero trackers, and encrypted local storage."
+          title = "Stealth Privacy & Ad Shield",
+          subtitle = "Zero telemetry, video ad shield, and AES-256 encrypted local storage."
         )
 
         Spacer(modifier = Modifier.height(28.dp))

@@ -76,20 +76,6 @@ enum class UserAgentMode(val id: String, val label: String) {
   }
 }
 
-enum class SniffedMediaType(val label: String) {
-  VIDEO("Video"),
-  AUDIO("Audio"),
-  IMAGE("Image"),
-  DOCUMENT("File")
-}
-
-data class SniffedResource(
-  val url: String,
-  val host: String,
-  val fileName: String,
-  val type: SniffedMediaType
-)
-
 data class TabInfo(
   val id: String,
   val title: String = "New Tab",
@@ -103,7 +89,6 @@ data class TabInfo(
   val canGoForward: Boolean = false,
   val securityState: SecurityState = SecurityState.HOME,
   val trackersBlockedCount: Int = 0,
-  val sniffedResourcesCount: Int = 0,
   val errorState: PageError? = null,
   val httpWarning: HttpWarningState? = null,
   val faviconInitial: String = "",

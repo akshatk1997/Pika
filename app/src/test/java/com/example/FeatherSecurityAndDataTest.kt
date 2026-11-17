@@ -2,9 +2,12 @@ package com.example
 
 import com.example.data.BookmarkImportExport
 import com.example.download.DownloadController
+import com.example.extensions.ChromeExtensionManager
+import com.example.extensions.CrxUnpacker
 import com.example.model.BookmarkItem
+import com.example.model.ReaderArticle
 import com.example.model.SearchEngine
-import com.example.model.SniffedMediaType
+import com.example.reader.NlpContentAnnouncer
 import com.example.security.ResolvedNavigation
 import com.example.security.TrackerBlocker
 import com.example.security.UrlValidator
@@ -132,34 +135,59 @@ class FeatherSecurityAndDataTest {
   }
 
   @Test
-  fun mediaSnifferClassifiesValidResourcesOnly() {
-    val video = TrackerBlocker.inferSniffedResource("https://cdn.example.org/videos/clip.mp4?token=1")
-    assertNotNull(video)
-    assertEquals(SniffedMediaType.VIDEO, video?.type)
-    assertEquals("clip.mp4", video?.fileName)
+  fun chromeExtensionUnpackerAndPatternMatcherWorkAccurately() {
+    // 1. Chrome Web Store URL & raw ID extraction
+    assertEquals(
+      "eimadpbcbfnmbkopoojfekhnkhdbieeh",
+      CrxUnpacker.extractChromeStoreId("https://chromewebstore.google.com/detail/dark-reader/eimadpbcbfnmbkopoojfekhnkhdbieeh?hl=en")
+    )
+    assertEquals(
+      "ddkjiahejlhfcafbddmgiahcphecmpfh",
+      CrxUnpacker.extractChromeStoreId("ddkjiahejlhfcafbddmgiahcphecmpfh")
+    )
+    assertNull(CrxUnpacker.extractChromeStoreId("https://example.com/not-an-extension"))
 
-    // Streaming formats (m3u8, webm, mpd)
-    val hls = TrackerBlocker.inferSniffedResource("https://stream.example.org/live/playlist.m3u8?auth=token")
-    assertNotNull(hls)
-    assertEquals(SniffedMediaType.VIDEO, hls?.type)
-    assertEquals("playlist.m3u8", hls?.fileName)
+    // 2. CRX3 binary header offset parsing (Cr24 + ver=3 + headerLen=8 -> ZIP starts at byte 20)
+    val crx3 = ByteArray(32)
+    crx3[0] = 'C'.code.toByte(); crx3[1] = 'r'.code.toByte(); crx3[2] = '2'.code.toByte(); crx3[3] = '4'.code.toByte()
+    crx3[4] = 3 // version 3 (little endian)
+    crx3[8] = 8 // header length = 8
+    assertEquals(20, CrxUnpacker.findZipOffsetInBytes(crx3))
 
-    val webm = TrackerBlocker.inferSniffedResource("https://media.example.com/assets/sample.webm")
-    assertNotNull(webm)
-    assertEquals(SniffedMediaType.VIDEO, webm?.type)
+    // 3. Standard ZIP offset = 0
+    val zipHeader = byteArrayOf(0x50, 0x4B, 0x03, 0x04, 0x00, 0x00)
+    assertEquals(0, CrxUnpacker.findZipOffsetInBytes(zipHeader))
 
-    // Query-based video stream without static extension in path
-    val ytStream = TrackerBlocker.inferSniffedResource("https://rr3---sn-ab5sznzl.googlevideo.com/videoplayback?expire=12345&mime=video%2Fmp4")
-    assertNotNull(ytStream)
-    assertEquals(SniffedMediaType.VIDEO, ytStream?.type)
-    assertTrue(ytStream?.fileName?.endsWith(".mp4") == true)
+    // 4. Chrome URL Match Patterns
+    assertTrue(ChromeExtensionManager.matchesChromePattern("<all_urls>", "https://www.youtube.com/watch?v=1"))
+    assertTrue(ChromeExtensionManager.matchesChromePattern("https://*.youtube.com/*", "https://m.youtube.com/watch?v=1"))
+    assertTrue(ChromeExtensionManager.matchesChromePattern("https://*.youtube.com/*", "https://youtube.com/"))
+    assertFalse(ChromeExtensionManager.matchesChromePattern("https://*.youtube.com/*", "https://example.org/"))
+    assertFalse(ChromeExtensionManager.matchesChromePattern("https://example.org/docs/*", "https://example.org/blog/post"))
+    assertTrue(ChromeExtensionManager.matchesChromePattern("https://example.org/docs/*", "https://example.org/docs/intro"))
+  }
 
-    val pdf = TrackerBlocker.inferSniffedResource("https://docs.example.org/manual.pdf")
-    assertNotNull(pdf)
-    assertEquals(SniffedMediaType.DOCUMENT, pdf?.type)
+  @Test
+  fun nlpContentAnnouncerNormalizesAndSegmentsWithoutSavingData() {
+    val normalized = NlpContentAnnouncer.normalizeForSpeech("Check https://en.wikipedia.org/wiki/Kio — e.g. fast & 100% private vs. bloated apps.")
+    assertTrue(normalized.contains("link to en.wikipedia.org"))
+    assertTrue(normalized.contains("for example"))
+    assertTrue(normalized.contains("100 percent"))
+    assertTrue(normalized.contains("versus"))
 
-    assertNull(TrackerBlocker.inferSniffedResource("https://example.org/index.html"))
-    assertNull(TrackerBlocker.inferSniffedResource("javascript:alert(1)"))
+    val article = ReaderArticle(
+      title = "Kio Privacy Architecture",
+      siteHost = "example.org",
+      paragraphs = listOf(
+        "Dr. Ada Lovelace studied computing in the U.S. and Europe. Her insights shaped modern software engineering! Every sentence is segmented cleanly in RAM."
+      )
+    )
+    val segments = NlpContentAnnouncer.segmentArticle(article)
+    assertTrue(segments.size >= 3)
+    assertTrue(segments[0].isHeading)
+    assertEquals("Kio Privacy Architecture", segments[0].displayText)
+    // Abbreviation "Dr." must not split into a broken 1-word fragment
+    assertTrue(segments[1].displayText.startsWith("Dr. Ada Lovelace"))
   }
 
   @Test
@@ -195,7 +223,7 @@ class FeatherSecurityAndDataTest {
       com.example.media.MediaPlaybackService.ACTION_UPDATE_STATE
     )
     assertEquals(6, actions.size)
-    assertEquals("kai_media_stream", com.example.media.MediaPlaybackService.CHANNEL_ID)
+    assertEquals("kio_media_stream", com.example.media.MediaPlaybackService.CHANNEL_ID)
   }
 
   @Test

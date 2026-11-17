@@ -28,11 +28,11 @@ class SettingsRepository(context: Context) {
   }
 
   companion object {
-    private const val SETTINGS_FILE = "kai_settings.enc"
-    private const val PERMISSIONS_FILE = "kai_site_perms.enc"
-    private const val RETAINED_TABS_FILE = "kai_retained_tabs.enc"
-    private const val FALLBACK_PREFS = "kai_local_state_fallback"
-    private const val PREF_INTRO_SEEN = "kai_intro_seen"
+    private const val SETTINGS_FILE = "kio_settings.enc"
+    private const val PERMISSIONS_FILE = "kio_site_perms.enc"
+    private const val RETAINED_TABS_FILE = "kio_retained_tabs.enc"
+    private const val FALLBACK_PREFS = "kio_local_state_fallback"
+    private const val PREF_INTRO_SEEN = "kio_intro_seen"
     private const val MAX_RETAINED_TABS = 24
   }
 

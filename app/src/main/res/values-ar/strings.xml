@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">كاي</string>
+    <string name="app_name">كيو</string>
 
     <string name="omnibox_hint">ابحث أو أدخل رابطاً</string>
     <string name="home_search_hint">البحث عبر %1$s</string>
@@ -31,7 +31,10 @@
     <string name="action_open_external">فتح خارجياً</string>
     <string name="action_share">مشاركة</string>
     <string name="action_settings">الإعدادات</string>
-    <string name="action_resources">الموارد</string>
+    <string name="action_announcer">القراءة الصوتية</string>
+    <string name="action_extensions">الإضافات</string>
+    <string name="action_fullscreen">ملء الشاشة</string>
+    <string name="action_exit_fullscreen">خروج</string>
     <string name="action_save_pdf">حفظ PDF</string>
     <string name="action_view_source">مصدر الصفحة</string>
     <string name="action_translate">ترجمة</string>
