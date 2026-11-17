@@ -76,10 +76,10 @@ class NlpContentAnnouncer(
 
       // Expand common abbreviations for natural voice pronunciation
       text = text
-        .replace(Regex("""\be\.g\.\b""", RegexOption.IGNORE_CASE), "for example")
-        .replace(Regex("""\bi\.e\.\b""", RegexOption.IGNORE_CASE), "that is")
-        .replace(Regex("""\bvs\.\b""", RegexOption.IGNORE_CASE), "versus")
-        .replace(Regex("""\betc\.\b""", RegexOption.IGNORE_CASE), "and so on")
+        .replace(Regex("""(?<![a-zA-Z])e\.g\.(?![a-zA-Z])""", RegexOption.IGNORE_CASE), "for example")
+        .replace(Regex("""(?<![a-zA-Z])i\.e\.(?![a-zA-Z])""", RegexOption.IGNORE_CASE), "that is")
+        .replace(Regex("""(?<![a-zA-Z])vs\.(?![a-zA-Z])""", RegexOption.IGNORE_CASE), "versus")
+        .replace(Regex("""(?<![a-zA-Z])etc\.(?![a-zA-Z])""", RegexOption.IGNORE_CASE), "and so on")
         .trim()
 
       return text
@@ -129,7 +129,7 @@ class NlpContentAnnouncer(
 
     internal fun splitIntoNaturalSentences(paragraph: String): List<String> {
       val clean = paragraph.trim()
-      if (clean.length <= 160) return listOf(clean)
+      if (clean.length <= 40) return listOf(clean)
 
       val rawParts = SENTENCE_SPLIT_REGEX.split(clean)
       val merged = mutableListOf<String>()
