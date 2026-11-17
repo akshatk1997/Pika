@@ -344,6 +344,7 @@ fun SettingsScreen(
               )
             }
           }
+          Spacer(modifier = Modifier.height(16.dp))
         }
 
         SettingsFolder.GENERAL -> {
@@ -1002,10 +1003,10 @@ private fun SettingsFolderRow(
   Row(
     modifier = Modifier
       .fillMaxWidth()
+      .testTag(tag)
       .minimumInteractiveComponentSize()
       .clickable(onClick = onClick)
-      .padding(horizontal = 14.dp, vertical = 12.dp)
-      .testTag(tag),
+      .padding(horizontal = 14.dp, vertical = 12.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
     Surface(

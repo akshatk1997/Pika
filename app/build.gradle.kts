@@ -101,6 +101,7 @@ android {
       all {
         it.testLogging {
           events("passed", "skipped", "failed", "standardError", "standardOut")
+          exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
           showExceptions = true
           showCauses = true
           showStackTraces = true
