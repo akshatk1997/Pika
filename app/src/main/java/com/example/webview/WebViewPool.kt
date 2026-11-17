@@ -161,11 +161,16 @@ class WebViewPool(
 
   // Bidirectional Standard <-> Private Isolation Vault
   @Volatile private var currentlyInPrivateMode: Boolean = false
+  @Volatile private var liveSystemDarkMode: Boolean? = null
   private val visitedStandardOrigins = ConcurrentHashMap.newKeySet<String>()
   private val vaultedStandardCookies = ConcurrentHashMap<String, List<String>>()
   private val cookieBarrierLock = Any()
 
   fun isCurrentlyInPrivateBarrier(): Boolean = currentlyInPrivateMode
+
+  fun updateSystemDarkMode(isSystemDark: Boolean) {
+    liveSystemDarkMode = isSystemDark
+  }
 
   fun registerStandardOriginForVault(url: String) {
     val origin = UrlValidator.extractOrigin(url)
@@ -660,7 +665,8 @@ class WebViewPool(
     }
     val headers = mutableMapOf(
       "Sec-GPC" to "1",
-      "DNT" to "1"
+      "DNT" to "1",
+      "Sec-CH-Prefers-Color-Scheme" to if (resolveIsDark(s)) "dark" else "light"
     )
     if (tabUserAgentModes[tabId] == UserAgentMode.DESKTOP || (!isPriv && isChromeWebStoreUrl(url))) {
       headers["Sec-CH-UA-Mobile"] = "?0"
@@ -935,8 +941,10 @@ class WebViewPool(
   fun resolveIsDark(settingsState: SettingsState): Boolean {
     return when (settingsState.themeMode) {
       ThemeMode.SYSTEM -> {
-        val uiMode = appContext.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
-        uiMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        liveSystemDarkMode ?: run {
+          val uiMode = appContext.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+          uiMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        }
       }
       ThemeMode.DARK -> true
       ThemeMode.LIGHT -> false
@@ -944,12 +952,67 @@ class WebViewPool(
   }
 
   fun applyThemeMode(webView: WebView, isDark: Boolean, nightWebMode: Boolean) {
-    if (!settingsProvider().javascriptEnabled || destroyedViews.contains(webView)) return
+    if (destroyedViews.contains(webView)) return
+    try {
+      webView.setBackgroundColor(if (isDark) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+    } catch (_: Throwable) {
+    }
+    if (!settingsProvider().javascriptEnabled) return
     val modeStr = if (isDark) "dark" else "light"
     val js = """
       (function() {
         var isDark = $isDark;
         var mode = '$modeStr';
+        window.__kioActiveThemeMode = mode;
+        // Dynamically mirror Kio's resolved System/Light/Dark theme into prefers-color-scheme
+        // so both Standard and cookie-less Private tabs match the OS/app theme immediately.
+        try {
+          if (!window.__kioMatchMediaHooked && window.matchMedia) {
+            window.__kioMatchMediaHooked = true;
+            var origMM = window.matchMedia.bind(window);
+            var trackedLists = [];
+            window.__kioThemeMqls = trackedLists;
+            window.matchMedia = function(query) {
+              var q = String(query || '').toLowerCase();
+              var isDarkQ = q.indexOf('prefers-color-scheme') !== -1 && q.indexOf('dark') !== -1;
+              var isLightQ = q.indexOf('prefers-color-scheme') !== -1 && q.indexOf('light') !== -1;
+              var nativeMql = origMM(query);
+              if (!isDarkQ && !isLightQ) return nativeMql;
+              var listeners = [];
+              var entry = {
+                isDarkQ: isDarkQ,
+                query: String(query),
+                listeners: listeners,
+                onchange: null
+              };
+              var proxy = {
+                get media() { return entry.query; },
+                get matches() { return entry.isDarkQ ? (window.__kioActiveThemeMode === 'dark') : (window.__kioActiveThemeMode !== 'dark'); },
+                get onchange() { return entry.onchange; },
+                set onchange(fn) { entry.onchange = fn; },
+                addEventListener: function(type, fn) { if (type === 'change' && typeof fn === 'function' && listeners.indexOf(fn) === -1) listeners.push(fn); },
+                removeEventListener: function(type, fn) { var idx = listeners.indexOf(fn); if (idx >= 0) listeners.splice(idx, 1); },
+                addListener: function(fn) { if (typeof fn === 'function' && listeners.indexOf(fn) === -1) listeners.push(fn); },
+                removeListener: function(fn) { var idx = listeners.indexOf(fn); if (idx >= 0) listeners.splice(idx, 1); },
+                dispatchEvent: function() { return true; }
+              };
+              entry.proxy = proxy;
+              trackedLists.push(entry);
+              return proxy;
+            };
+          }
+          if (window.__kioThemeMqls) {
+            for (var i = 0; i < window.__kioThemeMqls.length; i++) {
+              var item = window.__kioThemeMqls[i];
+              var matchesNow = item.isDarkQ ? isDark : !isDark;
+              var evt = { matches: matchesNow, media: item.query, type: 'change', target: item.proxy };
+              if (typeof item.onchange === 'function') { try { item.onchange(evt); } catch(e) {} }
+              for (var j = 0; j < item.listeners.length; j++) {
+                try { item.listeners[j](evt); } catch(e) {}
+              }
+            }
+          }
+        } catch(e) {}
         if (window.__kioSetTheme) {
           window.__kioSetTheme(mode);
         }
@@ -2081,10 +2144,14 @@ class WebViewPool(
           safeBrowsingEnabled = true
         } catch (_: Throwable) {
         }
+        val isDark = resolveIsDark(settingsState)
+        try {
+          webView.setBackgroundColor(if (isDark) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+        } catch (_: Throwable) {
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
           try {
-            val isDark = resolveIsDark(settingsState)
-            isAlgorithmicDarkeningAllowed = isDark || settingsState.nightWebMode
+            isAlgorithmicDarkeningAllowed = isDark && settingsState.nightWebMode
           } catch (_: Throwable) {
           }
         }

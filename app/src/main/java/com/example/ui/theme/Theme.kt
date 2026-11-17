@@ -67,10 +67,11 @@ fun isReducedMotionEnabled(context: Context): Boolean {
 fun FeatherTheme(
   themeMode: ThemeMode = ThemeMode.SYSTEM,
   dynamicColor: Boolean = false,
+  resolvedDarkTheme: Boolean? = null,
   content: @Composable () -> Unit
 ) {
   val context = LocalContext.current
-  val darkTheme = when (themeMode) {
+  val darkTheme = resolvedDarkTheme ?: when (themeMode) {
     ThemeMode.SYSTEM -> isSystemInDarkTheme()
     ThemeMode.DARK -> true
     ThemeMode.LIGHT -> false

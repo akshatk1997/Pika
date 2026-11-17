@@ -4,6 +4,7 @@ import android.app.SearchManager
 import android.content.Intent
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.drawable.Icon
 import android.net.Uri
@@ -21,7 +22,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -36,6 +39,7 @@ import com.example.ui.theme.FeatherTheme
 class MainActivity : ComponentActivity() {
 
   internal val viewModel: BrowserViewModel by viewModels()
+  private val configSystemDark = mutableStateOf<Boolean?>(null)
 
   private val exportBookmarksLauncher = registerForActivityResult(
     ActivityResultContracts.CreateDocument("text/html")
@@ -123,6 +127,8 @@ class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
+    val initialSysDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+    viewModel.onSystemThemeChanged(initialSysDark)
 
     try {
       window.setFlags(
@@ -222,7 +228,11 @@ class MainActivity : ComponentActivity() {
         }
       }
 
-      val systemDark = isSystemInDarkTheme()
+      val composeSystemDark = isSystemInDarkTheme()
+      val systemDark = configSystemDark.value ?: composeSystemDark
+      LaunchedEffect(systemDark) {
+        viewModel.onSystemThemeChanged(systemDark)
+      }
       val darkTheme = when (settings.themeMode) {
         ThemeMode.SYSTEM -> systemDark
         ThemeMode.DARK -> true
@@ -233,7 +243,7 @@ class MainActivity : ComponentActivity() {
       val isBrowserFullscreen by viewModel.isBrowserFullscreen.collectAsStateWithLifecycle()
       val isImmersiveFullscreen = fullscreenView != null || isBrowserFullscreen
 
-      DisposableEffect(darkTheme, useDarkStatusBar, isImmersiveFullscreen) {
+      DisposableEffect(darkTheme, useDarkStatusBar, isImmersiveFullscreen, isPrivateActive) {
         val window = this@MainActivity.window
         val insetsController = WindowCompat.getInsetsController(window, window.decorView)
 
@@ -282,6 +292,8 @@ class MainActivity : ComponentActivity() {
                 SystemBarStyle.light(Color.TRANSPARENT, Color.argb(0x66, 0x11, 0x18, 0x27))
               }
             )
+            insetsController.isAppearanceLightStatusBars = !useDarkStatusBar
+            insetsController.isAppearanceLightNavigationBars = !darkTheme
           } catch (_: Throwable) {
           }
         }
@@ -301,9 +313,15 @@ class MainActivity : ComponentActivity() {
           }
         }
       }
-      FeatherTheme(themeMode = settings.themeMode, dynamicColor = settings.dynamicColor) {
+      FeatherTheme(
+        themeMode = settings.themeMode,
+        dynamicColor = settings.dynamicColor,
+        resolvedDarkTheme = darkTheme
+      ) {
         BrowserScreen(
           viewModel = viewModel,
+          resolvedDarkTheme = darkTheme,
+          systemDarkTheme = systemDark,
           onExportBookmarks = {
             try {
               exportBookmarksLauncher.launch("kio-bookmarks.html")
@@ -475,6 +493,16 @@ class MainActivity : ComponentActivity() {
       }
     }
     return super.dispatchKeyEvent(event)
+  }
+
+  override fun onConfigurationChanged(newConfig: Configuration) {
+    super.onConfigurationChanged(newConfig)
+    val isNight = (newConfig.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+    configSystemDark.value = isNight
+    try {
+      viewModel.onSystemThemeChanged(isNight)
+    } catch (_: Throwable) {
+    }
   }
 
   override fun onTrimMemory(level: Int) {

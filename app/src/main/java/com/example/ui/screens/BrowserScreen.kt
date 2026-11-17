@@ -145,6 +145,8 @@ import com.example.ui.theme.LocalReduceMotion
 @Composable
 fun BrowserScreen(
   viewModel: BrowserViewModel,
+  resolvedDarkTheme: Boolean? = null,
+  systemDarkTheme: Boolean? = null,
   onExportBookmarks: () -> Unit,
   onImportBookmarks: () -> Unit,
   onPickLocalExtensionFile: () -> Unit = {},
@@ -182,8 +184,9 @@ fun BrowserScreen(
   var showQuickSheet by remember { mutableStateOf(false) }
   var isNavBarVisible by remember { mutableStateOf(true) }
 
-  val isDarkTheme = when (settings.themeMode) {
-    ThemeMode.SYSTEM -> isSystemInDarkTheme()
+  val systemDark = systemDarkTheme ?: isSystemInDarkTheme()
+  val isDarkTheme = resolvedDarkTheme ?: when (settings.themeMode) {
+    ThemeMode.SYSTEM -> systemDark
     ThemeMode.DARK -> true
     ThemeMode.LIGHT -> false
   }
@@ -878,6 +881,7 @@ fun BrowserScreen(
               settings = settings,
               currentUrl = shareableUrl,
               isPrivateMode = activeTab.isPrivate,
+              systemDarkTheme = systemDark,
               sitePermissions = sitePermissions,
               installedExtensionsCount = installedExtensions.size,
               systemWebViewInfo = viewModel.systemWebViewPackageInfo,
@@ -993,7 +997,7 @@ fun BrowserScreen(
             label = { Text("iPhone") }
           )
           FilterChip(
-            selected = isDarkTheme,
+            selected = settings.themeMode != ThemeMode.SYSTEM && isDarkTheme,
             onClick = {
               val nextDark = !isDarkTheme
               viewModel.updateSettings {
@@ -1011,6 +1015,19 @@ fun BrowserScreen(
               )
             },
             label = { Text(if (isDarkTheme) "Dark mode" else "Light mode") }
+          )
+          FilterChip(
+            selected = settings.themeMode == ThemeMode.SYSTEM,
+            onClick = {
+              viewModel.updateSettings {
+                it.copy(
+                  themeMode = ThemeMode.SYSTEM,
+                  nightWebMode = systemDark
+                )
+              }
+            },
+            label = { Text("System") },
+            modifier = Modifier.testTag("quick_theme_system_chip")
           )
           FilterChip(
             selected = settings.dataSaverEnabled,

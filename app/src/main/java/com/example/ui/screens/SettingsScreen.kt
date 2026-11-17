@@ -6,6 +6,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -113,6 +114,7 @@ fun SettingsScreen(
   settings: SettingsState,
   currentUrl: String = "",
   isPrivateMode: Boolean = false,
+  systemDarkTheme: Boolean? = null,
   sitePermissions: List<SitePermissionRule>,
   installedExtensionsCount: Int = 0,
   systemWebViewInfo: String? = null,
@@ -147,6 +149,12 @@ fun SettingsScreen(
   var infoDialogContent by remember { mutableStateOf<Pair<String, String>?>(null) }
 
   val context = LocalContext.current
+  val effectiveSystemDark = systemDarkTheme ?: isSystemInDarkTheme()
+  val resolvedDark = when (settings.themeMode) {
+    ThemeMode.SYSTEM -> effectiveSystemDark
+    ThemeMode.DARK -> true
+    ThemeMode.LIGHT -> false
+  }
 
   Scaffold(
     contentWindowInsets = WindowInsets.safeDrawing,
@@ -273,10 +281,10 @@ fun SettingsScreen(
               )
               FolderDivider()
               SettingsFolderRow(
-                icon = if (settings.themeMode == ThemeMode.DARK) FeatherIcons.NightMoon else FeatherIcons.SunLight,
+                icon = if (resolvedDark) FeatherIcons.NightMoon else FeatherIcons.SunLight,
                 iconTint = FeatherMintDark,
                 title = SettingsFolder.APPEARANCE.title,
-                subtitle = "${settings.themeMode.name.lowercase().replaceFirstChar { it.uppercase() }} theme · ${settings.textZoomPercent}% zoom",
+                subtitle = "${if (settings.themeMode == ThemeMode.SYSTEM) "System default" else settings.themeMode.name.lowercase().replaceFirstChar { it.uppercase() }} · ${settings.textZoomPercent}% zoom",
                 tag = "settings_folder_appearance",
                 onClick = { activeFolder = SettingsFolder.APPEARANCE }
               )
@@ -476,11 +484,16 @@ fun SettingsScreen(
                       when (mode) {
                         ThemeMode.LIGHT -> it.copy(themeMode = ThemeMode.LIGHT, nightWebMode = false)
                         ThemeMode.DARK -> it.copy(themeMode = ThemeMode.DARK, nightWebMode = true)
-                        ThemeMode.SYSTEM -> it.copy(themeMode = ThemeMode.SYSTEM)
+                        ThemeMode.SYSTEM -> it.copy(themeMode = ThemeMode.SYSTEM, nightWebMode = effectiveSystemDark)
                       }
                     }
                   },
-                  label = { Text(mode.name.lowercase().replaceFirstChar { it.uppercase() }) }
+                  label = {
+                    Text(
+                      if (mode == ThemeMode.SYSTEM) "System default"
+                      else mode.name.lowercase().replaceFirstChar { it.uppercase() }
+                    )
+                  }
                 )
               }
             }

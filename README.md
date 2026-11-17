@@ -8,11 +8,11 @@
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v1.9.2.apk`](releases/Kio-v1.9.2.apk) and published in GitHub Releases (`v1.9.2`).
+Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v1.9.3.apk`](releases/Kio-v1.9.3.apk) and published in GitHub Releases (`v1.9.3`).
 
 ---
 
-## Core Highlights (v1.9.2 — Build 64)
+## Core Highlights (v1.9.3 — Build 65)
 
 - **Hidden-"K" Concentric App Launcher Icon & Preserved Homepage Emblem:** Rebuilt the app icon from scratch on the classic concentric orbital logo using the exact cyan/sky/indigo/white palette, subtly embedding a hidden geometric **K** inside the inner orbital chord and prism rays while keeping the homepage emblem 100% untouched.
 - **Desktop Chrome Extensions (Kiwi-Style Direct Store Install & Full MV2/MV3 Engine):** Automatically switches Chrome Web Store to Desktop Chrome mode, clears false WebView unavailability banners, enables the Store's own install button directly to Kio's resilient CRX3 downloader (up to 4,000 files), injects synchronous `chrome.*` / `browser.*` / `GM_*` APIs before popup scripts run, serves `chrome-extension://` virtual resources, and supports live Popup ↔ Active Tab messaging, `chrome.storage.onChanged` broadcasts, `chrome.scripting`, and static DNR rules (Standard Mode only).

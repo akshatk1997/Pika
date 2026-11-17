@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kio", appName)
-    assertEquals("1.9.2", BuildConfig.VERSION_NAME)
-    assertEquals(64, BuildConfig.VERSION_CODE)
+    assertEquals("1.9.3", BuildConfig.VERSION_NAME)
+    assertEquals(65, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -189,7 +189,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Resources").assertDoesNotExist()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.9.2").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.9.3").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
 
     // Navigate into Data Saver folder
@@ -866,5 +866,51 @@ class ExampleRobolectricTest {
     assertEquals(204, resp?.statusCode)
     pool.trimMemoryAndDiskCaches("tab_perf", aggressive = true)
     pool.destroyAll()
+  }
+
+  @Test
+  fun systemDefaultModeWorksIdenticallyInPrivateModeAndStandardMode() {
+    val activity = composeTestRule.activity
+    val vm = activity.viewModel
+    composeTestRule.waitForIdle()
+    composeTestRule.runOnUiThread {
+      vm.dismissIntro()
+      vm.openNewTab(isPrivate = true)
+    }
+    composeTestRule.waitForIdle()
+    assertTrue(vm.activeTab().isPrivate)
+
+    // Select System Default Mode directly from Private Mode 3-dot menu
+    composeTestRule.onNodeWithTag("nav_menu_button").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("quick_theme_system_chip").assertIsDisplayed().performClick()
+    composeTestRule.waitForIdle()
+    assertEquals(com.example.model.ThemeMode.SYSTEM, vm.settings.value.themeMode)
+
+    // Simulate OS System Dark Mode change while in Private Mode
+    composeTestRule.runOnUiThread {
+      val darkConfig = android.content.res.Configuration(activity.resources.configuration).apply {
+        uiMode = (uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK.inv()) or
+          android.content.res.Configuration.UI_MODE_NIGHT_YES
+      }
+      activity.onConfigurationChanged(darkConfig)
+    }
+    composeTestRule.waitForIdle()
+    assertTrue("Private Mode in System Default must resolve dark when OS is dark", vm.webViewPool.resolveIsDark(vm.settings.value))
+    val darkController = androidx.core.view.WindowCompat.getInsetsController(activity.window, activity.window.decorView)
+    assertFalse("Private Mode System Dark must render light status bar icons", darkController.isAppearanceLightStatusBars)
+
+    // Simulate OS System Light Mode change while in Private Mode
+    composeTestRule.runOnUiThread {
+      val lightConfig = android.content.res.Configuration(activity.resources.configuration).apply {
+        uiMode = (uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK.inv()) or
+          android.content.res.Configuration.UI_MODE_NIGHT_NO
+      }
+      activity.onConfigurationChanged(lightConfig)
+    }
+    composeTestRule.waitForIdle()
+    assertFalse("Private Mode in System Default must resolve light when OS is light", vm.webViewPool.resolveIsDark(vm.settings.value))
+    val lightController = androidx.core.view.WindowCompat.getInsetsController(activity.window, activity.window.decorView)
+    assertTrue("Private Mode System Light must render dark status bar icons", lightController.isAppearanceLightStatusBars)
   }
 }

@@ -336,6 +336,17 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     webViewPool.trimMemoryAndDiskCaches(_activeTabId.value, aggressive = aggressive)
   }
 
+  fun onSystemThemeChanged(isSystemDark: Boolean) {
+    webViewPool.updateSystemDarkMode(isSystemDark)
+    val current = _settings.value
+    if (current.themeMode == ThemeMode.SYSTEM) {
+      webViewPool.applySettingsToAll(current) { id ->
+        val t = tabById(id)
+        (t?.isPrivate == true) to (t?.userAgentMode ?: UserAgentMode.MOBILE)
+      }
+    }
+  }
+
   // Pure On-Device NLP Content Announcer Controls (Zero Copy / Zero Persistence)
   fun toggleNarratorPlayPause() = contentAnnouncer.togglePlayPause()
 

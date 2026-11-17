@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kio-v1.9.2.apk
+          cp "$APK_PATH" releases/Kio-v1.9.3.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kio-v1.9.2.apk
+          git add releases/Kio-v1.9.3.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kio-v1.9.2.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kio-v1.9.3.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.9.2
+      - name: Create or update GitHub Release v1.9.3
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kio-v1.9.2.apk)
-          NOTES="Kio Browser v1.9.2 (Build 64) — Hidden-K Concentric App Icon, Kiwi-Style Direct Chrome Web Store Extensions Fix, and Ultra-Low Data & Storage Performance Engine strictly under 2 MB.\n\n- **Creative Hidden-'K' Concentric App Launcher Icon (Homepage Emblem 100% Untouched):** Rebuilt the adaptive & monochrome app launcher icon from scratch directly on the classic concentric orbital logo using the exact same cyan/sky/indigo/white color palette, concealing a subtle geometric **K** inside the inner orbital meridian chord and prism refraction rays through the center nucleus while keeping the homepage \`KioLogo\` completely untouched.\n- **Chrome Web Store & Desktop Extensions Fix (Kiwi-Style Direct Install & Full MV2/MV3 Engine):**\n  - Fixed Chrome Web Store's *\"Item currently unavailable\"* & disabled *\"Add to Chrome\"* button by auto-enforcing Desktop Windows Chrome UA + Client Hints, spoofing \`navigator.userAgentData\`, clearing the false WebView error banner, and activating the Store's own install button directly to Kio's CRX3 installer.\n  - Upgraded Google CRX3 downloads with full desktop platform query parameters (\`os=win&arch=x64&prod=chromecrx\`) + resilient fallback endpoints and strict HTTP 204 rejection.\n  - Raised CRX/ZIP unpacker limit from 600 to 4,000 files (64 MB cap with Zip-Slip protection) so large real-world desktop Chrome extensions unpack cleanly.\n  - Injected the full MV2/MV3 \`chrome.*\` / \`browser.*\` / \`GM_*\` API prelude synchronously into extension HTML \`<head>\` before scripts execute, added \`chrome-extension://\` virtual serving, and wired real-time Popup ↔ Active Tab messaging, live \`chrome.storage.onChanged\` broadcasts, \`chrome.scripting.executeScript\` / \`insertCSS\`, and \`chrome.tabs.reload\`.\n- **Low-Data Surfing & Ultra-Lean Android Footprint:**\n  - Always-on prefetch/prerender elimination and native below-the-fold lazy loading + async image decoding cut mobile data usage and speed up page loads without degrading visual quality.\n  - Added automatic WebP favicon disk compression, 96-icon/14-day disk cache trimming, orphan cache cleanup, and \`onTrimMemory\` background WebView eviction so Kio takes minimal Android space & RAM while staying lightning-fast strictly under 2 MB.\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
-          if gh release view v1.9.2 >/dev/null 2>&1; then
-            gh release upload v1.9.2 releases/Kio-v1.9.2.apk --clobber
-            gh release edit v1.9.2 --title "Kio v1.9.2 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kio-v1.9.3.apk)
+          NOTES="Kio Browser v1.9.3 (Build 65) — Full System Default Mode Parity in Private Mode & Standard Mode strictly under 2 MB.\n\n- **Fixed System Default Mode in Private Mode:**\n  - Added live \`onConfigurationChanged\` OS night-mode tracking in \`MainActivity\` synced directly into \`BrowserViewModel\` and \`WebViewPool\` so toggling Android's System Dark/Light theme updates Private Mode immediately just like Standard Mode (without leaving stale application-context \`uiMode\` or stale \`nightWebMode\`).\n  - Re-applied status bar and navigation bar icon contrast (\`isAppearanceLightStatusBars\` / \`isAppearanceLightNavigationBars\`) across Private Mode \`FLAG_SECURE\` transitions so system bars match System Default Light & Dark cleanly.\n  - Added \`Sec-CH-Prefers-Color-Scheme\` headers, live \`window.matchMedia('(prefers-color-scheme: dark|light)')\` mirroring, WebView background sync, and fixed API 33+ \`isAlgorithmicDarkeningAllowed\` so cookie-less Private Mode websites immediately match System Default Light & Dark just like Standard Mode.\n  - Synced \`ThemeMode.SYSTEM\` cleanly in both Settings (**System default**) and the 3-dot Quick Menu (**System** chip) for Standard Mode and Private Mode.\n- **Strictly Under 2 MB:** Preserves the hidden-'K' concentric app launcher icon, untouched homepage emblem, Kiwi-style Desktop Chrome Extensions, Zero-Leak Private Vault, and low-data/low-space performance engine.\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
+          if gh release view v1.9.3 >/dev/null 2>&1; then
+            gh release upload v1.9.3 releases/Kio-v1.9.3.apk --clobber
+            gh release edit v1.9.3 --title "Kio v1.9.3 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.9.2 releases/Kio-v1.9.2.apk \
-              --title "Kio v1.9.2 (< 2 MB)" \
+            gh release create v1.9.3 releases/Kio-v1.9.3.apk \
+              --title "Kio v1.9.3 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi
