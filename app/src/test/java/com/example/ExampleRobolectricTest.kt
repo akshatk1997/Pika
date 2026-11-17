@@ -168,14 +168,14 @@ class ExampleRobolectricTest {
     // Navigate into Data Saver folder
     composeTestRule.onNodeWithTag("settings_folder_data_saver").performScrollTo().performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("setting_data_saver").assertIsDisplayed()
     composeTestRule.onNodeWithTag("settings_back_button").performClick()
     composeTestRule.waitForIdle()
 
     // Navigate into Media & Playback folder
     composeTestRule.onNodeWithTag("settings_folder_media").performScrollTo().performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("setting_background_play").assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_youtube_scale_fit").assertDoesNotExist()
     composeTestRule.onNodeWithTag("settings_back_button").performClick()
     composeTestRule.waitForIdle()
@@ -183,7 +183,7 @@ class ExampleRobolectricTest {
     // Navigate into Tabs & Session folder
     composeTestRule.onNodeWithTag("settings_folder_tabs").performScrollTo().performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("setting_retain_tabs").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("setting_retain_tabs").assertIsDisplayed()
     composeTestRule.onNodeWithTag("settings_back_button").performClick()
     composeTestRule.waitForIdle()
 
@@ -197,8 +197,8 @@ class ExampleRobolectricTest {
     // Navigate into About Kai folder
     composeTestRule.onNodeWithTag("settings_folder_about").performScrollTo().performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Kai Browser").performScrollTo().assertIsDisplayed()
-    composeTestRule.onNodeWithText("Privacy Policy").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithText("Kai Browser").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Privacy Policy").assertIsDisplayed()
     composeTestRule.onNodeWithTag("settings_back_button").performClick()
     composeTestRule.waitForIdle()
 
