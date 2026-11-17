@@ -68,7 +68,9 @@ import com.example.R
 import com.example.model.ClosedTabRecord
 import com.example.model.TabInfo
 import com.example.ai.TabHistoryAiOrganizer
+import com.example.security.UrlValidator
 import com.example.ui.components.FeatherIcons
+import com.example.ui.components.SiteFavicon
 import com.example.ui.theme.FeatherPrivateAccent
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -82,6 +84,7 @@ fun TabsSheet(
   onMoveTab: (String, Int) -> Unit,
   onNewTab: (Boolean) -> Unit,
   onRestoreClosedTab: () -> Unit,
+  onReopenClosedTab: (String) -> Unit = { onRestoreClosedTab() },
   onEndPrivateSession: () -> Unit,
   onCloseSheet: () -> Unit
 ) {
@@ -276,28 +279,15 @@ fun TabsSheet(
                   modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                   verticalAlignment = Alignment.CenterVertically
                 ) {
-                  Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = accent.copy(alpha = 0.14f),
-                    modifier = Modifier.size(38.dp)
-                  ) {
-                    Box(contentAlignment = Alignment.Center) {
-                      if (tab.faviconInitial.isNotEmpty()) {
-                        Text(
-                          text = tab.faviconInitial,
-                          fontWeight = FontWeight.Bold,
-                          color = accent
-                        )
-                      } else {
-                        Icon(
-                          imageVector = if (tab.isPrivate) FeatherIcons.PrivateMask else FeatherIcons.FeatherLogo,
-                          contentDescription = null,
-                          tint = accent,
-                          modifier = Modifier.size(18.dp)
-                        )
-                      }
-                    }
-                  }
+                  SiteFavicon(
+                    url = tab.url,
+                    fallbackInitial = tab.faviconInitial,
+                    accentColor = accent,
+                    size = 38.dp,
+                    cornerRadius = 12.dp,
+                    isPrivate = tab.isPrivate,
+                    fallbackIcon = if (tab.isPrivate) FeatherIcons.PrivateMask else FeatherIcons.FeatherLogo
+                  )
 
                   Spacer(modifier = Modifier.width(12.dp))
 
@@ -350,12 +340,68 @@ fun TabsSheet(
         }
 
         if (closedTabs.isNotEmpty() && !showPrivate) {
-          OutlinedButton(
-            onClick = onRestoreClosedTab,
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).minimumInteractiveComponentSize()
+          Column(
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
           ) {
-            Text("${stringResource(R.string.tabs_restore)}: ${closedTabs.first().title}", maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+              text = "RECENT TABS",
+              style = MaterialTheme.typography.labelMedium,
+              fontWeight = FontWeight.SemiBold,
+              color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            closedTabs.take(3).forEach { closed ->
+              val closedHost = UrlValidator.extractHost(closed.url)
+              val closedInitial = closedHost.firstOrNull()?.uppercase() ?: "R"
+              Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .clip(RoundedCornerShape(14.dp))
+                  .clickable {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onReopenClosedTab(closed.url)
+                  }
+              ) {
+                Row(
+                  modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  SiteFavicon(
+                    url = closed.url,
+                    fallbackInitial = closedInitial,
+                    accentColor = MaterialTheme.colorScheme.primary,
+                    size = 32.dp,
+                    cornerRadius = 9.dp
+                  )
+                  Spacer(modifier = Modifier.width(10.dp))
+                  Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                      text = closed.title,
+                      style = MaterialTheme.typography.bodyMedium,
+                      fontWeight = FontWeight.Medium,
+                      maxLines = 1,
+                      overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                      text = closedHost.ifEmpty { closed.url },
+                      style = MaterialTheme.typography.labelSmall,
+                      color = MaterialTheme.colorScheme.onSurfaceVariant,
+                      maxLines = 1,
+                      overflow = TextOverflow.Ellipsis
+                    )
+                  }
+                  Icon(
+                    imageVector = Icons.Filled.Refresh,
+                    contentDescription = stringResource(R.string.tabs_restore),
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                  )
+                }
+              }
+            }
           }
         }
       }

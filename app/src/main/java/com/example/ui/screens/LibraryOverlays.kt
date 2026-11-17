@@ -70,7 +70,9 @@ import com.example.model.DownloadStatus
 import com.example.model.HistoryItem
 import com.example.model.SniffedMediaType
 import com.example.model.SniffedResource
+import com.example.security.UrlValidator
 import com.example.ui.components.FeatherIcons
+import com.example.ui.components.SiteFavicon
 import java.text.DateFormat
 import java.util.Date
 
@@ -164,11 +166,13 @@ fun BookmarksScreen(
                   modifier = Modifier.padding(12.dp),
                   verticalAlignment = Alignment.CenterVertically
                 ) {
-                  Icon(
-                    FeatherIcons.Bookmark,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
+                  val bmInitial = UrlValidator.extractHost(bm.url).firstOrNull()?.uppercase() ?: "B"
+                  SiteFavicon(
+                    url = bm.url,
+                    fallbackInitial = bmInitial,
+                    accentColor = MaterialTheme.colorScheme.primary,
+                    size = 36.dp,
+                    cornerRadius = 10.dp
                   )
                   Spacer(modifier = Modifier.width(12.dp))
                   Column(modifier = Modifier.weight(1f)) {
@@ -351,7 +355,14 @@ fun HistoryScreen(
                   }
               ) {
                 Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                  Icon(FeatherIcons.History, contentDescription = null, modifier = Modifier.size(20.dp))
+                  val histInitial = UrlValidator.extractHost(item.url).firstOrNull()?.uppercase() ?: "H"
+                  SiteFavicon(
+                    url = item.url,
+                    fallbackInitial = histInitial,
+                    accentColor = MaterialTheme.colorScheme.primary,
+                    size = 36.dp,
+                    cornerRadius = 10.dp
+                  )
                   Spacer(modifier = Modifier.width(12.dp))
                   Column(modifier = Modifier.weight(1f)) {
                     Text(item.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)

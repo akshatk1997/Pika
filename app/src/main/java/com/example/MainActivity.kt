@@ -195,21 +195,18 @@ class MainActivity : ComponentActivity() {
       }
 
       val systemDark = isSystemInDarkTheme()
-      val isHomeScreen = remember(tabs, activeTabId) {
-        val t = tabs.firstOrNull { it.id == activeTabId }
-        t != null && t.url.isBlank() && !t.isLoading && t.errorState == null && t.httpWarning == null
-      }
+      val activeOverlay by viewModel.activeOverlay.collectAsStateWithLifecycle()
       val darkTheme = when (settings.themeMode) {
         ThemeMode.SYSTEM -> systemDark
         ThemeMode.DARK -> true
         ThemeMode.LIGHT -> false
       }
-      val useDarkSystemBars = darkTheme || isHomeScreen
+      val useDarkStatusBar = darkTheme || activeOverlay == com.example.ui.ActiveOverlay.NONE
       val fullscreenView by viewModel.fullscreenView.collectAsStateWithLifecycle()
       val isBrowserFullscreen by viewModel.isBrowserFullscreen.collectAsStateWithLifecycle()
       val isImmersiveFullscreen = fullscreenView != null || isBrowserFullscreen
 
-      DisposableEffect(useDarkSystemBars, isImmersiveFullscreen) {
+      DisposableEffect(darkTheme, useDarkStatusBar, isImmersiveFullscreen) {
         val window = this@MainActivity.window
         val insetsController = WindowCompat.getInsetsController(window, window.decorView)
 
@@ -247,12 +244,12 @@ class MainActivity : ComponentActivity() {
             @Suppress("DEPRECATION")
             window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
             enableEdgeToEdge(
-              statusBarStyle = if (useDarkSystemBars) {
+              statusBarStyle = if (useDarkStatusBar) {
                 SystemBarStyle.dark(Color.TRANSPARENT)
               } else {
                 SystemBarStyle.light(Color.TRANSPARENT, Color.argb(0x66, 0x11, 0x18, 0x27))
               },
-              navigationBarStyle = if (useDarkSystemBars) {
+              navigationBarStyle = if (darkTheme) {
                 SystemBarStyle.dark(Color.TRANSPARENT)
               } else {
                 SystemBarStyle.light(Color.TRANSPARENT, Color.argb(0x66, 0x11, 0x18, 0x27))

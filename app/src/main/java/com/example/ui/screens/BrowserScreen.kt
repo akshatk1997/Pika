@@ -242,13 +242,9 @@ fun BrowserScreen(
     ) {
       val isWideWidth = maxWidth >= 600.dp
       val isImeVisible = WindowInsets.isImeVisible
-      val isHomePageVisible = activeTab.httpWarning == null &&
-        activeTab.errorState == null &&
-        activeTab.url.isBlank() &&
-        !activeTab.isLoading
 
       Scaffold(
-        containerColor = if (isHomePageVisible) Color.Black else MaterialTheme.colorScheme.background,
+        containerColor = Color.Black,
         contentWindowInsets = WindowInsets.statusBars
       ) { innerPadding ->
         Column(
@@ -752,6 +748,7 @@ fun BrowserScreen(
               onMoveTab = { id, delta -> viewModel.moveTab(id, delta) },
               onNewTab = { isPriv -> viewModel.openNewTab(isPrivate = isPriv) },
               onRestoreClosedTab = { viewModel.restoreLastClosedTab() },
+              onReopenClosedTab = { url -> viewModel.reopenClosedTab(url) },
               onEndPrivateSession = { viewModel.endAllPrivateTabs() },
               onCloseSheet = { viewModel.setOverlay(ActiveOverlay.NONE) }
             )
@@ -826,6 +823,7 @@ fun BrowserScreen(
               settings = settings,
               currentUrl = shareableUrl,
               sitePermissions = sitePermissions,
+              systemWebViewInfo = viewModel.systemWebViewPackageInfo,
               onUpdateSettings = { viewModel.updateSettings(it) },
               onAddCustomBlockedHost = { host -> viewModel.addCustomBlockedHost(host) },
               onRemoveCustomBlockedHost = { host -> viewModel.removeCustomBlockedHost(host) },
@@ -833,6 +831,7 @@ fun BrowserScreen(
               onClearBrowsingData = { opts -> viewModel.clearSelectedBrowsingData(opts) },
               onExportBookmarks = onExportBookmarks,
               onImportBookmarks = onImportBookmarks,
+              onCopyText = { text, msg -> viewModel.copyTextToClipboard(text, msg) },
               onShowMessage = { viewModel.showToast(it) },
               onClose = { viewModel.setOverlay(ActiveOverlay.NONE) }
             )
@@ -1447,11 +1446,15 @@ private fun BrowserToolbar(
   val isHomePage = activeTab.url.isBlank()
   val isPrivate = activeTab.isPrivate
 
+  val headerAccent = if (isPrivate) FeatherPrivateAccent else Color(0xFF38BDF8)
+  val headerTextPrimary = Color(0xFFF8FAFC)
+  val headerTextMuted = Color(0xFF94A3B8)
+
   val (secIcon, secTint, secDesc) = when (activeTab.securityState) {
     SecurityState.PRIVATE -> Triple(FeatherIcons.PrivateMask, FeatherPrivateAccent, stringResource(R.string.cd_security_private))
     SecurityState.SECURE_HTTPS -> Triple(Icons.Filled.Lock, FeatherSecureGreen, stringResource(R.string.cd_security_https))
     SecurityState.INSECURE_HTTP, SecurityState.ERROR -> Triple(Icons.Filled.Warning, FeatherWarningAmber, stringResource(R.string.cd_security_http))
-    SecurityState.HOME -> Triple(Icons.Filled.Search, if (isHomePage) Color(0xFF94A3B8) else MaterialTheme.colorScheme.onSurfaceVariant, stringResource(R.string.cd_security_home))
+    SecurityState.HOME -> Triple(Icons.Filled.Search, headerTextMuted, stringResource(R.string.cd_security_home))
   }
 
   val displayHost = remember(activeTab.url) {
@@ -1460,24 +1463,19 @@ private fun BrowserToolbar(
 
   val omniboxPill: @Composable (Modifier) -> Unit = { pillModifier ->
     var swipeAccum by remember { mutableFloatStateOf(0f) }
-    val isSystemDark = isSystemInDarkTheme()
-    val pillBg = if (isPrivate) {
-      if (isSystemDark) Color(0xFF14121F) else Color(0xFF231D33)
-    } else {
-      MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.82f)
-    }
+    val pillBg = if (isPrivate) Color(0xFF140D22) else Color(0xFF0E1016)
     val pillBorder = when {
-      isFocused -> MaterialTheme.colorScheme.primary
-      isPrivate -> FeatherPrivateAccent.copy(alpha = 0.75f)
-      else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+      isFocused -> headerAccent
+      isPrivate -> FeatherPrivateAccent.copy(alpha = 0.72f)
+      else -> Color(0xFF232736)
     }
     Surface(
       shape = RoundedCornerShape(26.dp),
       color = pillBg,
-      tonalElevation = if (isFocused) 6.dp else 2.dp,
-      shadowElevation = if (isFocused) 4.dp else 1.dp,
+      tonalElevation = 0.dp,
+      shadowElevation = 0.dp,
       border = BorderStroke(
-        width = if (isFocused || isPrivate) 1.2.dp else 0.8.dp,
+        width = if (isFocused || isPrivate) 1.2.dp else 0.9.dp,
         color = pillBorder
       ),
       modifier = pillModifier
@@ -1502,7 +1500,7 @@ private fun BrowserToolbar(
       ) {
         Surface(
           shape = RoundedCornerShape(10.dp),
-          color = secTint.copy(alpha = 0.14f),
+          color = secTint.copy(alpha = 0.16f),
           modifier = Modifier
             .size(30.dp)
             .clickable { onOpenSiteInfo() }
@@ -1529,7 +1527,7 @@ private fun BrowserToolbar(
               text = "$displayHost$modeTag",
               style = MaterialTheme.typography.bodyMedium,
               fontWeight = FontWeight.Medium,
-              color = if (isPrivate) Color(0xFFF3E8FF) else MaterialTheme.colorScheme.onSurface,
+              color = if (isPrivate) Color(0xFFF3E8FF) else headerTextPrimary,
               maxLines = 1,
               overflow = TextOverflow.Ellipsis
             )
@@ -1537,7 +1535,7 @@ private fun BrowserToolbar(
             Text(
               text = if (isPrivate) "Search or enter URL · Zero Tracking" else stringResource(R.string.omnibox_hint),
               style = MaterialTheme.typography.bodyMedium,
-              color = if (isPrivate) FeatherPrivateAccent.copy(alpha = 0.75f) else MaterialTheme.colorScheme.onSurfaceVariant,
+              color = if (isPrivate) FeatherPrivateAccent.copy(alpha = 0.78f) else headerTextMuted,
               maxLines = 1,
               overflow = TextOverflow.Ellipsis
             )
@@ -1547,9 +1545,9 @@ private fun BrowserToolbar(
             onValueChange = { omniboxValue = it },
             singleLine = true,
             textStyle = MaterialTheme.typography.bodyMedium.copy(
-              color = if (isPrivate) Color.White else MaterialTheme.colorScheme.onSurface
+              color = headerTextPrimary
             ),
-            cursorBrush = SolidColor(if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.primary),
+            cursorBrush = SolidColor(headerAccent),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
             keyboardActions = KeyboardActions(onGo = {
               if (omniboxValue.text.isNotBlank()) {
@@ -1577,7 +1575,7 @@ private fun BrowserToolbar(
             onClick = { omniboxValue = TextFieldValue("") },
             modifier = Modifier.minimumInteractiveComponentSize().testTag("address_clear_button")
           ) {
-            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.cd_clear_input), modifier = Modifier.size(18.dp))
+            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.cd_clear_input), tint = headerTextMuted, modifier = Modifier.size(18.dp))
           }
         } else if (activeTab.url.isNotBlank()) {
           IconButton(
@@ -1587,7 +1585,7 @@ private fun BrowserToolbar(
             },
             modifier = Modifier.minimumInteractiveComponentSize().testTag("address_copy_button")
           ) {
-            Icon(FeatherIcons.Copy, contentDescription = stringResource(R.string.cd_copy_url), modifier = Modifier.size(17.dp))
+            Icon(FeatherIcons.Copy, contentDescription = stringResource(R.string.cd_copy_url), tint = headerTextMuted, modifier = Modifier.size(17.dp))
           }
         }
         if (settings.noImageMode) {
@@ -1601,8 +1599,8 @@ private fun BrowserToolbar(
         if (activeTab.trackersBlockedCount > 0) {
           Surface(
             shape = RoundedCornerShape(12.dp),
-            color = if (isPrivate) FeatherPrivateAccent.copy(alpha = 0.2f) else MaterialTheme.colorScheme.primaryContainer,
-            border = BorderStroke(0.6.dp, (if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.primary).copy(alpha = 0.4f)),
+            color = headerAccent.copy(alpha = 0.18f),
+            border = BorderStroke(0.6.dp, headerAccent.copy(alpha = 0.45f)),
             modifier = Modifier.clickable { onOpenSiteInfo() }
           ) {
             Row(
@@ -1612,7 +1610,7 @@ private fun BrowserToolbar(
               Icon(
                 FeatherIcons.Shield,
                 contentDescription = "Blocked",
-                tint = if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.primary,
+                tint = headerAccent,
                 modifier = Modifier.size(12.dp)
               )
               Spacer(modifier = Modifier.width(3.dp))
@@ -1620,7 +1618,7 @@ private fun BrowserToolbar(
                 text = activeTab.trackersBlockedCount.toString(),
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.SemiBold,
-                color = if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.onPrimaryContainer
+                color = headerAccent
               )
             }
           }
@@ -1630,10 +1628,10 @@ private fun BrowserToolbar(
   }
 
   Surface(
-    tonalElevation = if (isHomePage) 0.dp else 3.dp,
-    shadowElevation = if (isHomePage) 0.dp else 4.dp,
-    color = if (isHomePage) Color.Black else MaterialTheme.colorScheme.surface,
-    contentColor = if (isHomePage) Color(0xFFF1F5F9) else MaterialTheme.colorScheme.onSurface,
+    tonalElevation = 0.dp,
+    shadowElevation = 0.dp,
+    color = Color.Black,
+    contentColor = headerTextPrimary,
     modifier = modifier.fillMaxWidth()
   ) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -1710,7 +1708,7 @@ private fun BrowserToolbar(
             Icon(
               imageVector = FeatherIcons.DesktopPc,
               contentDescription = stringResource(R.string.action_desktop_site),
-              tint = if (activeTab.userAgentMode == UserAgentMode.DESKTOP) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+              tint = if (activeTab.userAgentMode == UserAgentMode.DESKTOP) headerAccent else headerTextMuted
             )
           }
           IconButton(
@@ -1720,7 +1718,7 @@ private fun BrowserToolbar(
             Icon(
               imageVector = FeatherIcons.Bookmark,
               contentDescription = stringResource(R.string.action_bookmarks),
-              tint = MaterialTheme.colorScheme.onSurfaceVariant
+              tint = headerTextMuted
             )
           }
           IconButton(
@@ -1730,7 +1728,7 @@ private fun BrowserToolbar(
             Icon(
               imageVector = FeatherIcons.Download,
               contentDescription = stringResource(R.string.action_downloads),
-              tint = MaterialTheme.colorScheme.onSurfaceVariant
+              tint = headerTextMuted
             )
           }
           IconButton(
@@ -1743,16 +1741,16 @@ private fun BrowserToolbar(
             Icon(
               imageVector = Icons.Filled.Add,
               contentDescription = stringResource(R.string.action_new_tab),
-              tint = MaterialTheme.colorScheme.onSurfaceVariant
+              tint = headerTextMuted
             )
           }
           Surface(
             shape = RoundedCornerShape(12.dp),
             border = BorderStroke(
               1.5.dp,
-              if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+              if (isPrivate) FeatherPrivateAccent else headerTextPrimary.copy(alpha = 0.85f)
             ),
-            color = if (isPrivate) FeatherPrivateAccent.copy(alpha = 0.16f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            color = if (isPrivate) FeatherPrivateAccent.copy(alpha = 0.18f) else Color(0xFF141720),
             modifier = Modifier
               .minimumInteractiveComponentSize()
               .clickable {
@@ -1769,7 +1767,7 @@ private fun BrowserToolbar(
                 text = tabCount.toString(),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
-                color = if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.onSurface
+                color = if (isPrivate) FeatherPrivateAccent else headerTextPrimary
               )
             }
           }
@@ -1836,9 +1834,9 @@ private fun BrowserToolbar(
                 shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(
                   1.5.dp,
-                  if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+                  if (isPrivate) FeatherPrivateAccent else headerTextPrimary.copy(alpha = 0.85f)
                 ),
-                color = if (isPrivate) FeatherPrivateAccent.copy(alpha = 0.16f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                color = if (isPrivate) FeatherPrivateAccent.copy(alpha = 0.18f) else Color(0xFF141720),
                 modifier = Modifier
                   .minimumInteractiveComponentSize()
                   .clickable {
@@ -1855,7 +1853,7 @@ private fun BrowserToolbar(
                     text = tabCount.toString(),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.onSurface
+                    color = if (isPrivate) FeatherPrivateAccent else headerTextPrimary
                   )
                 }
               }
@@ -1925,7 +1923,7 @@ private fun BrowserToolbar(
                   Icon(
                     FeatherIcons.Sparkle,
                     contentDescription = "AI Assistant",
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = headerAccent,
                     modifier = Modifier.size(19.dp)
                   )
                 }
@@ -1935,9 +1933,9 @@ private fun BrowserToolbar(
                 shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(
                   1.5.dp,
-                  if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+                  if (isPrivate) FeatherPrivateAccent else headerTextPrimary.copy(alpha = 0.85f)
                 ),
-                color = if (isPrivate) FeatherPrivateAccent.copy(alpha = 0.16f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                color = if (isPrivate) FeatherPrivateAccent.copy(alpha = 0.18f) else Color(0xFF141720),
                 modifier = Modifier
                   .minimumInteractiveComponentSize()
                   .clickable {
@@ -1954,7 +1952,7 @@ private fun BrowserToolbar(
                     text = tabCount.toString(),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.onSurface
+                    color = if (isPrivate) FeatherPrivateAccent else headerTextPrimary
                   )
                 }
               }
@@ -1975,7 +1973,7 @@ private fun BrowserToolbar(
 
       if (!isHomePage && isFocused && !clipboardCandidate.isNullOrBlank() && clipboardCandidate != activeTab.url) {
         Surface(
-          color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+          color = Color(0xFF0E1A2B),
           modifier = Modifier
             .fillMaxWidth()
             .clickable {
@@ -1990,14 +1988,14 @@ private fun BrowserToolbar(
             Icon(
               Icons.AutoMirrored.Filled.ArrowForward,
               contentDescription = null,
-              tint = MaterialTheme.colorScheme.onPrimaryContainer,
+              tint = headerAccent,
               modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
               text = "Paste & Go: ${UrlValidator.sanitizeDisplayText(clipboardCandidate, 48)}",
               style = MaterialTheme.typography.labelMedium,
-              color = MaterialTheme.colorScheme.onPrimaryContainer,
+              color = Color(0xFFE0F2FE),
               maxLines = 1,
               overflow = TextOverflow.Ellipsis
             )
@@ -2005,14 +2003,16 @@ private fun BrowserToolbar(
         }
       }
 
-      HorizontalDivider(
-        thickness = 0.8.dp,
-        color = if (activeTab.isPrivate) {
-          FeatherPrivateAccent.copy(alpha = 0.45f)
-        } else {
-          MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)
-        }
-      )
+      if (!isHomePage) {
+        HorizontalDivider(
+          thickness = 0.8.dp,
+          color = if (activeTab.isPrivate) {
+            FeatherPrivateAccent.copy(alpha = 0.45f)
+          } else {
+            Color(0xFF1A1E29)
+          }
+        )
+      }
     }
   }
 }

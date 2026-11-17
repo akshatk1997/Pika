@@ -375,20 +375,13 @@ fun NewTabHomeView(
                     modifier = Modifier.padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                   ) {
-                    Surface(
-                      shape = RoundedCornerShape(11.dp),
-                      color = primaryAccent.copy(alpha = 0.14f),
-                      modifier = Modifier.size(36.dp)
-                    ) {
-                      Box(contentAlignment = Alignment.Center) {
-                        Text(
-                          text = initial,
-                          style = MaterialTheme.typography.titleMedium,
-                          fontWeight = FontWeight.Bold,
-                          color = primaryAccent
-                        )
-                      }
-                    }
+                    SiteFavicon(
+                      url = bm.url,
+                      fallbackInitial = initial,
+                      accentColor = primaryAccent,
+                      size = 36.dp,
+                      cornerRadius = 11.dp
+                    )
                     Spacer(modifier = Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
                       Text(

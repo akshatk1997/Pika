@@ -47,6 +47,7 @@ import com.example.model.UserAgentMode
 import com.example.model.WebPermissionKind
 import com.example.security.TrackerBlocker
 import com.example.security.UrlValidator
+import com.example.ui.components.SiteFaviconCache
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
@@ -778,6 +779,9 @@ class WebViewPool(
         wv.clearFormData()
       } catch (_: Throwable) {
       }
+    }
+    if (options.clearCache) {
+      SiteFaviconCache.clearAll(appContext)
     }
     if (options.clearCookies) {
       try {
@@ -2056,6 +2060,15 @@ class WebViewPool(
       override fun onReceivedTitle(view: WebView?, title: String?) {
         if (!title.isNullOrBlank()) {
           callbacks.onTitleReceived(tabId, UrlValidator.sanitizeDisplayText(title, 180))
+        }
+      }
+
+      override fun onReceivedIcon(view: WebView?, icon: Bitmap?) {
+        if (icon != null && !isPrivate) {
+          val liveUrl = try { view?.url.orEmpty() } catch (_: Throwable) { "" }
+          if (liveUrl.isNotBlank() && UrlValidator.isSafeWebUrl(liveUrl)) {
+            SiteFaviconCache.storeFromWebView(appContext, liveUrl, icon, isPrivate = false)
+          }
         }
       }
 

@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kai-v1.8.7.apk
+          cp "$APK_PATH" releases/Kai-v1.8.8.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kai-v1.8.7.apk
+          git add releases/Kai-v1.8.8.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kai-v1.8.7.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kai-v1.8.8.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.8.7
+      - name: Create or update GitHub Release v1.8.8
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kai-v1.8.7.apk)
-          NOTES="Kai Browser v1.8.7 (Build 60) — Minimal, privacy-hardened Android browser shell powered by Android System WebView.\n\n- **Link-Over-Picture Target Resolution Fix:** Permanently resolved tapping or long-pressing a picture/thumbnail inside a link opening the image file instead of the link. Added real-time DOM touch link extraction (handling nested <a href><img/></a>, <picture>/<figure>, data-href wrappers, and card containers), strict Link-First resolution via UrlValidator.resolveLinkOverImageTarget, and fixed onCreateWindow so Android's SRC_IMAGE_ANCHOR_TYPE extra (which holds the image src) is never mistaken for the link URL.\n- **Pure OLED Dark Homepage Background:** Upgraded the homepage canvas, toolbar, search pill, and bookmark cards to a sleek pure pitch-black (#000000) theme with high-contrast dark surfaces and matching dark system bars — leaving the Kai emblem and all icons completely untouched.\n- **Under 2 MB Limit:** Strictly maintained under 2 MB (~1.49 MB) with zero new dependencies.\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
-          if gh release view v1.8.7 >/dev/null 2>&1; then
-            gh release upload v1.8.7 releases/Kai-v1.8.7.apk --clobber
-            gh release edit v1.8.7 --title "Kai v1.8.7 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kai-v1.8.8.apk)
+          NOTES="Kai Browser v1.8.8 (Build 61) — Minimal, privacy-hardened Android browser shell powered by Android System WebView.\n\n- **Real Website Logos Across Bookmarks, History & Recent Tabs:** Built a zero-dependency SiteFaviconCache & SiteFavicon component capturing native WebView favicons (onReceivedIcon) plus compact memory/disk caching and privacy-first icon lookup so saved bookmarks (homepage & bookmarks list), history entries, open tabs, and recently closed tabs display each website's actual logo for instant visual recognition. Private tabs never persist favicons to disk.\n- **Unified Pure Pitch-Black Search Header:** Styled the active browsing header and omnibox search bar in seamless pure OLED black (#000000) with dark obsidian search pill (#0E1016) and crisp white status bar icons matching the homepage.\n- **Category-Wise Settings Folders, About & Help/Feedback:** Re-architected Settings into clean, professional category folders (General & Search, Appearance & Display, Privacy & Security, Data Saver & Bandwidth, Media & Playback, Tabs & Session, Data & Storage) with live status summaries, plus dedicated Help & Feedback (interactive FAQ, feedback composer, diagnostics copy) and About Kai (version, rendering engine, encryption, privacy policy, security architecture, and open-source licenses) folders.\n- **Under 2 MB Limit:** Strictly maintained under 2 MB (~1.50 MB) with zero new dependencies.\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
+          if gh release view v1.8.8 >/dev/null 2>&1; then
+            gh release upload v1.8.8 releases/Kai-v1.8.8.apk --clobber
+            gh release edit v1.8.8 --title "Kai v1.8.8 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.8.7 releases/Kai-v1.8.7.apk \
-              --title "Kai v1.8.7 (< 2 MB)" \
+            gh release create v1.8.8 releases/Kai-v1.8.8.apk \
+              --title "Kai v1.8.8 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

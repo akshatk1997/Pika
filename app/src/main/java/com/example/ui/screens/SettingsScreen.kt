@@ -1,7 +1,9 @@
 package com.example.ui.screens
 
+import android.content.Intent
 import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -9,7 +11,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -28,9 +29,15 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -62,10 +69,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.BuildConfig
 import com.example.R
@@ -76,8 +88,23 @@ import com.example.model.SitePermissionRule
 import com.example.model.ThemeMode
 import com.example.security.UrlValidator
 import com.example.ui.components.FeatherIcons
+import com.example.ui.theme.FeatherMintDark
+import com.example.ui.theme.FeatherPrivateAccent
 import com.example.ui.theme.FeatherSecureGreen
+import com.example.ui.theme.FeatherWarningAmber
 import kotlin.math.roundToInt
+
+private enum class SettingsFolder(val title: String) {
+  GENERAL("General & Search"),
+  APPEARANCE("Appearance & Display"),
+  PRIVACY("Privacy & Security"),
+  DATA_SAVER("Data Saver & Bandwidth"),
+  MEDIA("Media & Playback"),
+  TABS("Tabs & Session"),
+  STORAGE("Data & Storage"),
+  HELP_FEEDBACK("Help & Feedback"),
+  ABOUT("About Kai")
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -85,6 +112,7 @@ fun SettingsScreen(
   settings: SettingsState,
   currentUrl: String = "",
   sitePermissions: List<SitePermissionRule>,
+  systemWebViewInfo: String? = null,
   onUpdateSettings: ((SettingsState) -> SettingsState) -> Unit,
   onAddCustomBlockedHost: (String) -> Boolean,
   onRemoveCustomBlockedHost: (String) -> Unit,
@@ -92,25 +120,44 @@ fun SettingsScreen(
   onClearBrowsingData: (ClearDataOptions) -> Unit,
   onExportBookmarks: () -> Unit,
   onImportBookmarks: () -> Unit,
+  onCopyText: (String, String) -> Unit = { _, _ -> },
   onShowMessage: (String) -> Unit,
   onClose: () -> Unit
 ) {
-  BackHandler { onClose() }
+  var activeFolder by remember { mutableStateOf<SettingsFolder?>(null) }
+
+  BackHandler {
+    if (activeFolder != null) {
+      activeFolder = null
+    } else {
+      onClose()
+    }
+  }
+
   var homepageDraft by remember(settings.homepageUrl) { mutableStateOf(settings.homepageUrl) }
   var homepageError by remember { mutableStateOf(false) }
   var customSearchDraft by remember(settings.customSearchTemplate) { mutableStateOf(settings.customSearchTemplate) }
   var customBlockDraft by remember { mutableStateOf("") }
   var customBlockError by remember { mutableStateOf(false) }
   var showClearDialog by remember { mutableStateOf(false) }
+  var infoDialogContent by remember { mutableStateOf<Pair<String, String>?>(null) }
+
+  val context = LocalContext.current
 
   Scaffold(
     contentWindowInsets = WindowInsets.safeDrawing,
     topBar = {
       TopAppBar(
-        title = { Text(stringResource(R.string.settings_title)) },
+        title = { Text(activeFolder?.title ?: stringResource(R.string.settings_title)) },
         navigationIcon = {
           IconButton(
-            onClick = onClose,
+            onClick = {
+              if (activeFolder != null) {
+                activeFolder = null
+              } else {
+                onClose()
+              }
+            },
             modifier = Modifier.minimumInteractiveComponentSize().testTag("settings_back_button")
           ) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
@@ -130,387 +177,764 @@ fun SettingsScreen(
         .padding(16.dp)
         .testTag("settings_list")
     ) {
-        Card(
-          shape = RoundedCornerShape(18.dp),
-          border = BorderStroke(0.9.dp, FeatherSecureGreen.copy(alpha = 0.35f)),
-          colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-          modifier = Modifier.widthIn(max = 720.dp).fillMaxWidth()
-        ) {
-          Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+      when (activeFolder) {
+        null -> {
+          // Brand & Version Summary Header Card
+          Card(
+            shape = RoundedCornerShape(18.dp),
+            border = BorderStroke(0.9.dp, FeatherSecureGreen.copy(alpha = 0.35f)),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            modifier = Modifier
+              .widthIn(max = 720.dp)
+              .fillMaxWidth()
+              .clip(RoundedCornerShape(18.dp))
+              .clickable { activeFolder = SettingsFolder.ABOUT }
           ) {
-            Surface(
-              shape = RoundedCornerShape(12.dp),
-              color = FeatherSecureGreen.copy(alpha = 0.14f),
-              modifier = Modifier.size(40.dp)
+            Row(
+              modifier = Modifier.padding(14.dp),
+              verticalAlignment = Alignment.CenterVertically
             ) {
-              Box(contentAlignment = Alignment.Center) {
-                Icon(
-                  FeatherIcons.Shield,
-                  contentDescription = null,
-                  tint = FeatherSecureGreen,
-                  modifier = Modifier.size(20.dp)
+              Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = FeatherSecureGreen.copy(alpha = 0.14f),
+                modifier = Modifier.size(42.dp)
+              ) {
+                Box(contentAlignment = Alignment.Center) {
+                  Icon(
+                    FeatherIcons.Shield,
+                    contentDescription = null,
+                    tint = FeatherSecureGreen,
+                    modifier = Modifier.size(22.dp)
+                  )
+                }
+              }
+              Spacer(modifier = Modifier.width(12.dp))
+              Column(modifier = Modifier.weight(1f)) {
+                Text(
+                  text = stringResource(R.string.app_name),
+                  style = MaterialTheme.typography.titleMedium,
+                  fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                  text = "Version ${BuildConfig.VERSION_NAME}",
+                  style = MaterialTheme.typography.labelSmall,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+              }
+              Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = FeatherSecureGreen.copy(alpha = 0.14f)
+              ) {
+                Text(
+                  text = if (settings.trackerBlockingEnabled) "Shield Active" else "Standard",
+                  style = MaterialTheme.typography.labelSmall,
+                  fontWeight = FontWeight.Medium,
+                  color = FeatherSecureGreen,
+                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 )
               }
             }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-              Text(
-                text = stringResource(R.string.app_name),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+          }
+
+          SettingsFolderGroupHeader("Browser Settings", Modifier.widthIn(max = 720.dp))
+
+          // Category-wise Folders Card
+          Card(
+            shape = RoundedCornerShape(18.dp),
+            border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            modifier = Modifier.widthIn(max = 720.dp).fillMaxWidth()
+          ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+              val homeSummary = if (settings.homepageUrl.isBlank()) "Start page" else UrlValidator.extractHost(settings.homepageUrl).ifEmpty { "Custom" }
+              SettingsFolderRow(
+                icon = Icons.Filled.Search,
+                iconTint = MaterialTheme.colorScheme.primary,
+                title = SettingsFolder.GENERAL.title,
+                subtitle = "${settings.searchEngine.label} · $homeSummary",
+                tag = "settings_folder_general",
+                onClick = { activeFolder = SettingsFolder.GENERAL }
               )
-              Text(
-                text = "Version ${BuildConfig.VERSION_NAME}",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+              FolderDivider()
+              SettingsFolderRow(
+                icon = if (settings.themeMode == ThemeMode.DARK) FeatherIcons.NightMoon else FeatherIcons.SunLight,
+                iconTint = FeatherMintDark,
+                title = SettingsFolder.APPEARANCE.title,
+                subtitle = "${settings.themeMode.name.lowercase().replaceFirstChar { it.uppercase() }} theme · ${settings.textZoomPercent}% zoom",
+                tag = "settings_folder_appearance",
+                onClick = { activeFolder = SettingsFolder.APPEARANCE }
+              )
+              FolderDivider()
+              val permNote = if (sitePermissions.isNotEmpty()) " · ${sitePermissions.size} site rules" else ""
+              SettingsFolderRow(
+                icon = FeatherIcons.Shield,
+                iconTint = FeatherSecureGreen,
+                title = SettingsFolder.PRIVACY.title,
+                subtitle = "${if (settings.trackerBlockingEnabled) "Ad & tracker shield on" else "Shield off"} · ${if (settings.httpsOnlyEnabled) "HTTPS-Only" else "Standard"}$permNote",
+                tag = "settings_folder_privacy",
+                onClick = { activeFolder = SettingsFolder.PRIVACY }
+              )
+              FolderDivider()
+              SettingsFolderRow(
+                icon = FeatherIcons.DataSaver,
+                iconTint = FeatherWarningAmber,
+                title = SettingsFolder.DATA_SAVER.title,
+                subtitle = "Data saver ${if (settings.dataSaverEnabled) "on" else "off"} · Images ${if (settings.noImageMode) "blocked" else "allowed"}",
+                tag = "settings_folder_data_saver",
+                onClick = { activeFolder = SettingsFolder.DATA_SAVER }
+              )
+              FolderDivider()
+              SettingsFolderRow(
+                icon = FeatherIcons.Play,
+                iconTint = Color(0xFFEC4899),
+                title = SettingsFolder.MEDIA.title,
+                subtitle = "Background stream playback ${if (settings.backgroundPlayEnabled) "enabled" else "disabled"}",
+                tag = "settings_folder_media",
+                onClick = { activeFolder = SettingsFolder.MEDIA }
+              )
+              FolderDivider()
+              SettingsFolderRow(
+                icon = FeatherIcons.OpenInNew,
+                iconTint = FeatherPrivateAccent,
+                title = SettingsFolder.TABS.title,
+                subtitle = if (settings.retainOpenTabs) "Retain open pages across restarts" else "Start fresh on launch",
+                tag = "settings_folder_tabs",
+                onClick = { activeFolder = SettingsFolder.TABS }
+              )
+              FolderDivider()
+              SettingsFolderRow(
+                icon = FeatherIcons.Download,
+                iconTint = Color(0xFF6366F1),
+                title = SettingsFolder.STORAGE.title,
+                subtitle = "Bookmarks import/export & clear browsing data",
+                tag = "settings_folder_storage",
+                onClick = { activeFolder = SettingsFolder.STORAGE }
+              )
+            }
+          }
+
+          SettingsFolderGroupHeader("Support & Info", Modifier.widthIn(max = 720.dp))
+
+          // Help & Feedback + About Kai Folders Card
+          Card(
+            shape = RoundedCornerShape(18.dp),
+            border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            modifier = Modifier.widthIn(max = 720.dp).fillMaxWidth()
+          ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+              SettingsFolderRow(
+                icon = FeatherIcons.Sparkle,
+                iconTint = MaterialTheme.colorScheme.primary,
+                title = SettingsFolder.HELP_FEEDBACK.title,
+                subtitle = "Quick guide, troubleshooting & send feedback",
+                tag = "settings_folder_help_feedback",
+                onClick = { activeFolder = SettingsFolder.HELP_FEEDBACK }
+              )
+              FolderDivider()
+              SettingsFolderRow(
+                icon = Icons.Filled.Info,
+                iconTint = FeatherSecureGreen,
+                title = SettingsFolder.ABOUT.title,
+                subtitle = "Version ${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE}) · Engine & policies",
+                tag = "settings_folder_about",
+                onClick = { activeFolder = SettingsFolder.ABOUT }
               )
             }
           }
         }
 
-      SettingsSectionCard("General & Search", Modifier.widthIn(max = 720.dp)) {
-          Text("Search engine", style = MaterialTheme.typography.titleMedium)
-          Spacer(modifier = Modifier.height(4.dp))
-          SearchEngine.entries.forEach { engine ->
-            Row(
-              modifier = Modifier
-                .fillMaxWidth()
-                .minimumInteractiveComponentSize()
-                .clickable { onUpdateSettings { it.copy(searchEngine = engine) } },
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              RadioButton(
-                selected = settings.searchEngine == engine,
-                onClick = { onUpdateSettings { it.copy(searchEngine = engine) } }
+        SettingsFolder.GENERAL -> {
+          SettingsSectionCard("Search Engine", Modifier.widthIn(max = 720.dp)) {
+            SearchEngine.entries.forEach { engine ->
+              Row(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .minimumInteractiveComponentSize()
+                  .clickable { onUpdateSettings { it.copy(searchEngine = engine) } },
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                RadioButton(
+                  selected = settings.searchEngine == engine,
+                  onClick = { onUpdateSettings { it.copy(searchEngine = engine) } }
+                )
+                Text(engine.label, style = MaterialTheme.typography.bodyLarge)
+              }
+            }
+            if (settings.searchEngine == SearchEngine.CUSTOM) {
+              val saveCustomSearch = {
+                if (UrlValidator.isValidCustomSearchTemplate(customSearchDraft)) {
+                  onUpdateSettings { it.copy(customSearchTemplate = customSearchDraft.trim()) }
+                  onShowMessage("Search URL saved")
+                } else {
+                  onShowMessage("Enter an https:// URL containing %s")
+                }
+              }
+              OutlinedTextField(
+                value = customSearchDraft,
+                onValueChange = { customSearchDraft = it },
+                label = { Text("Search URL (%s)") },
+                singleLine = true,
+                isError = !UrlValidator.isValidCustomSearchTemplate(customSearchDraft),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { saveCustomSearch() }),
+                modifier = Modifier.fillMaxWidth()
               )
-              Text(engine.label, style = MaterialTheme.typography.bodyLarge)
+              Spacer(modifier = Modifier.height(6.dp))
+              OutlinedButton(onClick = saveCustomSearch) { Text("Save") }
             }
           }
-          if (settings.searchEngine == SearchEngine.CUSTOM) {
-            val saveCustomSearch = {
-              if (UrlValidator.isValidCustomSearchTemplate(customSearchDraft)) {
-                onUpdateSettings { it.copy(customSearchTemplate = customSearchDraft.trim()) }
-                onShowMessage("Search URL saved")
+
+          SettingsSectionCard("Homepage", Modifier.widthIn(max = 720.dp)) {
+            val commitHomepage = { raw: String ->
+              val cleaned = UrlValidator.sanitizeControlChars(raw)
+              val normalized = if (cleaned.isNotEmpty() && !cleaned.contains("://") && !cleaned.contains(' ') && cleaned.contains('.')) {
+                "https://$cleaned"
               } else {
-                onShowMessage("Enter an https:// URL containing %s")
+                cleaned
+              }
+              if (normalized.isEmpty() || (UrlValidator.isSafeWebUrl(normalized) && normalized != "about:blank")) {
+                homepageDraft = normalized
+                homepageError = false
+                onUpdateSettings { it.copy(homepageUrl = normalized) }
+                onShowMessage(if (normalized.isEmpty()) "Homepage set to Start page" else "Homepage saved")
+              } else {
+                homepageError = true
+                onShowMessage("Enter a valid URL")
               }
             }
             OutlinedTextField(
-              value = customSearchDraft,
-              onValueChange = { customSearchDraft = it },
-              label = { Text("Search URL (%s)") },
-              singleLine = true,
-              isError = !UrlValidator.isValidCustomSearchTemplate(customSearchDraft),
-              keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-              keyboardActions = KeyboardActions(onDone = { saveCustomSearch() }),
-              modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            OutlinedButton(onClick = saveCustomSearch) { Text("Save") }
-          }
-          Spacer(modifier = Modifier.height(8.dp))
-          val commitHomepage = { raw: String ->
-            val cleaned = UrlValidator.sanitizeControlChars(raw)
-            val normalized = if (cleaned.isNotEmpty() && !cleaned.contains("://") && !cleaned.contains(' ') && cleaned.contains('.')) {
-              "https://$cleaned"
-            } else {
-              cleaned
-            }
-            if (normalized.isEmpty() || (UrlValidator.isSafeWebUrl(normalized) && normalized != "about:blank")) {
-              homepageDraft = normalized
-              homepageError = false
-              onUpdateSettings { it.copy(homepageUrl = normalized) }
-              onShowMessage(if (normalized.isEmpty()) "Homepage set to Start page" else "Homepage saved")
-            } else {
-              homepageError = true
-              onShowMessage("Enter a valid URL")
-            }
-          }
-          OutlinedTextField(
-            value = homepageDraft,
-            onValueChange = {
-              homepageDraft = it
-              homepageError = false
-            },
-            label = { Text("Homepage") },
-            placeholder = { Text("Start page") },
-            isError = homepageError,
-            singleLine = true,
-            shape = RoundedCornerShape(14.dp),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { commitHomepage(homepageDraft) }),
-            modifier = Modifier.fillMaxWidth().testTag("setting_homepage_input")
-          )
-          Spacer(modifier = Modifier.height(8.dp))
-          FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-          ) {
-            OutlinedButton(
-              shape = RoundedCornerShape(12.dp),
-              modifier = Modifier.testTag("setting_homepage_save"),
-              onClick = { commitHomepage(homepageDraft) }
-            ) { Text("Save") }
-            if (currentUrl.isNotBlank() && UrlValidator.isSafeWebUrl(currentUrl) && currentUrl != "about:blank") {
-              OutlinedButton(
-                shape = RoundedCornerShape(12.dp),
-                onClick = { commitHomepage(currentUrl) }
-              ) { Text("Use current") }
-            }
-            if (homepageDraft.isNotBlank() || settings.homepageUrl.isNotBlank()) {
-              TextButton(
-                onClick = { commitHomepage("") }
-              ) { Text("Reset") }
-            }
-          }
-        }
-
-      SettingsSectionCard("Data Saver & Bandwidth", Modifier.widthIn(max = 720.dp)) {
-          SettingSwitchRow(
-            title = "Data saver mode",
-            subtitle = "Compress web traffic, send Save-Data header, and avoid background data usage",
-            checked = settings.dataSaverEnabled,
-            tag = "setting_data_saver",
-            onCheckedChange = { v -> onUpdateSettings { it.copy(dataSaverEnabled = v) } }
-          )
-          HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-          SettingSwitchRow(
-            title = "Block images",
-            subtitle = "Save data on slow connections",
-            checked = settings.noImageMode,
-            tag = "setting_no_image",
-            onCheckedChange = { v -> onUpdateSettings { it.copy(noImageMode = v) } }
-          )
-        }
-
-      SettingsSectionCard("Media & YouTube Playback", Modifier.widthIn(max = 720.dp)) {
-          SettingSwitchRow(
-            title = "Background stream playback",
-            subtitle = "Keep video and audio playing when browser is in background",
-            checked = settings.backgroundPlayEnabled,
-            tag = "setting_background_play",
-            onCheckedChange = { v -> onUpdateSettings { it.copy(backgroundPlayEnabled = v) } }
-          )
-        }
-
-      SettingsSectionCard("Tabs & Session", Modifier.widthIn(max = 720.dp)) {
-          SettingSwitchRow(
-            title = "Retain open web pages",
-            subtitle = "Keep open tabs and pages across restarts",
-            checked = settings.retainOpenTabs,
-            tag = "setting_retain_tabs",
-            onCheckedChange = { v -> onUpdateSettings { it.copy(retainOpenTabs = v) } }
-          )
-        }
-
-      SettingsSectionCard("Appearance & Display", Modifier.widthIn(max = 720.dp)) {
-          Text("Theme", style = MaterialTheme.typography.titleMedium)
-          Spacer(modifier = Modifier.height(6.dp))
-          FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-          ) {
-            ThemeMode.entries.forEach { mode ->
-              FilterChip(
-                selected = settings.themeMode == mode,
-                onClick = {
-                  onUpdateSettings {
-                    when (mode) {
-                      ThemeMode.LIGHT -> it.copy(themeMode = ThemeMode.LIGHT, nightWebMode = false)
-                      ThemeMode.DARK -> it.copy(themeMode = ThemeMode.DARK, nightWebMode = true)
-                      ThemeMode.SYSTEM -> it.copy(themeMode = ThemeMode.SYSTEM)
-                    }
-                  }
-                },
-                label = { Text(mode.name.lowercase().replaceFirstChar { it.uppercase() }) }
-              )
-            }
-          }
-          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-            SettingSwitchRow(
-              title = "Dynamic theme",
-              subtitle = "Use wallpaper colors",
-              checked = settings.dynamicColor,
-              tag = "setting_dynamic_color",
-              onCheckedChange = { v -> onUpdateSettings { it.copy(dynamicColor = v) } }
-            )
-          }
-          HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-          SettingSwitchRow(
-            title = "Dark mode for sites",
-            subtitle = "Invert light web pages",
-            checked = settings.nightWebMode,
-            tag = "setting_night_web",
-            onCheckedChange = { v -> onUpdateSettings { it.copy(nightWebMode = v) } }
-          )
-          Spacer(modifier = Modifier.height(10.dp))
-          Text("Text zoom: ${settings.textZoomPercent}%", style = MaterialTheme.typography.titleMedium)
-          Slider(
-            value = settings.textZoomPercent.toFloat(),
-            onValueChange = { raw ->
-              val snapped = ((raw / 5f).roundToInt() * 5).coerceIn(75, 200)
-              onUpdateSettings { it.copy(textZoomPercent = snapped) }
-            },
-            valueRange = 75f..200f
-          )
-        }
-
-      SettingsSectionCard("Privacy & Security", Modifier.widthIn(max = 720.dp)) {
-          SettingSwitchRow(
-            title = "HTTPS-Only mode",
-            subtitle = "Warn before unencrypted connections",
-            checked = settings.httpsOnlyEnabled,
-            tag = "setting_https_only",
-            onCheckedChange = { v -> onUpdateSettings { it.copy(httpsOnlyEnabled = v) } }
-          )
-          HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-          SettingSwitchRow(
-            title = "Block third-party cookies",
-            subtitle = "Limit cross-site tracking",
-            checked = settings.blockThirdPartyCookies,
-            tag = "setting_block_3p_cookies",
-            onCheckedChange = { v -> onUpdateSettings { it.copy(blockThirdPartyCookies = v) } }
-          )
-          HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-          SettingSwitchRow(
-            title = "Block ads & trackers",
-            subtitle = "Pure ad-free browsing and video streaming ad shield",
-            checked = settings.trackerBlockingEnabled,
-            tag = "setting_tracker_blocker",
-            onCheckedChange = { v -> onUpdateSettings { it.copy(trackerBlockingEnabled = v) } }
-          )
-          HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-          SettingSwitchRow(
-            title = "Save history",
-            subtitle = "Keep visited pages on device",
-            checked = settings.historyEnabled,
-            tag = "setting_history_enabled",
-            onCheckedChange = { v -> onUpdateSettings { it.copy(historyEnabled = v) } }
-          )
-          HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-          SettingSwitchRow(
-            title = "Do Not Track / GPC",
-            subtitle = stringResource(R.string.settings_dnt_note),
-            checked = settings.doNotTrackEnabled,
-            tag = "setting_dnt",
-            onCheckedChange = { v -> onUpdateSettings { it.copy(doNotTrackEnabled = v) } }
-          )
-          HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-          SettingSwitchRow(
-            title = "JavaScript",
-            subtitle = "Allow sites to run scripts",
-            checked = settings.javascriptEnabled,
-            tag = "setting_js",
-            onCheckedChange = { v -> onUpdateSettings { it.copy(javascriptEnabled = v) } }
-          )
-          HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-          Text("Blocked domains", style = MaterialTheme.typography.titleMedium)
-          Spacer(modifier = Modifier.height(6.dp))
-          Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            OutlinedTextField(
-              value = customBlockDraft,
+              value = homepageDraft,
               onValueChange = {
-                customBlockDraft = it
-                customBlockError = false
+                homepageDraft = it
+                homepageError = false
               },
-              placeholder = { Text("ads.example.com") },
-              isError = customBlockError,
+              label = { Text("Homepage URL") },
+              placeholder = { Text("Start page") },
+              isError = homepageError,
               singleLine = true,
-              shape = RoundedCornerShape(12.dp),
-              modifier = Modifier.weight(1f).testTag("custom_block_input")
+              shape = RoundedCornerShape(14.dp),
+              keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+              keyboardActions = KeyboardActions(onDone = { commitHomepage(homepageDraft) }),
+              modifier = Modifier.fillMaxWidth().testTag("setting_homepage_input")
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            OutlinedButton(
-              onClick = {
-                if (onAddCustomBlockedHost(customBlockDraft)) {
-                  customBlockDraft = ""
-                  customBlockError = false
-                } else {
-                  customBlockError = true
-                  onShowMessage("Enter a valid domain")
-                }
-              },
-              shape = RoundedCornerShape(12.dp),
-              modifier = Modifier.minimumInteractiveComponentSize().testTag("custom_block_add")
-            ) {
-              Icon(Icons.Filled.Add, contentDescription = "Add blocked domain")
-            }
-          }
-          if (settings.customBlockedHosts.isNotEmpty()) {
             Spacer(modifier = Modifier.height(8.dp))
             FlowRow(
               horizontalArrangement = Arrangement.spacedBy(8.dp),
               verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-              settings.customBlockedHosts.forEach { host ->
-                InputChip(
-                  selected = false,
-                  onClick = { onRemoveCustomBlockedHost(host) },
-                  label = { Text(host) },
-                  trailingIcon = {
-                    Icon(Icons.Filled.Close, contentDescription = "Remove $host", modifier = Modifier.size(16.dp))
-                  }
-                )
+              OutlinedButton(
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.testTag("setting_homepage_save"),
+                onClick = { commitHomepage(homepageDraft) }
+              ) { Text("Save") }
+              if (currentUrl.isNotBlank() && UrlValidator.isSafeWebUrl(currentUrl) && currentUrl != "about:blank") {
+                OutlinedButton(
+                  shape = RoundedCornerShape(12.dp),
+                  onClick = { commitHomepage(currentUrl) }
+                ) { Text("Use current") }
+              }
+              if (homepageDraft.isNotBlank() || settings.homepageUrl.isNotBlank()) {
+                TextButton(
+                  onClick = { commitHomepage("") }
+                ) { Text("Reset") }
               }
             }
           }
         }
 
-      if (sitePermissions.isNotEmpty()) {
-        SettingsSectionCard("Site permissions", Modifier.widthIn(max = 720.dp)) {
-          sitePermissions.forEach { rule ->
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              verticalAlignment = Alignment.CenterVertically
+        SettingsFolder.APPEARANCE -> {
+          SettingsSectionCard("Appearance & Display", Modifier.widthIn(max = 720.dp)) {
+            Text("Theme", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(6.dp))
+            FlowRow(
+              horizontalArrangement = Arrangement.spacedBy(8.dp),
+              verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-              Column(modifier = Modifier.weight(1f)) {
-                Text(rule.origin, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                Text(
-                  "${rule.kind.name.lowercase().replace('_', ' ')}: ${if (rule.allowed) "Allowed" else "Blocked"}",
-                  style = MaterialTheme.typography.labelSmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant
+              ThemeMode.entries.forEach { mode ->
+                FilterChip(
+                  selected = settings.themeMode == mode,
+                  onClick = {
+                    onUpdateSettings {
+                      when (mode) {
+                        ThemeMode.LIGHT -> it.copy(themeMode = ThemeMode.LIGHT, nightWebMode = false)
+                        ThemeMode.DARK -> it.copy(themeMode = ThemeMode.DARK, nightWebMode = true)
+                        ThemeMode.SYSTEM -> it.copy(themeMode = ThemeMode.SYSTEM)
+                      }
+                    }
+                  },
+                  label = { Text(mode.name.lowercase().replaceFirstChar { it.uppercase() }) }
                 )
               }
-              IconButton(
-                onClick = { onRemovePermissionRule(rule) },
-                modifier = Modifier.minimumInteractiveComponentSize()
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+              HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+              SettingSwitchRow(
+                title = "Dynamic theme",
+                subtitle = "Use wallpaper colors",
+                checked = settings.dynamicColor,
+                tag = "setting_dynamic_color",
+                onCheckedChange = { v -> onUpdateSettings { it.copy(dynamicColor = v) } }
+              )
+            }
+            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            SettingSwitchRow(
+              title = "Dark mode for sites",
+              subtitle = "Invert light web pages",
+              checked = settings.nightWebMode,
+              tag = "setting_night_web",
+              onCheckedChange = { v -> onUpdateSettings { it.copy(nightWebMode = v) } }
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Text("Text zoom: ${settings.textZoomPercent}%", style = MaterialTheme.typography.titleMedium)
+            Slider(
+              value = settings.textZoomPercent.toFloat(),
+              onValueChange = { raw ->
+                val snapped = ((raw / 5f).roundToInt() * 5).coerceIn(75, 200)
+                onUpdateSettings { it.copy(textZoomPercent = snapped) }
+              },
+              valueRange = 75f..200f
+            )
+          }
+        }
+
+        SettingsFolder.PRIVACY -> {
+          SettingsSectionCard("Shield & Tracking Protection", Modifier.widthIn(max = 720.dp)) {
+            SettingSwitchRow(
+              title = "HTTPS-Only mode",
+              subtitle = "Warn before unencrypted connections",
+              checked = settings.httpsOnlyEnabled,
+              tag = "setting_https_only",
+              onCheckedChange = { v -> onUpdateSettings { it.copy(httpsOnlyEnabled = v) } }
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            SettingSwitchRow(
+              title = "Block third-party cookies",
+              subtitle = "Limit cross-site tracking",
+              checked = settings.blockThirdPartyCookies,
+              tag = "setting_block_3p_cookies",
+              onCheckedChange = { v -> onUpdateSettings { it.copy(blockThirdPartyCookies = v) } }
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            SettingSwitchRow(
+              title = "Block ads & trackers",
+              subtitle = "Pure ad-free browsing and video streaming ad shield",
+              checked = settings.trackerBlockingEnabled,
+              tag = "setting_tracker_blocker",
+              onCheckedChange = { v -> onUpdateSettings { it.copy(trackerBlockingEnabled = v) } }
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            SettingSwitchRow(
+              title = "Save history",
+              subtitle = "Keep visited pages on device",
+              checked = settings.historyEnabled,
+              tag = "setting_history_enabled",
+              onCheckedChange = { v -> onUpdateSettings { it.copy(historyEnabled = v) } }
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            SettingSwitchRow(
+              title = "Do Not Track / GPC",
+              subtitle = stringResource(R.string.settings_dnt_note),
+              checked = settings.doNotTrackEnabled,
+              tag = "setting_dnt",
+              onCheckedChange = { v -> onUpdateSettings { it.copy(doNotTrackEnabled = v) } }
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            SettingSwitchRow(
+              title = "JavaScript",
+              subtitle = "Allow sites to run scripts",
+              checked = settings.javascriptEnabled,
+              tag = "setting_js",
+              onCheckedChange = { v -> onUpdateSettings { it.copy(javascriptEnabled = v) } }
+            )
+          }
+
+          SettingsSectionCard("Blocked Domains", Modifier.widthIn(max = 720.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+              OutlinedTextField(
+                value = customBlockDraft,
+                onValueChange = {
+                  customBlockDraft = it
+                  customBlockError = false
+                },
+                placeholder = { Text("ads.example.com") },
+                isError = customBlockError,
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.weight(1f).testTag("custom_block_input")
+              )
+              Spacer(modifier = Modifier.width(8.dp))
+              OutlinedButton(
+                onClick = {
+                  if (onAddCustomBlockedHost(customBlockDraft)) {
+                    customBlockDraft = ""
+                    customBlockError = false
+                  } else {
+                    customBlockError = true
+                    onShowMessage("Enter a valid domain")
+                  }
+                },
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.minimumInteractiveComponentSize().testTag("custom_block_add")
               ) {
-                Icon(Icons.Filled.Delete, contentDescription = "Remove ${rule.origin}")
+                Icon(Icons.Filled.Add, contentDescription = "Add blocked domain")
+              }
+            }
+            if (settings.customBlockedHosts.isNotEmpty()) {
+              Spacer(modifier = Modifier.height(8.dp))
+              FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+              ) {
+                settings.customBlockedHosts.forEach { host ->
+                  InputChip(
+                    selected = false,
+                    onClick = { onRemoveCustomBlockedHost(host) },
+                    label = { Text(host) },
+                    trailingIcon = {
+                      Icon(Icons.Filled.Close, contentDescription = "Remove $host", modifier = Modifier.size(16.dp))
+                    }
+                  )
+                }
+              }
+            }
+          }
+
+          if (sitePermissions.isNotEmpty()) {
+            SettingsSectionCard("Site Permissions", Modifier.widthIn(max = 720.dp)) {
+              sitePermissions.forEach { rule ->
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Column(modifier = Modifier.weight(1f)) {
+                    Text(rule.origin, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Text(
+                      "${rule.kind.name.lowercase().replace('_', ' ')}: ${if (rule.allowed) "Allowed" else "Blocked"}",
+                      style = MaterialTheme.typography.labelSmall,
+                      color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                  }
+                  IconButton(
+                    onClick = { onRemovePermissionRule(rule) },
+                    modifier = Modifier.minimumInteractiveComponentSize()
+                  ) {
+                    Icon(Icons.Filled.Delete, contentDescription = "Remove ${rule.origin}")
+                  }
+                }
               }
             }
           }
         }
-      }
 
-      SettingsSectionCard("Data & Storage", Modifier.widthIn(max = 720.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-          OutlinedButton(
-            onClick = onImportBookmarks,
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.weight(1f).minimumInteractiveComponentSize()
-          ) { Text(stringResource(R.string.bookmarks_import)) }
-          OutlinedButton(
-            onClick = onExportBookmarks,
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.weight(1f).minimumInteractiveComponentSize()
-          ) { Text(stringResource(R.string.bookmarks_export)) }
+        SettingsFolder.DATA_SAVER -> {
+          SettingsSectionCard("Data Saver & Bandwidth", Modifier.widthIn(max = 720.dp)) {
+            SettingSwitchRow(
+              title = "Data saver mode",
+              subtitle = "Compress web traffic, send Save-Data header, and avoid background data usage",
+              checked = settings.dataSaverEnabled,
+              tag = "setting_data_saver",
+              onCheckedChange = { v -> onUpdateSettings { it.copy(dataSaverEnabled = v) } }
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            SettingSwitchRow(
+              title = "Block images",
+              subtitle = "Save data on slow connections",
+              checked = settings.noImageMode,
+              tag = "setting_no_image",
+              onCheckedChange = { v -> onUpdateSettings { it.copy(noImageMode = v) } }
+            )
+          }
         }
-        Spacer(modifier = Modifier.height(10.dp))
-        Button(
-          onClick = { showClearDialog = true },
-          shape = RoundedCornerShape(14.dp),
-          colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-          modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("settings_clear_data_button")
-        ) {
-          Icon(Icons.Filled.Delete, contentDescription = null)
-          Spacer(modifier = Modifier.width(6.dp))
-          Text(stringResource(R.string.settings_clear_data))
+
+        SettingsFolder.MEDIA -> {
+          SettingsSectionCard("Media & Playback", Modifier.widthIn(max = 720.dp)) {
+            SettingSwitchRow(
+              title = "Background stream playback",
+              subtitle = "Keep video and audio playing when browser is in background",
+              checked = settings.backgroundPlayEnabled,
+              tag = "setting_background_play",
+              onCheckedChange = { v -> onUpdateSettings { it.copy(backgroundPlayEnabled = v) } }
+            )
+          }
+        }
+
+        SettingsFolder.TABS -> {
+          SettingsSectionCard("Tabs & Session", Modifier.widthIn(max = 720.dp)) {
+            SettingSwitchRow(
+              title = "Retain open web pages",
+              subtitle = "Keep open tabs and pages across restarts",
+              checked = settings.retainOpenTabs,
+              tag = "setting_retain_tabs",
+              onCheckedChange = { v -> onUpdateSettings { it.copy(retainOpenTabs = v) } }
+            )
+          }
+        }
+
+        SettingsFolder.STORAGE -> {
+          SettingsSectionCard("Bookmarks Backup", Modifier.widthIn(max = 720.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+              OutlinedButton(
+                onClick = onImportBookmarks,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.weight(1f).minimumInteractiveComponentSize()
+              ) { Text(stringResource(R.string.bookmarks_import)) }
+              OutlinedButton(
+                onClick = onExportBookmarks,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.weight(1f).minimumInteractiveComponentSize()
+              ) { Text(stringResource(R.string.bookmarks_export)) }
+            }
+          }
+
+          SettingsSectionCard("Clear Local Data", Modifier.widthIn(max = 720.dp)) {
+            Text(
+              text = "Erase browsing history, cookies, cached favicons, and saved site permissions stored on this device.",
+              style = MaterialTheme.typography.bodyMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(
+              onClick = { showClearDialog = true },
+              shape = RoundedCornerShape(14.dp),
+              colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+              modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("settings_clear_data_button")
+            ) {
+              Icon(Icons.Filled.Delete, contentDescription = null)
+              Spacer(modifier = Modifier.width(6.dp))
+              Text(stringResource(R.string.settings_clear_data))
+            }
+          }
+        }
+
+        SettingsFolder.HELP_FEEDBACK -> {
+          val faqs = remember {
+            listOf(
+              "How do I open links in a background or private tab?" to
+                "Tap and hold any link or picture-link on a website to open the link menu. Choose 'Open in background tab', 'Open in new tab', or 'Open in private tab'.",
+              "How do I view the full Desktop version of a site?" to
+                "Tap the menu button (⋮) and select Desktop. Kai switches to a Windows Chrome User-Agent, rewrites mobile URLs (like m.youtube.com), and renders a full 1280px desktop layout.",
+              "How do I download videos from a page?" to
+                "While on a page with a video, open the menu (⋮) → Resources and tap 'Scan Videos' to detect and download playable streams.",
+              "How does Private Mode keep my browsing safe?" to
+                "Private tabs run in RAM with zero disk caching, block OS task-switcher screenshots via FLAG_SECURE, never store history or favicons to disk, and purge all session data on exit.",
+              "Why are streaming popups and ad redirects blocked?" to
+                "Kai intercepts popunder ad redirects (including tsyndicate, ad.* subdomains, and click-hijack overlays) before they can open spam tabs or interrupt video playback."
+            )
+          }
+
+          SettingsSectionCard("Quick Help & FAQ", Modifier.widthIn(max = 720.dp)) {
+            faqs.forEachIndexed { idx, (question, answer) ->
+              var expanded by remember(idx) { mutableStateOf(idx == 0) }
+              Column(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .clickable { expanded = !expanded }
+                  .padding(vertical = 6.dp)
+              ) {
+                Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  modifier = Modifier.fillMaxWidth()
+                ) {
+                  Text(
+                    text = question,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
+                  )
+                  Icon(
+                    imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                  )
+                }
+                AnimatedVisibility(visible = expanded) {
+                  Text(
+                    text = answer,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 6.dp, bottom = 2.dp)
+                  )
+                }
+              }
+              if (idx < faqs.lastIndex) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+              }
+            }
+          }
+
+          var feedbackTopic by remember { mutableStateOf("Bug Report") }
+          var feedbackMessage by remember { mutableStateOf("") }
+          val diagnosticsSummary = remember(systemWebViewInfo) {
+            "Kai v${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})\n" +
+              "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})\n" +
+              "Device: ${Build.MANUFACTURER} ${Build.MODEL}\n" +
+              "Engine: ${systemWebViewInfo ?: "Android System WebView"}"
+          }
+
+          SettingsSectionCard("Send Feedback", Modifier.widthIn(max = 720.dp)) {
+            Text(
+              text = "Share suggestions, report a website issue, or send diagnostic info.",
+              style = MaterialTheme.typography.bodyMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            FlowRow(
+              horizontalArrangement = Arrangement.spacedBy(8.dp),
+              verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+              listOf("Bug Report", "Feature Request", "Website Issue", "General").forEach { topic ->
+                FilterChip(
+                  selected = feedbackTopic == topic,
+                  onClick = { feedbackTopic = topic },
+                  label = { Text(topic) }
+                )
+              }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+              value = feedbackMessage,
+              onValueChange = { feedbackMessage = it },
+              label = { Text("Describe your feedback") },
+              placeholder = { Text("Tell us what happened or what you'd like improved...") },
+              minLines = 3,
+              maxLines = 5,
+              shape = RoundedCornerShape(14.dp),
+              modifier = Modifier.fillMaxWidth().testTag("feedback_input")
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+              Button(
+                onClick = {
+                  val fullReport = buildString {
+                    append("[$feedbackTopic]\n")
+                    append(feedbackMessage.trim().ifEmpty { "(No message entered)" })
+                    append("\n\n--- Diagnostics ---\n")
+                    append(diagnosticsSummary)
+                  }
+                  try {
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                      type = "text/plain"
+                      putExtra(Intent.EXTRA_SUBJECT, "Kai Browser Feedback: $feedbackTopic")
+                      putExtra(Intent.EXTRA_TEXT, fullReport)
+                      addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(Intent.createChooser(shareIntent, "Send Feedback"))
+                  } catch (_: Throwable) {
+                    onCopyText(fullReport, "Feedback copied to clipboard")
+                  }
+                },
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.weight(1f).minimumInteractiveComponentSize().testTag("feedback_send_button")
+              ) {
+                Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Send Feedback")
+              }
+              OutlinedButton(
+                onClick = { onCopyText(diagnosticsSummary, "Diagnostics copied") },
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.minimumInteractiveComponentSize().testTag("feedback_copy_diag_button")
+              ) {
+                Icon(FeatherIcons.Copy, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Copy Info")
+              }
+            }
+          }
+        }
+
+        SettingsFolder.ABOUT -> {
+          Card(
+            shape = RoundedCornerShape(18.dp),
+            border = BorderStroke(0.9.dp, FeatherSecureGreen.copy(alpha = 0.4f)),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            modifier = Modifier.widthIn(max = 720.dp).fillMaxWidth()
+          ) {
+            Column(
+              modifier = Modifier.fillMaxWidth().padding(18.dp),
+              horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+              Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = FeatherSecureGreen.copy(alpha = 0.14f),
+                modifier = Modifier.size(54.dp)
+              ) {
+                Box(contentAlignment = Alignment.Center) {
+                  Icon(
+                    FeatherIcons.Shield,
+                    contentDescription = null,
+                    tint = FeatherSecureGreen,
+                    modifier = Modifier.size(28.dp)
+                  )
+                }
+              }
+              Spacer(modifier = Modifier.height(10.dp))
+              Text(
+                text = "Kai Browser",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+              )
+              Text(
+                text = "Version ${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+              )
+              Spacer(modifier = Modifier.height(8.dp))
+              Text(
+                text = "Minimal, privacy-hardened Android web browser engineered to stay ultra-lightweight (< 2 MB) with zero telemetry and OS-maintained WebView security.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+              )
+            }
+          }
+
+          SettingsSectionCard("Engine & System Information", Modifier.widthIn(max = 720.dp)) {
+            AboutInfoRow("Version", "${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})")
+            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+            AboutInfoRow("Rendering Engine", systemWebViewInfo ?: "Android System WebView")
+            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+            AboutInfoRow("Android Platform", "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
+            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+            AboutInfoRow("Settings Encryption", "Android Keystore AES-256-GCM")
+            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+            AboutInfoRow("Telemetry & Analytics", "None (0% data collection)")
+          }
+
+          SettingsSectionCard("Policies & Licenses", Modifier.widthIn(max = 720.dp)) {
+            AboutPolicyRow("Privacy Policy") {
+              infoDialogContent = "Privacy Policy" to
+                "Kai collects zero analytics, zero telemetry, and zero personal data. Bookmarks, history, and preferences stay strictly on your device. Private tabs run in ephemeral RAM, block screenshots, and wipe all cookies, cache, and storage when closed."
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+            AboutPolicyRow("Security Architecture") {
+              infoDialogContent = "Security Architecture" to
+                "• Powered by the OS-maintained Android System WebView with Google Safe Browsing.\n" +
+                "• Local settings encrypted via Android Keystore AES-256-GCM.\n" +
+                "• Strict URL scheme filtering, intent sanitization, and HTTPS-Only warnings.\n" +
+                "• Built-in ad, tracker, popunder, and WebRTC LAN IP leak protection."
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+            AboutPolicyRow("Open-Source Components") {
+              infoDialogContent = "Open-Source Components" to
+                "Kai is built with Kotlin, AndroidX Jetpack Compose, Material 3, and AndroidX Lifecycle under Apache 2.0 licenses, with zero proprietary tracking SDKs or bloated third-party libraries."
+            }
+          }
         }
       }
     }
+  }
+
+  infoDialogContent?.let { (title, body) ->
+    AlertDialog(
+      onDismissRequest = { infoDialogContent = null },
+      title = { Text(title) },
+      text = { Text(body, style = MaterialTheme.typography.bodyMedium) },
+      confirmButton = {
+        TextButton(onClick = { infoDialogContent = null }) { Text("Close") }
+      }
+    )
   }
 
   if (showClearDialog) {
@@ -526,7 +950,7 @@ fun SettingsScreen(
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
           ClearOptionRow("Browsing history", clearHistory) { clearHistory = it }
           ClearOptionRow("Cookies & site data", clearCookies) { clearCookies = it }
-          ClearOptionRow("Cache", clearCache) { clearCache = it }
+          ClearOptionRow("Cache & site logos", clearCache) { clearCache = it }
           ClearOptionRow("Site permissions", clearPerms) { clearPerms = it }
         }
       },
@@ -548,6 +972,132 @@ fun SettingsScreen(
       dismissButton = {
         TextButton(onClick = { showClearDialog = false }) { Text("Cancel") }
       }
+    )
+  }
+}
+
+@Composable
+private fun SettingsFolderGroupHeader(title: String, modifier: Modifier = Modifier) {
+  Text(
+    text = title.uppercase(),
+    style = MaterialTheme.typography.labelMedium,
+    fontWeight = FontWeight.SemiBold,
+    color = MaterialTheme.colorScheme.primary,
+    modifier = modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp)
+  )
+}
+
+@Composable
+private fun SettingsFolderRow(
+  icon: ImageVector,
+  iconTint: Color,
+  title: String,
+  subtitle: String,
+  tag: String,
+  onClick: () -> Unit
+) {
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .minimumInteractiveComponentSize()
+      .clickable(onClick = onClick)
+      .padding(horizontal = 14.dp, vertical = 12.dp)
+      .testTag(tag),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Surface(
+      shape = RoundedCornerShape(12.dp),
+      color = iconTint.copy(alpha = 0.14f),
+      modifier = Modifier.size(38.dp)
+    ) {
+      Box(contentAlignment = Alignment.Center) {
+        Icon(
+          imageVector = icon,
+          contentDescription = null,
+          tint = iconTint,
+          modifier = Modifier.size(20.dp)
+        )
+      }
+    }
+    Spacer(modifier = Modifier.width(14.dp))
+    Column(modifier = Modifier.weight(1f)) {
+      Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Medium,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
+      )
+      Text(
+        text = subtitle,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
+      )
+    }
+    Spacer(modifier = Modifier.width(8.dp))
+    Icon(
+      imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+      contentDescription = null,
+      tint = MaterialTheme.colorScheme.onSurfaceVariant,
+      modifier = Modifier.size(20.dp)
+    )
+  }
+}
+
+@Composable
+private fun FolderDivider() {
+  HorizontalDivider(
+    modifier = Modifier.padding(start = 66.dp, end = 14.dp),
+    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+  )
+}
+
+@Composable
+private fun AboutInfoRow(label: String, value: String) {
+  Row(
+    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+    horizontalArrangement = Arrangement.SpaceBetween,
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Text(
+      text = label,
+      style = MaterialTheme.typography.bodyMedium,
+      color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    Spacer(modifier = Modifier.width(12.dp))
+    Text(
+      text = value,
+      style = MaterialTheme.typography.bodyMedium,
+      fontWeight = FontWeight.Medium,
+      maxLines = 1,
+      overflow = TextOverflow.Ellipsis
+    )
+  }
+}
+
+@Composable
+private fun AboutPolicyRow(label: String, onClick: () -> Unit) {
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .minimumInteractiveComponentSize()
+      .clickable(onClick = onClick)
+      .padding(vertical = 6.dp),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Text(
+      text = label,
+      style = MaterialTheme.typography.titleSmall,
+      fontWeight = FontWeight.Medium,
+      modifier = Modifier.weight(1f)
+    )
+    Icon(
+      imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+      contentDescription = null,
+      tint = MaterialTheme.colorScheme.onSurfaceVariant,
+      modifier = Modifier.size(18.dp)
     )
   }
 }

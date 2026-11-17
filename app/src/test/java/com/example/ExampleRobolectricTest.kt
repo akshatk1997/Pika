@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.8.7", BuildConfig.VERSION_NAME)
-    assertEquals(60, BuildConfig.VERSION_CODE)
+    assertEquals("1.8.8", BuildConfig.VERSION_NAME)
+    assertEquals(61, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -162,12 +162,47 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.8.7").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.8.8").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
+
+    // Navigate into Data Saver folder
+    composeTestRule.onNodeWithTag("settings_folder_data_saver").performScrollTo().performClick()
+    composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("settings_back_button").performClick()
+    composeTestRule.waitForIdle()
+
+    // Navigate into Media & Playback folder
+    composeTestRule.onNodeWithTag("settings_folder_media").performScrollTo().performClick()
+    composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_youtube_scale_fit").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("settings_back_button").performClick()
+    composeTestRule.waitForIdle()
+
+    // Navigate into Tabs & Session folder
+    composeTestRule.onNodeWithTag("settings_folder_tabs").performScrollTo().performClick()
+    composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("setting_retain_tabs").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("settings_back_button").performClick()
+    composeTestRule.waitForIdle()
+
+    // Navigate into Help & Feedback folder
+    composeTestRule.onNodeWithTag("settings_folder_help_feedback").performScrollTo().performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("feedback_send_button").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("settings_back_button").performClick()
+    composeTestRule.waitForIdle()
+
+    // Navigate into About Kai folder
+    composeTestRule.onNodeWithTag("settings_folder_about").performScrollTo().performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("Kai Browser").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithText("Privacy Policy").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("settings_back_button").performClick()
+    composeTestRule.waitForIdle()
+
+    // Close Settings back to Private Tab
     composeTestRule.onNodeWithTag("settings_back_button").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("Private browsing is active").assertDoesNotExist()

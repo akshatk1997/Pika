@@ -1085,6 +1085,15 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     openNewTab(isPrivate = false, initialUrl = latest.url)
   }
 
+  fun reopenClosedTab(url: String) {
+    if (url.isBlank()) return
+    _closedTabs.update { list ->
+      val idx = list.indexOfFirst { it.url == url }
+      if (idx >= 0) list.toMutableList().apply { removeAt(idx) } else list
+    }
+    openNewTab(isPrivate = false, initialUrl = url)
+  }
+
   fun endAllPrivateTabs() {
     val privateIds = _tabs.value.filter { it.isPrivate }.map { it.id }
     val remaining = _tabs.value.filterNot { it.isPrivate }

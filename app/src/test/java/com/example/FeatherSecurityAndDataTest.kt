@@ -363,4 +363,12 @@ class FeatherSecurityAndDataTest {
     assertEquals("https://cdn.site.com/photo.jpg", standalonePic!!.first)
     assertTrue(standalonePic.second)
   }
+
+  @Test
+  fun siteFaviconHostNormalizationWorksCleanly() {
+    assertEquals("en.wikipedia.org", com.example.ui.components.SiteFaviconCache.normalizeHost("https://En.Wikipedia.org/wiki/Hope"))
+    assertEquals("github.com", com.example.ui.components.SiteFaviconCache.normalizeHost("https://github.com/akshatk1997/Pika"))
+    assertEquals("example.com", com.example.ui.components.SiteFaviconCache.normalizeHost("Example.com."))
+    assertEquals("", com.example.ui.components.SiteFaviconCache.normalizeHost(""))
+  }
 }
