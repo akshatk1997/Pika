@@ -64,6 +64,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -166,17 +167,18 @@ fun SettingsScreen(
       )
     }
   ) { padding ->
-    val scrollState = rememberScrollState()
-    Column(
-      verticalArrangement = Arrangement.spacedBy(12.dp),
-      horizontalAlignment = Alignment.CenterHorizontally,
-      modifier = Modifier
-        .fillMaxSize()
-        .padding(padding)
-        .verticalScroll(scrollState)
-        .padding(16.dp)
-        .testTag("settings_list")
-    ) {
+    key(activeFolder) {
+      val scrollState = rememberScrollState()
+      Column(
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+          .fillMaxSize()
+          .padding(padding)
+          .verticalScroll(scrollState)
+          .padding(16.dp)
+          .testTag("settings_list")
+      ) {
       when (activeFolder) {
         null -> {
           // Brand & Version Summary Header Card
@@ -922,6 +924,7 @@ fun SettingsScreen(
             }
           }
         }
+      }
       }
     }
   }
