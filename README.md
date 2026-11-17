@@ -8,18 +8,18 @@
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v1.9.1.apk`](releases/Kio-v1.9.1.apk) and published in GitHub Releases (`v1.9.1`).
+Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v1.9.2.apk`](releases/Kio-v1.9.2.apk) and published in GitHub Releases (`v1.9.2`).
 
 ---
 
-## Core Highlights (v1.9.1 — Build 63)
+## Core Highlights (v1.9.2 — Build 64)
 
+- **Hidden-"K" Concentric App Launcher Icon & Preserved Homepage Emblem:** Rebuilt the app icon from scratch on the classic concentric orbital logo using the exact cyan/sky/indigo/white palette, subtly embedding a hidden geometric **K** inside the inner orbital chord and prism rays while keeping the homepage emblem 100% untouched.
+- **Desktop Chrome Extensions (Kiwi-Style Direct Store Install & Full MV2/MV3 Engine):** Automatically switches Chrome Web Store to Desktop Chrome mode, clears false WebView unavailability banners, enables the Store's own install button directly to Kio's resilient CRX3 downloader (up to 4,000 files), injects synchronous `chrome.*` / `browser.*` / `GM_*` APIs before popup scripts run, serves `chrome-extension://` virtual resources, and supports live Popup ↔ Active Tab messaging, `chrome.storage.onChanged` broadcasts, `chrome.scripting`, and static DNR rules (Standard Mode only).
+- **Low-Data Surfing & Ultra-Lean Android Footprint:** Always-on prefetch/prerender blocking, native lazy loading & async image decoding, WebP favicon compression, automatic disk cache & temp-file trimming, and `onTrimMemory` background WebView eviction deliver top performance with minimal data and storage usage.
 - **Zero-Leak Bidirectional Isolation (Standard ↔ Private):** Strict mode-boundary cookie vaulting & incineration between Standard and Private tabs, ephemeral RAM-only `localStorage`/`sessionStorage` proxy in Private Mode, disabled IndexedDB/CacheStorage/third-party cookies/extensions/bookmarks/history/external apps/sharing/shortcuts/screenshots in Private Mode so zero data can leak in either direction.
 - **Exclusive Private-Mode Safety Tools (3-Dot Menu):** In Private Mode, Bookmarks, History, Extensions, Share, Open Externally, and Add Shortcut are disabled and replaced by 5 exclusive Private-Only tools: **Burn session**, **New identity**, **Shield audit**, **Wipe clipboard**, and **Purge RAM**.
 - **Full Dark Mode & Light Mode:** Seamless browser-wide switching between OLED Dark Mode and crisp Light Mode across Homepage (with preserved Kio emblem), search bar, Android status & navigation bars, menus, settings, and websites.
-- **Desktop Chrome Extensions (Kiwi-Style):** Install desktop Chrome extensions directly from Chrome Web Store URLs/IDs (native CRX2/CRX3 binary unpacker) or local `.crx`, `.zip`, and `.user.js` packages; supports Manifest V2 & V3 `content_scripts` (JS & CSS), `_locales` localization, static `declarative_net_request` blocking rulesets, persistent `chrome.storage` / `chrome.runtime` / `chrome.i18n` / `chrome.tabs` bridges, interactive Extension Popups & Options pages, and 1-tap Chrome Web Store detection (Standard Mode only).
 - **Content Announcer & Reader Mode (Pure On-Device NLP, Zero Data Copy/Save):** Accessible right inside the 3-dot menu (`Narrate`), extracts readable prose into volatile RAM only, normalizes web prose for natural spoken cadence, segments sentences with abbreviation awareness, narrates on-device with live sentence highlighting & speed/skip controls, disables copying/saving completely, and wipes volatile RAM immediately on close.
 - **True Edge-to-Edge Full Screen Mode:** Placed in the 3-dot menu (`Full screen`), hides the browser toolbar and Android system bars edge-to-edge with zero inset bars and an unobtrusive Exit pill + Back restoration.
-- **Real Website Logos (Favicons):** Displays authentic site logos across Standard Mode Homepage Bookmarks, Bookmarks, History, Open Tabs, and Recent Tabs.
-- **Creative "K" App Launcher Icon & Preserved Homepage Emblem:** Features a creative geometric **K** (denoting Kio) adaptive + monochrome app icon while preserving the homepage emblem untouched.
-- **Lightning-Fast & Strictly Under 2 MB:** Zero telemetry, zero bloat, trimmed unused resources & dependencies, and aggressive R8 optimization keeping the signed release APK strictly under 2 MB.
+- **Lightning-Fast & Strictly Under 2 MB:** Zero telemetry, zero bloat, and aggressive R8 optimization keeping the signed release APK strictly under 2 MB.

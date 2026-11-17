@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kio-v1.9.1.apk
+          cp "$APK_PATH" releases/Kio-v1.9.2.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kio-v1.9.1.apk
+          git add releases/Kio-v1.9.2.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kio-v1.9.1.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kio-v1.9.2.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.9.1
+      - name: Create or update GitHub Release v1.9.2
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kio-v1.9.1.apk)
-          NOTES="Kio Browser v1.9.1 (Build 63) — Zero-Leak Bidirectional Standard ↔ Private Isolation, Exclusive Private-Mode Safety Tools, Full Dark & Light Mode, and Leaner APK strictly under 2 MB.\n\n- **Zero-Leak Bidirectional Isolation (Standard ↔ Private):** Strict mode-boundary cookie vaulting & incineration on every switch between Standard and Private tabs, ephemeral RAM-only \`localStorage\`/\`sessionStorage\` proxy in Private tabs, disabled IndexedDB/CacheStorage/third-party cookies/geolocation/disk caching/extensions/favicons/external app launches/clipboard leak guards in Private Mode — zero data shared from Standard → Private or Private → Standard/outside.\n- **Bookmarks Exclusively for Standard Mode:** Completely removed Bookmarks UI, homepage Bookmarks section, Bookmark actions, and Bookmarks Backup from Private Mode (replaced on the Private homepage by the **Zero-Leak Private Vault** card).\n- **Private-Mode-Only Safety Tools (3-Dot Menu):** Removed **Open externally**, **Add shortcut**, **Share**, **Bookmarks**, **History**, and **Extensions** inside Private Mode and introduced 5 exclusive Private-Only safety tools visible ONLY in Private Mode: **Burn session** (instant 1-tap incineration of all private tabs, cookies, RAM & clipboard), **New identity** (rotate session fingerprint & clear cookies/RAM on reload), **Shield audit** (live isolation verification status dialog), **Wipe clipboard**, and **Purge RAM**.\n- **Full Dark Mode & Light Mode Across the Entire Browser:** Tapping Dark Mode or Light Mode seamlessly switches the entire browser — including the Homepage (with preserved KioLogo), search header, Android status & navigation bar icons, menus, settings, and web pages.\n- **Safe Space Cleanup:** Removed unused template color/locale resources, placeholder unit test, and unused Compose tooling preview dependencies without compromising any browser feature or performance — strictly under 2 MB.\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
-          if gh release view v1.9.1 >/dev/null 2>&1; then
-            gh release upload v1.9.1 releases/Kio-v1.9.1.apk --clobber
-            gh release edit v1.9.1 --title "Kio v1.9.1 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kio-v1.9.2.apk)
+          NOTES="Kio Browser v1.9.2 (Build 64) — Hidden-K Concentric App Icon, Kiwi-Style Direct Chrome Web Store Extensions Fix, and Ultra-Low Data & Storage Performance Engine strictly under 2 MB.\n\n- **Creative Hidden-'K' Concentric App Launcher Icon (Homepage Emblem 100% Untouched):** Rebuilt the adaptive & monochrome app launcher icon from scratch directly on the classic concentric orbital logo using the exact same cyan/sky/indigo/white color palette, concealing a subtle geometric **K** inside the inner orbital meridian chord and prism refraction rays through the center nucleus while keeping the homepage \`KioLogo\` completely untouched.\n- **Chrome Web Store & Desktop Extensions Fix (Kiwi-Style Direct Install & Full MV2/MV3 Engine):**\n  - Fixed Chrome Web Store's *\"Item currently unavailable\"* & disabled *\"Add to Chrome\"* button by auto-enforcing Desktop Windows Chrome UA + Client Hints, spoofing \`navigator.userAgentData\`, clearing the false WebView error banner, and activating the Store's own install button directly to Kio's CRX3 installer.\n  - Upgraded Google CRX3 downloads with full desktop platform query parameters (\`os=win&arch=x64&prod=chromecrx\`) + resilient fallback endpoints and strict HTTP 204 rejection.\n  - Raised CRX/ZIP unpacker limit from 600 to 4,000 files (64 MB cap with Zip-Slip protection) so large real-world desktop Chrome extensions unpack cleanly.\n  - Injected the full MV2/MV3 \`chrome.*\` / \`browser.*\` / \`GM_*\` API prelude synchronously into extension HTML \`<head>\` before scripts execute, added \`chrome-extension://\` virtual serving, and wired real-time Popup ↔ Active Tab messaging, live \`chrome.storage.onChanged\` broadcasts, \`chrome.scripting.executeScript\` / \`insertCSS\`, and \`chrome.tabs.reload\`.\n- **Low-Data Surfing & Ultra-Lean Android Footprint:**\n  - Always-on prefetch/prerender elimination and native below-the-fold lazy loading + async image decoding cut mobile data usage and speed up page loads without degrading visual quality.\n  - Added automatic WebP favicon disk compression, 96-icon/14-day disk cache trimming, orphan cache cleanup, and \`onTrimMemory\` background WebView eviction so Kio takes minimal Android space & RAM while staying lightning-fast strictly under 2 MB.\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
+          if gh release view v1.9.2 >/dev/null 2>&1; then
+            gh release upload v1.9.2 releases/Kio-v1.9.2.apk --clobber
+            gh release edit v1.9.2 --title "Kio v1.9.2 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.9.1 releases/Kio-v1.9.1.apk \
-              --title "Kio v1.9.1 (< 2 MB)" \
+            gh release create v1.9.2 releases/Kio-v1.9.2.apk \
+              --title "Kio v1.9.2 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

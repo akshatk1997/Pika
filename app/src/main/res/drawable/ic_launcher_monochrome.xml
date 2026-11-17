@@ -3,24 +3,40 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Orbital arc ('o' of Kio) -->
+    <!-- Classic outer concentric ring -->
     <path
-        android:pathData="M 79.5, 36.2 A 31,31 0 1,0 79.5, 71.8"
+        android:pathData="M 54, 20 C 72.78, 20 88, 35.22 88, 54 C 88, 72.78 72.78, 88 54, 88 C 35.22, 88 20, 72.78 20, 54 C 20, 35.22 35.22, 20 54, 20 Z"
+        android:strokeWidth="4"
+        android:strokeColor="#FFFFFFFF" />
+    <!-- Outer orbital satellite dot -->
+    <path
+        android:pathData="M 88, 54 m -2.5, 0 a 2.5,2.5 0 1,0 5,0 a 2.5,2.5 0 1,0 -5,0"
+        android:fillColor="#FFFFFFFF" />
+    <!-- Concentric inner orbital right arc -->
+    <path
+        android:pathData="M 48.2, 34.86 A 20,20 0 1,1 48.2, 73.14"
         android:strokeWidth="3.4"
         android:strokeLineCap="round"
         android:strokeColor="#FFFFFFFF" />
-    <!-- Creative Geometric "K" -->
+    <!-- Hidden K orbital meridian chord -->
     <path
-        android:pathData="M 38.5,35.5 C 38.5,33.6 40.0,32 42,32 L 44,32 C 46.0,32 47.5,33.6 47.5,35.5 L 47.5,72.5 C 47.5,74.4 46.0,76 44,76 L 42,76 C 40.0,76 38.5,74.4 38.5,72.5 Z"
-        android:fillColor="#FFFFFFFF" />
+        android:pathData="M 42.5, 37.6 C 40.8, 44.2 40.8, 63.8 42.5, 70.4"
+        android:strokeWidth="3.4"
+        android:strokeLineCap="round"
+        android:strokeColor="#FFFFFFFF" />
+    <!-- Hidden K orbital refraction rays -->
     <path
-        android:pathData="M 48.2,52.8 L 65.4,33.4 C 66.5,32.2 68.2,32 69.8,32 L 73.2,32 C 74.6,32 75.3,33.6 74.3,34.7 L 55.6,55.2 Z"
-        android:fillColor="#FFFFFFFF" />
+        android:pathData="M 42.8, 54.0 Q 52.5, 49.6 66.2, 38.2"
+        android:strokeWidth="2.4"
+        android:strokeLineCap="round"
+        android:strokeColor="#B8FFFFFF" />
     <path
-        android:pathData="M 52.8,50.8 L 75.0,73.4 C 76.0,74.5 75.3,76 73.8,76 L 68.4,76 C 66.8,76 65.3,75.3 64.2,74.1 L 47.5,56.6 Z"
-        android:fillColor="#FFFFFFFF" />
-    <!-- Nucleus orb -->
+        android:pathData="M 42.8, 54.0 Q 52.5, 58.4 66.2, 69.8"
+        android:strokeWidth="2.4"
+        android:strokeLineCap="round"
+        android:strokeColor="#B8FFFFFF" />
+    <!-- Center solid core dot -->
     <path
-        android:pathData="M 73.5, 54 m -4.2, 0 a 4.2,4.2 0 1,0 8.4,0 a 4.2,4.2 0 1,0 -8.4,0"
+        android:pathData="M 54, 54 m -6.5, 0 a 6.5,6.5 0 1,0 13,0 a 6.5,6.5 0 1,0 -13,0"
         android:fillColor="#FFFFFFFF" />
 </vector>

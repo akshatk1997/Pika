@@ -162,6 +162,41 @@ object SiteFaviconCache {
     _revision.value = _revision.value + 1L
   }
 
+  /**
+   * Keeps favicon disk usage ultra-lean by pruning stale icons older than [maxAgeDays]
+   * and capping total cached files at [maxFiles] (LRU by lastModified).
+   */
+  fun trimDiskCache(context: Context, maxFiles: Int = 96, maxAgeDays: Long = 14L) {
+    try {
+      val dir = File(context.applicationContext.cacheDir, CACHE_DIR_NAME)
+      if (!dir.isDirectory) return
+      val files = dir.listFiles()?.filter { it.isFile } ?: return
+      val cutoff = System.currentTimeMillis() - (maxAgeDays * 24L * 60L * 60L * 1000L)
+      val remaining = mutableListOf<File>()
+      for (f in files) {
+        if (f.lastModified() < cutoff || f.length() <= 0L) {
+          runCatching { f.delete() }
+        } else {
+          remaining += f
+        }
+      }
+      if (remaining.size > maxFiles) {
+        remaining.sortBy { it.lastModified() }
+        val toDrop = remaining.size - maxFiles
+        for (i in 0 until toDrop) {
+          runCatching { remaining[i].delete() }
+        }
+      }
+    } catch (_: Throwable) {
+    }
+  }
+
+  fun trimMemory() {
+    synchronized(memCache) {
+      memCache.trimToSize(32)
+    }
+  }
+
   private fun isRobolectricEnvironment(): Boolean {
     return try {
       Build.FINGERPRINT.equals("robolectric", ignoreCase = true)
@@ -191,7 +226,12 @@ object SiteFaviconCache {
     try {
       val file = cacheFileForHost(context, host)
       FileOutputStream(file).use { out ->
-        bitmap.compress(Bitmap.CompressFormat.PNG, 90, out)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+          bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, 80, out)
+        } else {
+          @Suppress("DEPRECATION")
+          bitmap.compress(Bitmap.CompressFormat.WEBP, 80, out)
+        }
       }
     } catch (_: Throwable) {
     }

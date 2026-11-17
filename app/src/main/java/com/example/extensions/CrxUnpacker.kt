@@ -16,9 +16,9 @@ import java.util.zip.ZipInputStream
  */
 object CrxUnpacker {
 
-  private const val MAX_FILES = 600
-  private const val MAX_UNPACKED_BYTES = 30L * 1024L * 1024L // 30 MB
-  private const val MAX_SINGLE_FILE_BYTES = 8L * 1024L * 1024L // 8 MB
+  private const val MAX_FILES = 4000
+  private const val MAX_UNPACKED_BYTES = 64L * 1024L * 1024L // 64 MB
+  private const val MAX_SINGLE_FILE_BYTES = 12L * 1024L * 1024L // 12 MB
 
   private val STORE_ID_IN_URL = Regex("""(?:chromewebstore\.google\.com|chrome\.google\.com/webstore)/detail/(?:[^/?#]+/)?([a-p]{32})""", RegexOption.IGNORE_CASE)
   private val RAW_CHROME_ID = Regex("""^[a-p]{32}$""", RegexOption.IGNORE_CASE)
@@ -35,13 +35,37 @@ object CrxUnpacker {
   }
 
   /**
-   * Builds Google's official Chrome Web Store CRX download endpoint URL for a desktop extension ID.
+   * Builds Google's official Desktop Chrome Web Store CRX3 download URL with full Windows x64
+   * platform targeting so clients2.google.com serves the real CRX instead of HTTP 204.
    */
   fun buildChromeWebStoreCrxUrl(extensionId: String): String {
     val cleanId = extensionId.trim().lowercase()
     return "https://clients2.google.com/service/update2/crx" +
-      "?response=redirect&prodversion=134.0.6998.166&acceptformat=crx2,crx3" +
-      "&x=id%3D$cleanId%26installsource%3Dondemand%26uc"
+      "?response=redirect&os=win&arch=x64&os_arch=x86_64&nacl_arch=x86-64" +
+      "&prod=chromecrx&prodchannel=unknown&prodversion=134.0.6998.166" +
+      "&acceptformat=crx2,crx3&x=id%3D$cleanId%26uc"
+  }
+
+  /**
+   * Ordered list of official Google CRX download endpoints (Windows Chrome -> Linux Chromium -> fallback)
+   * ensuring maximum compatibility across MV2 & MV3 desktop Chrome extensions.
+   */
+  fun buildChromeWebStoreCrxCandidateUrls(extensionId: String): List<String> {
+    val cleanId = extensionId.trim().lowercase()
+    return listOf(
+      buildChromeWebStoreCrxUrl(cleanId),
+      "https://clients2.google.com/service/update2/crx" +
+        "?response=redirect&os=win&arch=x64&os_arch=x86_64&nacl_arch=x86-64" +
+        "&prod=chromecrx&prodchannel=unknown&prodversion=134.0.6998.166" +
+        "&acceptformat=crx2,crx3&x=id%3D$cleanId%26installsource%3Dondemand%26uc",
+      "https://clients2.google.com/service/update2/crx" +
+        "?response=redirect&os=linux&arch=x64&nacl_arch=x86-64" +
+        "&prod=chromiumcrx&prodchannel=unknown&prodversion=134.0.6998.166" +
+        "&acceptformat=crx2,crx3&x=id%3D$cleanId%26installsource%3Dondemand%26uc",
+      "https://clients2.google.com/service/update2/crx" +
+        "?response=redirect&prodversion=131.0.6778.205&acceptformat=crx2,crx3" +
+        "&x=id%3D$cleanId%26installsource%3Dondemand%26uc"
+    )
   }
 
   /**

@@ -96,6 +96,13 @@ fun ExtensionsScreen(
   onToggleEnabled: (String, Boolean) -> Unit,
   onRemoveExtension: (String) -> Unit,
   onOpenUrlInNewTab: (String) -> Unit,
+  onBroadcastStorageChange: (String, String) -> Unit = { _, _ -> },
+  onSendMessageToActiveTab: (String, String) -> Unit = { _, _ -> },
+  onExecuteScriptInActiveTab: (String, String) -> Unit = { _, _ -> },
+  onExecuteScriptFileInActiveTab: (String, String) -> Unit = { _, _ -> },
+  onInsertCssInActiveTab: (String, String) -> Unit = { _, _ -> },
+  onInsertCssFileInActiveTab: (String, String) -> Unit = { _, _ -> },
+  onReloadActiveTab: () -> Unit = {},
   onClose: () -> Unit
 ) {
   BackHandler { onClose() }
@@ -389,6 +396,16 @@ fun ExtensionsScreen(
         popupTarget = null
         onOpenUrlInNewTab(url)
       },
+      onBroadcastStorageChange = onBroadcastStorageChange,
+      onSendMessageToActiveTab = onSendMessageToActiveTab,
+      onExecuteScriptInActiveTab = onExecuteScriptInActiveTab,
+      onExecuteScriptFileInActiveTab = onExecuteScriptFileInActiveTab,
+      onInsertCssInActiveTab = onInsertCssInActiveTab,
+      onInsertCssFileInActiveTab = onInsertCssFileInActiveTab,
+      onReloadActiveTab = onReloadActiveTab,
+      onOpenOptionsPage = { optPath ->
+        popupTarget = ext to optPath
+      },
       onDismiss = { popupTarget = null }
     )
   }
@@ -533,6 +550,14 @@ private fun ExtensionPopupDialog(
   activePageUrl: String,
   activePageTitle: String,
   onOpenUrlInNewTab: (String) -> Unit,
+  onBroadcastStorageChange: (String, String) -> Unit,
+  onSendMessageToActiveTab: (String, String) -> Unit,
+  onExecuteScriptInActiveTab: (String, String) -> Unit,
+  onExecuteScriptFileInActiveTab: (String, String) -> Unit,
+  onInsertCssInActiveTab: (String, String) -> Unit,
+  onInsertCssFileInActiveTab: (String, String) -> Unit,
+  onReloadActiveTab: () -> Unit,
+  onOpenOptionsPage: (String) -> Unit,
   onDismiss: () -> Unit
 ) {
   val popupUrl = "https://${ChromeExtensionManager.EXT_VIRTUAL_HOST}/${extension.id}/${relativePagePath.trimStart('/')}"
@@ -593,6 +618,47 @@ private fun ExtensionPopupDialog(
                   fun storageSetAll(extId: String, json: String) = extensionManager.writeStorageJson(extId, json)
 
                   @JavascriptInterface
+                  fun broadcastStorageChange(extId: String, changesJson: String) {
+                    post { onBroadcastStorageChange(extId, changesJson) }
+                  }
+
+                  @JavascriptInterface
+                  fun sendMessageToActiveTab(extId: String, msgJson: String) {
+                    post { onSendMessageToActiveTab(extId, msgJson) }
+                  }
+
+                  @JavascriptInterface
+                  fun executeScriptInActiveTab(extId: String, code: String) {
+                    post { onExecuteScriptInActiveTab(extId, code) }
+                  }
+
+                  @JavascriptInterface
+                  fun executeScriptFileInActiveTab(extId: String, file: String) {
+                    post { onExecuteScriptFileInActiveTab(extId, file) }
+                  }
+
+                  @JavascriptInterface
+                  fun insertCssInActiveTab(extId: String, css: String) {
+                    post { onInsertCssInActiveTab(extId, css) }
+                  }
+
+                  @JavascriptInterface
+                  fun insertCssFileInActiveTab(extId: String, file: String) {
+                    post { onInsertCssFileInActiveTab(extId, file) }
+                  }
+
+                  @JavascriptInterface
+                  fun reloadActiveTab() {
+                    post { onReloadActiveTab() }
+                  }
+
+                  @JavascriptInterface
+                  fun openOptionsPage(extId: String) {
+                    val opt = extension.optionsPage ?: return
+                    post { onOpenOptionsPage(opt) }
+                  }
+
+                  @JavascriptInterface
                   fun openTab(url: String) {
                     post { onOpenUrlInNewTab(url) }
                   }
@@ -612,14 +678,6 @@ private fun ExtensionPopupDialog(
                 ): WebResourceResponse? {
                   val url = request?.url?.toString() ?: return null
                   return extensionManager.serveVirtualExtensionResource(url)
-                }
-
-                override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
-                  view?.evaluateJavascript(extensionManager.buildChromeApiPrelude(extension.id), null)
-                }
-
-                override fun onPageFinished(view: WebView?, url: String?) {
-                  view?.evaluateJavascript(extensionManager.buildChromeApiPrelude(extension.id), null)
                 }
               }
               loadUrl(popupUrl)

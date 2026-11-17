@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kio", appName)
-    assertEquals("1.9.1", BuildConfig.VERSION_NAME)
-    assertEquals(63, BuildConfig.VERSION_CODE)
+    assertEquals("1.9.2", BuildConfig.VERSION_NAME)
+    assertEquals(64, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -189,7 +189,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Resources").assertDoesNotExist()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.9.1").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.9.2").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
 
     // Navigate into Data Saver folder
@@ -758,5 +758,113 @@ class ExampleRobolectricTest {
     assertTrue(vm.webViewPool.resolveIsDark(vm.settings.value))
     val darkController = androidx.core.view.WindowCompat.getInsetsController(activity.window, activity.window.decorView)
     assertFalse("Dark mode must render light status bar icons on dark background", darkController.isAppearanceLightStatusBars)
+  }
+
+  @Test
+  fun chromeWebStoreExtensionsEngineDesktopCrxEndpointsAndSynchronousPopupHtmlPreludeWork() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    // 1. Verify Chrome Web Store URL detection & full desktop CRX3 candidate endpoints
+    assertTrue(com.example.webview.WebViewPool.isChromeWebStoreUrl("https://chromewebstore.google.com/detail/free-vpn-for-chrome-vpn-p/majdfhpaihoncoakbjgbdhglocklcgno"))
+    assertTrue(com.example.webview.WebViewPool.isChromeWebStoreUrl("https://chrome.google.com/webstore/detail/eimadpbcbfnmbkopoojfekhnkhdbieeh"))
+    assertFalse(com.example.webview.WebViewPool.isChromeWebStoreUrl("https://example.org/detail/eimadpbcbfnmbkopoojfekhnkhdbieeh"))
+
+    val extId = com.example.extensions.CrxUnpacker.extractChromeStoreId(
+      "https://chromewebstore.google.com/detail/free-vpn-for-chrome-vpn-p/majdfhpaihoncoakbjgbdhglocklcgno"
+    )
+    assertEquals("majdfhpaihoncoakbjgbdhglocklcgno", extId)
+
+    val candidates = com.example.extensions.CrxUnpacker.buildChromeWebStoreCrxCandidateUrls(extId!!)
+    assertTrue(candidates.size >= 3)
+    assertTrue(candidates.first().contains("os=win"))
+    assertTrue(candidates.first().contains("arch=x64"))
+    assertTrue(candidates.first().contains("prod=chromecrx"))
+    assertTrue(candidates.first().contains("acceptformat=crx2,crx3"))
+
+    // 2. Build a real ZIP extension package containing manifest.json + popup.html and verify synchronous prelude injection
+    val baos = java.io.ByteArrayOutputStream()
+    java.util.zip.ZipOutputStream(baos).use { zos ->
+      zos.putNextEntry(java.util.zip.ZipEntry("manifest.json"))
+      zos.write(
+        """
+        {
+          "manifest_version": 3,
+          "name": "Popup Test Ext",
+          "version": "2.0.0",
+          "action": { "default_popup": "popup.html" },
+          "content_scripts": [{ "matches": ["https://example.org/*"], "js": ["content.js"] }]
+        }
+        """.trimIndent().toByteArray(Charsets.UTF_8)
+      )
+      zos.closeEntry()
+
+      zos.putNextEntry(java.util.zip.ZipEntry("popup.html"))
+      zos.write("<html><head><title>Popup</title></head><body><script src=\"popup.js\"></script></body></html>".toByteArray(Charsets.UTF_8))
+      zos.closeEntry()
+
+      zos.putNextEntry(java.util.zip.ZipEntry("content.js"))
+      zos.write("window.__kio_ext_v2 = true;".toByteArray(Charsets.UTF_8))
+      zos.closeEntry()
+    }
+
+    val mgr = com.example.extensions.ChromeExtensionManager(context)
+    val installRes = mgr.installFromBytes(baos.toByteArray(), "popup_test.zip", preferredId = "popuptestext0001")
+    assertTrue(installRes is com.example.extensions.ExtensionInstallResult.Success)
+
+    // Serve popup.html via both virtual https://kio-ext.invalid/ and chrome-extension:// URLs
+    val httpsResp = mgr.serveVirtualExtensionResource("https://kio-ext.invalid/popuptestext0001/popup.html")
+    assertNotNull(httpsResp)
+    val htmlText = httpsResp!!.data.bufferedReader().readText()
+    assertTrue("HTML must inject chrome API prelude synchronously inside <head>", htmlText.contains("var __kioChrome"))
+    assertTrue("HTML must expose chrome.scripting API", htmlText.contains("scripting:"))
+    assertTrue(htmlText.indexOf("var __kioChrome") < htmlText.indexOf("popup.js"))
+
+    val chromeSchemeResp = mgr.serveVirtualExtensionResource("chrome-extension://popuptestext0001/content.js")
+    assertNotNull(chromeSchemeResp)
+    assertTrue(chromeSchemeResp!!.data.bufferedReader().readText().contains("__kio_ext_v2"))
+
+    // Verify storage & message live dispatch scripts
+    val storageScript = mgr.buildStorageChangeBroadcastScript("popuptestext0001", "{\"enabled\":{\"newValue\":true}}")
+    assertTrue(storageScript.contains("__kioExtNotifyStorage"))
+    val msgScript = mgr.buildMessageDispatchScript("popuptestext0001", "{\"action\":\"toggle\"}")
+    assertTrue(msgScript.contains("__kioExtDeliverMessage"))
+
+    mgr.removeExtension("popuptestext0001")
+  }
+
+  @Test
+  fun dataSavingPrefetchRequestsBlockedAndDiskCacheTrimmingWorks() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val callbacks = object : com.example.webview.WebViewCallbacks {
+      override fun onPageStarted(tabId: String, url: String) {}
+      override fun onPageFinished(tabId: String, url: String, title: String?, canGoBack: Boolean, canGoForward: Boolean) {}
+      override fun onProgressChanged(tabId: String, progress: Int) {}
+      override fun onTitleReceived(tabId: String, title: String) {}
+      override fun onTrackerBlocked(tabId: String) {}
+      override fun onHttpBlockedByHttpsOnly(tabId: String, url: String) {}
+      override fun onBlockedScheme(tabId: String, url: String, scheme: String) {}
+      override fun onExternalSchemePrompt(tabId: String, url: String, scheme: String) {}
+      override fun onPageError(tabId: String, error: com.example.model.PageError) {}
+      override fun onRenderProcessCrashed(tabId: String) {}
+      override fun onDownloadRequested(tabId: String, url: String, contentDisposition: String?, mimeType: String?, contentLength: Long) {}
+      override fun onPermissionPrompt(tabId: String, origin: String, kind: com.example.model.WebPermissionKind, detail: String, onDecision: (Boolean) -> Unit) {}
+      override fun onFileChooserRequested(callback: android.webkit.ValueCallback<Array<android.net.Uri>>?, acceptTypes: Array<String>?) {}
+      override fun onFindMatches(tabId: String, activeOrdinal: Int, numberOfMatches: Int) {}
+      override fun onFullscreenChanged(tabId: String, customView: android.view.View?, callback: android.webkit.WebChromeClient.CustomViewCallback?) {}
+      override fun onLongPressLink(tabId: String, url: String, isImage: Boolean) {}
+    }
+    val pool = com.example.webview.WebViewPool(context, { SettingsState(dataSaverEnabled = false) }, callbacks)
+    val webView = pool.getOrCreateWebView("tab_perf", false, UserAgentMode.MOBILE, emptySet())!!
+    val prefetchReq = object : android.webkit.WebResourceRequest {
+      override fun getUrl(): android.net.Uri = android.net.Uri.parse("https://example.org/next-page")
+      override fun isForMainFrame(): Boolean = false
+      override fun isRedirect(): Boolean = false
+      override fun hasGesture(): Boolean = false
+      override fun getMethod(): String = "GET"
+      override fun getRequestHeaders(): MutableMap<String, String> = mutableMapOf("Sec-Purpose" to "prefetch")
+    }
+    val resp = webView.webViewClient.shouldInterceptRequest(webView, prefetchReq)
+    assertEquals(204, resp?.statusCode)
+    pool.trimMemoryAndDiskCaches("tab_perf", aggressive = true)
+    pool.destroyAll()
   }
 }

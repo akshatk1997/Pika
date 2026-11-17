@@ -305,6 +305,37 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   fun detectChromeWebStoreExtensionId(url: String): String? = CrxUnpacker.extractChromeStoreId(url)
 
+  fun broadcastExtensionStorageChange(extId: String, changesJson: String) {
+    webViewPool.broadcastExtensionStorageChange(extId, changesJson)
+  }
+
+  fun dispatchExtensionMessageToActiveTab(extId: String, msgJson: String) {
+    webViewPool.dispatchExtensionMessage(_activeTabId.value, extId, msgJson)
+  }
+
+  fun executeExtensionScriptOnActiveTab(extId: String, code: String) {
+    webViewPool.executeExtensionScript(_activeTabId.value, extId, code)
+  }
+
+  fun executeExtensionScriptFileOnActiveTab(extId: String, file: String) {
+    val code = extensionManager.readExtensionFileText(extId, file) ?: return
+    webViewPool.executeExtensionScript(_activeTabId.value, extId, code)
+  }
+
+  fun insertExtensionCssOnActiveTab(extId: String, css: String) {
+    webViewPool.insertExtensionCss(_activeTabId.value, extId, css)
+  }
+
+  fun insertExtensionCssFileOnActiveTab(extId: String, file: String) {
+    val css = extensionManager.readExtensionFileText(extId, file) ?: return
+    webViewPool.insertExtensionCss(_activeTabId.value, extId, css)
+  }
+
+  fun onSystemTrimMemory(level: Int) {
+    val aggressive = level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW
+    webViewPool.trimMemoryAndDiskCaches(_activeTabId.value, aggressive = aggressive)
+  }
+
   // Pure On-Device NLP Content Announcer Controls (Zero Copy / Zero Persistence)
   fun toggleNarratorPlayPause() = contentAnnouncer.togglePlayPause()
 
@@ -651,6 +682,22 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         closeTab(tabId)
       }
     }
+
+    override fun onInstallExtensionFromStore(extensionId: String) {
+      runOnMain {
+        if (!activeTab().isPrivate) {
+          installExtensionFromStore(extensionId)
+        }
+      }
+    }
+
+    override fun onOpenExtensionsManager() {
+      runOnMain {
+        if (!activeTab().isPrivate) {
+          setOverlay(ActiveOverlay.EXTENSIONS)
+        }
+      }
+    }
   }
 
   val webViewPool = WebViewPool(
@@ -663,6 +710,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   init {
     refreshBookmarks()
     refreshHistory()
+    webViewPool.trimMemoryAndDiskCaches(_activeTabId.value, aggressive = false)
 
     MediaPlaybackService.mediaControlListener = { action ->
       runOnMain {
@@ -812,9 +860,15 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         } else {
           null
         }
+        val effectiveUa = if (!tab.isPrivate && WebViewPool.isChromeWebStoreUrl(res.url)) {
+          UserAgentMode.DESKTOP
+        } else {
+          tab.userAgentMode
+        }
         updateTab(tab.id) {
           it.copy(
             url = res.url,
+            userAgentMode = effectiveUa,
             upgradedFromHttpUrl = originalHttp,
             isLoading = true,
             progress = 10,
@@ -822,7 +876,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             httpWarning = null
           )
         }
-        webViewPool.getOrCreateWebView(tab.id, tab.isPrivate, tab.userAgentMode, approvedHttpHosts)
+        webViewPool.getOrCreateWebView(tab.id, tab.isPrivate, effectiveUa, approvedHttpHosts)
         webViewPool.loadUrl(tab.id, res.url)
         persistOpenTabs()
       }

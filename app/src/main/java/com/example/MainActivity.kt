@@ -477,6 +477,14 @@ class MainActivity : ComponentActivity() {
     return super.dispatchKeyEvent(event)
   }
 
+  override fun onTrimMemory(level: Int) {
+    super.onTrimMemory(level)
+    try {
+      viewModel.onSystemTrimMemory(level)
+    } catch (_: Throwable) {
+    }
+  }
+
   private fun pinHomeScreenShortcut(url: String, title: String) {
     if (viewModel.activeTab().isPrivate) {
       viewModel.showToast("Home screen shortcuts are disabled in Private Mode")

@@ -295,20 +295,29 @@ fun BrowserScreen(
           }
 
             // Kiwi-style 1-tap Chrome Web Store Extension Installer Banner (Standard Mode only)
-            val detectedStoreExtId = remember(activeTab.url, activeTab.isPrivate, installedExtensions) {
+            val detectedStoreExtId = remember(activeTab.url, activeTab.isPrivate) {
               if (activeTab.isPrivate) return@remember null
-              val id = viewModel.detectChromeWebStoreExtensionId(activeTab.url)
-              if (id != null && installedExtensions.none { it.id == id }) id else null
+              viewModel.detectChromeWebStoreExtensionId(activeTab.url)
+            }
+            val detectedExtAlreadyInstalled = remember(detectedStoreExtId, installedExtensions) {
+              detectedStoreExtId != null && installedExtensions.any { it.id == detectedStoreExtId }
             }
             AnimatedVisibility(
               visible = !isBrowserFullscreen && detectedStoreExtId != null,
               enter = expandVertically() + fadeIn(),
               exit = shrinkVertically() + fadeOut()
             ) {
+              val bannerAccent = if (detectedExtAlreadyInstalled) {
+                FeatherSecureGreen
+              } else if (isDarkTheme) {
+                Color(0xFF38BDF8)
+              } else {
+                Color(0xFF0284C7)
+              }
               Surface(
                 shape = RoundedCornerShape(14.dp),
                 color = if (isDarkTheme) Color(0xFF0E1A2B) else Color(0xFFE0F2FE),
-                border = BorderStroke(1.dp, (if (isDarkTheme) Color(0xFF38BDF8) else Color(0xFF0284C7)).copy(alpha = 0.45f)),
+                border = BorderStroke(1.dp, bannerAccent.copy(alpha = 0.45f)),
                 modifier = Modifier
                   .fillMaxWidth()
                   .padding(horizontal = 12.dp, vertical = 6.dp)
@@ -322,12 +331,12 @@ fun BrowserScreen(
                     Icon(
                       FeatherIcons.Extension,
                       contentDescription = null,
-                      tint = if (isDarkTheme) Color(0xFF38BDF8) else Color(0xFF0284C7),
+                      tint = bannerAccent,
                       modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                      text = "Chrome extension detected",
+                      text = if (detectedExtAlreadyInstalled) "Extension installed in Kio" else "Chrome extension ready",
                       style = MaterialTheme.typography.labelMedium,
                       color = if (isDarkTheme) Color(0xFFF8FAFC) else Color(0xFF0F172A),
                       fontWeight = FontWeight.SemiBold,
@@ -337,11 +346,21 @@ fun BrowserScreen(
                   }
                   TextButton(
                     enabled = !isInstallingExtension,
-                    onClick = { detectedStoreExtId?.let { viewModel.installExtensionFromStore(it) } }
+                    onClick = {
+                      if (detectedExtAlreadyInstalled) {
+                        viewModel.setOverlay(ActiveOverlay.EXTENSIONS)
+                      } else {
+                        detectedStoreExtId?.let { viewModel.installExtensionFromStore(it) }
+                      }
+                    }
                   ) {
                     Text(
-                      if (isInstallingExtension) "Installing..." else "Add to Kio",
-                      color = if (isDarkTheme) Color(0xFF38BDF8) else Color(0xFF0284C7),
+                      text = when {
+                        isInstallingExtension -> "Installing..."
+                        detectedExtAlreadyInstalled -> "Manage"
+                        else -> "Add to Kio"
+                      },
+                      color = bannerAccent,
                       fontWeight = FontWeight.Bold
                     )
                   }
@@ -836,6 +855,13 @@ fun BrowserScreen(
               onToggleEnabled = { id, enabled -> viewModel.toggleExtensionEnabled(id, enabled) },
               onRemoveExtension = { viewModel.removeExtension(it) },
               onOpenUrlInNewTab = { url -> viewModel.openNewTab(isPrivate = activeTab.isPrivate, initialUrl = url) },
+              onBroadcastStorageChange = { extId, changesJson -> viewModel.broadcastExtensionStorageChange(extId, changesJson) },
+              onSendMessageToActiveTab = { extId, msgJson -> viewModel.dispatchExtensionMessageToActiveTab(extId, msgJson) },
+              onExecuteScriptInActiveTab = { extId, code -> viewModel.executeExtensionScriptOnActiveTab(extId, code) },
+              onExecuteScriptFileInActiveTab = { extId, file -> viewModel.executeExtensionScriptFileOnActiveTab(extId, file) },
+              onInsertCssInActiveTab = { extId, css -> viewModel.insertExtensionCssOnActiveTab(extId, css) },
+              onInsertCssFileInActiveTab = { extId, file -> viewModel.insertExtensionCssFileOnActiveTab(extId, file) },
+              onReloadActiveTab = { viewModel.reloadOrStop() },
               onClose = { viewModel.setOverlay(ActiveOverlay.NONE) }
             )
           }
