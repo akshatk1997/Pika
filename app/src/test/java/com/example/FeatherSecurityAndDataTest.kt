@@ -280,4 +280,38 @@ class FeatherSecurityAndDataTest {
     assertEquals("", UrlValidator.resolveRelativeUrl(base, ""))
     assertEquals("", UrlValidator.resolveRelativeUrl(base, null))
   }
+
+  @Test
+  fun desktopUrlRewritingAndSearchEngineDetectionWorkCorrectly() {
+    assertEquals("https://www.youtube.com/watch?v=123", UrlValidator.toDesktopUrl("https://m.youtube.com/watch?v=123"))
+    assertEquals("https://en.wikipedia.org/wiki/Hope", UrlValidator.toDesktopUrl("https://en.m.wikipedia.org/wiki/Hope"))
+    assertEquals("https://www.imdb.com/title/tt1234", UrlValidator.toDesktopUrl("https://m.imdb.com/title/tt1234"))
+    assertEquals("https://www.example.com/news", UrlValidator.toDesktopUrl("https://mobile.example.com/news"))
+    assertEquals("https://example.com/page", UrlValidator.toDesktopUrl("https://example.com/page"))
+
+    assertTrue(UrlValidator.isSearchEngineUrl("https://duckduckgo.com/?q=hope"))
+    assertTrue(UrlValidator.isSearchEngineUrl("https://www.google.com/search?q=hope"))
+    assertTrue(UrlValidator.isSearchEngineUrl("https://search.brave.com/search?q=hope"))
+    assertTrue(UrlValidator.isSearchEngineUrl("https://www.startpage.com/do/dsearch?query=hope"))
+    assertFalse(UrlValidator.isSearchEngineUrl("https://en.wikipedia.org/wiki/Hope"))
+    assertFalse(UrlValidator.isSearchEngineUrl("https://www.youtube.com/watch?v=123"))
+  }
+
+  @Test
+  fun adSubdomainsAndStreamingPopunderRedirectsBlockedSafely() {
+    assertTrue(TrackerBlocker.isAdSubdomain("ad.trans.example.com"))
+    assertTrue(TrackerBlocker.isAdSubdomain("ad.trafficjunky.net"))
+    assertTrue(TrackerBlocker.isAdSubdomain("ads.somehost.org"))
+    assertTrue(TrackerBlocker.isAdSubdomain("syndication.exoclick.com"))
+    assertTrue(TrackerBlocker.isAdSubdomain("pxl.tsyndicate.com"))
+    assertFalse(TrackerBlocker.isAdSubdomain("cdn.example.com"))
+    assertFalse(TrackerBlocker.isAdSubdomain("www.example.com"))
+
+    assertTrue(TrackerBlocker.isAdOrPopunderNavigation("https://ad.transmedia.net/go?id=1"))
+    assertTrue(TrackerBlocker.isAdOrPopunderNavigation("https://tsyndicate.com/out?ad=1"))
+    assertTrue(TrackerBlocker.isAdOrPopunderNavigation("https://a.magsrv.com/ad-provider.js"))
+    assertTrue(TrackerBlocker.isAdOrPopunderNavigation("https://random-pop.xyz/afu.php?zoneid=12345"))
+    assertFalse(TrackerBlocker.isAdOrPopunderNavigation("https://en.wikipedia.org/wiki/Hope"))
+    assertFalse(TrackerBlocker.shouldBlockRequest("https://cdn.videohost.org/hls/stream.m3u8", "watchsite.com", true))
+  }
 }

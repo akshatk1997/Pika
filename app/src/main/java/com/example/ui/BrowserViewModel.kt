@@ -918,7 +918,12 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   fun setUserAgentMode(mode: UserAgentMode) {
     val tab = activeTab()
-    updateTab(tab.id) { it.copy(userAgentMode = mode) }
+    val updatedUrl = if (mode == UserAgentMode.DESKTOP && tab.url.isNotBlank()) {
+      UrlValidator.toDesktopUrl(tab.url)
+    } else {
+      tab.url
+    }
+    updateTab(tab.id) { it.copy(userAgentMode = mode, url = updatedUrl) }
     webViewPool.applyUserAgentMode(tab.id, tab.isPrivate, mode)
     persistOpenTabs()
     showToast("${mode.label} site")
@@ -952,7 +957,11 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     return true
   }
 
-  fun openNewTab(isPrivate: Boolean = false, initialUrl: String = "") {
+  fun openNewTab(
+    isPrivate: Boolean = false,
+    initialUrl: String = "",
+    switchToNewTab: Boolean = true
+  ) {
     val target = initialUrl.ifBlank { if (!isPrivate) _settings.value.homepageUrl else "" }
     val newTab = TabInfo(
       id = UUID.randomUUID().toString(),
@@ -973,16 +982,25 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       progress = if (target.isNotBlank()) 10 else 0
     )
     _tabs.update { it + newTab }
-    _activeTabId.value = newTab.id
-    _activeOverlay.value = ActiveOverlay.NONE
-    _readerArticle.value = null
-    _pageSource.value = null
-    closeFindInPage()
 
-    if (target.isNotBlank() && UrlValidator.isSafeWebUrl(target)) {
-      navigateActiveTab(target)
+    if (switchToNewTab) {
+      _activeTabId.value = newTab.id
+      _activeOverlay.value = ActiveOverlay.NONE
+      _readerArticle.value = null
+      _pageSource.value = null
+      closeFindInPage()
+
+      if (target.isNotBlank() && UrlValidator.isSafeWebUrl(target)) {
+        navigateActiveTab(target)
+      } else {
+        persistOpenTabs()
+      }
     } else {
+      if (target.isNotBlank() && UrlValidator.isSafeWebUrl(target)) {
+        loadRestoredTabSafely(newTab.id, target)
+      }
       persistOpenTabs()
+      showToast(if (isPrivate) "Opened in private background tab" else "Opened in background tab")
     }
   }
 

@@ -131,7 +131,7 @@ class WebViewPool(
     private const val MAX_LIVE_WEBVIEWS = 4
     private const val MAX_SNIFFED_PER_TAB = 50
     private const val DESKTOP_USER_AGENT =
-      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
     private const val IPHONE_USER_AGENT =
       "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1"
   }
@@ -141,6 +141,7 @@ class WebViewPool(
   private val savedStates = HashMap<String, Bundle>()
   private val sniffedResourcesByTab = ConcurrentHashMap<String, LinkedHashMap<String, SniffedResource>>()
   private val currentPageHosts = ConcurrentHashMap<String, String>()
+  private val tabUserAgentModes = ConcurrentHashMap<String, UserAgentMode>()
   private val destroyedViews = Collections.newSetFromMap(WeakHashMap<WebView, Boolean>())
   private val defaultUserAgent: String by lazy {
     try {
@@ -152,9 +153,12 @@ class WebViewPool(
   private val cleanMobileUserAgent: String by lazy {
     try {
       val raw = defaultUserAgent
-      // Strip "Version/4.0 " marker so modern video platforms (Vimeo, Dailymotion, TikTok, news sites)
-      // recognize Kai as authentic Google Chrome Mobile rather than a restricted in-app webview
-      raw.replace(Regex("Version/\\d+\\.\\d+\\s*"), "")
+      // Strip "; wv" and "Version/4.0 " markers so modern websites and video platforms
+      // recognize Kai as authentic Google Chrome Mobile rather than a stripped in-app WebView
+      raw.replace(Regex(";\\s*wv\\b"), "")
+        .replace(Regex("Version/\\d+\\.\\d+\\s*"), "")
+        .replace(Regex("\\s{2,}"), " ")
+        .trim()
     } catch (_: Throwable) {
       ""
     }
@@ -203,6 +207,7 @@ class WebViewPool(
     fallbackUrl: String = ""
   ): WebView? {
     val settingsState = settingsProvider()
+    tabUserAgentModes[tabId] = userAgentMode
     liveViews[tabId]?.let { existing ->
       if (!destroyedViews.contains(existing)) {
         applySettings(existing, isPrivate, userAgentMode, settingsState)
@@ -340,9 +345,13 @@ class WebViewPool(
     val s = settingsProvider()
     val headers = mutableMapOf(
       "Sec-GPC" to "1",
-      "DNT" to "1",
-      "Referrer-Policy" to "strict-origin-when-cross-origin"
+      "DNT" to "1"
     )
+    if (tabUserAgentModes[tabId] == UserAgentMode.DESKTOP) {
+      headers["Sec-CH-UA-Mobile"] = "?0"
+      headers["Sec-CH-UA-Platform"] = "\"Windows\""
+      headers["Sec-CH-UA"] = "\"Chromium\";v=\"134\", \"Google Chrome\";v=\"134\", \"Not-A.Brand\";v=\"99\""
+    }
     if (s.dataSaverEnabled) {
       headers["Save-Data"] = "on"
     }
@@ -362,12 +371,151 @@ class WebViewPool(
   }
 
   fun applyUserAgentMode(tabId: String, isPrivate: Boolean, userAgentMode: UserAgentMode) {
+    tabUserAgentModes[tabId] = userAgentMode
     val webView = getLiveWebView(tabId) ?: return
     applySettings(webView, isPrivate, userAgentMode, settingsProvider())
     try {
-      if (!webView.url.isNullOrBlank()) {
-        webView.reload()
+      webView.setInitialScale(0)
+    } catch (_: Throwable) {
+    }
+    applyDesktopModeEngine(webView, userAgentMode == UserAgentMode.DESKTOP)
+    try {
+      val currentUrl = webView.url
+      if (!currentUrl.isNullOrBlank() && UrlValidator.isSafeWebUrl(currentUrl) && currentUrl != "about:blank") {
+        val targetUrl = if (userAgentMode == UserAgentMode.DESKTOP) {
+          UrlValidator.toDesktopUrl(currentUrl)
+        } else {
+          currentUrl
+        }
+        loadUrl(tabId, targetUrl)
       }
+    } catch (_: Throwable) {
+    }
+  }
+
+  fun applyDesktopModeEngine(webView: WebView, enabled: Boolean) {
+    if (!settingsProvider().javascriptEnabled || destroyedViews.contains(webView)) return
+    val js = if (enabled) {
+      """
+      (function() {
+        window.__kai_desktop_mode = true;
+        function enforceDesktopViewport() {
+          try {
+            if (!window.__kai_desktop_mode) return;
+            var head = document.head || document.documentElement;
+            if (!head) return;
+            var meta = document.querySelector('meta[name="viewport"]');
+            var desired = 'width=1280, user-scalable=yes';
+            if (!meta) {
+              meta = document.createElement('meta');
+              meta.name = 'viewport';
+              meta.content = desired;
+              head.insertBefore(meta, head.firstChild);
+            } else if (meta.getAttribute('content') !== desired) {
+              meta.setAttribute('content', desired);
+            }
+          } catch(e) {}
+        }
+        enforceDesktopViewport();
+        try {
+          Object.defineProperty(navigator, 'platform', { get: function() { return 'Win32'; }, configurable: true });
+          Object.defineProperty(navigator, 'maxTouchPoints', { get: function() { return 0; }, configurable: true });
+          if (navigator.userAgentData) {
+            Object.defineProperty(navigator, 'userAgentData', {
+              get: function() {
+                return {
+                  brands: [
+                    { brand: 'Chromium', version: '134' },
+                    { brand: 'Google Chrome', version: '134' },
+                    { brand: 'Not-A.Brand', version: '99' }
+                  ],
+                  mobile: false,
+                  platform: 'Windows',
+                  getHighEntropyValues: function() {
+                    return Promise.resolve({
+                      platform: 'Windows',
+                      platformVersion: '15.0.0',
+                      architecture: 'x86',
+                      bitness: '64',
+                      mobile: false,
+                      model: ''
+                    });
+                  }
+                };
+              },
+              configurable: true
+            });
+          }
+        } catch(e) {}
+        if (!window.__kai_desktop_observer && window.MutationObserver) {
+          var target = document.head || document.documentElement;
+          if (target) {
+            var obs = new MutationObserver(function() {
+              if (window.__kai_desktop_mode) enforceDesktopViewport();
+            });
+            obs.observe(target, { childList: true, subtree: true, attributes: true, attributeFilter: ['content'] });
+            window.__kai_desktop_observer = obs;
+          }
+        }
+      })();
+      """.trimIndent()
+    } else {
+      """
+      (function() {
+        window.__kai_desktop_mode = false;
+        if (window.__kai_desktop_observer) {
+          try { window.__kai_desktop_observer.disconnect(); } catch(e) {}
+          window.__kai_desktop_observer = null;
+        }
+      })();
+      """.trimIndent()
+    }
+    try {
+      webView.evaluateJavascript(js, null)
+    } catch (_: Throwable) {
+    }
+  }
+
+  private fun applySearchSameTabEngine(webView: WebView, url: String) {
+    if (!settingsProvider().javascriptEnabled || destroyedViews.contains(webView)) return
+    if (!UrlValidator.isSearchEngineUrl(url)) return
+    val js = """
+      (function() {
+        function clearBlankTargets(root) {
+          try {
+            var links = (root || document).querySelectorAll ? (root || document).querySelectorAll('a[target="_blank"], a[target="_new"]') : [];
+            for (var i = 0; i < links.length; i++) {
+              links[i].removeAttribute('target');
+            }
+          } catch(e) {}
+        }
+        clearBlankTargets(document);
+        if (!window.__kai_search_sametab_observer && window.MutationObserver) {
+          var obs = new MutationObserver(function(mutations) {
+            for (var i = 0; i < mutations.length; i++) {
+              var added = mutations[i].addedNodes;
+              for (var j = 0; j < added.length; j++) {
+                var node = added[j];
+                if (node.nodeType === 1) {
+                  if (node.tagName === 'A' && (node.target === '_blank' || node.target === '_new')) {
+                    node.removeAttribute('target');
+                  } else {
+                    clearBlankTargets(node);
+                  }
+                }
+              }
+            }
+          });
+          var root = document.body || document.documentElement;
+          if (root) {
+            obs.observe(root, { childList: true, subtree: true });
+            window.__kai_search_sametab_observer = obs;
+          }
+        }
+      })();
+      """.trimIndent()
+    try {
+      webView.evaluateJavascript(js, null)
     } catch (_: Throwable) {
     }
   }
@@ -429,7 +577,9 @@ class WebViewPool(
     for ((id, wv) in liveViews.toMap()) {
       if (destroyedViews.contains(wv)) continue
       val (isPriv, uaMode) = tabStateLookup(id)
+      tabUserAgentModes[id] = uaMode
       applySettings(wv, isPriv, uaMode, settingsState)
+      applyDesktopModeEngine(wv, uaMode == UserAgentMode.DESKTOP)
       applyThemeMode(wv, isDark, settingsState.nightWebMode)
       applyAdBlocker(wv, settingsState.trackerBlockingEnabled)
       applyBackgroundPlay(wv, settingsState.backgroundPlayEnabled)
@@ -445,6 +595,7 @@ class WebViewPool(
     savedStates.remove(tabId)
     sniffedResourcesByTab.remove(tabId)
     currentPageHosts.remove(tabId)
+    tabUserAgentModes.remove(tabId)
     liveViews.remove(tabId)?.let { wv ->
       if (isPrivate) {
         try {
@@ -659,6 +810,7 @@ class WebViewPool(
     savedStates.clear()
     sniffedResourcesByTab.clear()
     currentPageHosts.clear()
+    tabUserAgentModes.clear()
     val ids = liveViews.keys.toList()
     ids.forEach { destroyTab(it) }
   }
@@ -1133,29 +1285,19 @@ class WebViewPool(
         }
 
         // 6. Intercept and drop window.open calls to ad popunder and syndicate networks
+        function isAdPopUrl(raw) {
+          if (!raw) return false;
+          var u = String(raw).toLowerCase();
+          if (/(^|\/\/)(ad|ads|ad1|ad2|ads1|ads2|adserver|adclick|adtrack|adtrans|ad-trans|pop|pops|popunder|popup|syndication|pxl|trk|clk|vast|vmap)\./.test(u)) {
+            return true;
+          }
+          return /(tsyndicate|adtrans|ad-trans|popunder|popads|popcash|exosrv|realsrv|magsrv|pemsrv|optimizesrv|twinrdsrv|doublepimp|xlirdr|strpjmp|bngpt|traffichaus|trafficjunky|trafficfactory|trafficstars|adsterra|exoclick|monetag|admaven|ad-maven|hilltopads|rollerads|propeller|clickadu|clickaine|adskeeper|adspyglass|juicyads|crakrevenue|highrevenuegate|profitablegate|topcreativeformat|effectivegatecpm|onclkds|onclickalgo|zoneid=|zone_id=|clickid=|click_id=|\/afu\.php|\/pop\.php|\/delivery\/ajs\.php)/.test(u);
+        }
+
         try {
           var origOpen = window.open;
           window.open = function(url, target, features) {
-            if (!url) return null;
-            var u = String(url).toLowerCase();
-            if (u.indexOf('tsyndicate') !== -1 ||
-                u.indexOf('popunder') !== -1 ||
-                u.indexOf('popads') !== -1 ||
-                u.indexOf('popcash') !== -1 ||
-                u.indexOf('exosrv') !== -1 ||
-                u.indexOf('realsrv') !== -1 ||
-                u.indexOf('traffichaus') !== -1 ||
-                u.indexOf('trafficjunky') !== -1 ||
-                u.indexOf('adsterra') !== -1 ||
-                u.indexOf('exoclick') !== -1 ||
-                u.indexOf('monetag') !== -1 ||
-                u.indexOf('admaven') !== -1 ||
-                u.indexOf('hilltopads') !== -1 ||
-                u.indexOf('rollerads') !== -1 ||
-                u.indexOf('propeller') !== -1 ||
-                u.indexOf('clickadu') !== -1) {
-              return null;
-            }
+            if (!url || isAdPopUrl(url)) return null;
             return origOpen.apply(this, arguments);
           };
         } catch(e) {}
@@ -1167,28 +1309,15 @@ class WebViewPool(
             if (!target) return;
 
             var anchor = target.closest ? target.closest('a') : null;
-            if (anchor && anchor.href) {
-              var hrefLower = anchor.href.toLowerCase();
-              if (hrefLower.indexOf('tsyndicate') !== -1 ||
-                  hrefLower.indexOf('popunder') !== -1 ||
-                  hrefLower.indexOf('popads') !== -1 ||
-                  hrefLower.indexOf('exosrv') !== -1 ||
-                  hrefLower.indexOf('realsrv') !== -1 ||
-                  hrefLower.indexOf('traffichaus') !== -1 ||
-                  hrefLower.indexOf('adsterra') !== -1 ||
-                  hrefLower.indexOf('exoclick') !== -1 ||
-                  hrefLower.indexOf('monetag') !== -1 ||
-                  hrefLower.indexOf('admaven') !== -1 ||
-                  hrefLower.indexOf('propeller') !== -1) {
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-                var vids = document.querySelectorAll('video');
-                for (var i = 0; i < vids.length; i++) {
-                  if (vids[i].paused) try { vids[i].play(); } catch(err) {}
-                }
-                return;
+            if (anchor && anchor.href && isAdPopUrl(anchor.href)) {
+              e.preventDefault();
+              e.stopPropagation();
+              e.stopImmediatePropagation();
+              var vids = document.querySelectorAll('video');
+              for (var i = 0; i < vids.length; i++) {
+                if (vids[i].paused) try { vids[i].play(); } catch(err) {}
               }
+              return;
             }
 
             if (target.tagName === 'VIDEO') return;
@@ -1325,9 +1454,15 @@ class WebViewPool(
   ) {
     if (destroyedViews.contains(webView)) return
     try {
+      webView.isVerticalScrollBarEnabled = true
+      webView.isHorizontalScrollBarEnabled = true
+      webView.scrollBarStyle = View.SCROLLBARS_INSIDE_OVERLAY
+    } catch (_: Throwable) {
+    }
+    try {
       webView.settings.apply {
         javaScriptEnabled = settingsState.javascriptEnabled
-        javaScriptCanOpenWindowsAutomatically = true
+        javaScriptCanOpenWindowsAutomatically = false
         mediaPlaybackRequiresUserGesture = false
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
           try {
@@ -1335,7 +1470,7 @@ class WebViewPool(
           } catch (_: Throwable) {
           }
         }
-        // Enable multiple windows so target="_blank" and window.open trigger onCreateWindow
+        // Route user-initiated target="_blank" / window.open through onCreateWindow interceptor
         setSupportMultipleWindows(true)
         setGeolocationEnabled(!isPrivate)
         allowFileAccess = false
@@ -1350,10 +1485,16 @@ class WebViewPool(
         domStorageEnabled = true
         @Suppress("DEPRECATION")
         databaseEnabled = true
+        setSupportZoom(true)
         builtInZoomControls = true
         displayZoomControls = false
         useWideViewPort = true
         loadWithOverviewMode = true
+        layoutAlgorithm = if (userAgentMode == UserAgentMode.DESKTOP) {
+          WebSettings.LayoutAlgorithm.NORMAL
+        } else {
+          WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
+        }
         loadsImagesAutomatically = !settingsState.noImageMode
         blockNetworkImage = settingsState.noImageMode
         val targetUa = when (userAgentMode) {
@@ -1364,7 +1505,7 @@ class WebViewPool(
         if (userAgentString != targetUa) {
           userAgentString = targetUa
         }
-        textZoom = if (userAgentMode == UserAgentMode.DESKTOP) 90 else settingsState.textZoomPercent
+        textZoom = if (userAgentMode == UserAgentMode.DESKTOP) 100 else settingsState.textZoomPercent
         cacheMode = if (isPrivate) {
           WebSettings.LOAD_NO_CACHE
         } else if (settingsState.dataSaverEnabled) {
@@ -1492,14 +1633,12 @@ class WebViewPool(
           return true
         }
         if (currentSettings.trackerBlockingEnabled &&
-          (TrackerBlocker.isTrackerHost(host) || TrackerBlocker.isAdPathOrQuery(url))) {
+          TrackerBlocker.isAdOrPopunderNavigation(url)) {
           callbacks.onTrackerBlocked(tabId)
           return true
         }
-        if (currentSettings.httpsOnlyEnabled && UrlValidator.isHttpUrl(url) && host !in approvedHttpHosts) {
-          if (request.isForMainFrame) {
-            callbacks.onHttpBlockedByHttpsOnly(tabId, url)
-          }
+        if (request.isForMainFrame && currentSettings.httpsOnlyEnabled && UrlValidator.isHttpUrl(url) && host !in approvedHttpHosts) {
+          callbacks.onHttpBlockedByHttpsOnly(tabId, url)
           return true
         }
         if (request.isForMainFrame) {
@@ -1568,6 +1707,10 @@ class WebViewPool(
         if (url != null) {
           currentPageHosts[tabId] = UrlValidator.extractHost(url)
           if (view != null) {
+            if (tabUserAgentModes[tabId] == UserAgentMode.DESKTOP) {
+              applyDesktopModeEngine(view, true)
+            }
+            applySearchSameTabEngine(view, url)
             applyStealthPrivacyShield(view)
             applyVideoCompatibilityEngine(view)
             val s = settingsProvider()
@@ -1590,6 +1733,10 @@ class WebViewPool(
       override fun onPageFinished(view: WebView?, url: String?) {
         if (url != null && view != null && !destroyedViews.contains(view)) {
           currentPageHosts[tabId] = UrlValidator.extractHost(url)
+          if (tabUserAgentModes[tabId] == UserAgentMode.DESKTOP) {
+            applyDesktopModeEngine(view, true)
+          }
+          applySearchSameTabEngine(view, url)
           applyStealthPrivacyShield(view)
           applyVideoCompatibilityEngine(view)
           val s = settingsProvider()
@@ -1629,9 +1776,9 @@ class WebViewPool(
         }
         val failingUrl = error?.url ?: try { view?.url } catch (_: Throwable) { null } ?: ""
         val host = UrlValidator.extractHost(failingUrl)
-        // If an ad network or pop-under redirect failed (e.g. tsyndicate.com SSL error),
+        // If an ad network or pop-under redirect failed (e.g. tsyndicate.com / ad.trans* SSL error),
         // do not display a full-page error overlay. Revert back to the video page cleanly.
-        if (TrackerBlocker.isTrackerHost(host) || TrackerBlocker.isAdPathOrQuery(failingUrl)) {
+        if (TrackerBlocker.isAdOrPopunderNavigation(failingUrl)) {
           callbacks.onTrackerBlocked(tabId)
           try {
             if (view?.canGoBack() == true) {
@@ -1672,9 +1819,9 @@ class WebViewPool(
         if (reason.contains("ERR_ABORTED", ignoreCase = true)) return
         val failingUrl = request.url?.toString() ?: ""
         val host = UrlValidator.extractHost(failingUrl)
-        // If an ad network or pop-under redirect failed (e.g. tsyndicate.com net::ERR_SSL_PROTOCOL_ERROR),
+        // If an ad network or pop-under redirect failed (e.g. tsyndicate.com / ad.trans* net::ERR_SSL_PROTOCOL_ERROR),
         // do not display a full-page error overlay. Revert back to the video page cleanly.
-        if (TrackerBlocker.isTrackerHost(host) || TrackerBlocker.isAdPathOrQuery(failingUrl)) {
+        if (TrackerBlocker.isAdOrPopunderNavigation(failingUrl)) {
           callbacks.onTrackerBlocked(tabId)
           try {
             if (view?.canGoBack() == true) {
@@ -1746,10 +1893,19 @@ class WebViewPool(
       override fun onProgressChanged(view: WebView?, newProgress: Int) {
         callbacks.onProgressChanged(tabId, newProgress)
         if (view != null && newProgress >= 10 && !destroyedViews.contains(view)) {
+          if (tabUserAgentModes[tabId] == UserAgentMode.DESKTOP) {
+            applyDesktopModeEngine(view, true)
+          }
           applyVideoCompatibilityEngine(view)
         }
         if (view != null && newProgress >= 15 && !destroyedViews.contains(view)) {
           applyStealthPrivacyShield(view)
+        }
+        if (view != null && newProgress >= 25 && !destroyedViews.contains(view)) {
+          val liveUrl = try { view.url.orEmpty() } catch (_: Throwable) { "" }
+          if (liveUrl.isNotBlank()) {
+            applySearchSameTabEngine(view, liveUrl)
+          }
         }
         if (view != null && newProgress >= 30 && !destroyedViews.contains(view)) {
           val s = settingsProvider()
@@ -1774,76 +1930,128 @@ class WebViewPool(
         isUserGesture: Boolean,
         resultMsg: Message?
       ): Boolean {
-        if (resultMsg == null) return false
+        if (resultMsg == null || !isUserGesture) return false
         val currentSettings = settingsProvider()
+        val openerUrl = try { view?.url.orEmpty() } catch (_: Throwable) { "" }
+        val isSearchOpener = UrlValidator.isSearchEngineUrl(openerUrl)
 
         val hitUrl = try { view?.hitTestResult?.extra } catch (_: Throwable) { null }
-        if (!hitUrl.isNullOrBlank()) {
-          val host = UrlValidator.extractHost(hitUrl)
-          if (currentSettings.trackerBlockingEnabled &&
-            (TrackerBlocker.isTrackerHost(host) || TrackerBlocker.isAdPathOrQuery(hitUrl))
-          ) {
-            callbacks.onTrackerBlocked(tabId)
-            return false
-          }
+        val resolvedHitUrl = if (!hitUrl.isNullOrBlank()) UrlValidator.resolveRelativeUrl(openerUrl, hitUrl) else ""
+        if (resolvedHitUrl.isNotBlank() && currentSettings.trackerBlockingEnabled &&
+          TrackerBlocker.isAdOrPopunderNavigation(resolvedHitUrl)
+        ) {
+          callbacks.onTrackerBlocked(tabId)
+          return false
         }
 
         val transport = try { resultMsg.obj as? WebView.WebViewTransport } catch (_: Throwable) { null }
-        val currentUrl = view?.url.orEmpty()
-        val resolvedHitUrl = if (!hitUrl.isNullOrBlank()) UrlValidator.resolveRelativeUrl(currentUrl, hitUrl) else ""
-
         if (transport == null) {
           if (resolvedHitUrl.isNotBlank() && UrlValidator.isSafeWebUrl(resolvedHitUrl) && resolvedHitUrl != "about:blank") {
-            callbacks.onNewTabRequested(tabId, resolvedHitUrl, isPrivate)
+            if (isSearchOpener) {
+              loadUrl(tabId, resolvedHitUrl)
+            } else {
+              callbacks.onNewTabRequested(tabId, resolvedHitUrl, isPrivate)
+            }
             return true
           }
           return false
         }
 
-        val newTabId = java.util.UUID.randomUUID().toString()
-        evictExcessLiveViews()
-
-        val newWebView = createSecuredWebView(
-          tabId = newTabId,
-          isPrivate = isPrivate,
-          userAgentMode = userAgentMode,
-          approvedHttpHosts = approvedHttpHosts
-        ) ?: run {
-          if (resolvedHitUrl.isNotBlank() && UrlValidator.isSafeWebUrl(resolvedHitUrl)) {
-            callbacks.onNewTabRequested(tabId, resolvedHitUrl, isPrivate)
+        // Use a silent ephemeral interceptor WebView to inspect the true destination URL
+        // before creating any tab. This drops streaming ad popunders (e.g., ad.trans*, tsyndicate.com)
+        // and keeps search-page links loading inside the same tab.
+        val interceptor = try {
+          WebView(MutableContextWrapper(appContext))
+        } catch (_: Throwable) {
+          if (resolvedHitUrl.isNotBlank() && UrlValidator.isSafeWebUrl(resolvedHitUrl) && resolvedHitUrl != "about:blank") {
+            if (isSearchOpener) {
+              loadUrl(tabId, resolvedHitUrl)
+            } else {
+              callbacks.onNewTabRequested(tabId, resolvedHitUrl, isPrivate)
+            }
             return true
           }
           return false
         }
 
-        liveViews[newTabId] = newWebView
-        transport.webView = newWebView
+        val handled = AtomicBoolean(false)
+        val mainHandler = Handler(Looper.getMainLooper())
+        val cleanupInterceptor = {
+          try {
+            interceptor.stopLoading()
+            interceptor.webViewClient = WebViewClient()
+            interceptor.destroy()
+          } catch (_: Throwable) {
+          }
+        }
 
+        fun routeInterceptedUrl(rawTarget: String) {
+          if (!handled.compareAndSet(false, true)) return
+          cleanupInterceptor()
+          val targetUrl = UrlValidator.resolveRelativeUrl(openerUrl, rawTarget)
+          if (targetUrl.isBlank() || targetUrl == "about:blank") return
+          if (UrlValidator.isExternalAppScheme(targetUrl)) {
+            callbacks.onExternalSchemePrompt(tabId, targetUrl, UrlValidator.extractScheme(targetUrl))
+            return
+          }
+          if (!UrlValidator.isSafeWebUrl(targetUrl)) return
+          val s = settingsProvider()
+          val targetHost = UrlValidator.extractHost(targetUrl)
+          val customSet = s.customBlockedHosts.toSet()
+          if (customSet.isNotEmpty() && TrackerBlocker.isHostMatchingSet(targetHost, customSet)) {
+            callbacks.onTrackerBlocked(tabId)
+            return
+          }
+          if (s.trackerBlockingEnabled && TrackerBlocker.isAdOrPopunderNavigation(targetUrl)) {
+            callbacks.onTrackerBlocked(tabId)
+            return
+          }
+          if (isSearchOpener) {
+            loadUrl(tabId, targetUrl)
+          } else {
+            callbacks.onNewTabRequested(tabId, targetUrl, isPrivate)
+          }
+        }
+
+        interceptor.webViewClient = object : WebViewClient() {
+          override fun shouldOverrideUrlLoading(v: WebView?, req: WebResourceRequest?): Boolean {
+            val dest = req?.url?.toString().orEmpty()
+            if (dest.isNotBlank() && dest != "about:blank") {
+              routeInterceptedUrl(dest)
+            }
+            return true
+          }
+
+          override fun onPageStarted(v: WebView?, url: String?, favicon: Bitmap?) {
+            if (!url.isNullOrBlank() && url != "about:blank") {
+              routeInterceptedUrl(url)
+            }
+          }
+        }
+
+        transport.webView = interceptor
         try {
           resultMsg.sendToTarget()
         } catch (_: Throwable) {
-          liveViews.remove(newTabId)
-          safelyDestroyWebView(newWebView)
-          if (resolvedHitUrl.isNotBlank() && UrlValidator.isSafeWebUrl(resolvedHitUrl)) {
-            callbacks.onNewTabRequested(tabId, resolvedHitUrl, isPrivate)
-            return true
+          if (handled.compareAndSet(false, true)) {
+            cleanupInterceptor()
           }
           return false
         }
 
-        callbacks.onNewTabCreated(newTabId, isPrivate, resolvedHitUrl)
-
-        // Safety fallback: if Chromium does not commence navigation on the new window within 800ms
-        if (resolvedHitUrl.isNotBlank() && UrlValidator.isSafeWebUrl(resolvedHitUrl) && resolvedHitUrl != "about:blank") {
-          Handler(Looper.getMainLooper()).postDelayed({
-            if (isWebViewAlive(newWebView)) {
-              val current = newWebView.url
-              if (current.isNullOrBlank() || current == "about:blank") {
-                loadUrl(newTabId, resolvedHitUrl)
+        // Safety cleanup timer so the ephemeral interceptor never leaks memory
+        mainHandler.postDelayed({
+          if (handled.compareAndSet(false, true)) {
+            cleanupInterceptor()
+            if (resolvedHitUrl.isNotBlank() && UrlValidator.isSafeWebUrl(resolvedHitUrl) && resolvedHitUrl != "about:blank") {
+              if (isSearchOpener) {
+                loadUrl(tabId, resolvedHitUrl)
+              } else {
+                callbacks.onNewTabRequested(tabId, resolvedHitUrl, isPrivate)
               }
             }
-          }, 800)
-        }
+          }
+        }, 2500)
 
         return true
       }

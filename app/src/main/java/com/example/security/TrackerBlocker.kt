@@ -237,6 +237,17 @@ object TrackerBlocker {
     "syndication.exoclick.com",
     "exosrv.com",
     "realsrv.com",
+    "magsrv.com",
+    "pemsrv.com",
+    "optimizesrv.com",
+    "twinrdsrv.com",
+    "doublepimp.com",
+    "xlirdr.com",
+    "rmhfrtnd.com",
+    "mnaspm.com",
+    "strpjmp.com",
+    "bngpt.com",
+    "trwl1.com",
     "etahub.com",
     "mainstreamtraffic.com",
     "trafficfactory.biz",
@@ -244,6 +255,32 @@ object TrackerBlocker {
     "adtng.com",
     "stripchatads.com",
     "bongacash.com",
+    "cam4ads.com",
+    "crakrevenue.com",
+    "awempire.com",
+    "awecrptjmp.com",
+    "adskeeper.com",
+    "adskeeper.co.uk",
+    "adspyglass.com",
+    "asg.vid",
+    "highrevenuegate.com",
+    "profitablegate.com",
+    "topcreativeformat.com",
+    "effectivegatecpm.com",
+    "alwingulla.com",
+    "dolohen.com",
+    "thaudray.com",
+    "glizauvo.com",
+    "onclkds.com",
+    "onclickalgo.com",
+    "onclickperformance.com",
+    "onclickmax.com",
+    "pushground.com",
+    "pushub.net",
+    "pushprofit.net",
+    "notix.io",
+    "izooto.com",
+    "popunder.net",
     "clickaine.com",
     "plugrush.com",
     "rollerads.com",
@@ -257,7 +294,35 @@ object TrackerBlocker {
     "popmyads.com",
     "propellerclick.com",
     "bidvertiser.net",
-    "vidoomy.com"
+    "vidoomy.com",
+    "adtrans.com"
+  )
+
+  private val adSubdomainPrefixes = setOf(
+    "ad", "ads", "ad1", "ad2", "ad3", "ads1", "ads2",
+    "adserver", "adserv", "adservice", "adclick", "adtrack",
+    "adsystem", "adnetwork", "adnxs", "adx", "adframe", "adimg",
+    "adtech", "adcdn", "ad-delivery", "adtrans", "ad-trans",
+    "pop", "pops", "popunder", "popup", "syndication",
+    "pxl", "trk", "clk", "vast", "vmap", "banners"
+  )
+
+  private val popunderUrlSignatures = listOf(
+    "zoneid=",
+    "zone_id=",
+    "clickid=",
+    "click_id=",
+    "/afu.php",
+    "/popunder",
+    "/pop.php",
+    "/adclick",
+    "/adredirect",
+    "/delivery/ajs.php",
+    "/delivery/ck.php",
+    "ad_type=pop",
+    "adzone=",
+    "bannerid=",
+    "spot_id="
   )
 
   private val videoExts = setOf("mp4", "m3u8", "webm", "mov", "mkv", "ts", "mpd", "m4v", "flv", "avi", "3gp", "f4v", "wmv")
@@ -292,6 +357,27 @@ object TrackerBlocker {
     return false
   }
 
+  fun isPopunderOrAdRedirectUrl(requestUrl: String): Boolean {
+    val lower = requestUrl.lowercase()
+    for (sig in popunderUrlSignatures) {
+      if (lower.contains(sig)) return true
+    }
+    return false
+  }
+
+  fun isAdSubdomain(host: String): Boolean {
+    val clean = host.lowercase().trimEnd('.')
+    if (clean.isEmpty()) return false
+    val parts = clean.split('.')
+    if (parts.size < 3) return false
+    val first = parts[0]
+    return first in adSubdomainPrefixes ||
+      first.startsWith("ad-") ||
+      first.startsWith("ads-") ||
+      first.startsWith("popunder") ||
+      first.startsWith("adtrans")
+  }
+
   fun isHostMatchingSet(host: String, domainSet: Set<String>): Boolean {
     val clean = host.lowercase().trimEnd('.')
     if (clean.isEmpty() || domainSet.isEmpty()) return false
@@ -308,11 +394,26 @@ object TrackerBlocker {
   fun isTrackerHost(host: String): Boolean {
     if (isHostMatchingSet(host, blockedDomains)) return true
     val clean = host.lowercase().trimEnd('.')
+    if (clean.isEmpty()) return false
+    if (isAdSubdomain(clean)) return true
     return clean.contains("tsyndicate") ||
+      clean.contains("adtrans") ||
+      clean.contains("ad-trans") ||
+      clean.contains("ad.trans") ||
       clean.contains("popunder") ||
       clean.contains("adserver") ||
       clean.contains("exosrv") ||
       clean.contains("realsrv") ||
+      clean.contains("magsrv") ||
+      clean.contains("pemsrv") ||
+      clean.contains("optimizesrv") ||
+      clean.contains("twinrdsrv") ||
+      clean.contains("doublepimp") ||
+      clean.contains("xlirdr") ||
+      clean.contains("strpjmp") ||
+      clean.contains("bngpt") ||
+      clean.contains("adskeeper") ||
+      clean.contains("adspyglass") ||
       clean.contains("traffichaus") ||
       clean.contains("trafficjunky") ||
       clean.contains("adsterra") ||
@@ -323,6 +424,12 @@ object TrackerBlocker {
       clean.contains("rollerads") ||
       clean.contains("propellerads") ||
       clean.contains("propellerclick")
+  }
+
+  fun isAdOrPopunderNavigation(url: String): Boolean {
+    if (url.isBlank()) return false
+    val host = UrlValidator.extractHost(url)
+    return isTrackerHost(host) || isAdPathOrQuery(url) || isPopunderOrAdRedirectUrl(url)
   }
 
   fun shouldBlockRequest(
@@ -350,7 +457,12 @@ object TrackerBlocker {
     if (cleanPage.isNotEmpty() && (reqHost == cleanPage || reqHost.endsWith(".$cleanPage"))) {
       return false
     }
-    return isTrackerHost(reqHost)
+    // Protect legitimate cross-domain video/audio streams from heuristic subdomain blocking;
+    // only block media requests if explicitly listed in blockedDomains.
+    if (isMediaOrStreamRequest(requestUrl)) {
+      return isHostMatchingSet(reqHost, blockedDomains)
+    }
+    return isTrackerHost(reqHost) || isPopunderOrAdRedirectUrl(requestUrl)
   }
 
   fun normalizeCustomHost(raw: String): String {

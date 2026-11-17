@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kai", appName)
-    assertEquals("1.8.5", BuildConfig.VERSION_NAME)
-    assertEquals(58, BuildConfig.VERSION_CODE)
+    assertEquals("1.8.6", BuildConfig.VERSION_NAME)
+    assertEquals(59, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -162,7 +162,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.8.5").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.8.6").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
     composeTestRule.onNodeWithTag("setting_data_saver").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("setting_background_play").performScrollTo().assertIsDisplayed()
@@ -568,5 +568,30 @@ class ExampleRobolectricTest {
     assertNull(parsed.component)
     assertNull(parsed.selector)
     assertTrue(parsed.hasCategory(android.content.Intent.CATEGORY_BROWSABLE))
+  }
+
+  @Test
+  fun openTabInBackgroundKeepsCurrentTabActiveAndAddsTargetTab() {
+    val vm = composeTestRule.activity.viewModel
+    composeTestRule.waitForIdle()
+    val originalTabId = vm.activeTabId.value
+    val originalCount = vm.tabs.value.size
+
+    composeTestRule.runOnUiThread {
+      vm.openNewTab(isPrivate = false, initialUrl = "https://example.org/bg", switchToNewTab = false)
+    }
+    composeTestRule.waitForIdle()
+
+    assertEquals(originalTabId, vm.activeTabId.value)
+    assertEquals(originalCount + 1, vm.tabs.value.size)
+    assertTrue(vm.tabs.value.any { it.url == "https://example.org/bg" && !it.isPrivate })
+
+    composeTestRule.runOnUiThread {
+      vm.openNewTab(isPrivate = true, initialUrl = "https://example.org/priv", switchToNewTab = true)
+    }
+    composeTestRule.waitForIdle()
+
+    assertTrue(vm.activeTab().isPrivate)
+    assertEquals("https://example.org/priv", vm.activeTab().url)
   }
 }

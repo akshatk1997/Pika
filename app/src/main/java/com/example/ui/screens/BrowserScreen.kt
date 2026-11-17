@@ -453,6 +453,10 @@ fun BrowserScreen(
                       AndroidView(
                         factory = { ctx ->
                           FrameLayout(ctx).apply {
+                            layoutParams = ViewGroup.LayoutParams(
+                              ViewGroup.LayoutParams.MATCH_PARENT,
+                              ViewGroup.LayoutParams.MATCH_PARENT
+                            )
                             val targetWebView = viewModel.getOrCreateWebView(activeTab.id)
                             if (targetWebView != null && viewModel.webViewPool.isWebViewAlive(targetWebView)) {
                               viewModel.webViewPool.attachToHost(targetWebView, ctx)
@@ -464,6 +468,7 @@ fun BrowserScreen(
                                   ViewGroup.LayoutParams.MATCH_PARENT
                                 )
                               )
+                              targetWebView.requestLayout()
                             }
                           }
                         },
@@ -1213,17 +1218,21 @@ fun BrowserScreen(
           )
           ContextActionRow("Open in new tab") {
             viewModel.dismissLinkContext()
-            viewModel.openNewTab(isPrivate = activeTab.isPrivate, initialUrl = target.url)
+            viewModel.openNewTab(isPrivate = activeTab.isPrivate, initialUrl = target.url, switchToNewTab = true)
+          }
+          ContextActionRow("Open in background tab") {
+            viewModel.dismissLinkContext()
+            viewModel.openNewTab(isPrivate = activeTab.isPrivate, initialUrl = target.url, switchToNewTab = false)
           }
           if (activeTab.isPrivate) {
             ContextActionRow("Open in standard tab") {
               viewModel.dismissLinkContext()
-              viewModel.openNewTab(isPrivate = false, initialUrl = target.url)
+              viewModel.openNewTab(isPrivate = false, initialUrl = target.url, switchToNewTab = true)
             }
           } else {
             ContextActionRow("Open in private tab") {
               viewModel.dismissLinkContext()
-              viewModel.openNewTab(isPrivate = true, initialUrl = target.url)
+              viewModel.openNewTab(isPrivate = true, initialUrl = target.url, switchToNewTab = true)
             }
           }
           ContextActionRow("Copy URL") {

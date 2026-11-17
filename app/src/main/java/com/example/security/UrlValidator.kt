@@ -241,4 +241,52 @@ object UrlValidator {
       url
     }
   }
+
+  fun isSearchEngineUrl(url: String?): Boolean {
+    if (url.isNullOrBlank()) return false
+    val host = extractHost(url)
+    if (host.isEmpty()) return false
+    val lowerUrl = url.lowercase()
+    return host == "duckduckgo.com" || host.endsWith(".duckduckgo.com") ||
+      host == "startpage.com" || host.endsWith(".startpage.com") ||
+      host == "qwant.com" || host.endsWith(".qwant.com") ||
+      host == "search.brave.com" ||
+      host == "bing.com" || host.endsWith(".bing.com") ||
+      host == "search.yahoo.com" ||
+      host == "ecosia.org" || host.endsWith(".ecosia.org") ||
+      host == "kagi.com" ||
+      ((host == "google.com" || host.startsWith("www.google.") || host.startsWith("google.")) &&
+        (lowerUrl.contains("/search") || lowerUrl.contains("?q=") || lowerUrl.contains("&q="))) ||
+      ((host == "yandex.com" || host == "yandex.ru" || host.endsWith(".yandex.com") || host.endsWith(".yandex.ru")) &&
+        lowerUrl.contains("/search"))
+  }
+
+  fun toDesktopUrl(url: String): String {
+    if (!isSafeWebUrl(url) || url == "about:blank") return url
+    return try {
+      val uri = URI(sanitizeControlChars(url).trim())
+      val host = uri.host?.lowercase() ?: return url
+      val newHost = when {
+        host.contains(".m.wikipedia.org") -> host.replace(".m.wikipedia.org", ".wikipedia.org")
+        host == "m.youtube.com" -> "www.youtube.com"
+        host == "m.facebook.com" || host == "mbasic.facebook.com" -> "www.facebook.com"
+        host == "mobile.twitter.com" || host == "mobile.x.com" -> "x.com"
+        host == "m.reddit.com" -> "www.reddit.com"
+        host == "m.imdb.com" -> "www.imdb.com"
+        host.startsWith("mobile.") && host.count { it == '.' } >= 2 -> "www." + host.removePrefix("mobile.")
+        host.startsWith("m.") && host.count { it == '.' } >= 2 -> "www." + host.removePrefix("m.")
+        else -> host
+      }
+      if (newHost == host) return url
+      val schemePrefix = "${uri.scheme}://"
+      val afterScheme = url.substringAfter("://", "")
+      if (afterScheme.isEmpty()) return url
+      val authorityEnd = afterScheme.indexOfAny(charArrayOf('/', '?', '#'))
+      val rest = if (authorityEnd >= 0) afterScheme.substring(authorityEnd) else ""
+      val portPart = if (uri.port != -1) ":${uri.port}" else ""
+      "$schemePrefix$newHost$portPart$rest"
+    } catch (_: Throwable) {
+      url
+    }
+  }
 }
