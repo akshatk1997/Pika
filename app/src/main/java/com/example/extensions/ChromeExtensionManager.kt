@@ -71,7 +71,7 @@ class ChromeExtensionManager(context: Context) {
 
     /**
      * Evaluates a Chrome Extension URL match pattern against a target webpage URL.
-     * Supports <all_urls>, *://*.example.com/*, https://site.org/path*, etc.
+     * Supports all-URLs, subdomain wildcards, and path globs.
      */
     fun matchesChromePattern(pattern: String, url: String): Boolean {
       val p = pattern.trim()
