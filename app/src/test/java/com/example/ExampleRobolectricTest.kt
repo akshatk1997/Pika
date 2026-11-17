@@ -10,8 +10,6 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
-import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.swipeUp
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.LocalBrowserDatabase
 import com.example.data.SettingsRepository
@@ -200,9 +198,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithTag("settings_folder_about").performScrollTo().performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("Kai Browser").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("settings_list").performTouchInput { swipeUp() }
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Privacy Policy").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Privacy Policy").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("settings_back_button").performClick()
     composeTestRule.waitForIdle()
 
