@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kai-v1.8.4.apk
+          cp "$APK_PATH" releases/Kai-v1.8.5.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kai-v1.8.4.apk
+          git add releases/Kai-v1.8.5.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kai-v1.8.4.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kai-v1.8.5.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.8.4
+      - name: Create or update GitHub Release v1.8.5
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kai-v1.8.4.apk)
-          NOTES="Kai Browser v1.8.4 (Build 57) — Minimal, privacy-hardened Android browser shell powered by Android System WebView.\n\n- **Target Website Navigation in New Tabs:** Permanently fixed new tabs loading the current site instead of the requested destination website. Connected Chromium's native WebViewTransport directly to the newly allocated secured WebView instance, ensuring target URLs load completely without intermediate opener URL contamination.\n- **Accurate Anchor Link & DOM Extraction:** Enhanced long-press context handling with requestFocusNodeHref to accurately extract destination link URLs even when wrapping images (SRC_IMAGE_ANCHOR_TYPE) or relative paths, resolving them to absolute URLs via UrlValidator.resolveRelativeUrl.\n- **Instant AndroidView Mounting:** Mounted newly created loading tabs directly into the view hierarchy, eliminating Start Page flicker and providing immediate visual feedback during multi-window navigation.\n- **JavaScript Window Closure Support:** Added WebChromeClient.onCloseWindow support communicating window.close() events back to the tab manager cleanly.\n- **Full Browsing Mode Isolation:** Guaranteed independent private and standard tab sandboxing across all new tab lifecycles.\n- **Under 2 MB Limit:** Built with aggressive R8 minification, bytecode optimization, and zero bloated libraries, strictly maintaining the < 2 MB binary limit (~1.47 MB).\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
-          if gh release view v1.8.4 >/dev/null 2>&1; then
-            gh release upload v1.8.4 releases/Kai-v1.8.4.apk --clobber
-            gh release edit v1.8.4 --title "Kai v1.8.4 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kai-v1.8.5.apk)
+          NOTES="Kai Browser v1.8.5 (Build 58) — Minimal, privacy-hardened Android browser shell powered by Android System WebView.\n\n- **Compose Keyed AndroidView Subtree:** Permanently resolved stale WebView presentation where newly opened or switched tabs continued rendering the original tab's WebView. Enforced key(activeTab.id) around AndroidView with dedicated per-tab container allocation in factory and clean onRelease teardown, ensuring each tab's rendered web view matches its omnibox and tab manager state.\n- **Direct Tab-Keyed WebView Resolution:** Added viewModel.getOrCreateWebView(activeTab.id) ensuring the container factory and update blocks bind directly to the active tab's dedicated WebView.\n- **Flawless Multi-Tab Browsing:** Seamlessly switches between search engines, encyclopedic references, media hubs, and video platforms with immediate visual display upon tab creation.\n- **Under 2 MB Limit:** Built with aggressive R8 minification, bytecode optimization, and zero bloated libraries, strictly maintaining the < 2 MB binary limit (~1.48 MB).\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
+          if gh release view v1.8.5 >/dev/null 2>&1; then
+            gh release upload v1.8.5 releases/Kai-v1.8.5.apk --clobber
+            gh release edit v1.8.5 --title "Kai v1.8.5 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.8.4 releases/Kai-v1.8.4.apk \
-              --title "Kai v1.8.4 (< 2 MB)" \
+            gh release create v1.8.5 releases/Kai-v1.8.5.apk \
+              --title "Kai v1.8.5 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

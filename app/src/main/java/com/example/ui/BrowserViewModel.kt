@@ -815,8 +815,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     persistOpenTabs()
   }
 
-  fun getOrCreateActiveWebView(): WebView? {
-    val tab = activeTab()
+  fun getOrCreateWebView(tabId: String): WebView? {
+    val tab = tabById(tabId) ?: activeTab()
     val safeFallback = if (tab.errorState == null && tab.httpWarning == null) tab.url else ""
     return webViewPool.getOrCreateWebView(
       tabId = tab.id,
@@ -826,6 +826,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       fallbackUrl = safeFallback
     )
   }
+
+  fun getOrCreateActiveWebView(): WebView? = getOrCreateWebView(activeTab().id)
 
   fun getActiveSniffedResources(): List<SniffedResource> =
     webViewPool.getSniffedResources(activeTab().id)

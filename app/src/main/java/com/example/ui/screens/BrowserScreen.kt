@@ -85,6 +85,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -448,107 +449,125 @@ fun BrowserScreen(
                   val webContainerVisibility = if (hasFullOverlay && !settings.backgroundPlayEnabled) View.INVISIBLE else View.VISIBLE
 
                   Box(modifier = Modifier.fillMaxSize()) {
-                    AndroidView(
-                      factory = { ctx -> FrameLayout(ctx) },
-                      update = { container ->
-                        if (container.visibility != webContainerVisibility) {
-                          container.visibility = webContainerVisibility
-                        }
-                        val targetWebView = viewModel.getOrCreateActiveWebView()
-                        if (targetWebView == null || !viewModel.webViewPool.isWebViewAlive(targetWebView)) {
+                    key(activeTab.id) {
+                      AndroidView(
+                        factory = { ctx ->
+                          FrameLayout(ctx).apply {
+                            val targetWebView = viewModel.getOrCreateWebView(activeTab.id)
+                            if (targetWebView != null && viewModel.webViewPool.isWebViewAlive(targetWebView)) {
+                              viewModel.webViewPool.attachToHost(targetWebView, ctx)
+                              (targetWebView.parent as? ViewGroup)?.removeView(targetWebView)
+                              addView(
+                                targetWebView,
+                                FrameLayout.LayoutParams(
+                                  ViewGroup.LayoutParams.MATCH_PARENT,
+                                  ViewGroup.LayoutParams.MATCH_PARENT
+                                )
+                              )
+                            }
+                          }
+                        },
+                        update = { container ->
+                          if (container.visibility != webContainerVisibility) {
+                            container.visibility = webContainerVisibility
+                          }
+                          val targetWebView = viewModel.getOrCreateWebView(activeTab.id)
+                          if (targetWebView == null || !viewModel.webViewPool.isWebViewAlive(targetWebView)) {
+                            for (i in 0 until container.childCount) {
+                              val child = container.getChildAt(i) as? android.webkit.WebView
+                              if (child != null) {
+                                child.setOnTouchListener(null)
+                                child.setOnScrollChangeListener(null)
+                                viewModel.webViewPool.detachFromHost(child)
+                              }
+                            }
+                            container.removeAllViews()
+                            return@AndroidView
+                          }
+                          viewModel.webViewPool.attachToHost(targetWebView, container.context)
+                          if (container.childCount != 1 || container.getChildAt(0) !== targetWebView) {
+                            for (i in 0 until container.childCount) {
+                              val child = container.getChildAt(i) as? android.webkit.WebView
+                              if (child != null && child !== targetWebView) {
+                                child.setOnTouchListener(null)
+                                child.setOnScrollChangeListener(null)
+                                viewModel.webViewPool.detachFromHost(child)
+                              }
+                            }
+                            container.removeAllViews()
+                            (targetWebView.parent as? ViewGroup)?.removeView(targetWebView)
+                            try {
+                              container.addView(
+                                targetWebView,
+                                FrameLayout.LayoutParams(
+                                  ViewGroup.LayoutParams.MATCH_PARENT,
+                                  ViewGroup.LayoutParams.MATCH_PARENT
+                                )
+                              )
+                            } catch (_: Throwable) {
+                            }
+                          }
+                          targetWebView.setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
+                            if (isImeVisible) {
+                              if (!isNavBarVisible) isNavBarVisible = true
+                              return@setOnScrollChangeListener
+                            }
+                            val dy = scrollY - oldScrollY
+                            if (scrollY <= 24) {
+                              if (!isNavBarVisible) isNavBarVisible = true
+                            } else if (dy > 14) {
+                              if (isNavBarVisible) isNavBarVisible = false
+                            } else if (dy < -14) {
+                              if (!isNavBarVisible) isNavBarVisible = true
+                            }
+                          }
+                          targetWebView.setOnTouchListener { v, event ->
+                            if (v.scrollY == 0) {
+                              when (event.actionMasked) {
+                                MotionEvent.ACTION_DOWN -> {
+                                  pullStartX.floatValue = event.x
+                                  pullStartY.floatValue = event.y
+                                  pullProgress = 0f
+                                  if (!isNavBarVisible) isNavBarVisible = true
+                                }
+                                MotionEvent.ACTION_MOVE -> {
+                                  val dy = event.y - pullStartY.floatValue
+                                  val dx = kotlin.math.abs(event.x - pullStartX.floatValue)
+                                  if (dy > slopPx && dy > dx * 1.4f && pullStartY.floatValue > 0f) {
+                                    pullProgress = ((dy - slopPx) / triggerPx).coerceIn(0f, 1f)
+                                  } else {
+                                    pullProgress = 0f
+                                  }
+                                }
+                                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                                  if (pullProgress >= 0.95f) {
+                                    viewModel.reloadOrStop()
+                                  }
+                                  pullProgress = 0f
+                                  pullStartX.floatValue = 0f
+                                  pullStartY.floatValue = 0f
+                                }
+                              }
+                            } else {
+                              pullProgress = 0f
+                            }
+                            false
+                          }
+                        },
+                        onRelease = { container ->
                           for (i in 0 until container.childCount) {
                             val child = container.getChildAt(i) as? android.webkit.WebView
                             if (child != null) {
-                              child.setOnTouchListener(null)
-                              viewModel.webViewPool.detachFromHost(child)
-                            }
-                          }
-                          container.removeAllViews()
-                          return@AndroidView
-                        }
-                        viewModel.webViewPool.attachToHost(targetWebView, container.context)
-                        if (container.childCount != 1 || container.getChildAt(0) !== targetWebView) {
-                          for (i in 0 until container.childCount) {
-                            val child = container.getChildAt(i) as? android.webkit.WebView
-                            if (child != null && child !== targetWebView) {
                               child.setOnTouchListener(null)
                               child.setOnScrollChangeListener(null)
                               viewModel.webViewPool.detachFromHost(child)
                             }
                           }
                           container.removeAllViews()
-                          (targetWebView.parent as? ViewGroup)?.removeView(targetWebView)
-                          try {
-                            container.addView(
-                              targetWebView,
-                              FrameLayout.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT
-                              )
-                            )
-                          } catch (_: Throwable) {
-                          }
-                        }
-                        targetWebView.setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
-                          if (isImeVisible) {
-                            if (!isNavBarVisible) isNavBarVisible = true
-                            return@setOnScrollChangeListener
-                          }
-                          val dy = scrollY - oldScrollY
-                          if (scrollY <= 24) {
-                            if (!isNavBarVisible) isNavBarVisible = true
-                          } else if (dy > 14) {
-                            if (isNavBarVisible) isNavBarVisible = false
-                          } else if (dy < -14) {
-                            if (!isNavBarVisible) isNavBarVisible = true
-                          }
-                        }
-                        targetWebView.setOnTouchListener { v, event ->
-                          if (v.scrollY == 0) {
-                            when (event.actionMasked) {
-                              MotionEvent.ACTION_DOWN -> {
-                                pullStartX.floatValue = event.x
-                                pullStartY.floatValue = event.y
-                                pullProgress = 0f
-                                if (!isNavBarVisible) isNavBarVisible = true
-                              }
-                              MotionEvent.ACTION_MOVE -> {
-                                val dy = event.y - pullStartY.floatValue
-                                val dx = kotlin.math.abs(event.x - pullStartX.floatValue)
-                                if (dy > slopPx && dy > dx * 1.4f && pullStartY.floatValue > 0f) {
-                                  pullProgress = ((dy - slopPx) / triggerPx).coerceIn(0f, 1f)
-                                } else {
-                                  pullProgress = 0f
-                                }
-                              }
-                              MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                                if (pullProgress >= 0.95f) {
-                                  viewModel.reloadOrStop()
-                                }
-                                pullProgress = 0f
-                                pullStartX.floatValue = 0f
-                                pullStartY.floatValue = 0f
-                              }
-                            }
-                          } else {
-                            pullProgress = 0f
-                          }
-                          false
-                        }
-                      },
-                      onRelease = { container ->
-                        for (i in 0 until container.childCount) {
-                          val child = container.getChildAt(i) as? android.webkit.WebView
-                          if (child != null) {
-                            child.setOnTouchListener(null)
-                            child.setOnScrollChangeListener(null)
-                            viewModel.webViewPool.detachFromHost(child)
-                          }
-                        }
-                        container.removeAllViews()
-                      },
-                      modifier = Modifier.fillMaxSize().testTag("webview_container")
-                    )
+                        },
+                        modifier = Modifier.fillMaxSize().testTag("webview_container")
+                      )
+                    }
                     if (pullProgress > 0.1f) {
                       LinearProgressIndicator(
                         progress = { pullProgress },
