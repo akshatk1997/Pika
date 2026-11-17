@@ -118,42 +118,47 @@ fun NewTabHomeView(
 ) {
   var homeSearch by remember { mutableStateOf("") }
 
-  val primaryAccent = if (isPrivate) FeatherPrivateAccent else MaterialTheme.colorScheme.primary
+  // Pure OLED dark homepage palette (premium pitch-black vibe without touching the Kai icon)
+  val pureBlackBg = Color(0xFF000000)
+  val cardSurfaceDark = Color(0xFF0B0C10)
+  val searchSurfaceDark = Color(0xFF0E1016)
+  val hairlineBorderDark = Color(0xFF1E222D)
+  val titleOnDark = Color(0xFFF8FAFC)
+  val mutedOnDark = Color(0xFF94A3B8)
+  val primaryAccent = if (isPrivate) FeatherPrivateAccent else Color(0xFF38BDF8)
   val auraAccent = if (isPrivate) FeatherPrivateAccent else BatSignalGold
   val secondaryAccent = if (isPrivate) Color(0xFF6366F1) else FeatherMintDark
-  val surfaceColor = MaterialTheme.colorScheme.surface
-  val outlineColor = MaterialTheme.colorScheme.outline
 
   BoxWithConstraints(
     modifier = modifier
       .fillMaxSize()
-      .background(MaterialTheme.colorScheme.background)
+      .background(pureBlackBg)
       .drawBehind {
         val center = Offset(size.width * 0.5f, size.height * 0.18f)
         drawCircle(
           brush = Brush.radialGradient(
             colors = listOf(
-              auraAccent.copy(alpha = 0.15f),
-              secondaryAccent.copy(alpha = 0.05f),
+              auraAccent.copy(alpha = 0.09f),
+              secondaryAccent.copy(alpha = 0.03f),
               Color.Transparent
             ),
             center = center,
-            radius = size.minDimension * 0.72f
+            radius = size.minDimension * 0.68f
           ),
-          radius = size.minDimension * 0.72f,
+          radius = size.minDimension * 0.68f,
           center = center
         )
         drawCircle(
-          color = auraAccent.copy(alpha = 0.08f),
+          color = auraAccent.copy(alpha = 0.06f),
           radius = size.minDimension * 0.34f,
           center = center,
-          style = Stroke(width = 1.dp.toPx())
+          style = Stroke(width = 0.8.dp.toPx())
         )
         drawCircle(
-          color = primaryAccent.copy(alpha = 0.05f),
+          color = primaryAccent.copy(alpha = 0.04f),
           radius = size.minDimension * 0.52f,
           center = center,
-          style = Stroke(width = 1.dp.toPx())
+          style = Stroke(width = 0.8.dp.toPx())
         )
       }
       .padding(horizontal = 20.dp, vertical = 14.dp),
@@ -185,15 +190,15 @@ fun NewTabHomeView(
         text = if (isPrivate) stringResource(R.string.tabs_private) else stringResource(R.string.app_name),
         style = MaterialTheme.typography.headlineMedium,
         fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onBackground
+        color = titleOnDark
       )
 
       if (isPrivate) {
         Spacer(modifier = Modifier.height(8.dp))
         Surface(
           shape = RoundedCornerShape(50),
-          color = surfaceColor.copy(alpha = 0.85f),
-          border = BorderStroke(0.8.dp, FeatherPrivateAccent.copy(alpha = 0.5f))
+          color = Color(0xFF100A1A),
+          border = BorderStroke(0.8.dp, FeatherPrivateAccent.copy(alpha = 0.55f))
         ) {
           Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -209,7 +214,7 @@ fun NewTabHomeView(
             Text(
               text = stringResource(R.string.tabs_private_banner),
               style = MaterialTheme.typography.labelMedium,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
+              color = Color(0xFFE2E8F0)
             )
           }
         }
@@ -220,10 +225,10 @@ fun NewTabHomeView(
       // Clean Standard Search Box
       Surface(
         shape = RoundedCornerShape(28.dp),
-        color = surfaceColor,
-        tonalElevation = 4.dp,
-        shadowElevation = 6.dp,
-        border = BorderStroke(1.dp, primaryAccent.copy(alpha = 0.28f)),
+        color = searchSurfaceDark,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+        border = BorderStroke(1.dp, primaryAccent.copy(alpha = 0.32f)),
         modifier = Modifier.fillMaxWidth().height(54.dp)
       ) {
         Row(
@@ -242,7 +247,7 @@ fun NewTabHomeView(
               Text(
                 text = stringResource(R.string.home_search_hint, searchEngineName),
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = mutedOnDark
               )
             }
             BasicTextField(
@@ -250,7 +255,7 @@ fun NewTabHomeView(
               onValueChange = { homeSearch = it },
               singleLine = true,
               textStyle = MaterialTheme.typography.bodyLarge.copy(
-                color = MaterialTheme.colorScheme.onSurface
+                color = titleOnDark
               ),
               cursorBrush = SolidColor(primaryAccent),
               keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
@@ -302,7 +307,7 @@ fun NewTabHomeView(
           text = stringResource(R.string.home_bookmarks_section).uppercase(),
           style = MaterialTheme.typography.labelMedium,
           fontWeight = FontWeight.SemiBold,
-          color = MaterialTheme.colorScheme.onSurfaceVariant
+          color = mutedOnDark
         )
       }
 
@@ -311,8 +316,8 @@ fun NewTabHomeView(
       if (bookmarks.isEmpty()) {
         Surface(
           shape = RoundedCornerShape(18.dp),
-          color = surfaceColor.copy(alpha = 0.72f),
-          border = BorderStroke(0.8.dp, outlineColor.copy(alpha = 0.6f)),
+          color = cardSurfaceDark,
+          border = BorderStroke(0.8.dp, hairlineBorderDark),
           modifier = Modifier.fillMaxWidth()
         ) {
           Row(
@@ -321,7 +326,7 @@ fun NewTabHomeView(
           ) {
             Surface(
               shape = RoundedCornerShape(12.dp),
-              color = primaryAccent.copy(alpha = 0.1f),
+              color = primaryAccent.copy(alpha = 0.12f),
               modifier = Modifier.size(40.dp)
             ) {
               Box(contentAlignment = Alignment.Center) {
@@ -337,7 +342,7 @@ fun NewTabHomeView(
             Text(
               text = stringResource(R.string.home_no_bookmarks),
               style = MaterialTheme.typography.bodyMedium,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
+              color = mutedOnDark
             )
           }
         }
@@ -357,9 +362,9 @@ fun NewTabHomeView(
                 val initial = host.firstOrNull()?.uppercase() ?: "B"
                 Surface(
                   shape = RoundedCornerShape(16.dp),
-                  color = surfaceColor,
-                  tonalElevation = 1.dp,
-                  border = BorderStroke(0.8.dp, outlineColor.copy(alpha = 0.45f)),
+                  color = cardSurfaceDark,
+                  tonalElevation = 0.dp,
+                  border = BorderStroke(0.8.dp, hairlineBorderDark),
                   modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(16.dp))
@@ -372,7 +377,7 @@ fun NewTabHomeView(
                   ) {
                     Surface(
                       shape = RoundedCornerShape(11.dp),
-                      color = primaryAccent.copy(alpha = 0.13f),
+                      color = primaryAccent.copy(alpha = 0.14f),
                       modifier = Modifier.size(36.dp)
                     ) {
                       Box(contentAlignment = Alignment.Center) {
@@ -390,13 +395,14 @@ fun NewTabHomeView(
                         text = bm.title,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
+                        color = titleOnDark,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                       )
                       Text(
                         text = host,
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = mutedOnDark,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                       )

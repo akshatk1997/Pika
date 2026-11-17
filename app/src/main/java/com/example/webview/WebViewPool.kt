@@ -74,6 +74,9 @@ interface WebViewCallbacks {
   fun onFindMatches(tabId: String, activeOrdinal: Int, numberOfMatches: Int)
   fun onFullscreenChanged(tabId: String, customView: View?, callback: WebChromeClient.CustomViewCallback?)
   fun onLongPressLink(tabId: String, url: String, isImage: Boolean)
+  fun onLongPressLinkWithImage(tabId: String, url: String, isImage: Boolean, imageUrl: String?) {
+    onLongPressLink(tabId, url, isImage)
+  }
   fun onAudioPermissionNeeded() {}
   fun onNewTabRequested(parentTabId: String, url: String, isPrivate: Boolean) {}
   fun onNewTabCreated(newTabId: String, isPrivate: Boolean, initialUrl: String = "") {}
@@ -512,6 +515,103 @@ class WebViewPool(
             window.__kai_search_sametab_observer = obs;
           }
         }
+      })();
+      """.trimIndent()
+    try {
+      webView.evaluateJavascript(js, null)
+    } catch (_: Throwable) {
+    }
+  }
+
+  private fun applyLinkTargetTrackerEngine(webView: WebView) {
+    if (!settingsProvider().javascriptEnabled || destroyedViews.contains(webView)) return
+    val js = """
+      (function() {
+        if (window.__kai_link_tracker_installed) return;
+        window.__kai_link_tracker_installed = true;
+        window.__kai_touch_ctx = { link: '', image: '', ts: 0 };
+
+        function isValidHref(u) {
+          if (!u || typeof u !== 'string') return false;
+          var t = u.trim().toLowerCase();
+          return (t.indexOf('http://') === 0 || t.indexOf('https://') === 0) && t !== 'about:blank';
+        }
+        function isImageUrl(u) {
+          if (!u) return false;
+          var path = u.split('?')[0].split('#')[0].toLowerCase();
+          return /\.(jpg|jpeg|png|webp|gif|svg|avif|bmp|ico)$/.test(path);
+        }
+        function captureTarget(el) {
+          try {
+            if (!el || el.nodeType !== 1) return;
+            var link = '';
+            var img = '';
+
+            var imgEl = el.tagName === 'IMG' ? el : (el.closest ? el.closest('img') : null);
+            if (!imgEl && el.querySelector && (el.tagName === 'PICTURE' || el.tagName === 'FIGURE')) {
+              imgEl = el.querySelector('img');
+            }
+            if (imgEl) {
+              var s = imgEl.currentSrc || imgEl.src || '';
+              if (isValidHref(s)) img = s;
+            }
+
+            // 1. Direct enclosing <a href="..."> (e.g. <a href="page"><img src="pic"></a>)
+            var anchor = el.closest ? el.closest('a[href]') : null;
+            if (anchor && isValidHref(anchor.href)) {
+              link = anchor.href;
+            }
+
+            // 2. Data-href / data-url wrapper
+            if (!link && el.closest) {
+              var dataEl = el.closest('[data-href], [data-url], [data-link]');
+              if (dataEl) {
+                var raw = dataEl.getAttribute('data-href') || dataEl.getAttribute('data-url') || dataEl.getAttribute('data-link') || '';
+                if (raw) {
+                  try {
+                    var abs = new URL(raw, window.location.href).href;
+                    if (isValidHref(abs)) link = abs;
+                  } catch(e) {}
+                }
+              }
+            }
+
+            // 3. Thumbnail inside a card container whose sibling/child <a href> is the article/video link
+            if (!link && imgEl) {
+              var cur = imgEl.parentElement;
+              for (var depth = 0; depth < 3 && cur && cur !== document.body; depth++) {
+                var anchors = cur.querySelectorAll ? cur.querySelectorAll('a[href]') : [];
+                var uniquePageLinks = [];
+                for (var i = 0; i < anchors.length && uniquePageLinks.length < 4; i++) {
+                  var h = anchors[i].href;
+                  if (isValidHref(h) && !isImageUrl(h) && uniquePageLinks.indexOf(h) === -1) {
+                    uniquePageLinks.push(h);
+                  }
+                }
+                if (uniquePageLinks.length === 1) {
+                  link = uniquePageLinks[0];
+                  break;
+                }
+                if (uniquePageLinks.length > 1) break;
+                cur = cur.parentElement;
+              }
+            }
+
+            window.__kai_touch_ctx = { link: link, image: img, ts: Date.now() };
+          } catch(e) {}
+        }
+
+        document.addEventListener('touchstart', function(e) { captureTarget(e.target); }, { capture: true, passive: true });
+        document.addEventListener('pointerdown', function(e) { captureTarget(e.target); }, { capture: true, passive: true });
+        document.addEventListener('contextmenu', function(e) { captureTarget(e.target); }, { capture: true, passive: true });
+
+        window.__kai_get_touch_ctx = function() {
+          var ctx = window.__kai_touch_ctx || { link: '', image: '', ts: 0 };
+          if (Date.now() - (ctx.ts || 0) > 6000) {
+            return JSON.stringify({ link: '', image: '' });
+          }
+          return JSON.stringify({ link: ctx.link || '', image: ctx.image || '' });
+        };
       })();
       """.trimIndent()
     try {
@@ -1584,16 +1684,48 @@ class WebViewPool(
         if (!isLinkOrImage) return@setOnLongClickListener false
 
         val currentUrl = wv.url.orEmpty()
+        val anchorExtra = if (type == WebView.HitTestResult.SRC_ANCHOR_TYPE) extra else null
+        val imageExtra = if (type == WebView.HitTestResult.IMAGE_TYPE || type == WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE) extra else null
+
+        fun dispatchResolved(domLink: String?, domImg: String?, nativeHref: String?, nativeSrc: String?) {
+          val resolved = UrlValidator.resolveLinkOverImageTarget(
+            baseUrl = currentUrl,
+            domLink = domLink,
+            nativeHref = nativeHref,
+            anchorExtra = anchorExtra,
+            domImage = domImg,
+            nativeSrc = nativeSrc,
+            imageExtra = imageExtra
+          ) ?: return
+          val (finalUrl, isImg, optImg) = resolved
+          callbacks.onLongPressLinkWithImage(tabId, finalUrl, isImg, optImg)
+        }
+
         val handler = object : Handler(Looper.getMainLooper()) {
           override fun handleMessage(msg: Message) {
-            val href = msg.data?.getString("url")
-            val src = msg.data?.getString("src")
-            val candidate = if (!href.isNullOrBlank()) href else if (!src.isNullOrBlank()) src else extra
-            val resolvedUrl = UrlValidator.resolveRelativeUrl(currentUrl, candidate)
-            if (resolvedUrl.isNotBlank() && UrlValidator.isSafeWebUrl(resolvedUrl) && resolvedUrl != "about:blank") {
-              val isImg = href.isNullOrBlank() && (!src.isNullOrBlank() || type == WebView.HitTestResult.IMAGE_TYPE)
-              callbacks.onLongPressLink(tabId, resolvedUrl, isImg)
+            val nativeHref = msg.data?.getString("url")
+            val nativeSrc = msg.data?.getString("src")
+            if (settingsProvider().javascriptEnabled && !destroyedViews.contains(wv)) {
+              try {
+                wv.evaluateJavascript("(function(){return window.__kai_get_touch_ctx?window.__kai_get_touch_ctx():'{}';})();") { rawJson ->
+                  var domLink: String? = null
+                  var domImg: String? = null
+                  try {
+                    if (!rawJson.isNullOrBlank() && rawJson != "null") {
+                      val unwrapped = JSONObject("{\"v\":$rawJson}").getString("v")
+                      val obj = JSONObject(unwrapped)
+                      domLink = obj.optString("link").takeIf { it.isNotBlank() }
+                      domImg = obj.optString("image").takeIf { it.isNotBlank() }
+                    }
+                  } catch (_: Throwable) {
+                  }
+                  dispatchResolved(domLink, domImg, nativeHref, nativeSrc)
+                }
+                return
+              } catch (_: Throwable) {
+              }
             }
+            dispatchResolved(null, null, nativeHref, nativeSrc)
           }
         }
         val msg = handler.obtainMessage()
@@ -1711,6 +1843,7 @@ class WebViewPool(
               applyDesktopModeEngine(view, true)
             }
             applySearchSameTabEngine(view, url)
+            applyLinkTargetTrackerEngine(view)
             applyStealthPrivacyShield(view)
             applyVideoCompatibilityEngine(view)
             val s = settingsProvider()
@@ -1737,6 +1870,7 @@ class WebViewPool(
             applyDesktopModeEngine(view, true)
           }
           applySearchSameTabEngine(view, url)
+          applyLinkTargetTrackerEngine(view)
           applyStealthPrivacyShield(view)
           applyVideoCompatibilityEngine(view)
           val s = settingsProvider()
@@ -1896,6 +2030,7 @@ class WebViewPool(
           if (tabUserAgentModes[tabId] == UserAgentMode.DESKTOP) {
             applyDesktopModeEngine(view, true)
           }
+          applyLinkTargetTrackerEngine(view)
           applyVideoCompatibilityEngine(view)
         }
         if (view != null && newProgress >= 15 && !destroyedViews.contains(view)) {
@@ -1935,7 +2070,11 @@ class WebViewPool(
         val openerUrl = try { view?.url.orEmpty() } catch (_: Throwable) { "" }
         val isSearchOpener = UrlValidator.isSearchEngineUrl(openerUrl)
 
-        val hitUrl = try { view?.hitTestResult?.extra } catch (_: Throwable) { null }
+        val hitResult = try { view?.hitTestResult } catch (_: Throwable) { null }
+        // Only trust hitTestResult.extra as a destination link for pure anchor hits (SRC_ANCHOR_TYPE).
+        // For SRC_IMAGE_ANCHOR_TYPE / IMAGE_TYPE, Android populates extra with the <img> src (picture),
+        // NOT the enclosing <a href> webpage link.
+        val hitUrl = if (hitResult?.type == WebView.HitTestResult.SRC_ANCHOR_TYPE) hitResult.extra else null
         val resolvedHitUrl = if (!hitUrl.isNullOrBlank()) UrlValidator.resolveRelativeUrl(openerUrl, hitUrl) else ""
         if (resolvedHitUrl.isNotBlank() && currentSettings.trackerBlockingEnabled &&
           TrackerBlocker.isAdOrPopunderNavigation(resolvedHitUrl)
@@ -1944,17 +2083,45 @@ class WebViewPool(
           return false
         }
 
-        val transport = try { resultMsg.obj as? WebView.WebViewTransport } catch (_: Throwable) { null }
-        if (transport == null) {
+        fun routeFallbackUrl() {
           if (resolvedHitUrl.isNotBlank() && UrlValidator.isSafeWebUrl(resolvedHitUrl) && resolvedHitUrl != "about:blank") {
             if (isSearchOpener) {
               loadUrl(tabId, resolvedHitUrl)
             } else {
               callbacks.onNewTabRequested(tabId, resolvedHitUrl, isPrivate)
             }
-            return true
+            return
           }
-          return false
+          if (view != null && currentSettings.javascriptEnabled && !destroyedViews.contains(view)) {
+            try {
+              view.evaluateJavascript("(function(){return window.__kai_get_touch_ctx?window.__kai_get_touch_ctx():'{}';})();") { rawJson ->
+                try {
+                  if (!rawJson.isNullOrBlank() && rawJson != "null") {
+                    val unwrapped = JSONObject("{\"v\":$rawJson}").getString("v")
+                    val domLink = JSONObject(unwrapped).optString("link").trim()
+                    val resolvedDom = UrlValidator.resolveRelativeUrl(openerUrl, domLink)
+                    if (resolvedDom.isNotBlank() && UrlValidator.isSafeWebUrl(resolvedDom) && resolvedDom != "about:blank") {
+                      if (currentSettings.trackerBlockingEnabled && TrackerBlocker.isAdOrPopunderNavigation(resolvedDom)) {
+                        callbacks.onTrackerBlocked(tabId)
+                      } else if (isSearchOpener) {
+                        loadUrl(tabId, resolvedDom)
+                      } else {
+                        callbacks.onNewTabRequested(tabId, resolvedDom, isPrivate)
+                      }
+                    }
+                  }
+                } catch (_: Throwable) {
+                }
+              }
+            } catch (_: Throwable) {
+            }
+          }
+        }
+
+        val transport = try { resultMsg.obj as? WebView.WebViewTransport } catch (_: Throwable) { null }
+        if (transport == null) {
+          routeFallbackUrl()
+          return true
         }
 
         // Use a silent ephemeral interceptor WebView to inspect the true destination URL
@@ -1963,15 +2130,8 @@ class WebViewPool(
         val interceptor = try {
           WebView(MutableContextWrapper(appContext))
         } catch (_: Throwable) {
-          if (resolvedHitUrl.isNotBlank() && UrlValidator.isSafeWebUrl(resolvedHitUrl) && resolvedHitUrl != "about:blank") {
-            if (isSearchOpener) {
-              loadUrl(tabId, resolvedHitUrl)
-            } else {
-              callbacks.onNewTabRequested(tabId, resolvedHitUrl, isPrivate)
-            }
-            return true
-          }
-          return false
+          routeFallbackUrl()
+          return true
         }
 
         val handled = AtomicBoolean(false)
@@ -2043,13 +2203,7 @@ class WebViewPool(
         mainHandler.postDelayed({
           if (handled.compareAndSet(false, true)) {
             cleanupInterceptor()
-            if (resolvedHitUrl.isNotBlank() && UrlValidator.isSafeWebUrl(resolvedHitUrl) && resolvedHitUrl != "about:blank") {
-              if (isSearchOpener) {
-                loadUrl(tabId, resolvedHitUrl)
-              } else {
-                callbacks.onNewTabRequested(tabId, resolvedHitUrl, isPrivate)
-              }
-            }
+            routeFallbackUrl()
           }
         }, 2500)
 

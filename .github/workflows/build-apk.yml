@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kai-v1.8.6.apk
+          cp "$APK_PATH" releases/Kai-v1.8.7.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kai-v1.8.6.apk
+          git add releases/Kai-v1.8.7.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kai-v1.8.6.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kai-v1.8.7.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.8.6
+      - name: Create or update GitHub Release v1.8.7
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kai-v1.8.6.apk)
-          NOTES="Kai Browser v1.8.6 (Build 59) — Minimal, privacy-hardened Android browser shell powered by Android System WebView.\n\n- **Full Website Rendering & Viewport Fix:** Stripped the Android WebView '; wv' marker from the mobile User-Agent so websites deliver their full authentic Chrome experience instead of stripped/partial layouts, fixed subframe HTTP loading, removed invalid request headers, and enforced explicit MATCH_PARENT container layout sizing.\n- **True Desktop Mode Engine:** Upgraded Desktop Mode with authentic Windows Chrome UA, Sec-CH-UA-Mobile/Platform client hints, automatic mobile-to-desktop URL rewriting (m.youtube.com, en.m.wikipedia.org, m.imdb.com, mobile.*), 1280px forced desktop viewport with SPA MutationObserver protection, and NORMAL layout algorithm so responsive sites render full desktop layouts edge-to-edge.\n- **Streaming Video Ad & Popunder Shield:** Added smart ad-subdomain detection (ad.*, ads.*, ad.trans*, syndication.*, pxl.*, popunder.*), rotating popunder URL detection (zoneid=, clickid=, afu.php), expanded video ad network lists (tsyndicate, magsrv, pemsrv, optimizesrv, xlirdr, etc.), and a silent ephemeral onCreateWindow interceptor that kills ad popups before any tab or SSL error screen can appear.\n- **Same-Tab Search Navigation:** Links tapped on search engine results pages (DuckDuckGo, Google, Brave, Startpage, Qwant, Bing) now load directly inside the same tab instead of automatically spawning new tabs.\n- **Long-Press Link Context Menu Upgrade:** Added 'Open in background tab' alongside 'Open in new tab' and 'Open in private tab' when tapping and holding any link.\n- **Under 2 MB Limit:** Strictly maintained under 2 MB (~1.49 MB) with zero new dependencies.\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
-          if gh release view v1.8.6 >/dev/null 2>&1; then
-            gh release upload v1.8.6 releases/Kai-v1.8.6.apk --clobber
-            gh release edit v1.8.6 --title "Kai v1.8.6 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kai-v1.8.7.apk)
+          NOTES="Kai Browser v1.8.7 (Build 60) — Minimal, privacy-hardened Android browser shell powered by Android System WebView.\n\n- **Link-Over-Picture Target Resolution Fix:** Permanently resolved tapping or long-pressing a picture/thumbnail inside a link opening the image file instead of the link. Added real-time DOM touch link extraction (handling nested <a href><img/></a>, <picture>/<figure>, data-href wrappers, and card containers), strict Link-First resolution via UrlValidator.resolveLinkOverImageTarget, and fixed onCreateWindow so Android's SRC_IMAGE_ANCHOR_TYPE extra (which holds the image src) is never mistaken for the link URL.\n- **Pure OLED Dark Homepage Background:** Upgraded the homepage canvas, toolbar, search pill, and bookmark cards to a sleek pure pitch-black (#000000) theme with high-contrast dark surfaces and matching dark system bars — leaving the Kai emblem and all icons completely untouched.\n- **Under 2 MB Limit:** Strictly maintained under 2 MB (~1.49 MB) with zero new dependencies.\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
+          if gh release view v1.8.7 >/dev/null 2>&1; then
+            gh release upload v1.8.7 releases/Kai-v1.8.7.apk --clobber
+            gh release edit v1.8.7 --title "Kai v1.8.7 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.8.6 releases/Kai-v1.8.6.apk \
-              --title "Kai v1.8.6 (< 2 MB)" \
+            gh release create v1.8.7 releases/Kai-v1.8.7.apk \
+              --title "Kai v1.8.7 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

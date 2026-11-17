@@ -289,4 +289,35 @@ object UrlValidator {
       url
     }
   }
+
+  /**
+   * Resolves the effective target for a tap/long-press on a link or picture-link.
+   * Strictly prioritizes the actual webpage link (DOM anchor / native href / pure anchor extra)
+   * over the embedded picture src so tapping a linked image opens the link rather than the image.
+   * Returns Triple(resolvedUrl, isImageOnly, optionalImageUrl).
+   */
+  fun resolveLinkOverImageTarget(
+    baseUrl: String?,
+    domLink: String?,
+    nativeHref: String?,
+    anchorExtra: String?,
+    domImage: String?,
+    nativeSrc: String?,
+    imageExtra: String?
+  ): Triple<String, Boolean, String?>? {
+    fun validSafe(raw: String?): String? {
+      if (raw.isNullOrBlank()) return null
+      val resolved = resolveRelativeUrl(baseUrl, raw)
+      return resolved.takeIf { it.isNotBlank() && isSafeWebUrl(it) && it != "about:blank" }
+    }
+
+    val resolvedLink = validSafe(domLink) ?: validSafe(nativeHref) ?: validSafe(anchorExtra)
+    val resolvedImg = validSafe(domImage) ?: validSafe(nativeSrc) ?: validSafe(imageExtra)
+
+    return when {
+      resolvedLink != null -> Triple(resolvedLink, false, resolvedImg?.takeIf { it != resolvedLink })
+      resolvedImg != null -> Triple(resolvedImg, true, resolvedImg)
+      else -> null
+    }
+  }
 }

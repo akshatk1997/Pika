@@ -242,8 +242,13 @@ fun BrowserScreen(
     ) {
       val isWideWidth = maxWidth >= 600.dp
       val isImeVisible = WindowInsets.isImeVisible
+      val isHomePageVisible = activeTab.httpWarning == null &&
+        activeTab.errorState == null &&
+        activeTab.url.isBlank() &&
+        !activeTab.isLoading
 
       Scaffold(
+        containerColor = if (isHomePageVisible) Color.Black else MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets.statusBars
       ) { innerPadding ->
         Column(
@@ -1243,6 +1248,12 @@ fun BrowserScreen(
             viewModel.dismissLinkContext()
             viewModel.downloadUrlWithConsent(target.url)
           }
+          if (!target.isImage && !target.imageUrl.isNullOrBlank() && target.imageUrl != target.url) {
+            ContextActionRow("Download image") {
+              viewModel.dismissLinkContext()
+              viewModel.downloadUrlWithConsent(target.imageUrl)
+            }
+          }
           ContextActionRow("Share") {
             viewModel.dismissLinkContext()
             viewModel.shareUrl(target.url)
@@ -1440,7 +1451,7 @@ private fun BrowserToolbar(
     SecurityState.PRIVATE -> Triple(FeatherIcons.PrivateMask, FeatherPrivateAccent, stringResource(R.string.cd_security_private))
     SecurityState.SECURE_HTTPS -> Triple(Icons.Filled.Lock, FeatherSecureGreen, stringResource(R.string.cd_security_https))
     SecurityState.INSECURE_HTTP, SecurityState.ERROR -> Triple(Icons.Filled.Warning, FeatherWarningAmber, stringResource(R.string.cd_security_http))
-    SecurityState.HOME -> Triple(Icons.Filled.Search, MaterialTheme.colorScheme.onSurfaceVariant, stringResource(R.string.cd_security_home))
+    SecurityState.HOME -> Triple(Icons.Filled.Search, if (isHomePage) Color(0xFF94A3B8) else MaterialTheme.colorScheme.onSurfaceVariant, stringResource(R.string.cd_security_home))
   }
 
   val displayHost = remember(activeTab.url) {
@@ -1619,9 +1630,10 @@ private fun BrowserToolbar(
   }
 
   Surface(
-    tonalElevation = 3.dp,
-    shadowElevation = 4.dp,
-    color = MaterialTheme.colorScheme.surface,
+    tonalElevation = if (isHomePage) 0.dp else 3.dp,
+    shadowElevation = if (isHomePage) 0.dp else 4.dp,
+    color = if (isHomePage) Color.Black else MaterialTheme.colorScheme.surface,
+    contentColor = if (isHomePage) Color(0xFFF1F5F9) else MaterialTheme.colorScheme.onSurface,
     modifier = modifier.fillMaxWidth()
   ) {
     Column(modifier = Modifier.fillMaxWidth()) {

@@ -55,7 +55,8 @@ data class WebPermissionPrompt(
 
 data class LinkContextTarget(
   val url: String,
-  val isImage: Boolean
+  val isImage: Boolean,
+  val imageUrl: String? = null
 )
 
 data class ClearDataOptions(

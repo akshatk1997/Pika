@@ -680,6 +680,12 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       }
     }
 
+    override fun onLongPressLinkWithImage(tabId: String, url: String, isImage: Boolean, imageUrl: String?) {
+      runOnMain {
+        _linkContextTarget.value = LinkContextTarget(url = url, isImage = isImage, imageUrl = imageUrl)
+      }
+    }
+
     override fun onAudioPermissionNeeded() {
       runOnMain {
         onAudioPermissionRequested?.invoke()

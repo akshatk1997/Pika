@@ -314,4 +314,53 @@ class FeatherSecurityAndDataTest {
     assertFalse(TrackerBlocker.isAdOrPopunderNavigation("https://en.wikipedia.org/wiki/Hope"))
     assertFalse(TrackerBlocker.shouldBlockRequest("https://cdn.videohost.org/hls/stream.m3u8", "watchsite.com", true))
   }
+
+  @Test
+  fun resolveLinkOverImageTargetPrioritizesPageLinkOverThumbnailPicture() {
+    val base = "https://site.com/feed"
+
+    // 1. Picture wrapped in a link where Android hitTestResult.extra is the image src and nativeHref is null
+    val linkedPic = UrlValidator.resolveLinkOverImageTarget(
+      baseUrl = base,
+      domLink = "https://site.com/watch/123",
+      nativeHref = null,
+      anchorExtra = null,
+      domImage = "https://cdn.site.com/thumb.jpg",
+      nativeSrc = "https://cdn.site.com/thumb.jpg",
+      imageExtra = "https://cdn.site.com/thumb.jpg"
+    )
+    assertNotNull(linkedPic)
+    assertEquals("https://site.com/watch/123", linkedPic!!.first)
+    assertFalse(linkedPic.second)
+    assertEquals("https://cdn.site.com/thumb.jpg", linkedPic.third)
+
+    // 2. Picture wrapped in a link where nativeHref provides a relative URL
+    val nativeLinkedPic = UrlValidator.resolveLinkOverImageTarget(
+      baseUrl = base,
+      domLink = null,
+      nativeHref = "/article/42",
+      anchorExtra = null,
+      domImage = null,
+      nativeSrc = "https://cdn.site.com/cover.webp",
+      imageExtra = "https://cdn.site.com/cover.webp"
+    )
+    assertNotNull(nativeLinkedPic)
+    assertEquals("https://site.com/article/42", nativeLinkedPic!!.first)
+    assertFalse(nativeLinkedPic.second)
+    assertEquals("https://cdn.site.com/cover.webp", nativeLinkedPic.third)
+
+    // 3. Standalone picture with no link at all
+    val standalonePic = UrlValidator.resolveLinkOverImageTarget(
+      baseUrl = base,
+      domLink = null,
+      nativeHref = null,
+      anchorExtra = null,
+      domImage = "https://cdn.site.com/photo.jpg",
+      nativeSrc = null,
+      imageExtra = "https://cdn.site.com/photo.jpg"
+    )
+    assertNotNull(standalonePic)
+    assertEquals("https://cdn.site.com/photo.jpg", standalonePic!!.first)
+    assertTrue(standalonePic.second)
+  }
 }
