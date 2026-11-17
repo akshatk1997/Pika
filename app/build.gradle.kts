@@ -16,8 +16,8 @@ android {
     applicationId = "com.aistudio.featherbrowser.fwkmpz"
     minSdk = 26
     targetSdk = 36
-    versionCode = 66
-    versionName = "1.9.4"
+    versionCode = 67
+    versionName = "1.9.5"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -143,6 +143,7 @@ dependencies {
   // implementation(libs.androidx.compose.ui.tooling.preview)
   implementation(libs.androidx.graphics.path)
   implementation(libs.androidx.core.ktx)
+  implementation(libs.androidx.webkit)
   // implementation(libs.androidx.datastore.preferences)
   implementation(libs.androidx.lifecycle.runtime.compose)
   implementation(libs.androidx.lifecycle.runtime.ktx)

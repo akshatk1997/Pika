@@ -24,6 +24,7 @@ import com.example.download.DownloadController
 import com.example.extensions.ChromeExtensionManager
 import com.example.extensions.CrxUnpacker
 import com.example.extensions.ExtensionInstallResult
+import com.example.extensions.ExtensionRuntimeHost
 import com.example.extensions.InstalledExtension
 import com.example.media.MediaPlaybackService
 import com.example.model.BookmarkItem
@@ -249,6 +250,9 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         when (result) {
           is ExtensionInstallResult.Success -> {
             _installedExtensions.value = extensionManager.listExtensions()
+            if (result.extension.hasBackgroundRuntime && !activeTab().isPrivate) {
+              extensionRuntimeHost.ensureBackgroundRunning(result.extension.id)
+            }
             webViewPool.applyExtensionsToLiveTabs()
             showToast("Installed ${result.extension.name}")
           }
@@ -270,6 +274,9 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         when (result) {
           is ExtensionInstallResult.Success -> {
             _installedExtensions.value = extensionManager.listExtensions()
+            if (result.extension.hasBackgroundRuntime && !activeTab().isPrivate) {
+              extensionRuntimeHost.ensureBackgroundRunning(result.extension.id)
+            }
             webViewPool.applyExtensionsToLiveTabs()
             showToast("Installed ${result.extension.name}")
           }
@@ -284,14 +291,19 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   fun toggleExtensionEnabled(extId: String, enabled: Boolean) {
     _installedExtensions.value = extensionManager.setExtensionEnabled(extId, enabled)
     if (enabled) {
+      if (!activeTab().isPrivate) {
+        extensionRuntimeHost.ensureBackgroundRunning(extId)
+      }
       webViewPool.applyExtensionsToLiveTabs()
       showToast("Extension enabled")
     } else {
+      extensionRuntimeHost.stopBackground(extId)
       showToast("Extension disabled · reload page to clear active scripts")
     }
   }
 
   fun removeExtension(extId: String) {
+    extensionRuntimeHost.stopBackground(extId)
     _installedExtensions.value = extensionManager.removeExtension(extId)
     showToast("Extension removed")
   }
@@ -719,10 +731,41 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     extensionManager = extensionManager
   )
 
+  val extensionRuntimeHost = ExtensionRuntimeHost(
+    context = appContext,
+    extensionManager = extensionManager,
+    activeTabUrlProvider = { activeTab().url },
+    activeTabTitleProvider = { activeTab().title },
+    evaluateOnActiveStandardTab = { js ->
+      val current = activeTab()
+      if (!current.isPrivate) {
+        webViewPool.evaluateJsOnStandardTab(current.id, js)
+      }
+    },
+    broadcastStorageToStandardTabs = { extId, changesJson ->
+      webViewPool.broadcastExtensionStorageChange(extId, changesJson)
+    },
+    onOpenTab = { url ->
+      runOnMain {
+        if (!activeTab().isPrivate && UrlValidator.isSafeWebUrl(url) && url != "about:blank") {
+          openNewTab(isPrivate = false, initialUrl = url)
+        }
+      }
+    },
+    onReloadActiveTab = {
+      runOnMain { reloadOrStop() }
+    },
+    onToast = { msg ->
+      runOnMain { showToast(msg) }
+    }
+  )
+
   init {
+    webViewPool.setExtensionRuntimeHost(extensionRuntimeHost)
     refreshBookmarks()
     refreshHistory()
     webViewPool.trimMemoryAndDiskCaches(_activeTabId.value, aggressive = false)
+    extensionRuntimeHost.startAllEnabledBackgrounds()
 
     MediaPlaybackService.mediaControlListener = { action ->
       runOnMain {
@@ -938,6 +981,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   private fun applyModeBoundaryTransition(wasPrivate: Boolean, nowPrivate: Boolean) {
     webViewPool.syncActiveModeBoundary(nowPrivate)
+    extensionRuntimeHost.setPrivateModeSuspended(nowPrivate)
     if (wasPrivate && !nowPrivate && clipboardWrittenInPrivate) {
       wipeClipboard(silent = true)
     }
@@ -2147,6 +2191,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   override fun onCleared() {
     super.onCleared()
+    extensionRuntimeHost.stopAll()
     contentAnnouncer.shutdown()
     MediaPlaybackService.mediaControlListener = null
     MediaPlaybackService.stop(appContext)

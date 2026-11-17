@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kio", appName)
-    assertEquals("1.9.4", BuildConfig.VERSION_NAME)
-    assertEquals(66, BuildConfig.VERSION_CODE)
+    assertEquals("1.9.5", BuildConfig.VERSION_NAME)
+    assertEquals(67, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -189,7 +189,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Resources").assertDoesNotExist()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.9.4").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.9.5").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
 
     // Navigate into Data Saver folder
@@ -938,5 +938,79 @@ class ExampleRobolectricTest {
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("Wikipedia").assertIsDisplayed()
     composeTestRule.onNodeWithText("Bookmarks · https://en.wikipedia.org/wiki/Android").assertDoesNotExist()
+  }
+
+  @Test
+  fun extensionBackgroundWorkerHostRpcPortsCorsFreeFetchAndProxyParsingWork() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val baos = java.io.ByteArrayOutputStream()
+    java.util.zip.ZipOutputStream(baos).use { zos ->
+      zos.putNextEntry(java.util.zip.ZipEntry("manifest.json"))
+      zos.write(
+        """
+        {
+          "manifest_version": 3,
+          "name": "VPN Worker Test",
+          "version": "5.0.0",
+          "permissions": ["proxy", "storage", "webRequest", "privacy", "alarms"],
+          "host_permissions": ["<all_urls>"],
+          "background": { "service_worker": "bg/worker.js", "type": "module" },
+          "action": { "default_popup": "popup.html" }
+        }
+        """.trimIndent().toByteArray(Charsets.UTF_8)
+      )
+      zos.closeEntry()
+
+      zos.putNextEntry(java.util.zip.ZipEntry("bg/worker.js"))
+      zos.write("chrome.runtime.onMessage.addListener((m, s, r) => r({ ok: true }));".toByteArray(Charsets.UTF_8))
+      zos.closeEntry()
+
+      zos.putNextEntry(java.util.zip.ZipEntry("popup.html"))
+      zos.write("<html><head></head><body><script src=\"popup.js\"></script></body></html>".toByteArray(Charsets.UTF_8))
+      zos.closeEntry()
+    }
+
+    val mgr = com.example.extensions.ChromeExtensionManager(context)
+    val res = mgr.installFromBytes(baos.toByteArray(), "vpn_worker.zip", preferredId = "vpnworkertest001")
+    assertTrue(res is com.example.extensions.ExtensionInstallResult.Success)
+    val ext = (res as com.example.extensions.ExtensionInstallResult.Success).extension
+    assertTrue(ext.hasBackgroundRuntime)
+    assertEquals("bg/worker.js", ext.backgroundServiceWorker)
+    assertTrue(ext.backgroundIsModule)
+    assertTrue(ext.hostPermissions.contains("<all_urls>"))
+
+    // Verify virtual Background Host HTML includes Service Worker shims, module script, RPC/Port router, CORS-free fetch & XHR
+    val bgResp = mgr.serveVirtualExtensionResource("https://kio-ext.invalid/vpnworkertest001/__kio_bg_host.html")
+    assertNotNull(bgResp)
+    val bgHtml = bgResp!!.data.bufferedReader().readText()
+    assertTrue(bgHtml.contains("type=\"module\""))
+    assertTrue(bgHtml.contains("bg/worker.js"))
+    assertTrue(bgHtml.contains("__kioHandleIncomingRpc"))
+    assertTrue(bgHtml.contains("__kioHandleIncomingPortConnect"))
+    assertTrue(bgHtml.contains("__kioFetchPatched"))
+    assertTrue(bgHtml.contains("__kioXhrPatched"))
+    assertTrue(bgHtml.contains("webRTCIPHandlingPolicy"))
+    assertTrue(bgHtml.contains("onAuthRequired"))
+
+    // Verify chrome.proxy fixed_servers and pac_script parsing
+    val fixedProxy = mgr.parseProxyConfigFromJson(
+      "vpnworkertest001",
+      """{"value":{"mode":"fixed_servers","rules":{"singleProxy":{"scheme":"https","host":"us1.proxy.example","port":443},"bypassList":["*.local"]}}}"""
+    )
+    assertNotNull(fixedProxy)
+    assertEquals("fixed_servers", fixedProxy!!.mode)
+    assertEquals(listOf("https://us1.proxy.example:443"), fixedProxy.proxyRules)
+    assertEquals(listOf("*.local"), fixedProxy.bypassList)
+
+    val pacProxy = mgr.parseProxyConfigFromJson(
+      "vpnworkertest001",
+      """{"value":{"mode":"pac_script","pacScript":{"data":"function FindProxyForURL(u,h){ return 'HTTPS eu2.vpn.example:8443; PROXY fallback.example:8080; DIRECT'; }"}}}"""
+    )
+    assertNotNull(pacProxy)
+    assertEquals("pac_script", pacProxy!!.mode)
+    assertTrue(pacProxy.proxyRules.contains("https://eu2.vpn.example:8443"))
+    assertTrue(pacProxy.proxyRules.contains("http://fallback.example:8080"))
+
+    mgr.removeExtension("vpnworkertest001")
   }
 }

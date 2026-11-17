@@ -31,9 +31,11 @@ class ChromeExtensionManager(context: Context) {
 
   companion object {
     const val EXT_VIRTUAL_HOST = "kio-ext.invalid"
+    const val BG_HOST_VIRTUAL_FILE = "__kio_bg_host.html"
     const val CHROME_WEB_STORE_URL = "https://chromewebstore.google.com/"
     private const val MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024 // 25 MB
-    private const val DESKTOP_CHROME_UA =
+    private const val MAX_PRIVILEGED_FETCH_BYTES = 8 * 1024 * 1024 // 8 MB
+    const val DESKTOP_CHROME_UA =
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
 
     val POPULAR_PRESETS: List<PopularExtensionPreset> = listOf(
@@ -352,6 +354,14 @@ class ChromeExtensionManager(context: Context) {
     if (relPath.isEmpty() || relPath.contains("..")) return null
 
     val ext = getExtension(extId) ?: return null
+    val headers = mapOf(
+      "Access-Control-Allow-Origin" to "*",
+      "Cache-Control" to "no-cache"
+    )
+    if (relPath == BG_HOST_VIRTUAL_FILE) {
+      val bgHtml = buildBackgroundHostHtml(ext)
+      return WebResourceResponse("text/html", "utf-8", 200, "OK", headers, ByteArrayInputStream(bgHtml.toByteArray(Charsets.UTF_8)))
+    }
     val baseDir = File(ext.installDirPath)
     val targetFile = File(baseDir, relPath)
     return try {
@@ -363,22 +373,92 @@ class ChromeExtensionManager(context: Context) {
       val mime = inferMimeType(relPath)
       val bytes = if (mime == "text/html") {
         val rawHtml = targetFile.readText(Charsets.UTF_8)
-        injectPreludeIntoHtml(rawHtml, extId).toByteArray(Charsets.UTF_8)
+        val isBgPage = ext.backgroundPage?.trimStart('/')?.equals(relPath, ignoreCase = true) == true
+        injectPreludeIntoHtml(rawHtml, extId, if (isBgPage) "background" else "popup").toByteArray(Charsets.UTF_8)
       } else {
         targetFile.readBytes()
       }
-      val headers = mapOf(
-        "Access-Control-Allow-Origin" to "*",
-        "Cache-Control" to "no-cache"
-      )
       WebResourceResponse(mime, if (mime.startsWith("text/") || mime.contains("javascript") || mime.contains("json")) "utf-8" else null, 200, "OK", headers, ByteArrayInputStream(bytes))
     } catch (_: Throwable) {
       null
     }
   }
 
-  private fun injectPreludeIntoHtml(html: String, extId: String): String {
-    val prelude = buildChromeApiPrelude(extId)
+  private fun buildBackgroundHostHtml(ext: InstalledExtension): String {
+    val prelude = buildChromeApiPrelude(ext.id, contextKind = "background")
+      .replace("</script>", "<\\/script>", ignoreCase = true)
+    val scriptTags = buildString {
+      val sw = ext.backgroundServiceWorker?.trimStart('/')
+      if (!sw.isNullOrBlank()) {
+        val typeAttr = if (ext.backgroundIsModule) " type=\"module\"" else ""
+        append("<script$typeAttr src=\"https://$EXT_VIRTUAL_HOST/${ext.id}/$sw\"></script>\n")
+      } else {
+        for (sc in ext.backgroundScripts) {
+          val clean = sc.trimStart('/')
+          if (clean.isNotBlank()) {
+            append("<script src=\"https://$EXT_VIRTUAL_HOST/${ext.id}/$clean\"></script>\n")
+          }
+        }
+      }
+    }
+    return """
+      <!doctype html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <script>
+        (function(){
+          // Service Worker global shims for MV3 background scripts running in Kio Background Host
+          try { if (typeof window.global === 'undefined') window.global = window; } catch(e) {}
+          try {
+            if (typeof window.importScripts !== 'function') {
+              window.importScripts = function() {
+                for (var i = 0; i < arguments.length; i++) {
+                  var p = String(arguments[i] || '');
+                  var u = /^https?:\/\//i.test(p) ? p : ('https://$EXT_VIRTUAL_HOST/${ext.id}/' + p.replace(/^\/+/, ''));
+                  var xhr = new XMLHttpRequest();
+                  xhr.open('GET', u, false);
+                  xhr.send(null);
+                  if (xhr.status >= 200 && xhr.status < 300 && xhr.responseText) {
+                    (0, eval)(xhr.responseText);
+                  }
+                }
+              };
+            }
+            if (typeof window.clients === 'undefined') {
+              window.clients = {
+                matchAll: function() { return Promise.resolve([]); },
+                claim: function() { return Promise.resolve(); },
+                openWindow: function(u) { if (window.chrome && window.chrome.tabs) window.chrome.tabs.create({ url: u }); return Promise.resolve(null); }
+              };
+            }
+            if (typeof window.skipWaiting !== 'function') {
+              window.skipWaiting = function() { return Promise.resolve(); };
+            }
+            if (typeof window.registration === 'undefined') {
+              window.registration = { active: { state: 'activated' }, scope: 'https://$EXT_VIRTUAL_HOST/${ext.id}/', update: function(){ return Promise.resolve(); } };
+            }
+          } catch(e) {}
+          $prelude
+        })();
+        </script>
+      </head>
+      <body>
+        $scriptTags
+        <script>
+          window.addEventListener('load', function() {
+            setTimeout(function() {
+              try { if (window.__kioFireBackgroundStartup) window.__kioFireBackgroundStartup(); } catch(e) {}
+            }, 60);
+          });
+        </script>
+      </body>
+      </html>
+    """.trimIndent()
+  }
+
+  private fun injectPreludeIntoHtml(html: String, extId: String, contextKind: String = "popup"): String {
+    val prelude = buildChromeApiPrelude(extId, contextKind = contextKind)
     val safePrelude = prelude.replace("</script>", "<\\/script>", ignoreCase = true)
     val scriptTag = "<script>(function(){\n$safePrelude\n})();</script>"
     val headMatch = Regex("""<head\b[^>]*>""", RegexOption.IGNORE_CASE).find(html)
@@ -501,7 +581,8 @@ class ChromeExtensionManager(context: Context) {
     extId: String,
     manifestJson: String? = null,
     localeJson: String? = null,
-    storageJson: String? = null
+    storageJson: String? = null,
+    contextKind: String = "content"
   ): String {
     val ext = getExtension(extId)
     val baseDir = ext?.let { File(it.installDirPath) }
@@ -509,10 +590,12 @@ class ChromeExtensionManager(context: Context) {
     val resolvedLocales = localeJson ?: JSONObject(localesByExt[extId] ?: emptyMap<String, String>()).toString()
     val resolvedStorage = storageJson ?: readStorageJson(extId)
     val quotedId = JSONObject.quote(extId)
+    val quotedCtx = JSONObject.quote(contextKind)
     val baseUrl = JSONObject.quote("https://$EXT_VIRTUAL_HOST/$extId/")
 
     return """
       var __kioExtId = $quotedId;
+      var __kioCtxKind = $quotedCtx;
       var __kioBaseUrl = $baseUrl;
       var __kioManifest = $resolvedManifest;
       var __kioLocales = $resolvedLocales;
@@ -520,10 +603,25 @@ class ChromeExtensionManager(context: Context) {
       var __kioStorageListeners = [];
       var __kioMessageListeners = [];
       var __kioConnectListeners = [];
+      var __kioInstalledListeners = [];
+      var __kioStartupListeners = [];
+      var __kioAuthListeners = [];
+      var __kioAlarmListeners = [];
+      var __kioAlarms = {};
+      var __kioProxyValue = { mode: 'system' };
+      var __kioRpcSeq = 1;
+      var __kioPendingRpc = {};
+      var __kioPorts = {};
+      var __kioFetchSeq = 1;
+      var __kioPendingFetch = {};
       window.__kioExtStorageBus = window.__kioExtStorageBus || {};
       window.__kioExtStorageBus[__kioExtId] = __kioStorageListeners;
       window.__kioExtMessageBus = window.__kioExtMessageBus || {};
       window.__kioExtMessageBus[__kioExtId] = __kioMessageListeners;
+      window.__kioExtConnectBus = window.__kioExtConnectBus || {};
+      window.__kioExtConnectBus[__kioExtId] = __kioConnectListeners;
+      window.__kioExtAuthBus = window.__kioExtAuthBus || {};
+      window.__kioExtAuthBus[__kioExtId] = __kioAuthListeners;
       window.__kioExtNotifyStorage = function(id, changes) {
         var list = (window.__kioExtStorageBus && window.__kioExtStorageBus[id]) || [];
         for (var i = 0; i < list.length; i++) {
@@ -533,9 +631,255 @@ class ChromeExtensionManager(context: Context) {
       window.__kioExtDeliverMessage = function(id, msg) {
         var list = (window.__kioExtMessageBus && window.__kioExtMessageBus[id]) || [];
         for (var i = 0; i < list.length; i++) {
-          try { list[i](msg, { id: id, tab: { id: 1, url: window.location.href, active: true } }, function(){}); } catch(e) {}
+          try { list[i](msg, { id: id, tab: __kioActiveTabObj() }, function(){}); } catch(e) {}
         }
       };
+      window.__kioReceiveRpcReply = function(reqId, replyJson) {
+        var entry = __kioPendingRpc[reqId];
+        if (!entry) return;
+        delete __kioPendingRpc[reqId];
+        if (entry.timer) clearTimeout(entry.timer);
+        var val = undefined;
+        try { if (replyJson && replyJson !== 'undefined') val = JSON.parse(replyJson); } catch(e) { val = replyJson; }
+        try { if (typeof entry.cb === 'function') entry.cb(val); } catch(e) {}
+        try { if (typeof entry.resolve === 'function') entry.resolve(val); } catch(e) {}
+      };
+      window.__kioHandleIncomingRpc = function(id, fromCtx, reqId, msgJson) {
+        var list = (window.__kioExtMessageBus && window.__kioExtMessageBus[id]) || [];
+        var msg = null;
+        try { msg = JSON.parse(msgJson); } catch(e) { msg = msgJson; }
+        var replied = false;
+        function sendResponse(resp) {
+          if (replied) return;
+          replied = true;
+          try {
+            if (window.__KioExtBridge && window.__KioExtBridge.replyRuntimeMessage) {
+              window.__KioExtBridge.replyRuntimeMessage(id, fromCtx, reqId, JSON.stringify(resp === undefined ? null : resp));
+            }
+          } catch(e) {}
+        }
+        var sender = { id: id, url: __kioBaseUrl, tab: fromCtx === 'content' ? __kioActiveTabObj() : undefined };
+        var asyncWait = false;
+        for (var i = 0; i < list.length; i++) {
+          try {
+            var ret = list[i](msg, sender, sendResponse);
+            if (ret === true) {
+              asyncWait = true;
+            } else if (ret && typeof ret.then === 'function') {
+              asyncWait = true;
+              ret.then(function(r) { sendResponse(r); }, function() { sendResponse(null); });
+            }
+          } catch(e) {}
+        }
+        if (!replied && !asyncWait && list.length === 0) {
+          sendResponse(null);
+        }
+      };
+      function __kioCreatePortObject(portId, name, peerCtx) {
+        var pMsg = [];
+        var pDisc = [];
+        var port = {
+          name: String(name || ''),
+          sender: { id: __kioExtId, url: __kioBaseUrl, tab: peerCtx === 'content' ? __kioActiveTabObj() : undefined },
+          postMessage: function(m) {
+            try {
+              if (window.__KioExtBridge && window.__KioExtBridge.routePortMessage) {
+                window.__KioExtBridge.routePortMessage(__kioExtId, __kioCtxKind, portId, JSON.stringify(m === undefined ? null : m));
+              }
+            } catch(e) {}
+          },
+          disconnect: function() {
+            delete __kioPorts[portId];
+            try {
+              if (window.__KioExtBridge && window.__KioExtBridge.routePortDisconnect) {
+                window.__KioExtBridge.routePortDisconnect(__kioExtId, __kioCtxKind, portId);
+              }
+            } catch(e) {}
+            for (var i = 0; i < pDisc.length; i++) { try { pDisc[i](port); } catch(e) {} }
+          },
+          onMessage: __kioMakeEvent(pMsg),
+          onDisconnect: __kioMakeEvent(pDisc),
+          __deliver: function(m) { for (var i = 0; i < pMsg.length; i++) { try { pMsg[i](m, port); } catch(e) {} } },
+          __disconnected: function() { delete __kioPorts[portId]; for (var i = 0; i < pDisc.length; i++) { try { pDisc[i](port); } catch(e) {} } }
+        };
+        __kioPorts[portId] = port;
+        return port;
+      }
+      window.__kioHandleIncomingPortConnect = function(id, fromCtx, portId, name) {
+        var port = __kioCreatePortObject(portId, name, fromCtx);
+        var list = (window.__kioExtConnectBus && window.__kioExtConnectBus[id]) || [];
+        for (var i = 0; i < list.length; i++) {
+          try { list[i](port); } catch(e) {}
+        }
+      };
+      window.__kioHandleIncomingPortMessage = function(portId, msgJson) {
+        var port = __kioPorts[portId];
+        if (!port) return;
+        var msg = null;
+        try { msg = JSON.parse(msgJson); } catch(e) { msg = msgJson; }
+        port.__deliver(msg);
+      };
+      window.__kioHandleIncomingPortDisconnect = function(portId) {
+        var port = __kioPorts[portId];
+        if (!port) return;
+        port.__disconnected();
+      };
+      window.__kioDeliverNativeFetch = function(fetchId, status, statusText, headersJson, bodyBase64, errorMsg) {
+        var entry = __kioPendingFetch[fetchId];
+        if (!entry) return;
+        delete __kioPendingFetch[fetchId];
+        if (errorMsg) {
+          entry.reject(new TypeError(errorMsg));
+          return;
+        }
+        try {
+          var raw = bodyBase64 ? atob(bodyBase64) : '';
+          var bytes = new Uint8Array(raw.length);
+          for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+          var hdrs = new Headers();
+          try {
+            var parsed = JSON.parse(headersJson || '{}');
+            for (var k in parsed) {
+              try { hdrs.set(k, String(parsed[k])); } catch(e) {}
+            }
+          } catch(e) {}
+          var resp = new Response(status === 204 || status === 304 ? null : bytes, {
+            status: status || 200,
+            statusText: statusText || 'OK',
+            headers: hdrs
+          });
+          entry.resolve(resp);
+        } catch(e) {
+          entry.reject(e);
+        }
+      };
+      window.__kioQueryProxyAuth = function(id, host, port, realm) {
+        var list = (window.__kioExtAuthBus && window.__kioExtAuthBus[id]) || [];
+        var details = { isProxy: true, challenger: { host: host, port: port }, realm: realm || '', scheme: 'basic', url: 'https://' + host };
+        for (var i = 0; i < list.length; i++) {
+          try {
+            var res = list[i](details, function(asyncRes) {
+              if (asyncRes && asyncRes.authCredentials && window.__KioExtBridge && window.__KioExtBridge.deliverProxyAuth) {
+                window.__KioExtBridge.deliverProxyAuth(host, asyncRes.authCredentials.username || '', asyncRes.authCredentials.password || '');
+              }
+            });
+            if (res && res.authCredentials) {
+              return JSON.stringify(res.authCredentials);
+            }
+          } catch(e) {}
+        }
+        return '';
+      };
+      window.__kioFireBackgroundStartup = function() {
+        if (window.__kioBgStarted) return;
+        window.__kioBgStarted = true;
+        for (var i = 0; i < __kioInstalledListeners.length; i++) {
+          try { __kioInstalledListeners[i]({ reason: 'install' }); } catch(e) {}
+        }
+        for (var j = 0; j < __kioStartupListeners.length; j++) {
+          try { __kioStartupListeners[j](); } catch(e) {}
+        }
+        try {
+          if (window.__KioExtBridge && window.__KioExtBridge.onBackgroundReady) {
+            window.__KioExtBridge.onBackgroundReady(__kioExtId);
+          }
+        } catch(e) {}
+      };
+      // CORS-free privileged fetch & XHR bridge for extension background/popup contexts
+      if ((__kioCtxKind === 'background' || __kioCtxKind === 'popup') && typeof window.fetch === 'function' && !window.__kioFetchPatched) {
+        window.__kioFetchPatched = true;
+        var __kioOrigFetch = window.fetch.bind(window);
+        window.fetch = function(input, init) {
+          try {
+            var reqUrl = typeof input === 'string' ? input : (input && input.url ? String(input.url) : '');
+            var isExternal = /^https?:\/\//i.test(reqUrl) &&
+              reqUrl.indexOf('https://$EXT_VIRTUAL_HOST/') !== 0 &&
+              reqUrl.indexOf('chrome-extension://') !== 0;
+            if (!isExternal || !window.__KioExtBridge || !window.__KioExtBridge.nativeFetch) {
+              return __kioOrigFetch(input, init);
+            }
+            var method = (init && init.method) || (input && input.method) || 'GET';
+            var hdrObj = {};
+            var rawHdrs = (init && init.headers) || (input && input.headers);
+            if (rawHdrs) {
+              if (typeof rawHdrs.forEach === 'function') {
+                rawHdrs.forEach(function(v, k) { hdrObj[k] = String(v); });
+              } else if (Array.isArray(rawHdrs)) {
+                for (var h = 0; h < rawHdrs.length; h++) { if (rawHdrs[h] && rawHdrs[h].length >= 2) hdrObj[rawHdrs[h][0]] = String(rawHdrs[h][1]); }
+              } else if (typeof rawHdrs === 'object') {
+                for (var hk in rawHdrs) { hdrObj[hk] = String(rawHdrs[hk]); }
+              }
+            }
+            var bodyStr = '';
+            if (init && init.body != null) {
+              bodyStr = typeof init.body === 'string' ? init.body : String(init.body);
+            }
+            var fid = 'f_' + (__kioFetchSeq++);
+            return new Promise(function(resolve, reject) {
+              __kioPendingFetch[fid] = { resolve: resolve, reject: reject };
+              window.__KioExtBridge.nativeFetch(
+                __kioExtId,
+                __kioCtxKind,
+                fid,
+                reqUrl,
+                JSON.stringify({ method: String(method).toUpperCase(), headers: hdrObj, body: bodyStr })
+              );
+            });
+          } catch(e) {
+            return __kioOrigFetch(input, init);
+          }
+        };
+        // Also bridge external XMLHttpRequest (used by Axios / React extension popups) through CORS-free nativeFetch
+        var __kioOrigXhr = window.XMLHttpRequest;
+        if (__kioOrigXhr && !window.__kioXhrPatched) {
+          window.__kioXhrPatched = true;
+          var __kioOrigOpen = __kioOrigXhr.prototype.open;
+          var __kioOrigSetHdr = __kioOrigXhr.prototype.setRequestHeader;
+          var __kioOrigSend = __kioOrigXhr.prototype.send;
+          __kioOrigXhr.prototype.open = function(method, url, async) {
+            this.__kioMethod = String(method || 'GET').toUpperCase();
+            this.__kioUrl = String(url || '');
+            this.__kioAsync = async !== false;
+            this.__kioHdrs = {};
+            this.__kioExternal = this.__kioAsync && /^https?:\/\//i.test(this.__kioUrl) &&
+              this.__kioUrl.indexOf('https://$EXT_VIRTUAL_HOST/') !== 0 &&
+              this.__kioUrl.indexOf('chrome-extension://') !== 0;
+            if (!this.__kioExternal) return __kioOrigOpen.apply(this, arguments);
+          };
+          __kioOrigXhr.prototype.setRequestHeader = function(k, v) {
+            if (this.__kioExternal) { this.__kioHdrs[k] = String(v); return; }
+            return __kioOrigSetHdr.apply(this, arguments);
+          };
+          __kioOrigXhr.prototype.send = function(body) {
+            if (!this.__kioExternal) return __kioOrigSend.apply(this, arguments);
+            var selfXhr = this;
+            window.fetch(selfXhr.__kioUrl, { method: selfXhr.__kioMethod, headers: selfXhr.__kioHdrs, body: body != null ? String(body) : undefined })
+              .then(function(resp) {
+                return resp.text().then(function(txt) {
+                  var respHeaders = {};
+                  resp.headers.forEach(function(v, k) { respHeaders[k.toLowerCase()] = v; });
+                  Object.defineProperty(selfXhr, 'readyState', { value: 4, configurable: true });
+                  Object.defineProperty(selfXhr, 'status', { value: resp.status, configurable: true });
+                  Object.defineProperty(selfXhr, 'statusText', { value: resp.statusText, configurable: true });
+                  Object.defineProperty(selfXhr, 'responseText', { value: txt, configurable: true });
+                  Object.defineProperty(selfXhr, 'response', { value: selfXhr.responseType === 'json' ? (function(){try{return JSON.parse(txt);}catch(e){return null;}})() : txt, configurable: true });
+                  Object.defineProperty(selfXhr, 'responseURL', { value: selfXhr.__kioUrl, configurable: true });
+                  selfXhr.getResponseHeader = function(n) { return respHeaders[String(n || '').toLowerCase()] || null; };
+                  selfXhr.getAllResponseHeaders = function() { var s = ''; for (var k in respHeaders) s += k + ': ' + respHeaders[k] + '\r\n'; return s; };
+                  if (typeof selfXhr.onreadystatechange === 'function') try { selfXhr.onreadystatechange(); } catch(e) {}
+                  if (typeof selfXhr.onload === 'function') try { selfXhr.onload(); } catch(e) {}
+                  if (typeof selfXhr.onloadend === 'function') try { selfXhr.onloadend(); } catch(e) {}
+                });
+              })
+              .catch(function() {
+                Object.defineProperty(selfXhr, 'readyState', { value: 4, configurable: true });
+                Object.defineProperty(selfXhr, 'status', { value: 0, configurable: true });
+                if (typeof selfXhr.onerror === 'function') try { selfXhr.onerror(new Event('error')); } catch(e) {}
+                if (typeof selfXhr.onloadend === 'function') try { selfXhr.onloadend(); } catch(e) {}
+              });
+          };
+        }
+      }
       function __kioMakeEvent(arr) {
         var list = arr || [];
         return {
@@ -543,6 +887,15 @@ class ChromeExtensionManager(context: Context) {
           removeListener: function(fn) { var idx = list.indexOf(fn); if (idx >= 0) list.splice(idx, 1); },
           hasListener: function(fn) { return list.indexOf(fn) >= 0; },
           hasListeners: function() { return list.length > 0; }
+        };
+      }
+      function __kioMakeSetting(initialVal) {
+        var val = initialVal;
+        return {
+          get: function(d, cb) { var r = { value: val, levelOfControl: 'controllable_by_this_extension' }; if (typeof cb === 'function') try{cb(r);}catch(e){} return Promise.resolve(r); },
+          set: function(d, cb) { if (d && 'value' in d) val = d.value; if (typeof cb === 'function') try{cb();}catch(e){} return Promise.resolve(); },
+          clear: function(d, cb) { val = initialVal; if (typeof cb === 'function') try{cb();}catch(e){} return Promise.resolve(); },
+          onChange: __kioMakeEvent([])
         };
       }
       function __kioReadStore() {
@@ -637,7 +990,9 @@ class ChromeExtensionManager(context: Context) {
       }
       var __kioActionStub = {
         setBadgeText: function(d, cb) { if (typeof cb === 'function') try{cb();}catch(e){} return Promise.resolve(); },
+        getBadgeText: function(d, cb) { if (typeof cb === 'function') try{cb('');}catch(e){} return Promise.resolve(''); },
         setBadgeBackgroundColor: function(d, cb) { if (typeof cb === 'function') try{cb();}catch(e){} return Promise.resolve(); },
+        setBadgeTextColor: function(d, cb) { if (typeof cb === 'function') try{cb();}catch(e){} return Promise.resolve(); },
         setIcon: function(d, cb) { if (typeof cb === 'function') try{cb();}catch(e){} return Promise.resolve(); },
         setTitle: function(d, cb) { if (typeof cb === 'function') try{cb();}catch(e){} return Promise.resolve(); },
         setPopup: function(d, cb) { if (typeof cb === 'function') try{cb();}catch(e){} return Promise.resolve(); },
@@ -659,11 +1014,40 @@ class ChromeExtensionManager(context: Context) {
             if (typeof cb === 'function') { try { cb(info); } catch(e) {} }
             return Promise.resolve(info);
           },
+          getBackgroundPage: function(cb) {
+            if (typeof cb === 'function') { try { cb(window); } catch(e) {} }
+            return Promise.resolve(window);
+          },
+          setUninstallURL: function(u, cb) {
+            if (typeof cb === 'function') { try { cb(); } catch(e) {} }
+            return Promise.resolve();
+          },
           sendMessage: function(extOrMsg, msgOrOpts, optsOrCb, maybeCb) {
             var msg = extOrMsg;
             var cb = typeof msgOrOpts === 'function' ? msgOrOpts : (typeof optsOrCb === 'function' ? optsOrCb : maybeCb);
             if (typeof extOrMsg === 'string' && msgOrOpts !== undefined && typeof msgOrOpts !== 'function') {
               msg = msgOrOpts;
+            }
+            if (window.__KioExtBridge && window.__KioExtBridge.routeRuntimeMessage) {
+              var reqId = __kioCtxKind + '_rpc_' + (__kioRpcSeq++);
+              return new Promise(function(resolve) {
+                var timer = setTimeout(function() {
+                  if (__kioPendingRpc[reqId]) {
+                    delete __kioPendingRpc[reqId];
+                    if (typeof cb === 'function') { try { cb(undefined); } catch(e) {} }
+                    resolve(undefined);
+                  }
+                }, 4500);
+                __kioPendingRpc[reqId] = { cb: cb, resolve: resolve, timer: timer };
+                try {
+                  window.__KioExtBridge.routeRuntimeMessage(__kioExtId, __kioCtxKind, reqId, JSON.stringify(msg === undefined ? null : msg));
+                } catch(e) {
+                  clearTimeout(timer);
+                  delete __kioPendingRpc[reqId];
+                  if (typeof cb === 'function') { try { cb(undefined); } catch(e2) {} }
+                  resolve(undefined);
+                }
+              });
             }
             var handled = null;
             for (var i = 0; i < __kioMessageListeners.length; i++) {
@@ -671,37 +1055,25 @@ class ChromeExtensionManager(context: Context) {
                 __kioMessageListeners[i](msg, { id: __kioExtId, tab: __kioActiveTabObj() }, function(r) { handled = r; });
               } catch(e) {}
             }
-            try {
-              if (window.__KioExtBridge && window.__KioExtBridge.sendMessageToActiveTab) {
-                window.__KioExtBridge.sendMessageToActiveTab(__kioExtId, JSON.stringify(msg));
-              }
-            } catch(e) {}
             if (typeof cb === 'function') { try { cb(handled); } catch(e) {} }
             return Promise.resolve(handled);
           },
           connect: function(opts) {
-            var pMsg = [];
-            var pDisc = [];
-            var port = {
-              name: (opts && opts.name) ? String(opts.name) : '',
-              sender: { id: __kioExtId, tab: __kioActiveTabObj() },
-              postMessage: function(m) {
-                try {
-                  if (window.__KioExtBridge && window.__KioExtBridge.sendMessageToActiveTab) {
-                    window.__KioExtBridge.sendMessageToActiveTab(__kioExtId, JSON.stringify(m));
-                  }
-                } catch(e) {}
-              },
-              disconnect: function() { for (var i = 0; i < pDisc.length; i++) try { pDisc[i](port); } catch(e) {} },
-              onMessage: __kioMakeEvent(pMsg),
-              onDisconnect: __kioMakeEvent(pDisc)
-            };
+            var portId = __kioCtxKind + '_port_' + (__kioRpcSeq++);
+            var pName = (opts && opts.name) ? String(opts.name) : '';
+            var port = __kioCreatePortObject(portId, pName, __kioCtxKind === 'background' ? 'popup' : 'background');
+            try {
+              if (window.__KioExtBridge && window.__KioExtBridge.routePortConnect) {
+                window.__KioExtBridge.routePortConnect(__kioExtId, __kioCtxKind, portId, pName);
+              }
+            } catch(e) {}
             return port;
           },
           onMessage: __kioMakeEvent(__kioMessageListeners),
           onConnect: __kioMakeEvent(__kioConnectListeners),
-          onInstalled: __kioMakeEvent([]),
-          onStartup: __kioMakeEvent([]),
+          onInstalled: __kioMakeEvent(__kioInstalledListeners),
+          onStartup: __kioMakeEvent(__kioStartupListeners),
+          onSuspend: __kioMakeEvent([]),
           openOptionsPage: function(cb) {
             try {
               if (window.__KioExtBridge && window.__KioExtBridge.openOptionsPage) {
@@ -717,6 +1089,7 @@ class ChromeExtensionManager(context: Context) {
             var clean = String(path || '').replace(/^\/+/, '');
             return __kioBaseUrl + clean;
           },
+          getBackgroundPage: function() { return window; },
           inIncognitoContext: false
         },
         storage: {
@@ -780,11 +1153,12 @@ class ChromeExtensionManager(context: Context) {
             if (typeof cb === 'function') { try { cb(); } catch(e) {} }
             return Promise.resolve();
           },
+          remove: function(ids, cb) { if (typeof cb === 'function') try{cb();}catch(e){} return Promise.resolve(); },
           sendMessage: function(tabId, msg, optsOrCb, maybeCb) {
             var cb = typeof optsOrCb === 'function' ? optsOrCb : maybeCb;
             try {
               if (window.__KioExtBridge && window.__KioExtBridge.sendMessageToActiveTab) {
-                window.__KioExtBridge.sendMessageToActiveTab(__kioExtId, JSON.stringify(msg));
+                window.__KioExtBridge.sendMessageToActiveTab(__kioExtId, JSON.stringify(msg === undefined ? null : msg));
               }
             } catch(e) {}
             if (typeof cb === 'function') { try { cb(null); } catch(e) {} }
@@ -818,6 +1192,7 @@ class ChromeExtensionManager(context: Context) {
           },
           onUpdated: __kioMakeEvent([]),
           onActivated: __kioMakeEvent([]),
+          onCreated: __kioMakeEvent([]),
           onRemoved: __kioMakeEvent([])
         },
         scripting: {
@@ -849,7 +1224,8 @@ class ChromeExtensionManager(context: Context) {
             return Promise.resolve();
           },
           removeCSS: function(inj, cb) { if (typeof cb === 'function') try{cb();}catch(e){} return Promise.resolve(); },
-          registerContentScripts: function(s, cb) { if (typeof cb === 'function') try{cb();}catch(e){} return Promise.resolve(); }
+          registerContentScripts: function(s, cb) { if (typeof cb === 'function') try{cb();}catch(e){} return Promise.resolve(); },
+          unregisterContentScripts: function(s, cb) { if (typeof cb === 'function') try{cb();}catch(e){} return Promise.resolve(); }
         },
         action: __kioActionStub,
         browserAction: __kioActionStub,
@@ -860,16 +1236,114 @@ class ChromeExtensionManager(context: Context) {
           getAll: function(cb) { var r = { permissions: __kioManifest.permissions || [], origins: ['<all_urls>'] }; if (typeof cb === 'function') try{cb(r);}catch(e){} return Promise.resolve(r); },
           remove: function(p, cb) { if (typeof cb === 'function') try{cb(true);}catch(e){} return Promise.resolve(true); }
         },
-        alarms: { create: function(){}, clear: function(){ return Promise.resolve(true); }, getAll: function(cb){ if(typeof cb==='function')try{cb([]);}catch(e){} return Promise.resolve([]); }, onAlarm: __kioMakeEvent([]) },
+        alarms: {
+          create: function(nameOrInfo, maybeInfo) {
+            var n = typeof nameOrInfo === 'string' ? nameOrInfo : '';
+            var info = typeof nameOrInfo === 'object' ? nameOrInfo : (maybeInfo || {});
+            if (__kioAlarms[n] && __kioAlarms[n].timer) clearTimeout(__kioAlarms[n].timer);
+            var delayMs = Math.max(1000, ((info.delayInMinutes || info.periodInMinutes || 1) * 60000));
+            var alarmObj = { name: n, scheduledTime: Date.now() + delayMs, periodInMinutes: info.periodInMinutes };
+            var fire = function() {
+              for (var i = 0; i < __kioAlarmListeners.length; i++) { try { __kioAlarmListeners[i](alarmObj); } catch(e) {} }
+              if (info.periodInMinutes && __kioAlarms[n]) {
+                __kioAlarms[n].timer = setTimeout(fire, Math.max(1000, info.periodInMinutes * 60000));
+              }
+            };
+            __kioAlarms[n] = { alarm: alarmObj, timer: setTimeout(fire, delayMs) };
+          },
+          get: function(n, cb) { var a = __kioAlarms[n] ? __kioAlarms[n].alarm : undefined; if (typeof cb === 'function') try{cb(a);}catch(e){} return Promise.resolve(a); },
+          getAll: function(cb) { var list = Object.keys(__kioAlarms).map(function(k){return __kioAlarms[k].alarm;}); if (typeof cb === 'function') try{cb(list);}catch(e){} return Promise.resolve(list); },
+          clear: function(n, cb) { var ok = !!__kioAlarms[n]; if (ok) { clearTimeout(__kioAlarms[n].timer); delete __kioAlarms[n]; } if (typeof cb === 'function') try{cb(ok);}catch(e){} return Promise.resolve(ok); },
+          clearAll: function(cb) { for (var k in __kioAlarms) clearTimeout(__kioAlarms[k].timer); __kioAlarms = {}; if (typeof cb === 'function') try{cb(true);}catch(e){} return Promise.resolve(true); },
+          onAlarm: __kioMakeEvent(__kioAlarmListeners)
+        },
         contextMenus: { create: function(){}, removeAll: function(cb){ if(typeof cb==='function')try{cb();}catch(e){} }, onClicked: __kioMakeEvent([]) },
         notifications: { create: function(id, o, cb){ if(typeof cb==='function')try{cb(id||'1');}catch(e){} return Promise.resolve(id||'1'); }, clear: function(){ return Promise.resolve(true); }, onClicked: __kioMakeEvent([]) },
-        webNavigation: { onCommitted: __kioMakeEvent([]), onCompleted: __kioMakeEvent([]), onHistoryStateUpdated: __kioMakeEvent([]) },
-        webRequest: { onBeforeRequest: __kioMakeEvent([]), onBeforeSendHeaders: __kioMakeEvent([]), onHeadersReceived: __kioMakeEvent([]) },
-        cookies: { get: function(d, cb){ if(typeof cb==='function')try{cb(null);}catch(e){} return Promise.resolve(null); }, getAll: function(d, cb){ if(typeof cb==='function')try{cb([]);}catch(e){} return Promise.resolve([]); }, onChanged: __kioMakeEvent([]) },
-        windows: { getCurrent: function(cb){ var w = { id: 1, focused: true, type: 'normal', tabs: [__kioActiveTabObj()] }; if(typeof cb==='function')try{cb(w);}catch(e){} return Promise.resolve(w); }, getAll: function(o, cb){ var fn = typeof o==='function'?o:cb; var list = [{ id: 1, focused: true, type: 'normal', tabs: [__kioActiveTabObj()] }]; if(typeof fn==='function')try{fn(list);}catch(e){} return Promise.resolve(list); } },
-        commands: { onCommand: __kioMakeEvent([]) },
-        declarativeNetRequest: { updateEnabledRulesets: function(){ return Promise.resolve(); }, getEnabledRulesets: function(cb){ if(typeof cb==='function')try{cb([]);}catch(e){} return Promise.resolve([]); } },
-        proxy: { settings: { get: function(d, cb){ var r = { value: { mode: 'system' }, levelOfControl: 'controllable_by_this_extension' }; if(typeof cb==='function')try{cb(r);}catch(e){} return Promise.resolve(r); }, set: function(d, cb){ if(typeof cb==='function')try{cb();}catch(e){} return Promise.resolve(); }, clear: function(d, cb){ if(typeof cb==='function')try{cb();}catch(e){} return Promise.resolve(); } }, onProxyError: __kioMakeEvent([]) }
+        webNavigation: { onCommitted: __kioMakeEvent([]), onCompleted: __kioMakeEvent([]), onHistoryStateUpdated: __kioMakeEvent([]), onBeforeNavigate: __kioMakeEvent([]) },
+        webRequest: {
+          onBeforeRequest: __kioMakeEvent([]),
+          onBeforeSendHeaders: __kioMakeEvent([]),
+          onHeadersReceived: __kioMakeEvent([]),
+          onCompleted: __kioMakeEvent([]),
+          onErrorOccurred: __kioMakeEvent([]),
+          onAuthRequired: __kioMakeEvent(__kioAuthListeners)
+        },
+        cookies: { get: function(d, cb){ if(typeof cb==='function')try{cb(null);}catch(e){} return Promise.resolve(null); }, getAll: function(d, cb){ if(typeof cb==='function')try{cb([]);}catch(e){} return Promise.resolve([]); }, set: function(d, cb){ if(typeof cb==='function')try{cb(null);}catch(e){} return Promise.resolve(null); }, remove: function(d, cb){ if(typeof cb==='function')try{cb(null);}catch(e){} return Promise.resolve(null); }, onChanged: __kioMakeEvent([]) },
+        windows: {
+          getCurrent: function(cb){ var w = { id: 1, focused: true, type: 'normal', tabs: [__kioActiveTabObj()] }; if(typeof cb==='function')try{cb(w);}catch(e){} return Promise.resolve(w); },
+          getLastFocused: function(cb){ var w = { id: 1, focused: true, type: 'normal', tabs: [__kioActiveTabObj()] }; if(typeof cb==='function')try{cb(w);}catch(e){} return Promise.resolve(w); },
+          getAll: function(o, cb){ var fn = typeof o==='function'?o:cb; var list = [{ id: 1, focused: true, type: 'normal', tabs: [__kioActiveTabObj()] }]; if(typeof fn==='function')try{fn(list);}catch(e){} return Promise.resolve(list); },
+          create: function(o, cb){ var w = { id: 1, focused: true, type: 'normal', tabs: [__kioActiveTabObj()] }; if(typeof cb==='function')try{cb(w);}catch(e){} return Promise.resolve(w); },
+          onFocusChanged: __kioMakeEvent([]),
+          onRemoved: __kioMakeEvent([])
+        },
+        commands: { onCommand: __kioMakeEvent([]), getAll: function(cb){ if(typeof cb==='function')try{cb([]);}catch(e){} return Promise.resolve([]); } },
+        declarativeNetRequest: {
+          MAX_NUMBER_OF_DYNAMIC_AND_SESSION_RULES: 5000,
+          updateEnabledRulesets: function(o, cb){ if(typeof cb==='function')try{cb();}catch(e){} return Promise.resolve(); },
+          getEnabledRulesets: function(cb){ if(typeof cb==='function')try{cb([]);}catch(e){} return Promise.resolve([]); },
+          updateDynamicRules: function(o, cb){ if(typeof cb==='function')try{cb();}catch(e){} return Promise.resolve(); },
+          getDynamicRules: function(cb){ if(typeof cb==='function')try{cb([]);}catch(e){} return Promise.resolve([]); },
+          updateSessionRules: function(o, cb){ if(typeof cb==='function')try{cb();}catch(e){} return Promise.resolve(); },
+          getSessionRules: function(cb){ if(typeof cb==='function')try{cb([]);}catch(e){} return Promise.resolve([]); },
+          isRegexSupported: function(o, cb){ var r = { isSupported: true }; if(typeof cb==='function')try{cb(r);}catch(e){} return Promise.resolve(r); }
+        },
+        proxy: {
+          settings: {
+            get: function(d, cb){ var r = { value: __kioProxyValue, levelOfControl: 'controllable_by_this_extension' }; if(typeof cb==='function')try{cb(r);}catch(e){} return Promise.resolve(r); },
+            set: function(d, cb){
+              if (d && d.value) { __kioProxyValue = d.value; }
+              try {
+                if (window.__KioExtBridge && window.__KioExtBridge.proxySet) {
+                  window.__KioExtBridge.proxySet(__kioExtId, JSON.stringify(d || {}));
+                }
+              } catch(e) {}
+              if(typeof cb==='function')try{cb();}catch(e){}
+              return Promise.resolve();
+            },
+            clear: function(d, cb){
+              __kioProxyValue = { mode: 'system' };
+              try {
+                if (window.__KioExtBridge && window.__KioExtBridge.proxyClear) {
+                  window.__KioExtBridge.proxyClear(__kioExtId);
+                }
+              } catch(e) {}
+              if(typeof cb==='function')try{cb();}catch(e){}
+              return Promise.resolve();
+            },
+            onChange: __kioMakeEvent([])
+          },
+          onProxyError: __kioMakeEvent([])
+        },
+        privacy: {
+          network: {
+            webRTCIPHandlingPolicy: __kioMakeSetting('default_public_interface_only'),
+            networkPredictionEnabled: __kioMakeSetting(false)
+          },
+          websites: {
+            hyperlinkAuditingEnabled: __kioMakeSetting(false),
+            referrersEnabled: __kioMakeSetting(true),
+            thirdPartyCookiesAllowed: __kioMakeSetting(true)
+          },
+          services: {
+            autofillEnabled: __kioMakeSetting(false),
+            passwordSavingEnabled: __kioMakeSetting(false)
+          }
+        },
+        offscreen: {
+          Reason: { AUDIO_PLAYBACK: 'AUDIO_PLAYBACK', BLOBS: 'BLOBS', CLIPBOARD: 'CLIPBOARD', DOM_PARSER: 'DOM_PARSER', DOM_SCRAPING: 'DOM_SCRAPING', IFRAME_SCRIPTING: 'IFRAME_SCRIPTING', LOCAL_STORAGE: 'LOCAL_STORAGE', MATCH_MEDIA: 'MATCH_MEDIA', TESTING: 'TESTING', USER_MEDIA: 'USER_MEDIA', WEB_RTC: 'WEB_RTC', WORKERS: 'WORKERS' },
+          createDocument: function(o, cb){ if(typeof cb==='function')try{cb();}catch(e){} return Promise.resolve(); },
+          closeDocument: function(cb){ if(typeof cb==='function')try{cb();}catch(e){} return Promise.resolve(); },
+          hasDocument: function(cb){ if(typeof cb==='function')try{cb(false);}catch(e){} return Promise.resolve(false); }
+        },
+        management: {
+          getSelf: function(cb){ var m = { id: __kioExtId, name: __kioManifest.name || '', version: __kioManifest.version || '1.0', enabled: true, installType: 'normal', type: 'extension' }; if(typeof cb==='function')try{cb(m);}catch(e){} return Promise.resolve(m); },
+          getAll: function(cb){ if(typeof cb==='function')try{cb([]);}catch(e){} return Promise.resolve([]); },
+          get: function(id, cb){ var m = { id: id || __kioExtId, name: __kioManifest.name || '', version: __kioManifest.version || '1.0', enabled: true }; if(typeof cb==='function')try{cb(m);}catch(e){} return Promise.resolve(m); }
+        },
+        browsingData: { remove: function(o, d, cb){ if(typeof cb==='function')try{cb();}catch(e){} return Promise.resolve(); } },
+        idle: { queryState: function(i, cb){ if(typeof cb==='function')try{cb('active');}catch(e){} return Promise.resolve('active'); }, onStateChanged: __kioMakeEvent([]) },
+        power: { requestKeepAwake: function(){}, releaseKeepAwake: function(){} }
       };
       var chrome = __kioChrome;
       var browser = __kioChrome;
@@ -890,6 +1364,137 @@ class ChromeExtensionManager(context: Context) {
         window.GM_info = { script: { name: __kioManifest.name || '', version: __kioManifest.version || '1.0' }, scriptHandler: 'Kio' };
       }
     """.trimIndent() + "\n"
+  }
+
+  /**
+   * Executes a CORS-free privileged HTTP request on behalf of an installed extension's
+   * background worker or popup (matching Desktop Chrome's host_permissions fetch behavior).
+   */
+  fun performPrivilegedFetch(url: String, optionsJson: String): PrivilegedFetchResult {
+    if (!UrlValidator.isSafeWebUrl(url) || url == "about:blank") {
+      return PrivilegedFetchResult(error = "Blocked unsafe extension fetch URL")
+    }
+    var conn: HttpURLConnection? = null
+    return try {
+      val opts = try { JSONObject(optionsJson) } catch (_: Throwable) { JSONObject() }
+      val method = opts.optString("method", "GET").uppercase().ifBlank { "GET" }
+      val headersObj = opts.optJSONObject("headers")
+      val bodyText = opts.optString("body", "")
+
+      conn = (URL(url).openConnection() as HttpURLConnection).apply {
+        requestMethod = method
+        connectTimeout = 12_000
+        readTimeout = 20_000
+        instanceFollowRedirects = true
+        setRequestProperty("User-Agent", DESKTOP_CHROME_UA)
+        if (headersObj != null) {
+          val keys = headersObj.keys()
+          while (keys.hasNext()) {
+            val k = keys.next()
+            if (k.equals("host", true) || k.equals("origin", true) || k.equals("content-length", true)) continue
+            setRequestProperty(k, headersObj.optString(k, ""))
+          }
+        }
+      }
+      if (bodyText.isNotEmpty() && (method == "POST" || method == "PUT" || method == "PATCH" || method == "DELETE")) {
+        conn.doOutput = true
+        val bytes = bodyText.toByteArray(Charsets.UTF_8)
+        conn.outputStream.use { it.write(bytes) }
+      }
+      val status = conn.responseCode
+      val statusText = conn.responseMessage ?: "OK"
+      val stream = try {
+        if (status in 200..399) conn.inputStream else (conn.errorStream ?: conn.inputStream)
+      } catch (_: Throwable) {
+        conn.errorStream
+      }
+      val out = ByteArrayOutputStream()
+      if (stream != null) {
+        val buf = ByteArray(16 * 1024)
+        var total = 0
+        stream.use { s ->
+          while (true) {
+            val r = s.read(buf)
+            if (r <= 0) break
+            total += r
+            if (total > MAX_PRIVILEGED_FETCH_BYTES) break
+            out.write(buf, 0, r)
+          }
+        }
+      }
+      val respHeaders = JSONObject()
+      conn.headerFields?.forEach { (k, v) ->
+        if (!k.isNullOrBlank() && !v.isNullOrEmpty()) {
+          respHeaders.put(k, v.joinToString(", "))
+        }
+      }
+      val b64 = android.util.Base64.encodeToString(out.toByteArray(), android.util.Base64.NO_WRAP)
+      PrivilegedFetchResult(
+        status = status,
+        statusText = statusText,
+        headersJson = respHeaders.toString(),
+        bodyBase64 = b64,
+        error = null
+      )
+    } catch (t: Throwable) {
+      PrivilegedFetchResult(error = t.message ?: "Network error")
+    } finally {
+      try { conn?.disconnect() } catch (_: Throwable) {}
+    }
+  }
+
+  /**
+   * Parses chrome.proxy.settings.set({ value: { mode, rules, pacScript } }) into native proxy rules.
+   */
+  fun parseProxyConfigFromJson(extId: String, detailsJson: String): ExtensionProxyConfig? {
+    return try {
+      val root = JSONObject(detailsJson)
+      val value = root.optJSONObject("value") ?: root
+      val mode = value.optString("mode", "system").lowercase()
+      if (mode == "direct" || mode == "system" || mode == "auto_detect") {
+        return ExtensionProxyConfig(extId, mode, emptyList(), emptyList())
+      }
+      val proxyRules = mutableListOf<String>()
+      val bypass = mutableListOf<String>()
+      if (mode == "fixed_servers") {
+        val rulesObj = value.optJSONObject("rules")
+        if (rulesObj != null) {
+          fun addRule(obj: JSONObject?) {
+            if (obj == null) return
+            val scheme = obj.optString("scheme", "http").lowercase()
+            val host = obj.optString("host", "").trim()
+            val port = obj.optInt("port", if (scheme == "https") 443 else 80)
+            if (host.isNotEmpty() && port in 1..65535) {
+              proxyRules += "$scheme://$host:$port"
+            }
+          }
+          addRule(rulesObj.optJSONObject("singleProxy"))
+          if (proxyRules.isEmpty()) {
+            addRule(rulesObj.optJSONObject("proxyForHttps"))
+            addRule(rulesObj.optJSONObject("proxyForHttp"))
+            addRule(rulesObj.optJSONObject("fallbackProxy"))
+          }
+          bypass += jsonStringList(rulesObj.optJSONArray("bypassList"))
+        }
+      } else if (mode == "pac_script") {
+        val pacData = value.optJSONObject("pacScript")?.optString("data", "").orEmpty()
+        val matcher = Regex("""\b(HTTPS|PROXY|HTTP|SOCKS5|SOCKS)\s+([a-zA-Z0-9._-]+:\d{2,5})""", RegexOption.IGNORE_CASE)
+        matcher.findAll(pacData).forEach { m ->
+          val rawKind = m.groupValues[1].uppercase()
+          val hostPort = m.groupValues[2]
+          val scheme = when (rawKind) {
+            "HTTPS" -> "https"
+            "SOCKS5", "SOCKS" -> "socks5"
+            else -> "http"
+          }
+          val rule = "$scheme://$hostPort"
+          if (rule !in proxyRules) proxyRules += rule
+        }
+      }
+      ExtensionProxyConfig(extId, mode, proxyRules, bypass)
+    } catch (_: Throwable) {
+      null
+    }
   }
 
   // Native storage helpers invoked by @JavascriptInterface bridge
@@ -949,7 +1554,7 @@ class ChromeExtensionManager(context: Context) {
       val optionsUi = manifest.optJSONObject("options_ui")?.optString("page", "")?.takeIf { it.isNotBlank() }
       val optionsPage = optionsUi ?: manifest.optString("options_page", "").takeIf { it.isNotBlank() }
 
-      // Permissions
+      // Permissions & Host Permissions
       val permissions = mutableListOf<String>()
       val permArr = manifest.optJSONArray("permissions")
       if (permArr != null) {
@@ -958,6 +1563,14 @@ class ChromeExtensionManager(context: Context) {
           if (p.isNotEmpty()) permissions += p
         }
       }
+      val hostPermissions = jsonStringList(manifest.optJSONArray("host_permissions"))
+
+      // Background Service Worker (MV3) or Background Scripts / Page (MV2)
+      val bgObj = manifest.optJSONObject("background")
+      val bgServiceWorker = bgObj?.optString("service_worker", "")?.takeIf { it.isNotBlank() }
+      val bgIsModule = bgObj?.optString("type", "")?.equals("module", ignoreCase = true) == true
+      val bgScripts = jsonStringList(bgObj?.optJSONArray("scripts"))
+      val bgPage = bgObj?.optString("page", "")?.takeIf { it.isNotBlank() }
 
       // Content Scripts
       val contentScripts = mutableListOf<ExtensionContentScript>()
@@ -999,6 +1612,11 @@ class ChromeExtensionManager(context: Context) {
         optionsPage = optionsPage,
         manifestVersion = mv,
         permissions = permissions,
+        hostPermissions = hostPermissions,
+        backgroundServiceWorker = bgServiceWorker,
+        backgroundIsModule = bgIsModule,
+        backgroundScripts = bgScripts,
+        backgroundPage = bgPage,
         contentScripts = contentScripts,
         dnrRulesCount = dnrRules.size,
         sourceUrl = sourceUrl
@@ -1191,3 +1809,11 @@ class ChromeExtensionManager(context: Context) {
     }
   }
 }
+
+data class PrivilegedFetchResult(
+  val status: Int = 0,
+  val statusText: String = "",
+  val headersJson: String = "{}",
+  val bodyBase64: String = "",
+  val error: String? = null
+)

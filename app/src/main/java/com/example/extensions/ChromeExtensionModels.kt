@@ -15,6 +15,13 @@ data class ExtensionDnrRule(
   val excludedDomains: List<String> = emptyList()
 )
 
+data class ExtensionProxyConfig(
+  val extensionId: String,
+  val mode: String,
+  val proxyRules: List<String> = emptyList(),
+  val bypassList: List<String> = emptyList()
+)
+
 data class InstalledExtension(
   val id: String,
   val name: String,
@@ -28,11 +35,21 @@ data class InstalledExtension(
   val optionsPage: String? = null,
   val manifestVersion: Int = 3,
   val permissions: List<String> = emptyList(),
+  val hostPermissions: List<String> = emptyList(),
+  val backgroundServiceWorker: String? = null,
+  val backgroundIsModule: Boolean = false,
+  val backgroundScripts: List<String> = emptyList(),
+  val backgroundPage: String? = null,
   val contentScripts: List<ExtensionContentScript> = emptyList(),
   val dnrRulesCount: Int = 0,
   val sourceUrl: String = "",
   val installedAt: Long = System.currentTimeMillis()
-)
+) {
+  val hasBackgroundRuntime: Boolean
+    get() = !backgroundServiceWorker.isNullOrBlank() ||
+      backgroundScripts.isNotEmpty() ||
+      !backgroundPage.isNullOrBlank()
+}
 
 data class PopularExtensionPreset(
   val id: String,

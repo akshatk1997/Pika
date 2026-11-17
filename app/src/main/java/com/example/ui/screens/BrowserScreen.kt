@@ -167,6 +167,7 @@ fun BrowserScreen(
   val readerSegments by viewModel.readerSegments.collectAsStateWithLifecycle()
   val narratorState by viewModel.narratorState.collectAsStateWithLifecycle()
   val installedExtensions by viewModel.installedExtensions.collectAsStateWithLifecycle()
+  val activeExtensionProxy by viewModel.extensionRuntimeHost.activeProxy.collectAsStateWithLifecycle()
   val isInstallingExtension by viewModel.isInstallingExtension.collectAsStateWithLifecycle()
   val pageSource by viewModel.pageSource.collectAsStateWithLifecycle()
   val isBrowserFullscreen by viewModel.isBrowserFullscreen.collectAsStateWithLifecycle()
@@ -850,6 +851,8 @@ fun BrowserScreen(
               extensions = installedExtensions,
               isInstalling = isInstallingExtension,
               extensionManager = viewModel.extensionManager,
+              extensionRuntimeHost = viewModel.extensionRuntimeHost,
+              activeProxyExtId = activeExtensionProxy?.extensionId,
               activePageUrl = activeTab.url,
               activePageTitle = activeTab.title,
               onInstallFromStoreInput = { viewModel.installExtensionFromStore(it) },

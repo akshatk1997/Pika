@@ -5,6 +5,7 @@ import android.graphics.BitmapFactory
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -36,6 +38,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -77,6 +80,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.R
 import com.example.extensions.ChromeExtensionManager
+import com.example.extensions.ExtensionRuntimeHost
 import com.example.extensions.InstalledExtension
 import com.example.ui.components.FeatherIcons
 import com.example.ui.theme.FeatherSecureGreen
@@ -88,6 +92,8 @@ fun ExtensionsScreen(
   extensions: List<InstalledExtension>,
   isInstalling: Boolean,
   extensionManager: ChromeExtensionManager,
+  extensionRuntimeHost: ExtensionRuntimeHost? = null,
+  activeProxyExtId: String? = null,
   activePageUrl: String,
   activePageTitle: String,
   onInstallFromStoreInput: (String) -> Unit,
@@ -292,6 +298,7 @@ fun ExtensionsScreen(
           items(extensions, key = { it.id }) { ext ->
             InstalledExtensionCard(
               ext = ext,
+              isProxyActive = activeProxyExtId == ext.id,
               onToggleEnabled = { onToggleEnabled(ext.id, it) },
               onOpenPopup = { page -> popupTarget = ext to page },
               onRemove = { onRemoveExtension(ext.id) }
@@ -390,6 +397,7 @@ fun ExtensionsScreen(
       extension = ext,
       relativePagePath = pagePath,
       extensionManager = extensionManager,
+      extensionRuntimeHost = extensionRuntimeHost,
       activePageUrl = activePageUrl,
       activePageTitle = activePageTitle,
       onOpenUrlInNewTab = { url ->
@@ -414,6 +422,7 @@ fun ExtensionsScreen(
 @Composable
 private fun InstalledExtensionCard(
   ext: InstalledExtension,
+  isProxyActive: Boolean = false,
   onToggleEnabled: (Boolean) -> Unit,
   onOpenPopup: (String) -> Unit,
   onRemove: () -> Unit
@@ -474,9 +483,11 @@ private fun InstalledExtensionCard(
           )
           Text(
             text = "v${ext.version} · MV${ext.manifestVersion} · ${ext.contentScripts.size} scripts" +
-              if (ext.dnrRulesCount > 0) " · ${ext.dnrRulesCount} rules" else "",
+              (if (ext.hasBackgroundRuntime) " · Worker" else "") +
+              (if (ext.dnrRulesCount > 0) " · ${ext.dnrRulesCount} rules" else "") +
+              (if (isProxyActive) " · Proxy Active" else ""),
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = if (isProxyActive) FeatherSecureGreen else MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
           )
@@ -547,6 +558,7 @@ private fun ExtensionPopupDialog(
   extension: InstalledExtension,
   relativePagePath: String,
   extensionManager: ChromeExtensionManager,
+  extensionRuntimeHost: ExtensionRuntimeHost?,
   activePageUrl: String,
   activePageTitle: String,
   onOpenUrlInNewTab: (String) -> Unit,
@@ -561,6 +573,7 @@ private fun ExtensionPopupDialog(
   onDismiss: () -> Unit
 ) {
   val popupUrl = "https://${ChromeExtensionManager.EXT_VIRTUAL_HOST}/${extension.id}/${relativePagePath.trimStart('/')}"
+  var popupWebViewRef by remember { mutableStateOf<WebView?>(null) }
 
   Dialog(
     onDismissRequest = onDismiss,
@@ -571,8 +584,8 @@ private fun ExtensionPopupDialog(
       color = MaterialTheme.colorScheme.surface,
       border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
       modifier = Modifier
-        .fillMaxWidth(0.92f)
-        .height(520.dp)
+        .fillMaxWidth(0.94f)
+        .fillMaxHeight(0.84f)
     ) {
       Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -597,6 +610,9 @@ private fun ExtensionPopupDialog(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
           )
+          IconButton(onClick = { popupWebViewRef?.reload() }) {
+            Icon(Icons.Filled.Refresh, contentDescription = "Reload", tint = Color(0xFFF8FAFC), modifier = Modifier.size(18.dp))
+          }
           IconButton(onClick = onDismiss) {
             Icon(Icons.Filled.Close, contentDescription = "Close", tint = Color(0xFFF8FAFC))
           }
@@ -605,72 +621,83 @@ private fun ExtensionPopupDialog(
         AndroidView(
           factory = { ctx ->
             WebView(ctx).apply {
+              popupWebViewRef = this
               settings.javaScriptEnabled = true
               settings.domStorageEnabled = true
+              @Suppress("DEPRECATION")
+              settings.databaseEnabled = true
+              settings.useWideViewPort = true
+              settings.loadWithOverviewMode = true
+              settings.setSupportZoom(false)
+              settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
               settings.allowFileAccess = false
               settings.allowContentAccess = false
-              addJavascriptInterface(
-                object {
-                  @JavascriptInterface
-                  fun storageGetAll(extId: String): String = extensionManager.readStorageJson(extId)
+              settings.userAgentString = ChromeExtensionManager.DESKTOP_CHROME_UA
+              val bridge: Any = extensionRuntimeHost?.createBridgeObject(
+                extId = extension.id,
+                contextKind = "popup",
+                onOpenOptions = onOpenOptionsPage
+              ) ?: object {
+                @JavascriptInterface
+                fun storageGetAll(extId: String): String = extensionManager.readStorageJson(extId)
 
-                  @JavascriptInterface
-                  fun storageSetAll(extId: String, json: String) = extensionManager.writeStorageJson(extId, json)
+                @JavascriptInterface
+                fun storageSetAll(extId: String, json: String) = extensionManager.writeStorageJson(extId, json)
 
-                  @JavascriptInterface
-                  fun broadcastStorageChange(extId: String, changesJson: String) {
-                    post { onBroadcastStorageChange(extId, changesJson) }
-                  }
+                @JavascriptInterface
+                fun broadcastStorageChange(extId: String, changesJson: String) {
+                  post { onBroadcastStorageChange(extId, changesJson) }
+                }
 
-                  @JavascriptInterface
-                  fun sendMessageToActiveTab(extId: String, msgJson: String) {
-                    post { onSendMessageToActiveTab(extId, msgJson) }
-                  }
+                @JavascriptInterface
+                fun sendMessageToActiveTab(extId: String, msgJson: String) {
+                  post { onSendMessageToActiveTab(extId, msgJson) }
+                }
 
-                  @JavascriptInterface
-                  fun executeScriptInActiveTab(extId: String, code: String) {
-                    post { onExecuteScriptInActiveTab(extId, code) }
-                  }
+                @JavascriptInterface
+                fun executeScriptInActiveTab(extId: String, code: String) {
+                  post { onExecuteScriptInActiveTab(extId, code) }
+                }
 
-                  @JavascriptInterface
-                  fun executeScriptFileInActiveTab(extId: String, file: String) {
-                    post { onExecuteScriptFileInActiveTab(extId, file) }
-                  }
+                @JavascriptInterface
+                fun executeScriptFileInActiveTab(extId: String, file: String) {
+                  post { onExecuteScriptFileInActiveTab(extId, file) }
+                }
 
-                  @JavascriptInterface
-                  fun insertCssInActiveTab(extId: String, css: String) {
-                    post { onInsertCssInActiveTab(extId, css) }
-                  }
+                @JavascriptInterface
+                fun insertCssInActiveTab(extId: String, css: String) {
+                  post { onInsertCssInActiveTab(extId, css) }
+                }
 
-                  @JavascriptInterface
-                  fun insertCssFileInActiveTab(extId: String, file: String) {
-                    post { onInsertCssFileInActiveTab(extId, file) }
-                  }
+                @JavascriptInterface
+                fun insertCssFileInActiveTab(extId: String, file: String) {
+                  post { onInsertCssFileInActiveTab(extId, file) }
+                }
 
-                  @JavascriptInterface
-                  fun reloadActiveTab() {
-                    post { onReloadActiveTab() }
-                  }
+                @JavascriptInterface
+                fun reloadActiveTab() {
+                  post { onReloadActiveTab() }
+                }
 
-                  @JavascriptInterface
-                  fun openOptionsPage(extId: String) {
-                    val opt = extension.optionsPage ?: return
-                    post { onOpenOptionsPage(opt) }
-                  }
+                @JavascriptInterface
+                fun openOptionsPage(extId: String) {
+                  val opt = extension.optionsPage ?: return
+                  post { onOpenOptionsPage(opt) }
+                }
 
-                  @JavascriptInterface
-                  fun openTab(url: String) {
-                    post { onOpenUrlInNewTab(url) }
-                  }
+                @JavascriptInterface
+                fun openTab(url: String) {
+                  post { onOpenUrlInNewTab(url) }
+                }
 
-                  @JavascriptInterface
-                  fun getActiveUrl(): String = activePageUrl
+                @JavascriptInterface
+                fun getActiveUrl(): String = activePageUrl
 
-                  @JavascriptInterface
-                  fun getActiveTitle(): String = activePageTitle
-                },
-                "__KioExtBridge"
-              )
+                @JavascriptInterface
+                fun getActiveTitle(): String = activePageTitle
+              }
+              addJavascriptInterface(bridge, "__KioExtBridge")
+              extensionRuntimeHost?.attachPopupWebView(extension.id, this)
               webViewClient = object : WebViewClient() {
                 override fun shouldInterceptRequest(
                   view: WebView?,
@@ -680,10 +707,19 @@ private fun ExtensionPopupDialog(
                   return extensionManager.serveVirtualExtensionResource(url)
                 }
               }
-              loadUrl(popupUrl)
+              if (extensionRuntimeHost != null && extension.hasBackgroundRuntime) {
+                // Ensure extension background service worker / scripts are booted before loading popup UI
+                extensionRuntimeHost.ensureBackgroundRunning(extension.id) {
+                  loadUrl(popupUrl)
+                }
+              } else {
+                loadUrl(popupUrl)
+              }
             }
           },
           onRelease = { wv ->
+            extensionRuntimeHost?.detachPopupWebView(extension.id, wv)
+            if (popupWebViewRef === wv) popupWebViewRef = null
             try {
               wv.stopLoading()
               wv.destroy()

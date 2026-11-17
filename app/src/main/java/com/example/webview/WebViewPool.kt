@@ -21,6 +21,7 @@ import android.webkit.CookieManager
 import android.widget.FrameLayout
 import android.widget.ProgressBar
 import android.webkit.GeolocationPermissions
+import android.webkit.HttpAuthHandler
 import android.webkit.JavascriptInterface
 import android.webkit.PermissionRequest
 import android.webkit.RenderProcessGoneDetail
@@ -37,6 +38,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.webkit.WebViewDatabase
 import com.example.extensions.ChromeExtensionManager
+import com.example.extensions.ExtensionRuntimeHost
 import com.example.model.ClearDataOptions
 import com.example.model.PageError
 import com.example.model.PageErrorType
@@ -162,9 +164,27 @@ class WebViewPool(
   // Bidirectional Standard <-> Private Isolation Vault
   @Volatile private var currentlyInPrivateMode: Boolean = false
   @Volatile private var liveSystemDarkMode: Boolean? = null
+  @Volatile private var extensionRuntimeHost: ExtensionRuntimeHost? = null
   private val visitedStandardOrigins = ConcurrentHashMap.newKeySet<String>()
   private val vaultedStandardCookies = ConcurrentHashMap<String, List<String>>()
   private val cookieBarrierLock = Any()
+
+  fun setExtensionRuntimeHost(host: ExtensionRuntimeHost?) {
+    extensionRuntimeHost = host
+  }
+
+  fun evaluateJsOnStandardTab(tabId: String, js: String) {
+    if (tabPrivacyFlags[tabId] == true || !settingsProvider().javascriptEnabled) return
+    val wv = getLiveWebView(tabId) ?: return
+    try {
+      wv.post {
+        if (!destroyedViews.contains(wv)) {
+          wv.evaluateJavascript(js, null)
+        }
+      }
+    } catch (_: Throwable) {
+    }
+  }
 
   fun isCurrentlyInPrivateBarrier(): Boolean = currentlyInPrivateMode
 
@@ -2217,6 +2237,31 @@ class WebViewPool(
             }
 
             @JavascriptInterface
+            fun routeRuntimeMessage(extId: String, fromCtx: String, reqId: String, msgJson: String) {
+              extensionRuntimeHost?.routeRuntimeMessage(extId, fromCtx, reqId, msgJson)
+            }
+
+            @JavascriptInterface
+            fun replyRuntimeMessage(extId: String, targetCtx: String, reqId: String, replyJson: String) {
+              extensionRuntimeHost?.replyRuntimeMessage(extId, targetCtx, reqId, replyJson)
+            }
+
+            @JavascriptInterface
+            fun routePortConnect(extId: String, fromCtx: String, portId: String, name: String) {
+              extensionRuntimeHost?.routePortConnect(extId, fromCtx, portId, name)
+            }
+
+            @JavascriptInterface
+            fun routePortMessage(extId: String, fromCtx: String, portId: String, msgJson: String) {
+              extensionRuntimeHost?.routePortMessage(extId, fromCtx, portId, msgJson)
+            }
+
+            @JavascriptInterface
+            fun routePortDisconnect(extId: String, fromCtx: String, portId: String) {
+              extensionRuntimeHost?.routePortDisconnect(extId, fromCtx, portId)
+            }
+
+            @JavascriptInterface
             fun sendMessageToActiveTab(extId: String, msgJson: String) {
               dispatchExtensionMessage(tabId, extId, msgJson)
             }
@@ -2552,6 +2597,32 @@ class WebViewPool(
             canGoBack = canBack,
             canGoForward = canFwd
           )
+        }
+      }
+
+      override fun onReceivedHttpAuthRequest(
+        view: WebView?,
+        handler: HttpAuthHandler?,
+        host: String?,
+        realm: String?
+      ) {
+        val runtime = extensionRuntimeHost
+        if (!isPrivate && runtime != null && handler != null && !host.isNullOrBlank()) {
+          runtime.resolveProxyAuth(host, 443, realm.orEmpty()) { user, pass ->
+            try {
+              if (!user.isNullOrBlank()) {
+                handler.proceed(user, pass.orEmpty())
+              } else {
+                handler.cancel()
+              }
+            } catch (_: Throwable) {
+            }
+          }
+          return
+        }
+        try {
+          handler?.cancel()
+        } catch (_: Throwable) {
         }
       }
 

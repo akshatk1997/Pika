@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kio-v1.9.4.apk
+          cp "$APK_PATH" releases/Kio-v1.9.5.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kio-v1.9.4.apk
+          git add releases/Kio-v1.9.5.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kio-v1.9.4.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kio-v1.9.5.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.9.4
+      - name: Create or update GitHub Release v1.9.5
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kio-v1.9.4.apk)
-          NOTES="Kio Browser v1.9.4 (Build 66) — Sleeker Outer-Ring-Free Hidden-K App Icon, Chrome-Style Android Typography, Symmetric 3-Dot Menu Labels, and Clean Name-Only Bookmarks strictly under 2 MB.\n\n- **Cleaner Hidden-'K' App Launcher Icon (Outer Ring Removed, Homepage Emblem 100% Untouched):** Removed the outer layer ring circle & outer dot from the adaptive and monochrome launcher icon, cleanly scaling the inner hidden-**K** orbital core emblem to fill the icon with the exact same cyan/sky/indigo/white palette while leaving the homepage \`KioLogo\` completely untouched.\n- **Chrome for Android Typography Across the Entire Browser:** Replaced monospace small labels with a unified, crisp Material 3 Android Chrome sans-serif (Roboto) type scale across every screen, toolbar, badge, menu, and setting with zero bundled font bloat.\n- **Symmetric & Fully Readable 3-Dot Quick Action Grid:** Fixed clipped action labels by using uniform \`78.dp\` symmetric tiles, centered 2-line wrapping, balanced spacing, and row alignment padding so every option name in both Standard Mode and Private Mode displays cleanly.\n- **Clean Website-Name-Only Bookmarks:** Updated both the Homepage Bookmarks grid and the Bookmarks Manager screen to show only the website's logo and clean website name (hiding raw URLs/links and automatically converting URL-only titles into readable site names).\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
-          if gh release view v1.9.4 >/dev/null 2>&1; then
-            gh release upload v1.9.4 releases/Kio-v1.9.4.apk --clobber
-            gh release edit v1.9.4 --title "Kio v1.9.4 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kio-v1.9.5.apk)
+          NOTES="Kio Browser v1.9.5 (Build 67) — Full Chrome Extension Background Service Worker Runtime, Real Async RPC/Port Messaging, CORS-Free Privileged Fetch/XHR, and Native WebView Proxy Routing strictly under 2 MB.\n\n- **Fixed Infinite Loading Spinner in Extension Popups (Urban VPN, Dark Reader, uBlock Lite, Stylus & More):**\n  - Added **ExtensionRuntimeHost** booting MV3 \`background.service_worker\` (classic & ES module) and MV2 \`background.scripts\` / \`background.page\` in a lazy headless Background Runtime Host before extension popups open.\n  - Built a true bidirectional **Popup ↔ Background ↔ Content Script IPC router** with async \`chrome.runtime.sendMessage\` + \`sendResponse\` callbacks/Promises and full-duplex \`chrome.runtime.connect\` / \`chrome.runtime.onConnect\` Ports.\n  - Added a **CORS-free privileged \`fetch()\` & \`XMLHttpRequest\` (Axios) bridge** for extension background and popup contexts so extensions can communicate cleanly with their API servers without WebView CORS failures.\n  - Integrated native **\`chrome.proxy\` routing** via AndroidX WebKit \`ProxyController\` (supporting both \`fixed_servers\` and \`pac_script\`) plus **\`chrome.webRequest.onAuthRequired\`** wired to \`onReceivedHttpAuthRequest\` so proxy/VPN extensions actually connect and authenticate in Standard Mode (and auto-suspend in Private Mode for zero-leak isolation).\n  - Added missing startup APIs (\`chrome.privacy.network.webRTCIPHandlingPolicy\`, real timer-backed \`chrome.alarms\`, \`chrome.offscreen\`, \`chrome.management\`, \`chrome.declarativeNetRequest\`, Service Worker \`importScripts\`/\`clients\`/\`skipWaiting\`) and improved responsive Popup sizing + Refresh button.\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
+          if gh release view v1.9.5 >/dev/null 2>&1; then
+            gh release upload v1.9.5 releases/Kio-v1.9.5.apk --clobber
+            gh release edit v1.9.5 --title "Kio v1.9.5 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.9.4 releases/Kio-v1.9.4.apk \
-              --title "Kio v1.9.4 (< 2 MB)" \
+            gh release create v1.9.5 releases/Kio-v1.9.5.apk \
+              --title "Kio v1.9.5 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi
