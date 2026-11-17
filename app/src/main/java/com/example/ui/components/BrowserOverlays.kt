@@ -440,7 +440,8 @@ fun NewTabHomeView(
               ) {
                 rowItems.forEach { bm ->
                   val host = UrlValidator.extractHost(bm.url)
-                  val initial = host.firstOrNull()?.uppercase() ?: "B"
+                  val siteName = UrlValidator.extractWebsiteDisplayName(bm.title, bm.url)
+                  val initial = siteName.firstOrNull()?.uppercase() ?: host.firstOrNull()?.uppercase() ?: "B"
                   Surface(
                     shape = RoundedCornerShape(16.dp),
                     color = cardSurface,
@@ -453,34 +454,26 @@ fun NewTabHomeView(
                       .testTag("home_bookmark_${bm.id}")
                   ) {
                     Row(
-                      modifier = Modifier.padding(12.dp),
+                      modifier = Modifier.padding(horizontal = 12.dp, vertical = 11.dp),
                       verticalAlignment = Alignment.CenterVertically
                     ) {
                       SiteFavicon(
                         url = bm.url,
                         fallbackInitial = initial,
                         accentColor = primaryAccent,
-                        size = 36.dp,
-                        cornerRadius = 11.dp
+                        size = 34.dp,
+                        cornerRadius = 10.dp
                       )
                       Spacer(modifier = Modifier.width(10.dp))
-                      Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                          text = bm.title,
-                          style = MaterialTheme.typography.bodyMedium,
-                          fontWeight = FontWeight.SemiBold,
-                          color = titleColor,
-                          maxLines = 1,
-                          overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                          text = host,
-                          style = MaterialTheme.typography.labelSmall,
-                          color = mutedColor,
-                          maxLines = 1,
-                          overflow = TextOverflow.Ellipsis
-                        )
-                      }
+                      Text(
+                        text = siteName,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium,
+                        color = titleColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                      )
                     }
                   }
                 }

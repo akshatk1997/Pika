@@ -161,10 +161,11 @@ fun BookmarksScreen(
                   }
               ) {
                 Row(
-                  modifier = Modifier.padding(12.dp),
+                  modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                   verticalAlignment = Alignment.CenterVertically
                 ) {
-                  val bmInitial = UrlValidator.extractHost(bm.url).firstOrNull()?.uppercase() ?: "B"
+                  val siteName = UrlValidator.extractWebsiteDisplayName(bm.title, bm.url)
+                  val bmInitial = siteName.firstOrNull()?.uppercase() ?: UrlValidator.extractHost(bm.url).firstOrNull()?.uppercase() ?: "B"
                   SiteFavicon(
                     url = bm.url,
                     fallbackInitial = bmInitial,
@@ -173,27 +174,24 @@ fun BookmarksScreen(
                     cornerRadius = 10.dp
                   )
                   Spacer(modifier = Modifier.width(12.dp))
-                  Column(modifier = Modifier.weight(1f)) {
-                    Text(bm.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(
-                      text = "${bm.folder} · ${bm.url}",
-                      style = MaterialTheme.typography.labelSmall,
-                      color = MaterialTheme.colorScheme.onSurfaceVariant,
-                      maxLines = 1,
-                      overflow = TextOverflow.Ellipsis
-                    )
-                  }
+                  Text(
+                    text = siteName,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                  )
                   IconButton(
                     onClick = { editingItem = bm },
                     modifier = Modifier.minimumInteractiveComponentSize()
                   ) {
-                    Icon(Icons.Filled.Edit, contentDescription = "Edit bookmark ${bm.title}")
+                    Icon(Icons.Filled.Edit, contentDescription = "Edit bookmark $siteName")
                   }
                   IconButton(
                     onClick = { onDeleteBookmark(bm.id) },
                     modifier = Modifier.minimumInteractiveComponentSize()
                   ) {
-                    Icon(Icons.Filled.Delete, contentDescription = "Delete bookmark ${bm.title}")
+                    Icon(Icons.Filled.Delete, contentDescription = "Delete bookmark $siteName")
                   }
                 }
               }

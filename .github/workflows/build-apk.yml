@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kio-v1.9.3.apk
+          cp "$APK_PATH" releases/Kio-v1.9.4.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kio-v1.9.3.apk
+          git add releases/Kio-v1.9.4.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kio-v1.9.3.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kio-v1.9.4.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.9.3
+      - name: Create or update GitHub Release v1.9.4
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kio-v1.9.3.apk)
-          NOTES="Kio Browser v1.9.3 (Build 65) — Full System Default Mode Parity in Private Mode & Standard Mode strictly under 2 MB.\n\n- **Fixed System Default Mode in Private Mode:**\n  - Added live \`onConfigurationChanged\` OS night-mode tracking in \`MainActivity\` synced directly into \`BrowserViewModel\` and \`WebViewPool\` so toggling Android's System Dark/Light theme updates Private Mode immediately just like Standard Mode (without leaving stale application-context \`uiMode\` or stale \`nightWebMode\`).\n  - Re-applied status bar and navigation bar icon contrast (\`isAppearanceLightStatusBars\` / \`isAppearanceLightNavigationBars\`) across Private Mode \`FLAG_SECURE\` transitions so system bars match System Default Light & Dark cleanly.\n  - Added \`Sec-CH-Prefers-Color-Scheme\` headers, live \`window.matchMedia('(prefers-color-scheme: dark|light)')\` mirroring, WebView background sync, and fixed API 33+ \`isAlgorithmicDarkeningAllowed\` so cookie-less Private Mode websites immediately match System Default Light & Dark just like Standard Mode.\n  - Synced \`ThemeMode.SYSTEM\` cleanly in both Settings (**System default**) and the 3-dot Quick Menu (**System** chip) for Standard Mode and Private Mode.\n- **Strictly Under 2 MB:** Preserves the hidden-'K' concentric app launcher icon, untouched homepage emblem, Kiwi-style Desktop Chrome Extensions, Zero-Leak Private Vault, and low-data/low-space performance engine.\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
-          if gh release view v1.9.3 >/dev/null 2>&1; then
-            gh release upload v1.9.3 releases/Kio-v1.9.3.apk --clobber
-            gh release edit v1.9.3 --title "Kio v1.9.3 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kio-v1.9.4.apk)
+          NOTES="Kio Browser v1.9.4 (Build 66) — Sleeker Outer-Ring-Free Hidden-K App Icon, Chrome-Style Android Typography, Symmetric 3-Dot Menu Labels, and Clean Name-Only Bookmarks strictly under 2 MB.\n\n- **Cleaner Hidden-'K' App Launcher Icon (Outer Ring Removed, Homepage Emblem 100% Untouched):** Removed the outer layer ring circle & outer dot from the adaptive and monochrome launcher icon, cleanly scaling the inner hidden-**K** orbital core emblem to fill the icon with the exact same cyan/sky/indigo/white palette while leaving the homepage \`KioLogo\` completely untouched.\n- **Chrome for Android Typography Across the Entire Browser:** Replaced monospace small labels with a unified, crisp Material 3 Android Chrome sans-serif (Roboto) type scale across every screen, toolbar, badge, menu, and setting with zero bundled font bloat.\n- **Symmetric & Fully Readable 3-Dot Quick Action Grid:** Fixed clipped action labels by using uniform \`78.dp\` symmetric tiles, centered 2-line wrapping, balanced spacing, and row alignment padding so every option name in both Standard Mode and Private Mode displays cleanly.\n- **Clean Website-Name-Only Bookmarks:** Updated both the Homepage Bookmarks grid and the Bookmarks Manager screen to show only the website's logo and clean website name (hiding raw URLs/links and automatically converting URL-only titles into readable site names).\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
+          if gh release view v1.9.4 >/dev/null 2>&1; then
+            gh release upload v1.9.4 releases/Kio-v1.9.4.apk --clobber
+            gh release edit v1.9.4 --title "Kio v1.9.4 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.9.3 releases/Kio-v1.9.3.apk \
-              --title "Kio v1.9.3 (< 2 MB)" \
+            gh release create v1.9.4 releases/Kio-v1.9.4.apk \
+              --title "Kio v1.9.4 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

@@ -320,4 +320,36 @@ object UrlValidator {
       else -> null
     }
   }
+
+  /**
+   * Returns a clean human-friendly website name for Bookmarks (never showing raw https:// URLs or paths).
+   */
+  fun extractWebsiteDisplayName(title: String?, url: String): String {
+    val cleanTitle = sanitizeDisplayText(title, 60).trim()
+    val looksLikeRawUrl = cleanTitle.isEmpty() ||
+      cleanTitle.startsWith("http://", ignoreCase = true) ||
+      cleanTitle.startsWith("https://", ignoreCase = true) ||
+      cleanTitle.startsWith("www.", ignoreCase = true) ||
+      (!cleanTitle.contains(' ') && cleanTitle.contains('.') && cleanTitle.contains('/'))
+    if (!looksLikeRawUrl) {
+      return cleanTitle
+    }
+    val host = extractHost(url)
+      .removePrefix("www.")
+      .removePrefix("m.")
+      .removePrefix("mobile.")
+      .trim()
+    if (host.isEmpty()) return cleanTitle.ifEmpty { "Website" }
+    val parts = host.split('.').filter { it.isNotBlank() }
+    val core = when {
+      parts.size >= 3 && parts[parts.lastIndex - 1].length <= 3 && parts.last().length <= 3 ->
+        parts[parts.lastIndex - 2]
+      parts.size >= 2 -> parts[parts.lastIndex - 1]
+      else -> parts.firstOrNull().orEmpty()
+    }
+    if (core.isEmpty()) return host
+    return core.replace('-', ' ').split(' ')
+      .filter { it.isNotBlank() }
+      .joinToString(" ") { word -> word.replaceFirstChar { it.uppercase() } }
+  }
 }

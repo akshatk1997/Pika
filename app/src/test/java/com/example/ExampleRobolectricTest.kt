@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kio", appName)
-    assertEquals("1.9.3", BuildConfig.VERSION_NAME)
-    assertEquals(65, BuildConfig.VERSION_CODE)
+    assertEquals("1.9.4", BuildConfig.VERSION_NAME)
+    assertEquals(66, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -189,7 +189,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Resources").assertDoesNotExist()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.9.3").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.9.4").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
 
     // Navigate into Data Saver folder
@@ -912,5 +912,31 @@ class ExampleRobolectricTest {
     assertFalse("Private Mode in System Default must resolve light when OS is light", vm.webViewPool.resolveIsDark(vm.settings.value))
     val lightController = androidx.core.view.WindowCompat.getInsetsController(activity.window, activity.window.decorView)
     assertTrue("Private Mode System Light must render dark status bar icons", lightController.isAppearanceLightStatusBars)
+  }
+
+  @Test
+  fun chromeTypographyAndWebsiteNameOnlyBookmarksVerified() {
+    // 1. Verify Chrome-for-Android sans-serif typography across all styles (no monospace labelSmall)
+    assertEquals(androidx.compose.ui.text.font.FontFamily.SansSerif, com.example.ui.theme.FeatherTypography.labelSmall.fontFamily)
+    assertEquals(androidx.compose.ui.text.font.FontFamily.SansSerif, com.example.ui.theme.FeatherTypography.bodyMedium.fontFamily)
+    assertEquals(androidx.compose.ui.text.font.FontFamily.SansSerif, com.example.ui.theme.FeatherTypography.titleMedium.fontFamily)
+
+    // 2. Verify clean website display name extraction (hides raw URLs)
+    assertEquals("Wikipedia", com.example.security.UrlValidator.extractWebsiteDisplayName("Wikipedia", "https://en.wikipedia.org/wiki/Main_Page"))
+    assertEquals("Youtube", com.example.security.UrlValidator.extractWebsiteDisplayName("https://www.youtube.com/watch?v=123", "https://www.youtube.com/watch?v=123"))
+    assertEquals("Github", com.example.security.UrlValidator.extractWebsiteDisplayName("", "https://github.com/akshatk1997/Pika"))
+
+    // 3. Add a bookmark and verify the Bookmarks screen renders ONLY the website name (no raw URL)
+    val vm = composeTestRule.activity.viewModel
+    composeTestRule.waitForIdle()
+    composeTestRule.runOnUiThread {
+      vm.dismissIntro()
+      vm.openNewTab(isPrivate = false)
+      vm.addOrUpdateBookmark(null, "Wikipedia", "https://en.wikipedia.org/wiki/Android", "Bookmarks")
+      vm.setOverlay(com.example.ui.ActiveOverlay.BOOKMARKS)
+    }
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("Wikipedia").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Bookmarks · https://en.wikipedia.org/wiki/Android").assertDoesNotExist()
   }
 }

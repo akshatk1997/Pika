@@ -1232,30 +1232,35 @@ fun BrowserScreen(
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (item.enabled) 0.55f else 0.2f),
                 modifier = Modifier
                   .weight(1f)
+                  .height(78.dp)
                   .clip(RoundedCornerShape(14.dp))
                   .clickable(enabled = item.enabled, onClick = item.onClick)
               ) {
                 Column(
                   horizontalAlignment = Alignment.CenterHorizontally,
-                  modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp)
+                  verticalArrangement = Arrangement.Center,
+                  modifier = Modifier.fillMaxSize().padding(vertical = 8.dp, horizontal = 6.dp)
                 ) {
                   Icon(
                     imageVector = item.icon,
                     contentDescription = item.label,
                     tint = iconColor,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(21.dp)
                   )
-                  Spacer(modifier = Modifier.height(5.dp))
+                  Spacer(modifier = Modifier.height(6.dp))
                   Text(
                     text = item.label,
                     style = MaterialTheme.typography.labelSmall,
                     color = if (item.enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center
                   )
                 }
               }
+            }
+            repeat(4 - rowItems.size) {
+              Spacer(modifier = Modifier.weight(1f))
             }
           }
         }
