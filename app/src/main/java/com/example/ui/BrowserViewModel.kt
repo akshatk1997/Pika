@@ -42,6 +42,7 @@ import com.example.model.SecurityState
 import com.example.model.SettingsState
 import com.example.model.SitePermissionRule
 import com.example.model.TabInfo
+import com.example.model.ThemeMode
 import com.example.model.UserAgentMode
 import com.example.model.WebPermissionKind
 import com.example.model.WebPermissionPrompt
