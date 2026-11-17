@@ -37,6 +37,11 @@
     <string name="action_extensions">Extensions</string>
     <string name="action_fullscreen">Full screen</string>
     <string name="action_exit_fullscreen">Exit full</string>
+    <string name="action_burn_session">Burn session</string>
+    <string name="action_new_identity">New identity</string>
+    <string name="action_shield_audit">Shield audit</string>
+    <string name="action_wipe_clipboard">Wipe clipboard</string>
+    <string name="action_purge_ram">Purge RAM</string>
     <string name="action_save_pdf">Save PDF</string>
     <string name="action_view_source">Page source</string>
     <string name="action_translate">Translate</string>

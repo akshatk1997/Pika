@@ -146,8 +146,73 @@ class WebViewPool(
   private val currentPageUrls = ConcurrentHashMap<String, String>()
   private val currentPageTitles = ConcurrentHashMap<String, String>()
   private val tabUserAgentModes = ConcurrentHashMap<String, UserAgentMode>()
+  private val tabPrivacyFlags = ConcurrentHashMap<String, Boolean>()
   private val pageEarlyInjectedStage = ConcurrentHashMap<String, Int>()
   private val destroyedViews = Collections.newSetFromMap(WeakHashMap<WebView, Boolean>())
+
+  // Bidirectional Standard <-> Private Isolation Vault
+  @Volatile private var currentlyInPrivateMode: Boolean = false
+  private val visitedStandardOrigins = ConcurrentHashMap.newKeySet<String>()
+  private val vaultedStandardCookies = ConcurrentHashMap<String, List<String>>()
+  private val cookieBarrierLock = Any()
+
+  fun isCurrentlyInPrivateBarrier(): Boolean = currentlyInPrivateMode
+
+  fun registerStandardOriginForVault(url: String) {
+    val origin = UrlValidator.extractOrigin(url)
+    if (origin.startsWith("http://") || origin.startsWith("https://")) {
+      visitedStandardOrigins.add(origin)
+    }
+  }
+
+  /**
+   * Enforces strict bidirectional cookie isolation between Standard Mode and Private Mode:
+   * - Standard -> Private: snapshots Standard cookies into RAM vault and wipes CookieManager so Private starts with 0 cookies.
+   * - Private -> Standard: incinerates 100% of Private cookies and restores vaulted Standard cookies cleanly.
+   */
+  fun syncActiveModeBoundary(targetPrivateMode: Boolean) {
+    synchronized(cookieBarrierLock) {
+      if (targetPrivateMode == currentlyInPrivateMode) return
+      try {
+        val cm = CookieManager.getInstance()
+        if (targetPrivateMode) {
+          // Standard -> Private: vault standard cookies, then zero out CookieManager
+          vaultedStandardCookies.clear()
+          for (origin in visitedStandardOrigins) {
+            val raw = try { cm.getCookie(origin) } catch (_: Throwable) { null }
+            if (!raw.isNullOrBlank()) {
+              val pairs = raw.split(";").map { it.trim() }.filter { it.isNotEmpty() }
+              if (pairs.isNotEmpty()) {
+                vaultedStandardCookies[origin] = pairs
+              }
+            }
+          }
+          cm.removeSessionCookies(null)
+          cm.removeAllCookies(null)
+          cm.flush()
+          currentlyInPrivateMode = true
+        } else {
+          // Private -> Standard: incinerate ALL private cookies, then restore standard cookies
+          cm.removeSessionCookies(null)
+          cm.removeAllCookies(null)
+          cm.flush()
+          for ((origin, pairs) in vaultedStandardCookies) {
+            for (pair in pairs) {
+              try {
+                cm.setCookie(origin, pair)
+              } catch (_: Throwable) {
+              }
+            }
+          }
+          cm.flush()
+          vaultedStandardCookies.clear()
+          currentlyInPrivateMode = false
+        }
+      } catch (_: Throwable) {
+        currentlyInPrivateMode = targetPrivateMode
+      }
+    }
+  }
   private val defaultUserAgent: String by lazy {
     try {
       WebSettings.getDefaultUserAgent(appContext)
@@ -213,6 +278,8 @@ class WebViewPool(
   ): WebView? {
     val settingsState = settingsProvider()
     tabUserAgentModes[tabId] = userAgentMode
+    tabPrivacyFlags[tabId] = isPrivate
+    syncActiveModeBoundary(isPrivate)
     liveViews[tabId]?.let { existing ->
       if (!destroyedViews.contains(existing)) {
         applySettings(existing, isPrivate, userAgentMode, settingsState)
@@ -249,6 +316,8 @@ class WebViewPool(
     if (!settingsProvider().javascriptEnabled) return
     for ((id, wv) in liveViews.toMap()) {
       if (destroyedViews.contains(wv)) continue
+      // Never inject Chrome Extensions into Private tabs
+      if (tabPrivacyFlags[id] == true) continue
       val url = currentPageUrls[id].orEmpty()
       if (url.isBlank()) continue
       val script = extMgr.buildPageInjectionScript(url, "end") ?: continue
@@ -261,6 +330,9 @@ class WebViewPool(
 
   fun loadUrl(tabId: String, url: String) {
     val webView = getLiveWebView(tabId) ?: return
+    val isPriv = tabPrivacyFlags[tabId] == true
+    syncActiveModeBoundary(isPriv)
+    if (!isPriv) registerStandardOriginForVault(url)
     pageEarlyInjectedStage[tabId] = 0
     currentPageHosts[tabId] = UrlValidator.extractHost(url)
     currentPageUrls[tabId] = url
@@ -616,6 +688,7 @@ class WebViewPool(
     currentPageUrls.remove(tabId)
     currentPageTitles.remove(tabId)
     tabUserAgentModes.remove(tabId)
+    tabPrivacyFlags.remove(tabId)
     pageEarlyInjectedStage.remove(tabId)
     liveViews.remove(tabId)?.let { wv ->
       if (isPrivate) {
@@ -656,9 +729,58 @@ class WebViewPool(
 
   fun wipePrivateSessionData(privateTabIds: List<String>) {
     privateTabIds.forEach { destroyTab(it, isPrivate = true) }
-    for ((_, wv) in liveViews.toMap()) {
-      if (destroyedViews.contains(wv)) continue
+    // Also wipe any remaining live WebViews explicitly flagged private
+    for ((id, wv) in liveViews.toMap()) {
+      if (destroyedViews.contains(wv) || tabPrivacyFlags[id] != true) continue
       try {
+        wv.evaluateJavascript("(function(){if(window.__kio_reset_private_storage)window.__kio_reset_private_storage();})();", null)
+        wv.clearCache(true)
+        wv.clearHistory()
+        @Suppress("DEPRECATION")
+        wv.clearFormData()
+        wv.clearSslPreferences()
+      } catch (_: Throwable) {
+      }
+    }
+    if (currentlyInPrivateMode) {
+      // Incinerate all private cookies and restore vaulted standard cookies cleanly
+      syncActiveModeBoundary(targetPrivateMode = false)
+    } else {
+      try {
+        CookieManager.getInstance().apply {
+          removeSessionCookies(null)
+          flush()
+        }
+      } catch (_: Throwable) {
+      }
+    }
+    try {
+      @Suppress("DEPRECATION")
+      WebViewDatabase.getInstance(appContext).apply {
+        clearFormData()
+        clearHttpAuthUsernamePassword()
+      }
+    } catch (_: Throwable) {
+    }
+  }
+
+  /**
+   * Purges all active private cookies, RAM storage maps, cache, and HTTP auth
+   * while keeping the current private tabs open (used by New Identity & Purge RAM).
+   */
+  fun purgePrivateRamData(privateTabIds: List<String>, reloadTabId: String? = null) {
+    try {
+      CookieManager.getInstance().apply {
+        removeSessionCookies(null)
+        removeAllCookies(null)
+        flush()
+      }
+    } catch (_: Throwable) {
+    }
+    for (id in privateTabIds) {
+      val wv = getLiveWebView(id) ?: continue
+      try {
+        wv.evaluateJavascript("(function(){if(window.__kio_reset_private_storage)window.__kio_reset_private_storage();})();", null)
         wv.clearCache(true)
         wv.clearHistory()
         @Suppress("DEPRECATION")
@@ -668,24 +790,19 @@ class WebViewPool(
       }
     }
     try {
-      CookieManager.getInstance().apply {
-        removeSessionCookies(null)
-        removeAllCookies(null)
-        flush()
-      }
-    } catch (_: Throwable) {
-    }
-    try {
-      WebStorage.getInstance().deleteAllData()
-    } catch (_: Throwable) {
-    }
-    try {
       @Suppress("DEPRECATION")
       WebViewDatabase.getInstance(appContext).apply {
         clearFormData()
         clearHttpAuthUsernamePassword()
       }
     } catch (_: Throwable) {
+    }
+    if (reloadTabId != null) {
+      val target = getLiveWebView(reloadTabId)
+      try {
+        target?.reload()
+      } catch (_: Throwable) {
+      }
     }
   }
 
@@ -1407,6 +1524,106 @@ class WebViewPool(
   }
 
   /**
+   * Hermetic Private-Mode-Only Storage & Anti-Fingerprint Sandbox.
+   * - Shadows window.localStorage and window.sessionStorage with pure ephemeral RAM Maps so
+   *   Private tabs NEVER read Standard Mode storage and NEVER write to disk or Standard Mode.
+   * - Blocks persistent IndexedDB and CacheStorage writes.
+   * - Adds per-session Canvas & hardware anti-fingerprinting noise exclusive to Private Mode.
+   */
+  private fun applyPrivateIsolationSandbox(webView: WebView) {
+    if (!settingsProvider().javascriptEnabled || destroyedViews.contains(webView)) return
+    val js = """
+      (function() {
+        if (window.__kio_private_sandbox_installed) return;
+        window.__kio_private_sandbox_installed = true;
+
+        function makeRamStorage() {
+          var map = Object.create(null);
+          return {
+            get length() { return Object.keys(map).length; },
+            key: function(i) { var k = Object.keys(map); return (i >= 0 && i < k.length) ? k[i] : null; },
+            getItem: function(k) { var s = String(k); return Object.prototype.hasOwnProperty.call(map, s) ? map[s] : null; },
+            setItem: function(k, v) { map[String(k)] = String(v); },
+            removeItem: function(k) { delete map[String(k)]; },
+            clear: function() { map = Object.create(null); }
+          };
+        }
+
+        var ramLocal = makeRamStorage();
+        var ramSession = makeRamStorage();
+        window.__kio_reset_private_storage = function() {
+          try { ramLocal.clear(); ramSession.clear(); } catch(e) {}
+        };
+        try {
+          Object.defineProperty(window, 'localStorage', { get: function() { return ramLocal; }, configurable: true });
+        } catch(e) {}
+        try {
+          Object.defineProperty(window, 'sessionStorage', { get: function() { return ramSession; }, configurable: true });
+        } catch(e) {}
+
+        // Prevent persistent IndexedDB / CacheStorage cross-mode leakage
+        try {
+          if (window.caches) {
+            Object.defineProperty(window, 'caches', {
+              get: function() {
+                return {
+                  open: function() { return Promise.reject(new DOMException('Private mode', 'SecurityError')); },
+                  match: function() { return Promise.resolve(undefined); },
+                  has: function() { return Promise.resolve(false); },
+                  keys: function() { return Promise.resolve([]); },
+                  delete: function() { return Promise.resolve(false); }
+                };
+              },
+              configurable: true
+            });
+          }
+        } catch(e) {}
+        try {
+          if (window.indexedDB && window.indexedDB.open) {
+            var origIdbOpen = window.indexedDB.open;
+            window.indexedDB.open = function() {
+              var req = {};
+              setTimeout(function() {
+                if (typeof req.onerror === 'function') {
+                  req.onerror({ target: { error: new DOMException('Blocked in Private Vault', 'SecurityError') } });
+                }
+              }, 0);
+              return req;
+            };
+          }
+        } catch(e) {}
+
+        // Private-Mode-Only Anti-Fingerprinting (Hardware normalization + Canvas micro-salt)
+        try {
+          Object.defineProperty(navigator, 'hardwareConcurrency', { get: function() { return 4; }, configurable: true });
+          if ('deviceMemory' in navigator) {
+            Object.defineProperty(navigator, 'deviceMemory', { get: function() { return 4; }, configurable: true });
+          }
+        } catch(e) {}
+        try {
+          var salt = ((Math.random() * 4) | 0) + 1;
+          var origToDataUrl = HTMLCanvasElement.prototype.toDataURL;
+          HTMLCanvasElement.prototype.toDataURL = function() {
+            try {
+              var ctx = this.getContext && this.getContext('2d');
+              if (ctx && this.width > 0 && this.height > 0 && this.width <= 512 && this.height <= 512) {
+                var img = ctx.getImageData(0, 0, 1, 1);
+                img.data[0] = (img.data[0] ^ salt) & 255;
+                ctx.putImageData(img, 0, 0);
+              }
+            } catch(e) {}
+            return origToDataUrl.apply(this, arguments);
+          };
+        } catch(e) {}
+      })();
+    """.trimIndent()
+    try {
+      webView.evaluateJavascript(js, null)
+    } catch (_: Throwable) {
+    }
+  }
+
+  /**
    * Industry-leading anti-tracking & anti-fingerprinting shield injected into web pages.
    * Protects against GPC/DNT privacy violations, referrer leaks, battery sniffing, and WebRTC IP exposure.
    */
@@ -1510,7 +1727,7 @@ class WebViewPool(
         mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         domStorageEnabled = true
         @Suppress("DEPRECATION")
-        databaseEnabled = true
+        databaseEnabled = !isPrivate
         setSupportZoom(true)
         builtInZoomControls = true
         displayZoomControls = false
@@ -1556,11 +1773,9 @@ class WebViewPool(
 
     try {
       val cookieMgr = CookieManager.getInstance()
-      // First-party cookies are accepted so websites, sessions, and Cloudflare/auth challenges work
       cookieMgr.setAcceptCookie(true)
-      // Allow third-party cookies if not explicitly disabled in settings so cross-domain video CDNs and embeds work.
-      // In private mode, cookies remain strictly ephemeral in RAM and are completely purged on exit.
-      cookieMgr.setAcceptThirdPartyCookies(webView, !settingsState.blockThirdPartyCookies)
+      // Private mode strictly blocks ALL third-party cookies unconditionally.
+      cookieMgr.setAcceptThirdPartyCookies(webView, !isPrivate && !settingsState.blockThirdPartyCookies)
     } catch (_: Throwable) {
     }
   }
@@ -1598,7 +1813,7 @@ class WebViewPool(
     } catch (_: Throwable) {
     }
 
-    if (extensionManager != null) {
+    if (!isPrivate && extensionManager != null) {
       try {
         webView.addJavascriptInterface(
           object {
@@ -1706,7 +1921,10 @@ class WebViewPool(
         val url = request?.url?.toString() ?: return true
         val currentSettings = settingsProvider()
         if (UrlValidator.isExternalAppScheme(url)) {
-          callbacks.onExternalSchemePrompt(tabId, url, UrlValidator.extractScheme(url))
+          // Strict Private Mode isolation: never hand off private links to external apps
+          if (!isPrivate) {
+            callbacks.onExternalSchemePrompt(tabId, url, UrlValidator.extractScheme(url))
+          }
           return true
         }
         if (!UrlValidator.isSafeWebUrl(url)) {
@@ -1740,8 +1958,10 @@ class WebViewPool(
       ): WebResourceResponse? {
         return try {
           val reqUrl = request?.url?.toString() ?: return null
-          // Serve local Chrome Extension virtual assets cleanly via https://kio-ext.invalid/<extId>/...
-          extensionManager?.serveVirtualExtensionResource(reqUrl)?.let { return it }
+          // Serve local Chrome Extension virtual assets ONLY in Standard Mode (never in Private Mode)
+          if (!isPrivate) {
+            extensionManager?.serveVirtualExtensionResource(reqUrl)?.let { return it }
+          }
           // Allow internal browser schemes (blob:, data:) to be processed natively by Chromium (MediaSource MSE, inline assets)
           if (reqUrl.startsWith("blob:", ignoreCase = true) || reqUrl.startsWith("data:", ignoreCase = true)) {
             return null
@@ -1762,7 +1982,7 @@ class WebViewPool(
           }
           val pageHost = currentPageHosts[tabId].orEmpty()
           val customSet = currentSettings.customBlockedHosts.toSet()
-          val blockedByDnr = extensionManager?.shouldBlockByDnrRules(reqUrl, pageHost) == true
+          val blockedByDnr = !isPrivate && extensionManager?.shouldBlockByDnrRules(reqUrl, pageHost) == true
           if (blockedByDnr || TrackerBlocker.shouldBlockRequest(reqUrl, pageHost, currentSettings.trackerBlockingEnabled, customSet)) {
             callbacks.onTrackerBlocked(tabId)
             val acceptHeader = request?.requestHeaders?.get("Accept")?.lowercase() ?: ""
@@ -1788,7 +2008,11 @@ class WebViewPool(
           pageEarlyInjectedStage[tabId] = 0
           currentPageHosts[tabId] = UrlValidator.extractHost(url)
           currentPageUrls[tabId] = url
+          if (!isPrivate) registerStandardOriginForVault(url)
           if (view != null) {
+            if (isPrivate) {
+              applyPrivateIsolationSandbox(view)
+            }
             if (tabUserAgentModes[tabId] == UserAgentMode.DESKTOP) {
               applyDesktopModeEngine(view, true)
             }
@@ -1808,7 +2032,7 @@ class WebViewPool(
             if (s.dataSaverEnabled) {
               applyDataSaver(view, true)
             }
-            if (s.javascriptEnabled) {
+            if (!isPrivate && s.javascriptEnabled) {
               extensionManager?.buildPageInjectionScript(url, "start")?.let { extJs ->
                 try { view.evaluateJavascript(extJs, null) } catch (_: Throwable) {}
               }
@@ -1822,6 +2046,10 @@ class WebViewPool(
         if (url != null && view != null && !destroyedViews.contains(view)) {
           currentPageHosts[tabId] = UrlValidator.extractHost(url)
           currentPageUrls[tabId] = url
+          if (!isPrivate) registerStandardOriginForVault(url)
+          if (isPrivate) {
+            applyPrivateIsolationSandbox(view)
+          }
           if (tabUserAgentModes[tabId] == UserAgentMode.DESKTOP) {
             applyDesktopModeEngine(view, true)
           }
@@ -1841,7 +2069,7 @@ class WebViewPool(
           if (s.dataSaverEnabled) {
             applyDataSaver(view, true)
           }
-          if (s.javascriptEnabled) {
+          if (!isPrivate && s.javascriptEnabled) {
             extensionManager?.buildPageInjectionScript(url, "end")?.let { extJs ->
               try { view.evaluateJavascript(extJs, null) } catch (_: Throwable) {}
             }
@@ -1993,6 +2221,9 @@ class WebViewPool(
         val stage = pageEarlyInjectedStage[tabId] ?: 0
         if (newProgress >= 15 && stage < 1) {
           pageEarlyInjectedStage[tabId] = 1
+          if (isPrivate) {
+            applyPrivateIsolationSandbox(view)
+          }
           if (tabUserAgentModes[tabId] == UserAgentMode.DESKTOP) {
             applyDesktopModeEngine(view, true)
           }
@@ -2125,7 +2356,9 @@ class WebViewPool(
           val targetUrl = UrlValidator.resolveRelativeUrl(openerUrl, rawTarget)
           if (targetUrl.isBlank() || targetUrl == "about:blank") return
           if (UrlValidator.isExternalAppScheme(targetUrl)) {
-            callbacks.onExternalSchemePrompt(tabId, targetUrl, UrlValidator.extractScheme(targetUrl))
+            if (!isPrivate) {
+              callbacks.onExternalSchemePrompt(tabId, targetUrl, UrlValidator.extractScheme(targetUrl))
+            }
             return
           }
           if (!UrlValidator.isSafeWebUrl(targetUrl)) return

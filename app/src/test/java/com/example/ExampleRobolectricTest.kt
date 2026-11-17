@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kio", appName)
-    assertEquals("1.9.0", BuildConfig.VERSION_NAME)
-    assertEquals(62, BuildConfig.VERSION_CODE)
+    assertEquals("1.9.1", BuildConfig.VERSION_NAME)
+    assertEquals(63, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -153,9 +153,12 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithTag("tabs_new_button").performClick()
     composeTestRule.waitForIdle()
 
-    // Verify Private Mode UI badge and banner
+    // Verify Private Mode UI badge, Zero-Leak Vault card, and removal of Bookmarks & Extensions
     composeTestRule.onNodeWithText("Private").assertIsDisplayed()
     composeTestRule.onNodeWithText("History, cookies & cache are cleared on exit").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("private_vault_card").assertIsDisplayed()
+    composeTestRule.onNodeWithText("No bookmarks saved").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("nav_extensions_button").assertDoesNotExist()
 
     // Open Security Site Info dialog from omnibox security badge
     composeTestRule.onNodeWithTag("security_badge_button").performClick()
@@ -164,18 +167,29 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Done").performClick()
     composeTestRule.waitForIdle()
 
-    // Open Quick Action Grid Menu and verify Extensions, Full screen (replaces New tab), Narrate (replaces Resources)
+    // Open Private Quick Action Grid Menu and verify Private-Mode-Only tools + disabled external/bookmark/share options
     composeTestRule.onNodeWithTag("nav_menu_button").performClick()
     composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("private_menu_banner").assertIsDisplayed()
     composeTestRule.onNodeWithText("Data Saver").assertIsDisplayed()
     composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Full screen").assertIsDisplayed()
     composeTestRule.onNodeWithText("Narrate").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Burn session").assertIsDisplayed()
+    composeTestRule.onNodeWithText("New identity").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Shield audit").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Wipe clipboard").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Purge RAM").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Bookmarks").assertDoesNotExist()
+    composeTestRule.onNodeWithText("Share").assertDoesNotExist()
+    composeTestRule.onNodeWithText("Open externally").assertDoesNotExist()
+    composeTestRule.onNodeWithText("Add shortcut").assertDoesNotExist()
+    composeTestRule.onNodeWithText("Extensions").assertDoesNotExist()
     composeTestRule.onNodeWithText("AI Assistant").assertDoesNotExist()
     composeTestRule.onNodeWithText("Resources").assertDoesNotExist()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.9.0").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.9.1").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
 
     // Navigate into Data Saver folder
@@ -658,5 +672,91 @@ class ExampleRobolectricTest {
 
     assertTrue(vm.activeTab().isPrivate)
     assertEquals("https://example.org/priv", vm.activeTab().url)
+  }
+
+  @Test
+  fun privateModeStrictIsolationAndZeroLeakGuardsWork() {
+    val vm = composeTestRule.activity.viewModel
+    composeTestRule.waitForIdle()
+    composeTestRule.runOnUiThread {
+      vm.dismissIntro()
+      vm.openNewTab(isPrivate = false)
+    }
+    composeTestRule.waitForIdle()
+
+    // Standard Mode 3-dot menu shows standard options and does NOT show Private-Only tools
+    composeTestRule.onNodeWithTag("nav_menu_button").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("Bookmarks").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Share").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Open externally").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Add shortcut").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Burn session").assertDoesNotExist()
+    composeTestRule.onNodeWithText("Shield audit").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("private_menu_banner").assertDoesNotExist()
+    // Dismiss sheet by opening a Private tab via the grid item
+    composeTestRule.onNodeWithText("Private tab").performClick()
+    composeTestRule.waitForIdle()
+
+    // Now in Private Mode: verify strict isolation boundary & guards
+    assertTrue(vm.activeTab().isPrivate)
+    assertTrue(vm.webViewPool.isCurrentlyInPrivateBarrier())
+    assertNull(vm.readClipboardText())
+
+    val bookmarksBefore = vm.bookmarks.value.size
+    composeTestRule.runOnUiThread {
+      vm.setOverlay(com.example.model.ActiveOverlay.BOOKMARKS)
+      assertEquals(com.example.model.ActiveOverlay.NONE, vm.activeOverlay.value)
+      vm.setOverlay(com.example.model.ActiveOverlay.HISTORY)
+      assertEquals(com.example.model.ActiveOverlay.NONE, vm.activeOverlay.value)
+      vm.setOverlay(com.example.model.ActiveOverlay.EXTENSIONS)
+      assertEquals(com.example.model.ActiveOverlay.NONE, vm.activeOverlay.value)
+      vm.toggleCurrentBookmark()
+    }
+    composeTestRule.waitForIdle()
+    assertEquals(bookmarksBefore, vm.bookmarks.value.size)
+
+    // Burn Session incinerates all private tabs and transitions barrier back to Standard Mode
+    composeTestRule.runOnUiThread {
+      vm.burnPrivateSession()
+    }
+    composeTestRule.waitForIdle()
+    assertFalse(vm.activeTab().isPrivate)
+    assertTrue(vm.tabs.value.none { it.isPrivate })
+    assertFalse(vm.webViewPool.isCurrentlyInPrivateBarrier())
+  }
+
+  @Test
+  fun darkModeAndLightModeSwitchEntireBrowserAndStatusBarCleanly() {
+    val activity = composeTestRule.activity
+    val vm = activity.viewModel
+    composeTestRule.waitForIdle()
+    composeTestRule.runOnUiThread {
+      vm.dismissIntro()
+      vm.openNewTab(isPrivate = false)
+    }
+    composeTestRule.waitForIdle()
+
+    // Switch to Light Mode
+    composeTestRule.runOnUiThread {
+      vm.updateSettings { it.copy(themeMode = com.example.model.ThemeMode.LIGHT, nightWebMode = false) }
+    }
+    composeTestRule.waitForIdle()
+    assertEquals(com.example.model.ThemeMode.LIGHT, vm.settings.value.themeMode)
+    assertFalse(vm.settings.value.nightWebMode)
+    assertFalse(vm.webViewPool.resolveIsDark(vm.settings.value))
+    val lightController = androidx.core.view.WindowCompat.getInsetsController(activity.window, activity.window.decorView)
+    assertTrue("Light mode must render dark status bar icons on light background", lightController.isAppearanceLightStatusBars)
+
+    // Switch to Dark Mode
+    composeTestRule.runOnUiThread {
+      vm.updateSettings { it.copy(themeMode = com.example.model.ThemeMode.DARK, nightWebMode = true) }
+    }
+    composeTestRule.waitForIdle()
+    assertEquals(com.example.model.ThemeMode.DARK, vm.settings.value.themeMode)
+    assertTrue(vm.settings.value.nightWebMode)
+    assertTrue(vm.webViewPool.resolveIsDark(vm.settings.value))
+    val darkController = androidx.core.view.WindowCompat.getInsetsController(activity.window, activity.window.decorView)
+    assertFalse("Dark mode must render light status bar icons on dark background", darkController.isAppearanceLightStatusBars)
   }
 }

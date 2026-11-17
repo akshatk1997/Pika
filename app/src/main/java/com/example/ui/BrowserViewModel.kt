@@ -189,6 +189,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   }
 
   private val approvedHttpHosts: MutableSet<String> = ConcurrentHashMap.newKeySet()
+  @Volatile private var clipboardWrittenInPrivate: Boolean = false
   private var bookmarkQuery = ""
   private var historyQuery = ""
 
@@ -451,6 +452,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     override fun onExternalSchemePrompt(tabId: String, url: String, scheme: String) {
       runOnMain {
+        // Hard isolation: Private tabs never hand off links to external apps
+        if (tabById(tabId)?.isPrivate == true) return@runOnMain
         _externalLinkPrompt.value = ExternalLinkPrompt(
           url = url,
           scheme = scheme,
@@ -682,6 +685,11 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     val retained = if (_settings.value.retainOpenTabs) settingsRepo.loadRetainedTabs() else null
     if (retained != null) {
       val (restoredTabs, restoredActiveId) = retained
+      restoredTabs.forEach { t ->
+        if (!t.isPrivate && t.url.isNotBlank()) {
+          webViewPool.registerStandardOriginForVault(t.url)
+        }
+      }
       _tabs.value = restoredTabs
       _activeTabId.value = restoredActiveId
       val current = activeTab()
@@ -862,11 +870,19 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     return true
   }
 
+  private fun applyModeBoundaryTransition(wasPrivate: Boolean, nowPrivate: Boolean) {
+    webViewPool.syncActiveModeBoundary(nowPrivate)
+    if (wasPrivate && !nowPrivate && clipboardWrittenInPrivate) {
+      wipeClipboard(silent = true)
+    }
+  }
+
   fun openNewTab(
     isPrivate: Boolean = false,
     initialUrl: String = "",
     switchToNewTab: Boolean = true
   ) {
+    val wasPrivate = activeTab().isPrivate
     val target = initialUrl.ifBlank { if (!isPrivate) _settings.value.homepageUrl else "" }
     val newTab = TabInfo(
       id = UUID.randomUUID().toString(),
@@ -890,6 +906,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     if (switchToNewTab) {
       _activeTabId.value = newTab.id
+      applyModeBoundaryTransition(wasPrivate = wasPrivate, nowPrivate = isPrivate)
       _activeOverlay.value = ActiveOverlay.NONE
       closeReaderMode()
       _pageSource.value = null
@@ -910,8 +927,10 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   }
 
   fun switchToTab(tabId: String) {
+    val wasPrivate = activeTab().isPrivate
     val targetTab = _tabs.value.firstOrNull { it.id == tabId } ?: return
     _activeTabId.value = tabId
+    applyModeBoundaryTransition(wasPrivate = wasPrivate, nowPrivate = targetTab.isPrivate)
     updateTab(tabId) { it.copy(lastActiveAt = System.currentTimeMillis()) }
     _activeOverlay.value = ActiveOverlay.NONE
     closeReaderMode()
@@ -929,6 +948,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   }
 
   fun closeTab(tabId: String) {
+    val wasPrivate = activeTab().isPrivate
     if (_fullscreenView.value != null && _activeTabId.value == tabId) {
       exitFullscreen()
     }
@@ -951,8 +971,9 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     if (closing.isPrivate && _tabs.value.none { it.isPrivate }) {
       endPrivateSessionCleanup(emptyList())
     }
-    persistOpenTabs()
     val nextActive = activeTab()
+    applyModeBoundaryTransition(wasPrivate = wasPrivate, nowPrivate = nextActive.isPrivate)
+    persistOpenTabs()
     if (nextActive.url.isNotBlank() &&
       nextActive.errorState == null &&
       nextActive.httpWarning == null &&
@@ -1023,6 +1044,65 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   private fun endPrivateSessionCleanup(privateIds: List<String>) {
     webViewPool.wipePrivateSessionData(privateIds)
     downloadController.clearPrivateDownloads()
+    if (clipboardWrittenInPrivate) {
+      wipeClipboard(silent = true)
+    }
+  }
+
+  // Private-Mode-Only Safety Actions
+  fun burnPrivateSession() {
+    val privateIds = _tabs.value.filter { it.isPrivate }.map { it.id }
+    val remaining = _tabs.value.filterNot { it.isPrivate }
+    if (remaining.isEmpty()) {
+      val fresh = TabInfo(id = UUID.randomUUID().toString(), title = "New Tab")
+      _tabs.value = listOf(fresh)
+      _activeTabId.value = fresh.id
+    } else {
+      _tabs.value = remaining
+      if (privateIds.contains(_activeTabId.value)) {
+        _activeTabId.value = remaining.last().id
+      }
+    }
+    closeReaderMode()
+    _pageSource.value = null
+    closeFindInPage()
+    _activeOverlay.value = ActiveOverlay.NONE
+    endPrivateSessionCleanup(privateIds)
+    wipeClipboard(silent = true)
+    webViewPool.syncActiveModeBoundary(false)
+    persistOpenTabs()
+    showToast("Private session burned — zero traces left")
+  }
+
+  fun rotatePrivateIdentity() {
+    val tab = activeTab()
+    if (!tab.isPrivate) return
+    val privateIds = _tabs.value.filter { it.isPrivate }.map { it.id }
+    webViewPool.purgePrivateRamData(privateIds, reloadTabId = if (tab.url.isNotBlank()) tab.id else null)
+    showToast("Fresh private identity active")
+  }
+
+  fun purgePrivateRamOnly() {
+    val tab = activeTab()
+    if (!tab.isPrivate) return
+    val privateIds = _tabs.value.filter { it.isPrivate }.map { it.id }
+    webViewPool.purgePrivateRamData(privateIds, reloadTabId = null)
+    showToast("Private cookies, RAM cache & storage purged")
+  }
+
+  fun wipeClipboard(silent: Boolean = false) {
+    clipboardWrittenInPrivate = false
+    try {
+      val cm = appContext.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        cm.clearPrimaryClip()
+      } else {
+        cm.setPrimaryClip(ClipData.newPlainText("", ""))
+      }
+      if (!silent) showToast("Clipboard wiped")
+    } catch (_: Throwable) {
+      if (!silent) showToast("Clipboard cleared")
+    }
   }
 
   fun goBack(): Boolean {
@@ -1163,6 +1243,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   }
 
   fun readClipboardText(): String? {
+    // Strict Private Mode isolation: never peek external/standard clipboard into Private Mode
+    if (activeTab().isPrivate) return null
     return try {
       val cm = appContext.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return null
       val item = cm.primaryClip?.getItemAt(0) ?: return null
@@ -1177,12 +1259,15 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     try {
       val cm = appContext.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
       val clipData = ClipData.newPlainText("Text", text)
-      if (activeTab().isPrivate && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        try {
-          clipData.description.extras = PersistableBundle().apply {
-            putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
+      if (activeTab().isPrivate) {
+        clipboardWrittenInPrivate = true
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+          try {
+            clipData.description.extras = PersistableBundle().apply {
+              putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
+            }
+          } catch (_: Throwable) {
           }
-        } catch (_: Throwable) {
         }
       }
       cm.setPrimaryClip(clipData)
@@ -1200,6 +1285,10 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   }
 
   fun openInSystemBrowser() {
+    if (activeTab().isPrivate) {
+      showToast("External browser is disabled in Private Mode")
+      return
+    }
     val url = activeTab().url
     if (!UrlValidator.isSafeWebUrl(url) || url == "about:blank") return
     try {
@@ -1583,6 +1672,10 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   }
 
   fun shareUrl(url: String) {
+    if (activeTab().isPrivate) {
+      showToast("Sharing is disabled in Private Mode")
+      return
+    }
     if (!UrlValidator.isSafeWebUrl(url) || url == "about:blank") return
     try {
       val intent = Intent(Intent.ACTION_SEND).apply {
@@ -1634,6 +1727,10 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   fun toggleCurrentBookmark() {
     val tab = activeTab()
+    if (tab.isPrivate) {
+      showToast("Bookmarks are only available in Standard Mode")
+      return
+    }
     if (!UrlValidator.isSafeWebUrl(tab.url) || tab.url == "about:blank") return
     viewModelScope.launch(Dispatchers.IO) {
       try {
@@ -1962,6 +2059,12 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   }
 
   fun setOverlay(overlay: ActiveOverlay) {
+    if (activeTab().isPrivate &&
+      (overlay == ActiveOverlay.BOOKMARKS || overlay == ActiveOverlay.HISTORY || overlay == ActiveOverlay.EXTENSIONS)
+    ) {
+      showToast("Unavailable in Private Mode for isolation")
+      return
+    }
     _activeOverlay.value = overlay
     if (overlay == ActiveOverlay.BOOKMARKS) refreshBookmarks("")
     if (overlay == ActiveOverlay.HISTORY) refreshHistory("")

@@ -107,6 +107,7 @@ import com.example.ui.theme.BatSignalGold
 import com.example.ui.theme.FeatherDangerRed
 import com.example.ui.theme.FeatherMintDark
 import com.example.ui.theme.FeatherPrivateAccent
+import com.example.ui.theme.FeatherPrivateAccentLight
 import com.example.ui.theme.FeatherSecureGreen
 import com.example.ui.theme.FeatherWarningAmber
 import java.net.URLEncoder
@@ -115,6 +116,7 @@ import java.net.URLEncoder
 @Composable
 fun NewTabHomeView(
   isPrivate: Boolean,
+  isDarkTheme: Boolean = true,
   searchEngineName: String,
   bookmarks: List<BookmarkItem>,
   onSubmitQuery: (String) -> Unit,
@@ -123,27 +125,48 @@ fun NewTabHomeView(
 ) {
   var homeSearch by remember { mutableStateOf("") }
 
-  // Pure OLED dark homepage palette (premium pitch-black vibe without touching the homepage logo)
-  val pureBlackBg = Color(0xFF000000)
-  val cardSurfaceDark = Color(0xFF0B0C10)
-  val searchSurfaceDark = Color(0xFF0E1016)
-  val hairlineBorderDark = Color(0xFF1E222D)
-  val titleOnDark = Color(0xFFF8FAFC)
-  val mutedOnDark = Color(0xFF94A3B8)
-  val primaryAccent = if (isPrivate) FeatherPrivateAccent else Color(0xFF38BDF8)
-  val auraAccent = if (isPrivate) FeatherPrivateAccent else BatSignalGold
+  // Adaptive Pure OLED Dark & Crisp Light Homepage Palette (KioLogo remains 100% untouched)
+  val pageBg = when {
+    isDarkTheme -> Color(0xFF000000)
+    isPrivate -> Color(0xFFF6F3FF)
+    else -> Color(0xFFF8FAFC)
+  }
+  val cardSurface = when {
+    isDarkTheme -> Color(0xFF0B0C10)
+    else -> Color(0xFFFFFFFF)
+  }
+  val searchSurface = when {
+    isDarkTheme && isPrivate -> Color(0xFF140D22)
+    isDarkTheme -> Color(0xFF0E1016)
+    else -> Color(0xFFFFFFFF)
+  }
+  val hairlineBorder = when {
+    isDarkTheme -> Color(0xFF1E222D)
+    isPrivate -> Color(0xFFDDD6FE)
+    else -> Color(0xFFE2E8F0)
+  }
+  val titleColor = if (isDarkTheme) Color(0xFFF8FAFC) else Color(0xFF0F172A)
+  val mutedColor = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF475569)
+  val primaryAccent = when {
+    isPrivate && isDarkTheme -> FeatherPrivateAccent
+    isPrivate -> FeatherPrivateAccentLight
+    isDarkTheme -> Color(0xFF38BDF8)
+    else -> Color(0xFF0284C7)
+  }
+  val auraAccent = if (isPrivate) primaryAccent else BatSignalGold
   val secondaryAccent = if (isPrivate) Color(0xFF6366F1) else FeatherMintDark
 
   BoxWithConstraints(
     modifier = modifier
       .fillMaxSize()
-      .background(pureBlackBg)
+      .background(pageBg)
       .drawBehind {
         val center = Offset(size.width * 0.5f, size.height * 0.18f)
+        val glowAlpha = if (isDarkTheme) 0.09f else 0.10f
         drawCircle(
           brush = Brush.radialGradient(
             colors = listOf(
-              auraAccent.copy(alpha = 0.09f),
+              auraAccent.copy(alpha = glowAlpha),
               secondaryAccent.copy(alpha = 0.03f),
               Color.Transparent
             ),
@@ -154,13 +177,13 @@ fun NewTabHomeView(
           center = center
         )
         drawCircle(
-          color = auraAccent.copy(alpha = 0.06f),
+          color = auraAccent.copy(alpha = if (isDarkTheme) 0.06f else 0.09f),
           radius = size.minDimension * 0.34f,
           center = center,
           style = Stroke(width = 0.8.dp.toPx())
         )
         drawCircle(
-          color = primaryAccent.copy(alpha = 0.04f),
+          color = primaryAccent.copy(alpha = if (isDarkTheme) 0.04f else 0.07f),
           radius = size.minDimension * 0.52f,
           center = center,
           style = Stroke(width = 0.8.dp.toPx())
@@ -195,15 +218,15 @@ fun NewTabHomeView(
         text = if (isPrivate) stringResource(R.string.tabs_private) else stringResource(R.string.app_name),
         style = MaterialTheme.typography.headlineMedium,
         fontWeight = FontWeight.SemiBold,
-        color = titleOnDark
+        color = titleColor
       )
 
       if (isPrivate) {
         Spacer(modifier = Modifier.height(8.dp))
         Surface(
           shape = RoundedCornerShape(50),
-          color = Color(0xFF100A1A),
-          border = BorderStroke(0.8.dp, FeatherPrivateAccent.copy(alpha = 0.55f))
+          color = if (isDarkTheme) Color(0xFF100A1A) else Color(0xFFEDE9FE),
+          border = BorderStroke(0.8.dp, primaryAccent.copy(alpha = 0.55f))
         ) {
           Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -213,13 +236,13 @@ fun NewTabHomeView(
               modifier = Modifier
                 .size(7.dp)
                 .clip(CircleShape)
-                .background(FeatherPrivateAccent)
+                .background(primaryAccent)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
               text = stringResource(R.string.tabs_private_banner),
               style = MaterialTheme.typography.labelMedium,
-              color = Color(0xFFE2E8F0)
+              color = if (isDarkTheme) Color(0xFFE2E8F0) else Color(0xFF4C1D95)
             )
           }
         }
@@ -227,13 +250,13 @@ fun NewTabHomeView(
 
       Spacer(modifier = Modifier.height(18.dp))
 
-      // Clean Standard Search Box
+      // Clean Search Box
       Surface(
         shape = RoundedCornerShape(28.dp),
-        color = searchSurfaceDark,
+        color = searchSurface,
         tonalElevation = 0.dp,
-        shadowElevation = 0.dp,
-        border = BorderStroke(1.dp, primaryAccent.copy(alpha = 0.32f)),
+        shadowElevation = if (isDarkTheme) 0.dp else 2.dp,
+        border = BorderStroke(1.dp, primaryAccent.copy(alpha = if (isDarkTheme) 0.32f else 0.42f)),
         modifier = Modifier.fillMaxWidth().height(54.dp)
       ) {
         Row(
@@ -252,7 +275,7 @@ fun NewTabHomeView(
               Text(
                 text = stringResource(R.string.home_search_hint, searchEngineName),
                 style = MaterialTheme.typography.bodyLarge,
-                color = mutedOnDark
+                color = mutedColor
               )
             }
             BasicTextField(
@@ -260,7 +283,7 @@ fun NewTabHomeView(
               onValueChange = { homeSearch = it },
               singleLine = true,
               textStyle = MaterialTheme.typography.bodyLarge.copy(
-                color = titleOnDark
+                color = titleColor
               ),
               cursorBrush = SolidColor(primaryAccent),
               keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
@@ -296,120 +319,174 @@ fun NewTabHomeView(
 
       Spacer(modifier = Modifier.height(20.dp))
 
-      // Bookmarks Section Header
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Icon(
-          FeatherIcons.Bookmark,
-          contentDescription = null,
-          tint = primaryAccent,
-          modifier = Modifier.size(16.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-          text = stringResource(R.string.home_bookmarks_section).uppercase(),
-          style = MaterialTheme.typography.labelMedium,
-          fontWeight = FontWeight.SemiBold,
-          color = mutedOnDark
-        )
-      }
-
-      Spacer(modifier = Modifier.height(12.dp))
-
-      if (bookmarks.isEmpty()) {
+      if (isPrivate) {
+        // Private Mode: Bookmarks are strictly excluded. Show isolated Private Vault protection card.
         Surface(
           shape = RoundedCornerShape(18.dp),
-          color = cardSurfaceDark,
-          border = BorderStroke(0.8.dp, hairlineBorderDark),
-          modifier = Modifier.fillMaxWidth()
+          color = cardSurface,
+          border = BorderStroke(0.9.dp, primaryAccent.copy(alpha = 0.35f)),
+          modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp).testTag("private_vault_card")
         ) {
-          Row(
-            modifier = Modifier.padding(18.dp),
-            verticalAlignment = Alignment.CenterVertically
+          Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
           ) {
-            Surface(
-              shape = RoundedCornerShape(12.dp),
-              color = primaryAccent.copy(alpha = 0.12f),
-              modifier = Modifier.size(40.dp)
-            ) {
-              Box(contentAlignment = Alignment.Center) {
-                Icon(
-                  FeatherIcons.BookmarkOutline,
-                  contentDescription = null,
-                  tint = primaryAccent,
-                  modifier = Modifier.size(20.dp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = primaryAccent.copy(alpha = 0.14f),
+                modifier = Modifier.size(34.dp)
+              ) {
+                Box(contentAlignment = Alignment.Center) {
+                  Icon(
+                    FeatherIcons.Shield,
+                    contentDescription = null,
+                    tint = primaryAccent,
+                    modifier = Modifier.size(18.dp)
+                  )
+                }
+              }
+              Spacer(modifier = Modifier.width(10.dp))
+              Column {
+                Text(
+                  text = "Zero-Leak Private Vault",
+                  style = MaterialTheme.typography.titleSmall,
+                  fontWeight = FontWeight.SemiBold,
+                  color = titleColor
+                )
+                Text(
+                  text = "Completely isolated from Standard Mode",
+                  style = MaterialTheme.typography.labelSmall,
+                  color = mutedColor
                 )
               }
             }
-            Spacer(modifier = Modifier.width(14.dp))
             Text(
-              text = stringResource(R.string.home_no_bookmarks),
-              style = MaterialTheme.typography.bodyMedium,
-              color = mutedOnDark
+              text = "• Zero cookies, storage, bookmarks, or history shared across modes.\n" +
+                "• Ephemeral RAM-only storage & anti-fingerprinting shield active.\n" +
+                "• External apps, shortcuts, sharing, extensions & screenshots blocked.",
+              style = MaterialTheme.typography.bodySmall,
+              color = mutedColor,
+              lineHeight = 19.sp
             )
           }
         }
       } else {
-        val bookmarkRows = bookmarks.take(8).chunked(2)
-        Column(
-          modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-          verticalArrangement = Arrangement.spacedBy(10.dp)
+        // Standard Mode Only: Bookmarks Section
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          verticalAlignment = Alignment.CenterVertically
         ) {
-          bookmarkRows.forEach { rowItems ->
+          Icon(
+            FeatherIcons.Bookmark,
+            contentDescription = null,
+            tint = primaryAccent,
+            modifier = Modifier.size(16.dp)
+          )
+          Spacer(modifier = Modifier.width(8.dp))
+          Text(
+            text = stringResource(R.string.home_bookmarks_section).uppercase(),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = mutedColor
+          )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (bookmarks.isEmpty()) {
+          Surface(
+            shape = RoundedCornerShape(18.dp),
+            color = cardSurface,
+            border = BorderStroke(0.8.dp, hairlineBorder),
+            modifier = Modifier.fillMaxWidth()
+          ) {
             Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.spacedBy(10.dp)
+              modifier = Modifier.padding(18.dp),
+              verticalAlignment = Alignment.CenterVertically
             ) {
-              rowItems.forEach { bm ->
-                val host = UrlValidator.extractHost(bm.url)
-                val initial = host.firstOrNull()?.uppercase() ?: "B"
-                Surface(
-                  shape = RoundedCornerShape(16.dp),
-                  color = cardSurfaceDark,
-                  tonalElevation = 0.dp,
-                  border = BorderStroke(0.8.dp, hairlineBorderDark),
-                  modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(16.dp))
-                    .clickable { onOpenBookmark(bm.url) }
-                    .testTag("home_bookmark_${bm.id}")
-                ) {
-                  Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+              Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = primaryAccent.copy(alpha = 0.12f),
+                modifier = Modifier.size(40.dp)
+              ) {
+                Box(contentAlignment = Alignment.Center) {
+                  Icon(
+                    FeatherIcons.BookmarkOutline,
+                    contentDescription = null,
+                    tint = primaryAccent,
+                    modifier = Modifier.size(20.dp)
+                  )
+                }
+              }
+              Spacer(modifier = Modifier.width(14.dp))
+              Text(
+                text = stringResource(R.string.home_no_bookmarks),
+                style = MaterialTheme.typography.bodyMedium,
+                color = mutedColor
+              )
+            }
+          }
+        } else {
+          val bookmarkRows = bookmarks.take(8).chunked(2)
+          Column(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+          ) {
+            bookmarkRows.forEach { rowItems ->
+              Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+              ) {
+                rowItems.forEach { bm ->
+                  val host = UrlValidator.extractHost(bm.url)
+                  val initial = host.firstOrNull()?.uppercase() ?: "B"
+                  Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = cardSurface,
+                    tonalElevation = 0.dp,
+                    border = BorderStroke(0.8.dp, hairlineBorder),
+                    modifier = Modifier
+                      .weight(1f)
+                      .clip(RoundedCornerShape(16.dp))
+                      .clickable { onOpenBookmark(bm.url) }
+                      .testTag("home_bookmark_${bm.id}")
                   ) {
-                    SiteFavicon(
-                      url = bm.url,
-                      fallbackInitial = initial,
-                      accentColor = primaryAccent,
-                      size = 36.dp,
-                      cornerRadius = 11.dp
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                      Text(
-                        text = bm.title,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = titleOnDark,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                    Row(
+                      modifier = Modifier.padding(12.dp),
+                      verticalAlignment = Alignment.CenterVertically
+                    ) {
+                      SiteFavicon(
+                        url = bm.url,
+                        fallbackInitial = initial,
+                        accentColor = primaryAccent,
+                        size = 36.dp,
+                        cornerRadius = 11.dp
                       )
-                      Text(
-                        text = host,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = mutedOnDark,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                      )
+                      Spacer(modifier = Modifier.width(10.dp))
+                      Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                          text = bm.title,
+                          style = MaterialTheme.typography.bodyMedium,
+                          fontWeight = FontWeight.SemiBold,
+                          color = titleColor,
+                          maxLines = 1,
+                          overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                          text = host,
+                          style = MaterialTheme.typography.labelSmall,
+                          color = mutedColor,
+                          maxLines = 1,
+                          overflow = TextOverflow.Ellipsis
+                        )
+                      }
                     }
                   }
                 }
-              }
-              if (rowItems.size == 1) {
-                Spacer(modifier = Modifier.weight(1f))
+                if (rowItems.size == 1) {
+                  Spacer(modifier = Modifier.weight(1f))
+                }
               }
             }
           }

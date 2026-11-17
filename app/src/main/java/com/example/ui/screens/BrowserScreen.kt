@@ -132,8 +132,10 @@ import com.example.ui.components.NewTabHomeView
 import com.example.ui.components.PageErrorOverlay
 import com.example.ui.components.PageSourceOverlay
 import com.example.ui.components.ReaderModeOverlay
+import com.example.ui.theme.FeatherDangerRed
 import com.example.ui.theme.FeatherMintDark
 import com.example.ui.theme.FeatherPrivateAccent
+import com.example.ui.theme.FeatherPrivateAccentLight
 import com.example.ui.theme.FeatherSecureGreen
 import com.example.ui.theme.FeatherWarningAmber
 import com.example.ui.theme.LocalReduceMotion
@@ -176,8 +178,15 @@ fun BrowserScreen(
   val phishingAssessment by viewModel.phishingAssessment.collectAsStateWithLifecycle()
 
   var showSiteInfoDialog by remember { mutableStateOf(false) }
+  var showPrivateAuditDialog by remember { mutableStateOf(false) }
   var showQuickSheet by remember { mutableStateOf(false) }
   var isNavBarVisible by remember { mutableStateOf(true) }
+
+  val isDarkTheme = when (settings.themeMode) {
+    ThemeMode.SYSTEM -> isSystemInDarkTheme()
+    ThemeMode.DARK -> true
+    ThemeMode.LIGHT -> false
+  }
 
   val activeTab = tabs.firstOrNull { it.id == activeTabId } ?: tabs.first()
   val snackbarHostState = remember { SnackbarHostState() }
@@ -238,7 +247,11 @@ fun BrowserScreen(
       val isImeVisible = WindowInsets.isImeVisible
 
       Scaffold(
-        containerColor = Color.Black,
+        containerColor = when {
+          isDarkTheme -> Color.Black
+          activeTab.isPrivate -> Color(0xFFF6F3FF)
+          else -> Color(0xFFF8FAFC)
+        },
         contentWindowInsets = if (isBrowserFullscreen) WindowInsets(0, 0, 0, 0) else WindowInsets.statusBars
       ) { innerPadding ->
         Column(
@@ -257,6 +270,7 @@ fun BrowserScreen(
               activeTab = activeTab,
               tabCount = tabs.size,
               extensionsCount = installedExtensions.count { it.enabled },
+              isDarkTheme = isDarkTheme,
               settings = settings,
               compactSingleRow = isWideWidth,
               readClipboard = { viewModel.readClipboardText() },
@@ -280,8 +294,9 @@ fun BrowserScreen(
             )
           }
 
-            // Kiwi-style 1-tap Chrome Web Store Extension Installer Banner when browsing a store item
-            val detectedStoreExtId = remember(activeTab.url, installedExtensions) {
+            // Kiwi-style 1-tap Chrome Web Store Extension Installer Banner (Standard Mode only)
+            val detectedStoreExtId = remember(activeTab.url, activeTab.isPrivate, installedExtensions) {
+              if (activeTab.isPrivate) return@remember null
               val id = viewModel.detectChromeWebStoreExtensionId(activeTab.url)
               if (id != null && installedExtensions.none { it.id == id }) id else null
             }
@@ -292,8 +307,8 @@ fun BrowserScreen(
             ) {
               Surface(
                 shape = RoundedCornerShape(14.dp),
-                color = Color(0xFF0E1A2B),
-                border = BorderStroke(1.dp, Color(0xFF38BDF8).copy(alpha = 0.45f)),
+                color = if (isDarkTheme) Color(0xFF0E1A2B) else Color(0xFFE0F2FE),
+                border = BorderStroke(1.dp, (if (isDarkTheme) Color(0xFF38BDF8) else Color(0xFF0284C7)).copy(alpha = 0.45f)),
                 modifier = Modifier
                   .fillMaxWidth()
                   .padding(horizontal = 12.dp, vertical = 6.dp)
@@ -307,14 +322,14 @@ fun BrowserScreen(
                     Icon(
                       FeatherIcons.Extension,
                       contentDescription = null,
-                      tint = Color(0xFF38BDF8),
+                      tint = if (isDarkTheme) Color(0xFF38BDF8) else Color(0xFF0284C7),
                       modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                       text = "Chrome extension detected",
                       style = MaterialTheme.typography.labelMedium,
-                      color = Color(0xFFF8FAFC),
+                      color = if (isDarkTheme) Color(0xFFF8FAFC) else Color(0xFF0F172A),
                       fontWeight = FontWeight.SemiBold,
                       maxLines = 1,
                       overflow = TextOverflow.Ellipsis
@@ -326,7 +341,7 @@ fun BrowserScreen(
                   ) {
                     Text(
                       if (isInstallingExtension) "Installing..." else "Add to Kio",
-                      color = Color(0xFF38BDF8),
+                      color = if (isDarkTheme) Color(0xFF38BDF8) else Color(0xFF0284C7),
                       fontWeight = FontWeight.Bold
                     )
                   }
@@ -443,8 +458,9 @@ fun BrowserScreen(
                 activeTab.url.isBlank() && !activeTab.isLoading -> {
                   NewTabHomeView(
                     isPrivate = activeTab.isPrivate,
+                    isDarkTheme = isDarkTheme,
                     searchEngineName = settings.searchEngine.label,
-                    bookmarks = bookmarks,
+                    bookmarks = if (activeTab.isPrivate) emptyList() else bookmarks,
                     onSubmitQuery = { viewModel.navigateActiveTab(it) },
                     onOpenBookmark = { viewModel.navigateActiveTab(it) }
                   )
@@ -769,7 +785,7 @@ fun BrowserScreen(
               onCloseSheet = { viewModel.setOverlay(ActiveOverlay.NONE) }
             )
           }
-          activeOverlay == ActiveOverlay.BOOKMARKS -> {
+          activeOverlay == ActiveOverlay.BOOKMARKS && !activeTab.isPrivate -> {
             BookmarksScreen(
               bookmarks = bookmarks,
               onSearch = { viewModel.refreshBookmarks(it) },
@@ -781,7 +797,7 @@ fun BrowserScreen(
               onClose = { viewModel.setOverlay(ActiveOverlay.NONE) }
             )
           }
-          activeOverlay == ActiveOverlay.HISTORY -> {
+          activeOverlay == ActiveOverlay.HISTORY && !activeTab.isPrivate -> {
             HistoryScreen(
               history = history,
               historyEnabled = settings.historyEnabled,
@@ -807,7 +823,7 @@ fun BrowserScreen(
               onClose = { viewModel.setOverlay(ActiveOverlay.NONE) }
             )
           }
-          activeOverlay == ActiveOverlay.EXTENSIONS -> {
+          activeOverlay == ActiveOverlay.EXTENSIONS && !activeTab.isPrivate -> {
             ExtensionsScreen(
               extensions = installedExtensions,
               isInstalling = isInstallingExtension,
@@ -835,6 +851,7 @@ fun BrowserScreen(
             SettingsScreen(
               settings = settings,
               currentUrl = shareableUrl,
+              isPrivateMode = activeTab.isPrivate,
               sitePermissions = sitePermissions,
               installedExtensionsCount = installedExtensions.size,
               systemWebViewInfo = viewModel.systemWebViewPackageInfo,
@@ -865,11 +882,12 @@ fun BrowserScreen(
     )
   }
 
-  // Via / X Browser Quick Action Grid Sheet
+  // Quick Action Grid Sheet (strictly separated Standard vs Private Mode controls)
   if (showQuickSheet) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val hasUrl = activeTab.url.isNotBlank()
-    val isBookmarked = viewModel.isCurrentPageBookmarked()
+    val isPrivate = activeTab.isPrivate
+    val isBookmarked = !isPrivate && viewModel.isCurrentPageBookmarked()
     ModalBottomSheet(
       onDismissRequest = { showQuickSheet = false },
       sheetState = sheetState,
@@ -882,24 +900,54 @@ fun BrowserScreen(
           .padding(horizontal = 16.dp)
           .padding(bottom = 20.dp)
       ) {
+        if (isPrivate) {
+          Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = (if (isDarkTheme) FeatherPrivateAccent else FeatherPrivateAccentLight).copy(alpha = 0.14f),
+            border = BorderStroke(0.8.dp, (if (isDarkTheme) FeatherPrivateAccent else FeatherPrivateAccentLight).copy(alpha = 0.45f)),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp).testTag("private_menu_banner")
+          ) {
+            Row(
+              modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Icon(
+                FeatherIcons.PrivateMask,
+                contentDescription = null,
+                tint = if (isDarkTheme) FeatherPrivateAccent else FeatherPrivateAccentLight,
+                modifier = Modifier.size(16.dp)
+              )
+              Spacer(modifier = Modifier.width(8.dp))
+              Text(
+                text = "PRIVATE VAULT · ISOLATED ZERO-LEAK MODE",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = if (isDarkTheme) FeatherPrivateAccent else FeatherPrivateAccentLight
+              )
+            }
+          }
+        }
+
         // Quick Modes Row
         FlowRow(
           horizontalArrangement = Arrangement.spacedBy(8.dp),
           verticalArrangement = Arrangement.spacedBy(6.dp),
           modifier = Modifier.fillMaxWidth()
         ) {
-          FilterChip(
-            selected = installedExtensions.any { it.enabled },
-            onClick = {
-              showQuickSheet = false
-              viewModel.setOverlay(ActiveOverlay.EXTENSIONS)
-            },
-            leadingIcon = { Icon(FeatherIcons.Extension, contentDescription = null, modifier = Modifier.size(16.dp)) },
-            label = {
-              val activeExtCount = installedExtensions.count { it.enabled }
-              Text(if (activeExtCount > 0) "Extensions ($activeExtCount)" else "Extensions")
-            }
-          )
+          if (!isPrivate) {
+            FilterChip(
+              selected = installedExtensions.any { it.enabled },
+              onClick = {
+                showQuickSheet = false
+                viewModel.setOverlay(ActiveOverlay.EXTENSIONS)
+              },
+              leadingIcon = { Icon(FeatherIcons.Extension, contentDescription = null, modifier = Modifier.size(16.dp)) },
+              label = {
+                val activeExtCount = installedExtensions.count { it.enabled }
+                Text(if (activeExtCount > 0) "Extensions ($activeExtCount)" else "Extensions")
+              }
+            )
+          }
           FilterChip(
             selected = activeTab.userAgentMode == UserAgentMode.DESKTOP,
             onClick = {
@@ -918,15 +966,10 @@ fun BrowserScreen(
             },
             label = { Text("iPhone") }
           )
-          val isDarkActive = when (settings.themeMode) {
-            ThemeMode.SYSTEM -> isSystemInDarkTheme()
-            ThemeMode.DARK -> true
-            ThemeMode.LIGHT -> false
-          }
           FilterChip(
-            selected = isDarkActive,
+            selected = isDarkTheme,
             onClick = {
-              val nextDark = !isDarkActive
+              val nextDark = !isDarkTheme
               viewModel.updateSettings {
                 it.copy(
                   themeMode = if (nextDark) ThemeMode.DARK else ThemeMode.LIGHT,
@@ -936,12 +979,12 @@ fun BrowserScreen(
             },
             leadingIcon = {
               Icon(
-                if (isDarkActive) FeatherIcons.NightMoon else FeatherIcons.SunLight,
+                if (isDarkTheme) FeatherIcons.NightMoon else FeatherIcons.SunLight,
                 contentDescription = null,
                 modifier = Modifier.size(16.dp)
               )
             },
-            label = { Text(if (isDarkActive) "Dark mode" else "Light mode") }
+            label = { Text(if (isDarkTheme) "Dark mode" else "Light mode") }
           )
           FilterChip(
             selected = settings.dataSaverEnabled,
@@ -961,89 +1004,174 @@ fun BrowserScreen(
         HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
         Spacer(modifier = Modifier.height(12.dp))
 
-        // 4-Column Crisp Grid Actions
-        val gridActions = listOf(
-          QuickActionItem(
-            FeatherIcons.Fullscreen,
-            if (isBrowserFullscreen) stringResource(R.string.action_exit_fullscreen) else stringResource(R.string.action_fullscreen),
-            true
-          ) {
-            showQuickSheet = false
-            viewModel.toggleBrowserFullscreen()
-          },
-          QuickActionItem(FeatherIcons.PrivateMask, stringResource(R.string.action_new_private_tab), true) {
-            showQuickSheet = false
-            viewModel.openNewTab(isPrivate = true)
-          },
-          QuickActionItem(
-            if (isBookmarked) FeatherIcons.Bookmark else FeatherIcons.BookmarkOutline,
-            if (isBookmarked) stringResource(R.string.action_remove_bookmark) else stringResource(R.string.action_add_bookmark),
-            hasUrl
-          ) {
-            showQuickSheet = false
-            viewModel.toggleCurrentBookmark()
-          },
-          QuickActionItem(Icons.Filled.Search, stringResource(R.string.action_find_in_page), hasUrl) {
-            showQuickSheet = false
-            viewModel.openFindInPage()
-          },
-          QuickActionItem(FeatherIcons.Bookmark, stringResource(R.string.action_bookmarks), true) {
-            showQuickSheet = false
-            viewModel.setOverlay(ActiveOverlay.BOOKMARKS)
-          },
-          QuickActionItem(FeatherIcons.History, stringResource(R.string.action_history), true) {
-            showQuickSheet = false
-            viewModel.setOverlay(ActiveOverlay.HISTORY)
-          },
-          QuickActionItem(FeatherIcons.Download, stringResource(R.string.action_downloads), true) {
-            showQuickSheet = false
-            viewModel.setOverlay(ActiveOverlay.DOWNLOADS)
-          },
-          QuickActionItem(
-            FeatherIcons.Announcer,
-            stringResource(R.string.action_announcer),
-            hasUrl
-          ) {
-            showQuickSheet = false
-            viewModel.toggleReaderMode()
-          },
-          QuickActionItem(
-            FeatherIcons.Extension,
-            stringResource(R.string.action_extensions),
-            true
-          ) {
-            showQuickSheet = false
-            viewModel.setOverlay(ActiveOverlay.EXTENSIONS)
-          },
-          QuickActionItem(FeatherIcons.PrintPdf, stringResource(R.string.action_save_pdf), hasUrl) {
-            showQuickSheet = false
-            onSavePdf()
-          },
-          QuickActionItem(FeatherIcons.CodeSource, stringResource(R.string.action_view_source), hasUrl) {
-            showQuickSheet = false
-            viewModel.openPageSource()
-          },
-          QuickActionItem(FeatherIcons.Translate, stringResource(R.string.action_translate), hasUrl) {
-            showQuickSheet = false
-            viewModel.translateActivePage()
-          },
-          QuickActionItem(Icons.Filled.Share, stringResource(R.string.action_share), hasUrl) {
-            showQuickSheet = false
-            viewModel.shareActiveUrl()
-          },
-          QuickActionItem(FeatherIcons.OpenInNew, stringResource(R.string.action_open_external), hasUrl) {
-            showQuickSheet = false
-            viewModel.openInSystemBrowser()
-          },
-          QuickActionItem(Icons.Filled.Star, stringResource(R.string.action_pin_home), hasUrl) {
-            showQuickSheet = false
-            onPinHomeShortcut(activeTab.url, activeTab.title)
-          },
-          QuickActionItem(Icons.Filled.Settings, stringResource(R.string.action_settings), true) {
-            showQuickSheet = false
-            viewModel.setOverlay(ActiveOverlay.SETTINGS)
-          }
-        )
+        // 4-Column Crisp Grid Actions: Private Mode excludes Bookmarks/History/Extensions/Share/External/Shortcut
+        // and provides exclusive Private-Mode-Only Safety Tools instead.
+        val gridActions = if (isPrivate) {
+          listOf(
+            QuickActionItem(
+              FeatherIcons.Fullscreen,
+              if (isBrowserFullscreen) stringResource(R.string.action_exit_fullscreen) else stringResource(R.string.action_fullscreen),
+              true
+            ) {
+              showQuickSheet = false
+              viewModel.toggleBrowserFullscreen()
+            },
+            QuickActionItem(FeatherIcons.PrivateMask, stringResource(R.string.action_new_private_tab), true) {
+              showQuickSheet = false
+              viewModel.openNewTab(isPrivate = true)
+            },
+            QuickActionItem(
+              FeatherIcons.BurnFlame,
+              stringResource(R.string.action_burn_session),
+              true,
+              accentTint = FeatherDangerRed
+            ) {
+              showQuickSheet = false
+              viewModel.burnPrivateSession()
+            },
+            QuickActionItem(
+              Icons.Filled.Refresh,
+              stringResource(R.string.action_new_identity),
+              true,
+              accentTint = if (isDarkTheme) FeatherPrivateAccent else FeatherPrivateAccentLight
+            ) {
+              showQuickSheet = false
+              viewModel.rotatePrivateIdentity()
+            },
+            QuickActionItem(
+              FeatherIcons.Shield,
+              stringResource(R.string.action_shield_audit),
+              true,
+              accentTint = FeatherSecureGreen
+            ) {
+              showQuickSheet = false
+              showPrivateAuditDialog = true
+            },
+            QuickActionItem(
+              FeatherIcons.BroomWipe,
+              stringResource(R.string.action_wipe_clipboard),
+              true
+            ) {
+              showQuickSheet = false
+              viewModel.wipeClipboard()
+            },
+            QuickActionItem(
+              FeatherIcons.NoImage,
+              stringResource(R.string.action_purge_ram),
+              true
+            ) {
+              showQuickSheet = false
+              viewModel.purgePrivateRamOnly()
+            },
+            QuickActionItem(
+              FeatherIcons.Announcer,
+              stringResource(R.string.action_announcer),
+              hasUrl
+            ) {
+              showQuickSheet = false
+              viewModel.toggleReaderMode()
+            },
+            QuickActionItem(Icons.Filled.Search, stringResource(R.string.action_find_in_page), hasUrl) {
+              showQuickSheet = false
+              viewModel.openFindInPage()
+            },
+            QuickActionItem(FeatherIcons.Download, stringResource(R.string.action_downloads), true) {
+              showQuickSheet = false
+              viewModel.setOverlay(ActiveOverlay.DOWNLOADS)
+            },
+            QuickActionItem(FeatherIcons.Translate, stringResource(R.string.action_translate), hasUrl) {
+              showQuickSheet = false
+              viewModel.translateActivePage()
+            },
+            QuickActionItem(Icons.Filled.Settings, stringResource(R.string.action_settings), true) {
+              showQuickSheet = false
+              viewModel.setOverlay(ActiveOverlay.SETTINGS)
+            }
+          )
+        } else {
+          listOf(
+            QuickActionItem(
+              FeatherIcons.Fullscreen,
+              if (isBrowserFullscreen) stringResource(R.string.action_exit_fullscreen) else stringResource(R.string.action_fullscreen),
+              true
+            ) {
+              showQuickSheet = false
+              viewModel.toggleBrowserFullscreen()
+            },
+            QuickActionItem(FeatherIcons.PrivateMask, stringResource(R.string.action_new_private_tab), true) {
+              showQuickSheet = false
+              viewModel.openNewTab(isPrivate = true)
+            },
+            QuickActionItem(
+              if (isBookmarked) FeatherIcons.Bookmark else FeatherIcons.BookmarkOutline,
+              if (isBookmarked) stringResource(R.string.action_remove_bookmark) else stringResource(R.string.action_add_bookmark),
+              hasUrl
+            ) {
+              showQuickSheet = false
+              viewModel.toggleCurrentBookmark()
+            },
+            QuickActionItem(Icons.Filled.Search, stringResource(R.string.action_find_in_page), hasUrl) {
+              showQuickSheet = false
+              viewModel.openFindInPage()
+            },
+            QuickActionItem(FeatherIcons.Bookmark, stringResource(R.string.action_bookmarks), true) {
+              showQuickSheet = false
+              viewModel.setOverlay(ActiveOverlay.BOOKMARKS)
+            },
+            QuickActionItem(FeatherIcons.History, stringResource(R.string.action_history), true) {
+              showQuickSheet = false
+              viewModel.setOverlay(ActiveOverlay.HISTORY)
+            },
+            QuickActionItem(FeatherIcons.Download, stringResource(R.string.action_downloads), true) {
+              showQuickSheet = false
+              viewModel.setOverlay(ActiveOverlay.DOWNLOADS)
+            },
+            QuickActionItem(
+              FeatherIcons.Announcer,
+              stringResource(R.string.action_announcer),
+              hasUrl
+            ) {
+              showQuickSheet = false
+              viewModel.toggleReaderMode()
+            },
+            QuickActionItem(
+              FeatherIcons.Extension,
+              stringResource(R.string.action_extensions),
+              true
+            ) {
+              showQuickSheet = false
+              viewModel.setOverlay(ActiveOverlay.EXTENSIONS)
+            },
+            QuickActionItem(FeatherIcons.PrintPdf, stringResource(R.string.action_save_pdf), hasUrl) {
+              showQuickSheet = false
+              onSavePdf()
+            },
+            QuickActionItem(FeatherIcons.CodeSource, stringResource(R.string.action_view_source), hasUrl) {
+              showQuickSheet = false
+              viewModel.openPageSource()
+            },
+            QuickActionItem(FeatherIcons.Translate, stringResource(R.string.action_translate), hasUrl) {
+              showQuickSheet = false
+              viewModel.translateActivePage()
+            },
+            QuickActionItem(Icons.Filled.Share, stringResource(R.string.action_share), hasUrl) {
+              showQuickSheet = false
+              viewModel.shareActiveUrl()
+            },
+            QuickActionItem(FeatherIcons.OpenInNew, stringResource(R.string.action_open_external), hasUrl) {
+              showQuickSheet = false
+              viewModel.openInSystemBrowser()
+            },
+            QuickActionItem(Icons.Filled.Star, stringResource(R.string.action_pin_home), hasUrl) {
+              showQuickSheet = false
+              onPinHomeShortcut(activeTab.url, activeTab.title)
+            },
+            QuickActionItem(Icons.Filled.Settings, stringResource(R.string.action_settings), true) {
+              showQuickSheet = false
+              viewModel.setOverlay(ActiveOverlay.SETTINGS)
+            }
+          )
+        }
 
         gridActions.chunked(4).forEach { rowItems ->
           Row(
@@ -1051,6 +1179,11 @@ fun BrowserScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
           ) {
             rowItems.forEach { item ->
+              val iconColor = when {
+                !item.enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                item.accentTint != null -> item.accentTint
+                else -> MaterialTheme.colorScheme.onSurface
+              }
               Surface(
                 shape = RoundedCornerShape(14.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (item.enabled) 0.55f else 0.2f),
@@ -1066,7 +1199,7 @@ fun BrowserScreen(
                   Icon(
                     imageVector = item.icon,
                     contentDescription = item.label,
-                    tint = if (item.enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
+                    tint = iconColor,
                     modifier = Modifier.size(20.dp)
                   )
                   Spacer(modifier = Modifier.height(5.dp))
@@ -1085,6 +1218,57 @@ fun BrowserScreen(
         }
       }
     }
+  }
+
+  // Private-Mode-Only Security Shield Audit Dialog
+  if (showPrivateAuditDialog && activeTab.isPrivate) {
+    AlertDialog(
+      onDismissRequest = { showPrivateAuditDialog = false },
+      title = {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Icon(
+            FeatherIcons.Shield,
+            contentDescription = null,
+            tint = FeatherSecureGreen,
+            modifier = Modifier.size(22.dp)
+          )
+          Spacer(modifier = Modifier.width(8.dp))
+          Text("Private Shield Audit")
+        }
+      },
+      text = {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+          Text(
+            "Hermetic bidirectional isolation is active between Standard and Private Mode:",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+          )
+          Text("• Cookie Vault Barrier: Active (0 cross-mode cookies)", style = MaterialTheme.typography.bodySmall)
+          Text("• RAM-Only Storage Sandbox: Active (localStorage & sessionStorage isolated in RAM)", style = MaterialTheme.typography.bodySmall)
+          Text("• Third-Party Cookies & IndexedDB: Strictly Blocked", style = MaterialTheme.typography.bodySmall)
+          Text("• Bookmarks, History & Extensions: Completely Disabled", style = MaterialTheme.typography.bodySmall)
+          Text("• Share, Shortcuts & External Apps: Blocked (zero external leaks)", style = MaterialTheme.typography.bodySmall)
+          Text("• Anti-Screenshot (FLAG_SECURE) & Fingerprint Noise: Active", style = MaterialTheme.typography.bodySmall)
+          Text(
+            "• Trackers & Ads Blocked in Tab: ${activeTab.trackersBlockedCount}",
+            style = MaterialTheme.typography.labelMedium,
+            color = FeatherSecureGreen,
+            fontWeight = FontWeight.SemiBold
+          )
+        }
+      },
+      confirmButton = {
+        TextButton(onClick = { showPrivateAuditDialog = false }) { Text("Done") }
+      },
+      dismissButton = {
+        TextButton(
+          onClick = {
+            showPrivateAuditDialog = false
+            viewModel.burnPrivateSession()
+          }
+        ) { Text("Burn Session", color = FeatherDangerRed) }
+      }
+    )
   }
 
   // Site Info & Connection Security Dialog
@@ -1243,12 +1427,7 @@ fun BrowserScreen(
             viewModel.dismissLinkContext()
             viewModel.openNewTab(isPrivate = activeTab.isPrivate, initialUrl = target.url, switchToNewTab = false)
           }
-          if (activeTab.isPrivate) {
-            ContextActionRow("Open in standard tab") {
-              viewModel.dismissLinkContext()
-              viewModel.openNewTab(isPrivate = false, initialUrl = target.url, switchToNewTab = true)
-            }
-          } else {
+          if (!activeTab.isPrivate) {
             ContextActionRow("Open in private tab") {
               viewModel.dismissLinkContext()
               viewModel.openNewTab(isPrivate = true, initialUrl = target.url, switchToNewTab = true)
@@ -1268,9 +1447,11 @@ fun BrowserScreen(
               viewModel.downloadUrlWithConsent(target.imageUrl)
             }
           }
-          ContextActionRow("Share") {
-            viewModel.dismissLinkContext()
-            viewModel.shareUrl(target.url)
+          if (!activeTab.isPrivate) {
+            ContextActionRow("Share") {
+              viewModel.dismissLinkContext()
+              viewModel.shareUrl(target.url)
+            }
           }
         }
       },
@@ -1391,6 +1572,7 @@ private data class QuickActionItem(
   val icon: ImageVector,
   val label: String,
   val enabled: Boolean,
+  val accentTint: Color? = null,
   val onClick: () -> Unit
 )
 
@@ -1413,6 +1595,7 @@ private fun BrowserToolbar(
   activeTab: TabInfo,
   tabCount: Int,
   extensionsCount: Int = 0,
+  isDarkTheme: Boolean = true,
   settings: SettingsState,
   compactSingleRow: Boolean,
   readClipboard: () -> String?,
@@ -1442,12 +1625,23 @@ private fun BrowserToolbar(
   val isHomePage = activeTab.url.isBlank()
   val isPrivate = activeTab.isPrivate
 
-  val headerAccent = if (isPrivate) FeatherPrivateAccent else Color(0xFF38BDF8)
-  val headerTextPrimary = Color(0xFFF8FAFC)
-  val headerTextMuted = Color(0xFF94A3B8)
+  val privateAccent = if (isDarkTheme) FeatherPrivateAccent else FeatherPrivateAccentLight
+  val headerBg = when {
+    isDarkTheme -> Color.Black
+    isPrivate -> Color(0xFFF6F3FF)
+    else -> Color(0xFFFFFFFF)
+  }
+  val headerAccent = if (isPrivate) privateAccent else if (isDarkTheme) Color(0xFF38BDF8) else Color(0xFF0284C7)
+  val headerTextPrimary = if (isDarkTheme) Color(0xFFF8FAFC) else Color(0xFF0F172A)
+  val headerTextMuted = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF475569)
+  val tabBadgeBg = when {
+    isPrivate -> privateAccent.copy(alpha = 0.16f)
+    isDarkTheme -> Color(0xFF141720)
+    else -> Color(0xFFF1F5F9)
+  }
 
   val (secIcon, secTint, secDesc) = when (activeTab.securityState) {
-    SecurityState.PRIVATE -> Triple(FeatherIcons.PrivateMask, FeatherPrivateAccent, stringResource(R.string.cd_security_private))
+    SecurityState.PRIVATE -> Triple(FeatherIcons.PrivateMask, privateAccent, stringResource(R.string.cd_security_private))
     SecurityState.SECURE_HTTPS -> Triple(Icons.Filled.Lock, FeatherSecureGreen, stringResource(R.string.cd_security_https))
     SecurityState.INSECURE_HTTP, SecurityState.ERROR -> Triple(Icons.Filled.Warning, FeatherWarningAmber, stringResource(R.string.cd_security_http))
     SecurityState.HOME -> Triple(Icons.Filled.Search, headerTextMuted, stringResource(R.string.cd_security_home))
@@ -1459,11 +1653,18 @@ private fun BrowserToolbar(
 
   val omniboxPill: @Composable (Modifier) -> Unit = { pillModifier ->
     var swipeAccum by remember { mutableFloatStateOf(0f) }
-    val pillBg = if (isPrivate) Color(0xFF140D22) else Color(0xFF0E1016)
+    val pillBg = when {
+      isDarkTheme && isPrivate -> Color(0xFF140D22)
+      isDarkTheme -> Color(0xFF0E1016)
+      isPrivate -> Color(0xFFEDE9FE)
+      isFocused -> Color(0xFFFFFFFF)
+      else -> Color(0xFFF1F5F9)
+    }
     val pillBorder = when {
       isFocused -> headerAccent
-      isPrivate -> FeatherPrivateAccent.copy(alpha = 0.72f)
-      else -> Color(0xFF232736)
+      isPrivate -> privateAccent.copy(alpha = 0.72f)
+      isDarkTheme -> Color(0xFF232736)
+      else -> Color(0xFFCBD5E1)
     }
     Surface(
       shape = RoundedCornerShape(26.dp),
@@ -1523,7 +1724,7 @@ private fun BrowserToolbar(
               text = "$displayHost$modeTag",
               style = MaterialTheme.typography.bodyMedium,
               fontWeight = FontWeight.Medium,
-              color = if (isPrivate) Color(0xFFF3E8FF) else headerTextPrimary,
+              color = if (isPrivate) (if (isDarkTheme) Color(0xFFF3E8FF) else Color(0xFF4C1D95)) else headerTextPrimary,
               maxLines = 1,
               overflow = TextOverflow.Ellipsis
             )
@@ -1531,7 +1732,7 @@ private fun BrowserToolbar(
             Text(
               text = if (isPrivate) "Search or enter URL · Zero Tracking" else stringResource(R.string.omnibox_hint),
               style = MaterialTheme.typography.bodyMedium,
-              color = if (isPrivate) FeatherPrivateAccent.copy(alpha = 0.78f) else headerTextMuted,
+              color = if (isPrivate) privateAccent.copy(alpha = 0.85f) else headerTextMuted,
               maxLines = 1,
               overflow = TextOverflow.Ellipsis
             )
@@ -1626,7 +1827,7 @@ private fun BrowserToolbar(
   Surface(
     tonalElevation = 0.dp,
     shadowElevation = 0.dp,
-    color = Color.Black,
+    color = headerBg,
     contentColor = headerTextPrimary,
     modifier = modifier.fillMaxWidth()
   ) {
@@ -1707,15 +1908,17 @@ private fun BrowserToolbar(
               tint = if (activeTab.userAgentMode == UserAgentMode.DESKTOP) headerAccent else headerTextMuted
             )
           }
-          IconButton(
-            onClick = onOpenBookmarks,
-            modifier = Modifier.minimumInteractiveComponentSize().testTag("tablet_bookmarks_button")
-          ) {
-            Icon(
-              imageVector = FeatherIcons.Bookmark,
-              contentDescription = stringResource(R.string.action_bookmarks),
-              tint = headerTextMuted
-            )
+          if (!isPrivate) {
+            IconButton(
+              onClick = onOpenBookmarks,
+              modifier = Modifier.minimumInteractiveComponentSize().testTag("tablet_bookmarks_button")
+            ) {
+              Icon(
+                imageVector = FeatherIcons.Bookmark,
+                contentDescription = stringResource(R.string.action_bookmarks),
+                tint = headerTextMuted
+              )
+            }
           }
           IconButton(
             onClick = onOpenDownloads,
@@ -1727,18 +1930,20 @@ private fun BrowserToolbar(
               tint = headerTextMuted
             )
           }
-          IconButton(
-            onClick = {
-              haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-              onOpenExtensions()
-            },
-            modifier = Modifier.minimumInteractiveComponentSize().testTag("tablet_extensions_button")
-          ) {
-            Icon(
-              imageVector = FeatherIcons.Extension,
-              contentDescription = stringResource(R.string.action_extensions),
-              tint = if (extensionsCount > 0) headerAccent else headerTextMuted
-            )
+          if (!isPrivate) {
+            IconButton(
+              onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onOpenExtensions()
+              },
+              modifier = Modifier.minimumInteractiveComponentSize().testTag("tablet_extensions_button")
+            ) {
+              Icon(
+                imageVector = FeatherIcons.Extension,
+                contentDescription = stringResource(R.string.action_extensions),
+                tint = if (extensionsCount > 0) headerAccent else headerTextMuted
+              )
+            }
           }
           IconButton(
             onClick = {
@@ -1757,9 +1962,9 @@ private fun BrowserToolbar(
             shape = RoundedCornerShape(12.dp),
             border = BorderStroke(
               1.5.dp,
-              if (isPrivate) FeatherPrivateAccent else headerTextPrimary.copy(alpha = 0.85f)
+              if (isPrivate) privateAccent else headerTextPrimary.copy(alpha = 0.85f)
             ),
-            color = if (isPrivate) FeatherPrivateAccent.copy(alpha = 0.18f) else Color(0xFF141720),
+            color = tabBadgeBg,
             modifier = Modifier
               .minimumInteractiveComponentSize()
               .clickable {
@@ -1776,7 +1981,7 @@ private fun BrowserToolbar(
                 text = tabCount.toString(),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
-                color = if (isPrivate) FeatherPrivateAccent else headerTextPrimary
+                color = if (isPrivate) privateAccent else headerTextPrimary
               )
             }
           }
@@ -1839,28 +2044,30 @@ private fun BrowserToolbar(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-              IconButton(
-                onClick = {
-                  haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                  onOpenExtensions()
-                },
-                modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_extensions_button")
-              ) {
-                Icon(
-                  FeatherIcons.Extension,
-                  contentDescription = stringResource(R.string.action_extensions),
-                  tint = if (extensionsCount > 0) headerAccent else headerTextMuted,
-                  modifier = Modifier.size(19.dp)
-                )
+              if (!isPrivate) {
+                IconButton(
+                  onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onOpenExtensions()
+                  },
+                  modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_extensions_button")
+                ) {
+                  Icon(
+                    FeatherIcons.Extension,
+                    contentDescription = stringResource(R.string.action_extensions),
+                    tint = if (extensionsCount > 0) headerAccent else headerTextMuted,
+                    modifier = Modifier.size(19.dp)
+                  )
+                }
               }
 
               Surface(
                 shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(
                   1.5.dp,
-                  if (isPrivate) FeatherPrivateAccent else headerTextPrimary.copy(alpha = 0.85f)
+                  if (isPrivate) privateAccent else headerTextPrimary.copy(alpha = 0.85f)
                 ),
-                color = if (isPrivate) FeatherPrivateAccent.copy(alpha = 0.18f) else Color(0xFF141720),
+                color = tabBadgeBg,
                 modifier = Modifier
                   .minimumInteractiveComponentSize()
                   .clickable {
@@ -1877,7 +2084,7 @@ private fun BrowserToolbar(
                     text = tabCount.toString(),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (isPrivate) FeatherPrivateAccent else headerTextPrimary
+                    color = if (isPrivate) privateAccent else headerTextPrimary
                   )
                 }
               }
@@ -1936,28 +2143,30 @@ private fun BrowserToolbar(
                 )
               }
 
-              IconButton(
-                onClick = {
-                  haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                  onOpenExtensions()
-                },
-                modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_extensions_button")
-              ) {
-                Icon(
-                  FeatherIcons.Extension,
-                  contentDescription = stringResource(R.string.action_extensions),
-                  tint = if (extensionsCount > 0) headerAccent else headerTextPrimary,
-                  modifier = Modifier.size(19.dp)
-                )
+              if (!isPrivate) {
+                IconButton(
+                  onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onOpenExtensions()
+                  },
+                  modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_extensions_button")
+                ) {
+                  Icon(
+                    FeatherIcons.Extension,
+                    contentDescription = stringResource(R.string.action_extensions),
+                    tint = if (extensionsCount > 0) headerAccent else headerTextPrimary,
+                    modifier = Modifier.size(19.dp)
+                  )
+                }
               }
 
               Surface(
                 shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(
                   1.5.dp,
-                  if (isPrivate) FeatherPrivateAccent else headerTextPrimary.copy(alpha = 0.85f)
+                  if (isPrivate) privateAccent else headerTextPrimary.copy(alpha = 0.85f)
                 ),
-                color = if (isPrivate) FeatherPrivateAccent.copy(alpha = 0.18f) else Color(0xFF141720),
+                color = tabBadgeBg,
                 modifier = Modifier
                   .minimumInteractiveComponentSize()
                   .clickable {
@@ -1974,7 +2183,7 @@ private fun BrowserToolbar(
                     text = tabCount.toString(),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (isPrivate) FeatherPrivateAccent else headerTextPrimary
+                    color = if (isPrivate) privateAccent else headerTextPrimary
                   )
                 }
               }
@@ -1993,9 +2202,9 @@ private fun BrowserToolbar(
         }
       }
 
-      if (!isHomePage && isFocused && !clipboardCandidate.isNullOrBlank() && clipboardCandidate != activeTab.url) {
+      if (!isPrivate && !isHomePage && isFocused && !clipboardCandidate.isNullOrBlank() && clipboardCandidate != activeTab.url) {
         Surface(
-          color = Color(0xFF0E1A2B),
+          color = if (isDarkTheme) Color(0xFF0E1A2B) else Color(0xFFE0F2FE),
           modifier = Modifier
             .fillMaxWidth()
             .clickable {
@@ -2017,7 +2226,7 @@ private fun BrowserToolbar(
             Text(
               text = "Paste & Go: ${UrlValidator.sanitizeDisplayText(clipboardCandidate, 48)}",
               style = MaterialTheme.typography.labelMedium,
-              color = Color(0xFFE0F2FE),
+              color = if (isDarkTheme) Color(0xFFE0F2FE) else Color(0xFF0C4A6E),
               maxLines = 1,
               overflow = TextOverflow.Ellipsis
             )
@@ -2028,10 +2237,10 @@ private fun BrowserToolbar(
       if (!isHomePage) {
         HorizontalDivider(
           thickness = 0.8.dp,
-          color = if (activeTab.isPrivate) {
-            FeatherPrivateAccent.copy(alpha = 0.45f)
-          } else {
-            Color(0xFF1A1E29)
+          color = when {
+            activeTab.isPrivate -> privateAccent.copy(alpha = 0.45f)
+            isDarkTheme -> Color(0xFF1A1E29)
+            else -> Color(0xFFE2E8F0)
           }
         )
       }

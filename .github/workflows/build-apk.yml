@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kio-v1.9.0.apk
+          cp "$APK_PATH" releases/Kio-v1.9.1.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kio-v1.9.0.apk
+          git add releases/Kio-v1.9.1.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kio-v1.9.0.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kio-v1.9.1.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.9.0
+      - name: Create or update GitHub Release v1.9.1
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kio-v1.9.0.apk)
-          NOTES="Kio Browser v1.9.0 (Build 62) — Lightning-fast, privacy-hardened Android browser with Desktop Chrome Extensions & pure on-device NLP narration strictly under 2 MB.\n\n- **Complete Rebrand to Kio & Creative 'K' App Launcher Icon:** Renamed the entire browser to **Kio** with all previous naming removed; crafted a creative geometric **K** launcher icon denoting Kio (adaptive + Material You monochrome) while preserving the homepage emblem 100% untouched.\n- **AI Assistant Removed & Replaced by Desktop Chrome Extensions (Kiwi-Style):** Completely removed the old AI Assistant suite and replaced it across the toolbar, quick menu, and Settings with a full Desktop Chrome Extension engine supporting direct Chrome Web Store URL/ID installation (CRX2/CRX3 binary unpacker), local .crx/.zip/.user.js packages, Manifest V2/V3 content scripts & CSS, static declarative_net_request rules, persistent chrome.storage/runtime/i18n/tabs bridges, interactive extension popups/options, and 1-tap Chrome Web Store auto-detection.\n- **Content Announcer & Reader Mode (Pure On-Device NLP, Zero Data Copy/Save):** Replaced Resources in the 3-dot menu with an on-device NLP Reader & Voice Announcer featuring natural speech normalization, abbreviation-aware sentence segmentation, live sentence highlighting with auto-scroll, speed/prev/next/play-pause controls, and strict volatile RAM-only processing (non-selectable, zero copy, zero disk save, instant RAM wipe on close).\n- **True Edge-to-Edge Full Screen Mode:** Replaced New Tab in the 3-dot menu with Full Screen mode hiding toolbar, status bar, and navigation bar edge-to-edge with zero inset gutters and instant Exit pill / Back support.\n- **Performance & Size Cleanup:** Removed obsolete AI files, Resources sniffer overhead, and 10 unused legacy raster mipmap PNGs; deduplicated early WebView script injections per page load for lightning-fast browsing strictly under 2 MB.\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
-          if gh release view v1.9.0 >/dev/null 2>&1; then
-            gh release upload v1.9.0 releases/Kio-v1.9.0.apk --clobber
-            gh release edit v1.9.0 --title "Kio v1.9.0 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kio-v1.9.1.apk)
+          NOTES="Kio Browser v1.9.1 (Build 63) — Zero-Leak Bidirectional Standard ↔ Private Isolation, Exclusive Private-Mode Safety Tools, Full Dark & Light Mode, and Leaner APK strictly under 2 MB.\n\n- **Zero-Leak Bidirectional Isolation (Standard ↔ Private):** Strict mode-boundary cookie vaulting & incineration on every switch between Standard and Private tabs, ephemeral RAM-only \`localStorage\`/\`sessionStorage\` proxy in Private tabs, disabled IndexedDB/CacheStorage/third-party cookies/geolocation/disk caching/extensions/favicons/external app launches/clipboard leak guards in Private Mode — zero data shared from Standard → Private or Private → Standard/outside.\n- **Bookmarks Exclusively for Standard Mode:** Completely removed Bookmarks UI, homepage Bookmarks section, Bookmark actions, and Bookmarks Backup from Private Mode (replaced on the Private homepage by the **Zero-Leak Private Vault** card).\n- **Private-Mode-Only Safety Tools (3-Dot Menu):** Removed **Open externally**, **Add shortcut**, **Share**, **Bookmarks**, **History**, and **Extensions** inside Private Mode and introduced 5 exclusive Private-Only safety tools visible ONLY in Private Mode: **Burn session** (instant 1-tap incineration of all private tabs, cookies, RAM & clipboard), **New identity** (rotate session fingerprint & clear cookies/RAM on reload), **Shield audit** (live isolation verification status dialog), **Wipe clipboard**, and **Purge RAM**.\n- **Full Dark Mode & Light Mode Across the Entire Browser:** Tapping Dark Mode or Light Mode seamlessly switches the entire browser — including the Homepage (with preserved KioLogo), search header, Android status & navigation bar icons, menus, settings, and web pages.\n- **Safe Space Cleanup:** Removed unused template color/locale resources, placeholder unit test, and unused Compose tooling preview dependencies without compromising any browser feature or performance — strictly under 2 MB.\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
+          if gh release view v1.9.1 >/dev/null 2>&1; then
+            gh release upload v1.9.1 releases/Kio-v1.9.1.apk --clobber
+            gh release edit v1.9.1 --title "Kio v1.9.1 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.9.0 releases/Kio-v1.9.0.apk \
-              --title "Kio v1.9.0 (< 2 MB)" \
+            gh release create v1.9.1 releases/Kio-v1.9.1.apk \
+              --title "Kio v1.9.1 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

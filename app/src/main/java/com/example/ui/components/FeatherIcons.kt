@@ -757,4 +757,59 @@ object FeatherIcons {
       }
     }.build()
   }
+
+  val BurnFlame: ImageVector by lazy {
+    ImageVector.Builder("BurnFlame", 24.dp, 24.dp, 24f, 24f).apply {
+      path(fill = SolidColor(Color.Black)) {
+        moveTo(13.5f, 0.67f)
+        curveTo(13.5f, 0.67f, 14.24f, 3.32f, 14.24f, 5.47f)
+        curveTo(14.24f, 7.53f, 12.89f, 9.2f, 10.83f, 9.2f)
+        curveTo(8.76f, 9.2f, 7.2f, 7.53f, 7.2f, 5.47f)
+        lineTo(7.23f, 5.11f)
+        curveTo(5.21f, 7.51f, 4f, 10.62f, 4f, 14f)
+        curveTo(4f, 18.42f, 7.58f, 22f, 12f, 22f)
+        curveTo(16.42f, 22f, 20f, 18.42f, 20f, 14f)
+        curveTo(20f, 8.61f, 17.41f, 3.8f, 13.5f, 0.67f)
+        close()
+        moveTo(11.71f, 19f)
+        curveTo(9.93f, 19f, 8.49f, 17.6f, 8.49f, 15.84f)
+        curveTo(8.49f, 14.22f, 9.54f, 13.08f, 11.3f, 12.72f)
+        curveTo(13.07f, 12.36f, 14.9f, 11.51f, 15.92f, 10.14f)
+        curveTo(16.31f, 11.43f, 16.51f, 12.79f, 16.51f, 14.2f)
+        curveTo(16.51f, 16.85f, 14.36f, 19f, 11.71f, 19f)
+        close()
+      }
+    }.build()
+  }
+
+  val BroomWipe: ImageVector by lazy {
+    ImageVector.Builder("BroomWipe", 24.dp, 24.dp, 24f, 24f).apply {
+      path(fill = SolidColor(Color.Black)) {
+        moveTo(19.36f, 2.72f)
+        lineTo(20.78f, 4.14f)
+        lineTo(15.06f, 9.85f)
+        lineTo(17.18f, 11.97f)
+        lineTo(15.77f, 13.38f)
+        lineTo(14.36f, 11.97f)
+        lineTo(10.82f, 15.51f)
+        lineTo(12.23f, 16.92f)
+        lineTo(10.82f, 18.34f)
+        lineTo(4.46f, 11.97f)
+        lineTo(5.87f, 10.56f)
+        lineTo(7.29f, 11.97f)
+        lineTo(10.82f, 8.44f)
+        lineTo(9.41f, 7.03f)
+        lineTo(10.82f, 5.61f)
+        lineTo(12.94f, 7.73f)
+        lineTo(19.36f, 2.72f)
+        close()
+        moveTo(3f, 20f)
+        horizontalLineTo(21f)
+        verticalLineTo(22f)
+        horizontalLineTo(3f)
+        verticalLineTo(20f)
+        close()
+      }
+    }.build()
+  }
 }

@@ -223,13 +223,12 @@ class MainActivity : ComponentActivity() {
       }
 
       val systemDark = isSystemInDarkTheme()
-      val activeOverlay by viewModel.activeOverlay.collectAsStateWithLifecycle()
       val darkTheme = when (settings.themeMode) {
         ThemeMode.SYSTEM -> systemDark
         ThemeMode.DARK -> true
         ThemeMode.LIGHT -> false
       }
-      val useDarkStatusBar = darkTheme || activeOverlay == com.example.ui.ActiveOverlay.NONE
+      val useDarkStatusBar = darkTheme
       val fullscreenView by viewModel.fullscreenView.collectAsStateWithLifecycle()
       val isBrowserFullscreen by viewModel.isBrowserFullscreen.collectAsStateWithLifecycle()
       val isImmersiveFullscreen = fullscreenView != null || isBrowserFullscreen
@@ -479,6 +478,10 @@ class MainActivity : ComponentActivity() {
   }
 
   private fun pinHomeScreenShortcut(url: String, title: String) {
+    if (viewModel.activeTab().isPrivate) {
+      viewModel.showToast("Home screen shortcuts are disabled in Private Mode")
+      return
+    }
     if (!UrlValidator.isSafeWebUrl(url)) return
     try {
       val sm = getSystemService(ShortcutManager::class.java)

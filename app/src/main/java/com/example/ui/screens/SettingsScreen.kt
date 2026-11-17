@@ -112,6 +112,7 @@ private enum class SettingsFolder(val title: String) {
 fun SettingsScreen(
   settings: SettingsState,
   currentUrl: String = "",
+  isPrivateMode: Boolean = false,
   sitePermissions: List<SitePermissionRule>,
   installedExtensionsCount: Int = 0,
   systemWebViewInfo: String? = null,
@@ -250,15 +251,17 @@ fun SettingsScreen(
             modifier = Modifier.widthIn(max = 720.dp).fillMaxWidth()
           ) {
             Column(modifier = Modifier.fillMaxWidth()) {
-              SettingsFolderRow(
-                icon = FeatherIcons.Extension,
-                iconTint = Color(0xFF38BDF8),
-                title = "Extensions",
-                subtitle = if (installedExtensionsCount > 0) "$installedExtensionsCount desktop Chrome extension(s) installed" else "Install Chrome Web Store, .crx, .zip & .user.js",
-                tag = "settings_folder_extensions",
-                onClick = onOpenExtensions
-              )
-              FolderDivider()
+              if (!isPrivateMode) {
+                SettingsFolderRow(
+                  icon = FeatherIcons.Extension,
+                  iconTint = Color(0xFF38BDF8),
+                  title = "Extensions",
+                  subtitle = if (installedExtensionsCount > 0) "$installedExtensionsCount desktop Chrome extension(s) installed" else "Install Chrome Web Store, .crx, .zip & .user.js",
+                  tag = "settings_folder_extensions",
+                  onClick = onOpenExtensions
+                )
+                FolderDivider()
+              }
               val homeSummary = if (settings.homepageUrl.isBlank()) "Start page" else UrlValidator.extractHost(settings.homepageUrl).ifEmpty { "Custom" }
               SettingsFolderRow(
                 icon = Icons.Filled.Search,
@@ -686,18 +689,20 @@ fun SettingsScreen(
         }
 
         SettingsFolder.STORAGE -> {
-          SettingsSectionCard("Bookmarks Backup", Modifier.widthIn(max = 720.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-              OutlinedButton(
-                onClick = onImportBookmarks,
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.weight(1f).minimumInteractiveComponentSize()
-              ) { Text(stringResource(R.string.bookmarks_import)) }
-              OutlinedButton(
-                onClick = onExportBookmarks,
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.weight(1f).minimumInteractiveComponentSize()
-              ) { Text(stringResource(R.string.bookmarks_export)) }
+          if (!isPrivateMode) {
+            SettingsSectionCard("Bookmarks Backup", Modifier.widthIn(max = 720.dp)) {
+              Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                  onClick = onImportBookmarks,
+                  shape = RoundedCornerShape(14.dp),
+                  modifier = Modifier.weight(1f).minimumInteractiveComponentSize()
+                ) { Text(stringResource(R.string.bookmarks_import)) }
+                OutlinedButton(
+                  onClick = onExportBookmarks,
+                  shape = RoundedCornerShape(14.dp),
+                  modifier = Modifier.weight(1f).minimumInteractiveComponentSize()
+                ) { Text(stringResource(R.string.bookmarks_export)) }
+              }
             }
           }
 
@@ -733,7 +738,7 @@ fun SettingsScreen(
               "How do I view the full Desktop version of a site?" to
                 "Tap the menu button (⋮) and select Desktop. Kio switches to a Windows Chrome User-Agent, rewrites mobile URLs (like m.youtube.com), and renders a full 1280px desktop layout.",
               "How does Private Mode keep my browsing safe?" to
-                "Private tabs run in RAM with zero disk caching, block OS task-switcher screenshots via FLAG_SECURE, never store history or favicons to disk, and purge all session data on exit.",
+                "Private Mode runs inside a Zero-Leak Private Vault completely isolated from Standard Mode: cookies are bidirectionally vaulted/cleared on every mode switch, localStorage/sessionStorage live strictly in RAM, IndexedDB/caches/extensions/bookmarks/share/external browser/shortcuts are disabled, FLAG_SECURE blocks screenshots, and the 3-dot menu provides exclusive Burn Session, New Identity, Shield Audit, Wipe Clipboard, and Purge RAM tools.",
               "Why are streaming popups and ad redirects blocked?" to
                 "Kio intercepts popunder ad redirects (including tsyndicate, ad.* subdomains, and click-hijack overlays) before they can open spam tabs or interrupt video playback."
             )
