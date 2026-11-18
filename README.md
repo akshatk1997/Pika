@@ -8,13 +8,17 @@
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v1.9.5.apk`](releases/Kio-v1.9.5.apk) and published in GitHub Releases (`v1.9.5`).
+Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v1.9.6.apk`](releases/Kio-v1.9.6.apk) and published in GitHub Releases (`v1.9.6`).
 
 ---
 
-## Core Highlights (v1.9.5 — Build 67)
+## Core Highlights (v1.9.6 — Build 68)
 
-- **Hidden-"K" Concentric App Launcher Icon & Preserved Homepage Emblem:** Rebuilt the app icon from scratch on the classic concentric orbital logo using the exact cyan/sky/indigo/white palette, subtly embedding a hidden geometric **K** inside the inner orbital chord and prism rays while keeping the homepage emblem 100% untouched.
+- **3-Dot Menu Overhaul (Modes tile, Block Images, Clean Header):** Cleaned up cluttered header chips, added a dedicated **Modes** tile with instant switching between Desktop, iPhone, and Mobile site viewports, and replaced Extensions with an instant **Block Images** toggle.
+- **Enhanced Settings Sections with Feature Details:** Upgraded all category folder subtitles with rich technical feature details, and embedded the official vector **Kio launcher icon** inside About Kio and the main settings card.
+- **Professional UI Wording:** Streamlined toasts, status labels, and banners for both Standard and Private Browsing modes.
+- **Full Chrome Extension Background Service Worker Runtime (MV3/MV2):** Runs background service workers, real async RPC/Port messaging, CORS-free privileged fetch/XHR, and AndroidX WebKit `ProxyController` integration.
+- **Hidden-"K" Concentric App Launcher Icon & Preserved Homepage Emblem:** Rebuilt the app icon on the classic concentric orbital logo using the exact cyan/sky/indigo/white palette, subtly embedding a hidden geometric **K** inside the inner orbital chord and prism rays while keeping the homepage emblem 100% untouched.
 - **Desktop Chrome Extensions (Kiwi-Style Direct Store Install & Full MV2/MV3 Engine):** Automatically switches Chrome Web Store to Desktop Chrome mode, clears false WebView unavailability banners, enables the Store's own install button directly to Kio's resilient CRX3 downloader (up to 4,000 files), injects synchronous `chrome.*` / `browser.*` / `GM_*` APIs before popup scripts run, serves `chrome-extension://` virtual resources, and supports live Popup ↔ Active Tab messaging, `chrome.storage.onChanged` broadcasts, `chrome.scripting`, and static DNR rules (Standard Mode only).
 - **Low-Data Surfing & Ultra-Lean Android Footprint:** Always-on prefetch/prerender blocking, native lazy loading & async image decoding, WebP favicon compression, automatic disk cache & temp-file trimming, and `onTrimMemory` background WebView eviction deliver top performance with minimal data and storage usage.
 - **Zero-Leak Bidirectional Isolation (Standard ↔ Private):** Strict mode-boundary cookie vaulting & incineration between Standard and Private tabs, ephemeral RAM-only `localStorage`/`sessionStorage` proxy in Private Mode, disabled IndexedDB/CacheStorage/third-party cookies/extensions/bookmarks/history/external apps/sharing/shortcuts/screenshots in Private Mode so zero data can leak in either direction.

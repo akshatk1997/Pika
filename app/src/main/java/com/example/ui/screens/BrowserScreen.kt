@@ -952,55 +952,24 @@ fun BrowserScreen(
               )
               Spacer(modifier = Modifier.width(8.dp))
               Text(
-                text = "PRIVATE VAULT · ISOLATED ZERO-LEAK MODE",
+                text = "Private Browsing",
                 style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 color = if (isDarkTheme) FeatherPrivateAccent else FeatherPrivateAccentLight
               )
             }
           }
         }
 
-        // Quick Modes Row
+        // Quick Theme Row
+        var showModesExpanded by remember { mutableStateOf(false) }
         FlowRow(
           horizontalArrangement = Arrangement.spacedBy(8.dp),
           verticalArrangement = Arrangement.spacedBy(6.dp),
           modifier = Modifier.fillMaxWidth()
         ) {
-          if (!isPrivate) {
-            FilterChip(
-              selected = installedExtensions.any { it.enabled },
-              onClick = {
-                showQuickSheet = false
-                viewModel.setOverlay(ActiveOverlay.EXTENSIONS)
-              },
-              leadingIcon = { Icon(FeatherIcons.Extension, contentDescription = null, modifier = Modifier.size(16.dp)) },
-              label = {
-                val activeExtCount = installedExtensions.count { it.enabled }
-                Text(if (activeExtCount > 0) "Extensions ($activeExtCount)" else "Extensions")
-              }
-            )
-          }
           FilterChip(
-            selected = activeTab.userAgentMode == UserAgentMode.DESKTOP,
-            onClick = {
-              showQuickSheet = false
-              viewModel.toggleDesktopMode()
-            },
-            leadingIcon = { Icon(FeatherIcons.DesktopPc, contentDescription = null, modifier = Modifier.size(16.dp)) },
-            label = { Text("Desktop") }
-          )
-          FilterChip(
-            selected = activeTab.userAgentMode == UserAgentMode.IPHONE,
-            onClick = {
-              showQuickSheet = false
-              val next = if (activeTab.userAgentMode == UserAgentMode.IPHONE) UserAgentMode.MOBILE else UserAgentMode.IPHONE
-              viewModel.setUserAgentMode(next)
-            },
-            label = { Text("iPhone") }
-          )
-          FilterChip(
-            selected = settings.themeMode != ThemeMode.SYSTEM && isDarkTheme,
+            selected = isDarkTheme,
             onClick = {
               val nextDark = !isDarkTheme
               viewModel.updateSettings {
@@ -1019,36 +988,59 @@ fun BrowserScreen(
             },
             label = { Text(if (isDarkTheme) "Dark mode" else "Light mode") }
           )
-          FilterChip(
-            selected = settings.themeMode == ThemeMode.SYSTEM,
-            onClick = {
-              viewModel.updateSettings {
-                it.copy(
-                  themeMode = ThemeMode.SYSTEM,
-                  nightWebMode = systemDark
-                )
-              }
-            },
-            label = { Text("System") },
-            modifier = Modifier.testTag("quick_theme_system_chip")
-          )
-          FilterChip(
-            selected = settings.dataSaverEnabled,
-            onClick = { viewModel.updateSettings { it.copy(dataSaverEnabled = !it.dataSaverEnabled) } },
-            leadingIcon = { Icon(FeatherIcons.DataSaver, contentDescription = null, modifier = Modifier.size(16.dp)) },
-            label = { Text("Data Saver") }
-          )
-          FilterChip(
-            selected = settings.noImageMode,
-            onClick = { viewModel.updateSettings { it.copy(noImageMode = !it.noImageMode) } },
-            leadingIcon = { Icon(FeatherIcons.NoImage, contentDescription = null, modifier = Modifier.size(16.dp)) },
-            label = { Text("Block images") }
-          )
         }
 
         Spacer(modifier = Modifier.height(12.dp))
         HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
         Spacer(modifier = Modifier.height(12.dp))
+
+        // Show Modes expander if toggled
+        AnimatedVisibility(
+          visible = showModesExpanded,
+          enter = fadeIn() + expandVertically(),
+          exit = fadeOut() + shrinkVertically()
+        ) {
+          Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(bottom = 12.dp)
+          ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+              Text(
+                text = "Viewing Mode",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+              )
+              Spacer(modifier = Modifier.height(8.dp))
+              Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+              ) {
+                listOf(
+                  Triple("Desktop", FeatherIcons.DesktopPc, UserAgentMode.DESKTOP),
+                  Triple("iPhone", FeatherIcons.SunLight, UserAgentMode.IPHONE),
+                  Triple("Mobile", FeatherIcons.NightMoon, UserAgentMode.MOBILE)
+                ).forEach { (label, icon, mode) ->
+                  FilterChip(
+                    selected = activeTab.userAgentMode == mode,
+                    onClick = {
+                      viewModel.setUserAgentMode(mode)
+                      showModesExpanded = false
+                      showQuickSheet = false
+                    },
+                    leadingIcon = { Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                    label = { Text(label, maxLines = 1) },
+                    modifier = Modifier.weight(1f)
+                  )
+                }
+              }
+            }
+          }
+        }
 
         // 4-Column Crisp Grid Actions: Private Mode excludes Bookmarks/History/Extensions/Share/External/Shortcut
         // and provides exclusive Private-Mode-Only Safety Tools instead.
@@ -1149,12 +1141,12 @@ fun BrowserScreen(
               viewModel.openNewTab(isPrivate = true)
             },
             QuickActionItem(
-              if (isBookmarked) FeatherIcons.Bookmark else FeatherIcons.BookmarkOutline,
-              if (isBookmarked) stringResource(R.string.action_remove_bookmark) else stringResource(R.string.action_add_bookmark),
-              hasUrl
+              FeatherIcons.DesktopPc,
+              "Modes",
+              true,
+              accentTint = if (activeTab.userAgentMode != UserAgentMode.MOBILE) MaterialTheme.colorScheme.primary else null
             ) {
-              showQuickSheet = false
-              viewModel.toggleCurrentBookmark()
+              showModesExpanded = !showModesExpanded
             },
             QuickActionItem(Icons.Filled.Search, stringResource(R.string.action_find_in_page), hasUrl) {
               showQuickSheet = false
@@ -1181,12 +1173,14 @@ fun BrowserScreen(
               viewModel.toggleReaderMode()
             },
             QuickActionItem(
-              FeatherIcons.Extension,
-              stringResource(R.string.action_extensions),
-              true
+              FeatherIcons.NoImage,
+              "Block Images",
+              true,
+              accentTint = if (settings.noImageMode) FeatherWarningAmber else null
             ) {
-              showQuickSheet = false
-              viewModel.setOverlay(ActiveOverlay.EXTENSIONS)
+              val next = !settings.noImageMode
+              viewModel.updateSettings { it.copy(noImageMode = next) }
+              viewModel.showToast(if (next) "Images blocked" else "Images allowed")
             },
             QuickActionItem(FeatherIcons.PrintPdf, stringResource(R.string.action_save_pdf), hasUrl) {
               showQuickSheet = false

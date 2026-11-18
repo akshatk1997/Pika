@@ -5,6 +5,7 @@ import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -76,6 +77,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -209,15 +211,15 @@ fun SettingsScreen(
             ) {
               Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = FeatherSecureGreen.copy(alpha = 0.14f),
-                modifier = Modifier.size(42.dp)
+                color = Color(0xFF050810),
+                border = BorderStroke(0.8.dp, Color(0xFF38BDF8).copy(alpha = 0.35f)),
+                modifier = Modifier.size(44.dp)
               ) {
                 Box(contentAlignment = Alignment.Center) {
-                  Icon(
-                    FeatherIcons.Shield,
-                    contentDescription = null,
-                    tint = FeatherSecureGreen,
-                    modifier = Modifier.size(22.dp)
+                  Image(
+                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                    contentDescription = "Kio Launcher Icon",
+                    modifier = Modifier.size(40.dp)
                   )
                 }
               }
@@ -264,7 +266,7 @@ fun SettingsScreen(
                   icon = FeatherIcons.Extension,
                   iconTint = Color(0xFF38BDF8),
                   title = "Extensions",
-                  subtitle = if (installedExtensionsCount > 0) "$installedExtensionsCount desktop Chrome extension(s) installed" else "Install Chrome Web Store, .crx, .zip & .user.js",
+                  subtitle = if (installedExtensionsCount > 0) "$installedExtensionsCount active · MV3 Service Worker · Web Store & CRX" else "Desktop Chrome extensions · MV3 Background Worker · CRX & ZIP support",
                   tag = "settings_folder_extensions",
                   onClick = onOpenExtensions
                 )
@@ -275,7 +277,7 @@ fun SettingsScreen(
                 icon = Icons.Filled.Search,
                 iconTint = MaterialTheme.colorScheme.primary,
                 title = SettingsFolder.GENERAL.title,
-                subtitle = "${settings.searchEngine.label} · $homeSummary",
+                subtitle = "Search: ${settings.searchEngine.label} · Home: $homeSummary · Modes",
                 tag = "settings_folder_general",
                 onClick = { activeFolder = SettingsFolder.GENERAL }
               )
@@ -284,17 +286,17 @@ fun SettingsScreen(
                 icon = if (resolvedDark) FeatherIcons.NightMoon else FeatherIcons.SunLight,
                 iconTint = FeatherMintDark,
                 title = SettingsFolder.APPEARANCE.title,
-                subtitle = "${if (settings.themeMode == ThemeMode.SYSTEM) "System default" else settings.themeMode.name.lowercase().replaceFirstChar { it.uppercase() }} · ${settings.textZoomPercent}% zoom",
+                subtitle = "${if (settings.themeMode == ThemeMode.SYSTEM) "System default" else settings.themeMode.name.lowercase().replaceFirstChar { it.uppercase() }} · ${settings.textZoomPercent}% zoom · Night web",
                 tag = "settings_folder_appearance",
                 onClick = { activeFolder = SettingsFolder.APPEARANCE }
               )
               FolderDivider()
-              val permNote = if (sitePermissions.isNotEmpty()) " · ${sitePermissions.size} site rules" else ""
+              val permNote = if (sitePermissions.isNotEmpty()) " · ${sitePermissions.size} rules" else ""
               SettingsFolderRow(
                 icon = FeatherIcons.Shield,
                 iconTint = FeatherSecureGreen,
                 title = SettingsFolder.PRIVACY.title,
-                subtitle = "${if (settings.trackerBlockingEnabled) "Ad & tracker shield on" else "Shield off"} · ${if (settings.httpsOnlyEnabled) "HTTPS-Only" else "Standard"}$permNote",
+                subtitle = "Tracker shield: ${if (settings.trackerBlockingEnabled) "On" else "Off"} · HTTPS-only: ${if (settings.httpsOnlyEnabled) "On" else "Off"}$permNote",
                 tag = "settings_folder_privacy",
                 onClick = { activeFolder = SettingsFolder.PRIVACY }
               )
@@ -303,7 +305,7 @@ fun SettingsScreen(
                 icon = FeatherIcons.DataSaver,
                 iconTint = FeatherWarningAmber,
                 title = SettingsFolder.DATA_SAVER.title,
-                subtitle = "Data saver ${if (settings.dataSaverEnabled) "on" else "off"} · Images ${if (settings.noImageMode) "blocked" else "allowed"}",
+                subtitle = "Data saver: ${if (settings.dataSaverEnabled) "On" else "Off"} · Block images: ${if (settings.noImageMode) "On" else "Off"}",
                 tag = "settings_folder_data_saver",
                 onClick = { activeFolder = SettingsFolder.DATA_SAVER }
               )
@@ -312,7 +314,7 @@ fun SettingsScreen(
                 icon = FeatherIcons.Play,
                 iconTint = Color(0xFFEC4899),
                 title = SettingsFolder.MEDIA.title,
-                subtitle = "Background stream playback ${if (settings.backgroundPlayEnabled) "enabled" else "disabled"}",
+                subtitle = "Background playback: ${if (settings.backgroundPlayEnabled) "On" else "Off"} · WebRTC isolation",
                 tag = "settings_folder_media",
                 onClick = { activeFolder = SettingsFolder.MEDIA }
               )
@@ -321,7 +323,7 @@ fun SettingsScreen(
                 icon = FeatherIcons.OpenInNew,
                 iconTint = FeatherPrivateAccent,
                 title = SettingsFolder.TABS.title,
-                subtitle = if (settings.retainOpenTabs) "Retain open pages across restarts" else "Start fresh on launch",
+                subtitle = if (settings.retainOpenTabs) "Session restore active · Grid switcher" else "Clean session on launch · Low memory",
                 tag = "settings_folder_tabs",
                 onClick = { activeFolder = SettingsFolder.TABS }
               )
@@ -330,7 +332,7 @@ fun SettingsScreen(
                 icon = FeatherIcons.Download,
                 iconTint = Color(0xFF6366F1),
                 title = SettingsFolder.STORAGE.title,
-                subtitle = "Bookmarks import/export & clear browsing data",
+                subtitle = "HTML bookmark import/export · Granular data manager",
                 tag = "settings_folder_storage",
                 onClick = { activeFolder = SettingsFolder.STORAGE }
               )
@@ -351,7 +353,7 @@ fun SettingsScreen(
                 icon = FeatherIcons.Help,
                 iconTint = MaterialTheme.colorScheme.primary,
                 title = SettingsFolder.HELP_FEEDBACK.title,
-                subtitle = "Quick guide, troubleshooting & send feedback",
+                subtitle = "Guide, gestures, keyboard shortcuts & feedback",
                 tag = "settings_folder_help_feedback",
                 onClick = { activeFolder = SettingsFolder.HELP_FEEDBACK }
               )
@@ -360,7 +362,7 @@ fun SettingsScreen(
                 icon = Icons.Filled.Info,
                 iconTint = FeatherSecureGreen,
                 title = SettingsFolder.ABOUT.title,
-                subtitle = "Version ${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE}) · Engine & policies",
+                subtitle = "Kio v${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE}) · Engine & privacy policies",
                 tag = "settings_folder_about",
                 onClick = { activeFolder = SettingsFolder.ABOUT }
               )
@@ -748,10 +750,10 @@ fun SettingsScreen(
                 "Open the menu (⋮) → Narrate to read and listen to any page with pure on-device NLP narration. Text exists only in volatile RAM while open, cannot be copied or exported, and is wiped immediately when closed.",
               "How do I toggle Full Screen mode?" to
                 "Open the menu (⋮) and tap Full screen to hide the toolbar and system bars edge-to-edge. Tap the floating Exit pill or press Back to return.",
-              "How do I view the full Desktop version of a site?" to
-                "Tap the menu button (⋮) and select Desktop. Kio switches to a Windows Chrome User-Agent, rewrites mobile URLs (like m.youtube.com), and renders a full 1280px desktop layout.",
+              "How do I switch viewing modes?" to
+                "Tap the menu button (⋮) and tap Modes to select Desktop, iPhone, or Mobile. Kio instantly adjusts the User-Agent and viewport layout to match your preference.",
               "How does Private Mode keep my browsing safe?" to
-                "Private Mode runs inside a Zero-Leak Private Vault completely isolated from Standard Mode: cookies are bidirectionally vaulted/cleared on every mode switch, localStorage/sessionStorage live strictly in RAM, IndexedDB/caches/extensions/bookmarks/share/external browser/shortcuts are disabled, FLAG_SECURE blocks screenshots, and the 3-dot menu provides exclusive Burn Session, New Identity, Shield Audit, Wipe Clipboard, and Purge RAM tools.",
+                "Private Mode runs isolated from Standard Mode: cookies, cache, and history are never shared or saved. Extensions, bookmarks, and sharing are disabled for isolation, screenshots are blocked, and all private session data is wiped on exit.",
               "Why are streaming popups and ad redirects blocked?" to
                 "Kio intercepts popunder ad redirects (including tsyndicate, ad.* subdomains, and click-hijack overlays) before they can open spam tabs or interrupt video playback."
             )
@@ -891,20 +893,20 @@ fun SettingsScreen(
               horizontalAlignment = Alignment.CenterHorizontally
             ) {
               Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = FeatherSecureGreen.copy(alpha = 0.14f),
-                modifier = Modifier.size(54.dp)
+                shape = RoundedCornerShape(20.dp),
+                color = Color(0xFF050810),
+                border = BorderStroke(1.2.dp, Color(0xFF38BDF8).copy(alpha = 0.45f)),
+                modifier = Modifier.size(72.dp)
               ) {
                 Box(contentAlignment = Alignment.Center) {
-                  Icon(
-                    FeatherIcons.Shield,
-                    contentDescription = null,
-                    tint = FeatherSecureGreen,
-                    modifier = Modifier.size(28.dp)
+                  Image(
+                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                    contentDescription = "Kio Icon",
+                    modifier = Modifier.size(68.dp)
                   )
                 }
               }
-              Spacer(modifier = Modifier.height(10.dp))
+              Spacer(modifier = Modifier.height(12.dp))
               Text(
                 text = "Kio Browser",
                 style = MaterialTheme.typography.headlineSmall,
@@ -917,7 +919,7 @@ fun SettingsScreen(
               )
               Spacer(modifier = Modifier.height(8.dp))
               Text(
-                text = "Lightning-fast, privacy-hardened Android web browser with Desktop Chrome Extensions and pure on-device NLP narration — engineered strictly under 2 MB.",
+                text = "High-performance, privacy-hardened Android web browser with Desktop Chrome Extensions and on-device text narration — engineered strictly under 2 MB.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
               )

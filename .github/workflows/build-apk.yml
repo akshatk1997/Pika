@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kio-v1.9.5.apk
+          cp "$APK_PATH" releases/Kio-v1.9.6.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kio-v1.9.5.apk
+          git add releases/Kio-v1.9.6.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kio-v1.9.5.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kio-v1.9.6.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.9.5
+      - name: Create or update GitHub Release v1.9.6
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kio-v1.9.5.apk)
-          NOTES="Kio Browser v1.9.5 (Build 67) — Full Chrome Extension Background Service Worker Runtime, Real Async RPC/Port Messaging, CORS-Free Privileged Fetch/XHR, and Native WebView Proxy Routing strictly under 2 MB.\n\n- **Fixed Infinite Loading Spinner in Extension Popups (Urban VPN, Dark Reader, uBlock Lite, Stylus & More):**\n  - Added **ExtensionRuntimeHost** booting MV3 \`background.service_worker\` (classic & ES module) and MV2 \`background.scripts\` / \`background.page\` in a lazy headless Background Runtime Host before extension popups open.\n  - Built a true bidirectional **Popup ↔ Background ↔ Content Script IPC router** with async \`chrome.runtime.sendMessage\` + \`sendResponse\` callbacks/Promises and full-duplex \`chrome.runtime.connect\` / \`chrome.runtime.onConnect\` Ports.\n  - Added a **CORS-free privileged \`fetch()\` & \`XMLHttpRequest\` (Axios) bridge** for extension background and popup contexts so extensions can communicate cleanly with their API servers without WebView CORS failures.\n  - Integrated native **\`chrome.proxy\` routing** via AndroidX WebKit \`ProxyController\` (supporting both \`fixed_servers\` and \`pac_script\`) plus **\`chrome.webRequest.onAuthRequired\`** wired to \`onReceivedHttpAuthRequest\` so proxy/VPN extensions actually connect and authenticate in Standard Mode (and auto-suspend in Private Mode for zero-leak isolation).\n  - Added missing startup APIs (\`chrome.privacy.network.webRTCIPHandlingPolicy\`, real timer-backed \`chrome.alarms\`, \`chrome.offscreen\`, \`chrome.management\`, \`chrome.declarativeNetRequest\`, Service Worker \`importScripts\`/\`clients\`/\`skipWaiting\`) and improved responsive Popup sizing + Refresh button.\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease."
-          if gh release view v1.9.5 >/dev/null 2>&1; then
-            gh release upload v1.9.5 releases/Kio-v1.9.5.apk --clobber
-            gh release edit v1.9.5 --title "Kio v1.9.5 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kio-v1.9.6.apk)
+          NOTES="Kio Browser v1.9.6 (Build 68) — 3-Dot Menu Overhaul (Modes tile, Block Images, Clean Header), Enhanced Settings Sections with Feature Details, Kio Launcher Icon in About, and Professional UI Wording (< 2 MB).\n\n- **Refined 3-Dot Quick Menu:**\n  - Removed cluttered header chips (Extensions, Desktop, iPhone, System, Data Saver), leaving a clean theme toggle.\n  - Replaced the bookmark grid action with a dedicated **Modes** tile that reveals tappable **Desktop**, **iPhone**, and **Mobile** options with real-time active mode highlighting.\n  - Replaced the Extensions grid tile with a direct **Block Images** toggle with instant toast feedback.\n- **Enhanced Settings Experience:**\n  - Added rich feature details across all settings categories (MV3 extensions, search & homepage, text zoom & dark web, tracker shield & HTTPS enforcement, bandwidth optimizer, background playback, session restore, and HTML bookmark manager).\n  - Added the official vector **Kio launcher icon** inside the **About Kio** section and main Settings header card.\n- **Professional UI Refinements:**\n  - Streamlined toasts, status labels, and banners for both Standard and Private Browsing modes.\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease strictly under 2 MB."
+          if gh release view v1.9.6 >/dev/null 2>&1; then
+            gh release upload v1.9.6 releases/Kio-v1.9.6.apk --clobber
+            gh release edit v1.9.6 --title "Kio v1.9.6 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.9.5 releases/Kio-v1.9.5.apk \
-              --title "Kio v1.9.5 (< 2 MB)" \
+            gh release create v1.9.6 releases/Kio-v1.9.6.apk \
+              --title "Kio v1.9.6 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

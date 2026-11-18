@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kio", appName)
-    assertEquals("1.9.5", BuildConfig.VERSION_NAME)
-    assertEquals(67, BuildConfig.VERSION_CODE)
+    assertEquals("1.9.6", BuildConfig.VERSION_NAME)
+    assertEquals(68, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -171,8 +171,6 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithTag("nav_menu_button").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("private_menu_banner").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Data Saver").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Block images").assertIsDisplayed()
     composeTestRule.onNodeWithText("Full screen").assertIsDisplayed()
     composeTestRule.onNodeWithText("Narrate").assertIsDisplayed()
     composeTestRule.onNodeWithText("Burn session").assertIsDisplayed()
@@ -189,7 +187,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Resources").assertDoesNotExist()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.9.5").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.9.6").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
 
     // Navigate into Data Saver folder
@@ -880,10 +878,10 @@ class ExampleRobolectricTest {
     composeTestRule.waitForIdle()
     assertTrue(vm.activeTab().isPrivate)
 
-    // Select System Default Mode directly from Private Mode 3-dot menu
-    composeTestRule.onNodeWithTag("nav_menu_button").performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("quick_theme_system_chip").assertIsDisplayed().performClick()
+    // Set System Default Mode in Private Mode
+    composeTestRule.runOnUiThread {
+      vm.updateSettings { it.copy(themeMode = com.example.model.ThemeMode.SYSTEM) }
+    }
     composeTestRule.waitForIdle()
     assertEquals(com.example.model.ThemeMode.SYSTEM, vm.settings.value.themeMode)
 
@@ -1012,5 +1010,40 @@ class ExampleRobolectricTest {
     assertTrue(pacProxy.proxyRules.contains("http://fallback.example:8080"))
 
     mgr.removeExtension("vpnworkertest001")
+  }
+
+  @Test
+  fun quickMenuHasModesAndBlockImagesAction() {
+    val activity = composeTestRule.activity
+    val vm = activity.viewModel
+    composeTestRule.waitForIdle()
+    composeTestRule.runOnUiThread {
+      vm.dismissIntro()
+    }
+    composeTestRule.waitForIdle()
+
+    // Open quick menu in standard mode
+    composeTestRule.onNodeWithTag("nav_menu_button").performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify Modes tile exists in grid
+    composeTestRule.onNodeWithText("Modes").assertIsDisplayed()
+
+    // Verify Block Images tile exists in grid
+    composeTestRule.onNodeWithText("Block Images").assertIsDisplayed()
+
+    // Tap Modes to open expander
+    composeTestRule.onNodeWithText("Modes").performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify Viewing Mode choices are visible
+    composeTestRule.onNodeWithText("Desktop").assertIsDisplayed()
+    composeTestRule.onNodeWithText("iPhone").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Mobile").assertIsDisplayed()
+
+    // Tap Desktop to switch mode
+    composeTestRule.onNodeWithText("Desktop").performClick()
+    composeTestRule.waitForIdle()
+    assertEquals(com.example.model.UserAgentMode.DESKTOP, vm.activeTab().userAgentMode)
   }
 }

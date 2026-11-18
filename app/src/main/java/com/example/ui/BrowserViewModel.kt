@@ -298,7 +298,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
       showToast("Extension enabled")
     } else {
       extensionRuntimeHost.stopBackground(extId)
-      showToast("Extension disabled · reload page to clear active scripts")
+      showToast("Extension disabled")
     }
   }
 
@@ -1032,7 +1032,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         loadRestoredTabSafely(newTab.id, target)
       }
       persistOpenTabs()
-      showToast(if (isPrivate) "Opened in private background tab" else "Opened in background tab")
+      showToast("Opened in background")
     }
   }
 
@@ -1181,7 +1181,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     wipeClipboard(silent = true)
     webViewPool.syncActiveModeBoundary(false)
     persistOpenTabs()
-    showToast("Private session burned — zero traces left")
+    showToast("Private session cleared")
   }
 
   fun rotatePrivateIdentity() {
@@ -1189,7 +1189,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     if (!tab.isPrivate) return
     val privateIds = _tabs.value.filter { it.isPrivate }.map { it.id }
     webViewPool.purgePrivateRamData(privateIds, reloadTabId = if (tab.url.isNotBlank()) tab.id else null)
-    showToast("Fresh private identity active")
+    showToast("Identity reset")
   }
 
   fun purgePrivateRamOnly() {
@@ -1197,7 +1197,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     if (!tab.isPrivate) return
     val privateIds = _tabs.value.filter { it.isPrivate }.map { it.id }
     webViewPool.purgePrivateRamData(privateIds, reloadTabId = null)
-    showToast("Private cookies, RAM cache & storage purged")
+    showToast("Private storage cleared")
   }
 
   fun wipeClipboard(silent: Boolean = false) {
@@ -1396,7 +1396,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   fun openInSystemBrowser() {
     if (activeTab().isPrivate) {
-      showToast("External browser is disabled in Private Mode")
+      showToast("Unavailable in Private Mode")
       return
     }
     val url = activeTab().url
@@ -1783,7 +1783,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   fun shareUrl(url: String) {
     if (activeTab().isPrivate) {
-      showToast("Sharing is disabled in Private Mode")
+      showToast("Unavailable in Private Mode")
       return
     }
     if (!UrlValidator.isSafeWebUrl(url) || url == "about:blank") return
@@ -1838,7 +1838,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   fun toggleCurrentBookmark() {
     val tab = activeTab()
     if (tab.isPrivate) {
-      showToast("Bookmarks are only available in Standard Mode")
+      showToast("Bookmarks unavailable in Private Mode")
       return
     }
     if (!UrlValidator.isSafeWebUrl(tab.url) || tab.url == "about:blank") return
@@ -2172,7 +2172,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     if (activeTab().isPrivate &&
       (overlay == ActiveOverlay.BOOKMARKS || overlay == ActiveOverlay.HISTORY || overlay == ActiveOverlay.EXTENSIONS)
     ) {
-      showToast("Unavailable in Private Mode for isolation")
+      showToast("Unavailable in Private Mode")
       return
     }
     _activeOverlay.value = overlay

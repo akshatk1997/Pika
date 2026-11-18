@@ -349,7 +349,7 @@ fun NewTabHomeView(
               Spacer(modifier = Modifier.width(10.dp))
               Column {
                 Text(
-                  text = "Zero-Leak Private Vault",
+                  text = "Private Browsing Shield",
                   style = MaterialTheme.typography.titleSmall,
                   fontWeight = FontWeight.SemiBold,
                   color = titleColor
