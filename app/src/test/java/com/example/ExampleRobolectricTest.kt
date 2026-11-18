@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kio", appName)
-    assertEquals("1.9.6", BuildConfig.VERSION_NAME)
-    assertEquals(68, BuildConfig.VERSION_CODE)
+    assertEquals("1.9.7", BuildConfig.VERSION_NAME)
+    assertEquals(69, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -187,7 +187,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Resources").assertDoesNotExist()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.9.6").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.9.7").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
 
     // Navigate into Data Saver folder
@@ -989,6 +989,11 @@ class ExampleRobolectricTest {
     assertTrue(bgHtml.contains("__kioXhrPatched"))
     assertTrue(bgHtml.contains("webRTCIPHandlingPolicy"))
     assertTrue(bgHtml.contains("onAuthRequired"))
+    assertTrue(bgHtml.contains("setAccessLevel"))
+    assertTrue(bgHtml.contains("getUserSettings"))
+    assertTrue(bgHtml.contains("getViews"))
+    assertTrue(bgHtml.contains("handlerBehaviorChanged"))
+    assertTrue(bgHtml.contains("openOrClosedShadowRoot"))
 
     // Verify chrome.proxy fixed_servers and pac_script parsing
     val fixedProxy = mgr.parseProxyConfigFromJson(

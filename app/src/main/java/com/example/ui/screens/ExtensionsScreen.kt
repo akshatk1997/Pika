@@ -3,6 +3,7 @@ package com.example.ui.screens
 import android.annotation.SuppressLint
 import android.graphics.BitmapFactory
 import android.webkit.JavascriptInterface
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
@@ -12,6 +13,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -445,7 +447,14 @@ private fun InstalledExtensionCard(
       else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
     ),
     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    modifier = Modifier.fillMaxWidth().testTag("extension_card_${ext.id}")
+    modifier = Modifier
+      .fillMaxWidth()
+      .testTag("extension_card_${ext.id}")
+      .then(
+        if (ext.enabled && ext.defaultPopup != null) {
+          Modifier.clickable { onOpenPopup(ext.defaultPopup) }
+        } else Modifier
+      )
   ) {
     Column(modifier = Modifier.padding(14.dp)) {
       Row(verticalAlignment = Alignment.CenterVertically) {
@@ -632,11 +641,13 @@ private fun ExtensionPopupDialog(
               settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
               settings.allowFileAccess = false
               settings.allowContentAccess = false
+              settings.javaScriptCanOpenWindowsAutomatically = true
               settings.userAgentString = ChromeExtensionManager.DESKTOP_CHROME_UA
               val bridge: Any = extensionRuntimeHost?.createBridgeObject(
                 extId = extension.id,
                 contextKind = "popup",
-                onOpenOptions = onOpenOptionsPage
+                onOpenOptions = onOpenOptionsPage,
+                onClosePopup = onDismiss
               ) ?: object {
                 @JavascriptInterface
                 fun storageGetAll(extId: String): String = extensionManager.readStorageJson(extId)
@@ -675,6 +686,16 @@ private fun ExtensionPopupDialog(
                 }
 
                 @JavascriptInterface
+                fun removeCssFromActiveTab(extId: String) {
+                  // Fallback
+                }
+
+                @JavascriptInterface
+                fun closePopup(extId: String) {
+                  post { onDismiss() }
+                }
+
+                @JavascriptInterface
                 fun reloadActiveTab() {
                   post { onReloadActiveTab() }
                 }
@@ -698,6 +719,11 @@ private fun ExtensionPopupDialog(
               }
               addJavascriptInterface(bridge, "__KioExtBridge")
               extensionRuntimeHost?.attachPopupWebView(extension.id, this)
+              webChromeClient = object : WebChromeClient() {
+                override fun onCloseWindow(window: WebView?) {
+                  onDismiss()
+                }
+              }
               webViewClient = object : WebViewClient() {
                 override fun shouldInterceptRequest(
                   view: WebView?,

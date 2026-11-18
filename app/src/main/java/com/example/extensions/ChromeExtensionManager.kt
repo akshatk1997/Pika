@@ -356,20 +356,23 @@ class ChromeExtensionManager(context: Context) {
     val ext = getExtension(extId) ?: return null
     val headers = mapOf(
       "Access-Control-Allow-Origin" to "*",
-      "Cache-Control" to "no-cache"
+      "Access-Control-Allow-Methods" to "GET, POST, PUT, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers" to "*",
+      "Cache-Control" to "no-cache",
+      "Content-Security-Policy" to "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;"
     )
     if (relPath == BG_HOST_VIRTUAL_FILE) {
       val bgHtml = buildBackgroundHostHtml(ext)
       return WebResourceResponse("text/html", "utf-8", 200, "OK", headers, ByteArrayInputStream(bgHtml.toByteArray(Charsets.UTF_8)))
     }
+    if (relPath == "__kio_prelude.js") {
+      val prelude = buildChromeApiPrelude(ext.id, contextKind = "popup")
+      return WebResourceResponse("application/javascript", "utf-8", 200, "OK", headers, ByteArrayInputStream(prelude.toByteArray(Charsets.UTF_8)))
+    }
     val baseDir = File(ext.installDirPath)
-    val targetFile = File(baseDir, relPath)
+    val targetFile = safeResolveAsset(baseDir, relPath)
+      ?: return WebResourceResponse("text/plain", "utf-8", 404, "Not Found", emptyMap(), ByteArrayInputStream(ByteArray(0)))
     return try {
-      val canonicalBase = baseDir.canonicalPath + File.separator
-      val canonicalTarget = targetFile.canonicalPath
-      if (!canonicalTarget.startsWith(canonicalBase) || !targetFile.isFile) {
-        return WebResourceResponse("text/plain", "utf-8", 404, "Not Found", emptyMap(), ByteArrayInputStream(ByteArray(0)))
-      }
       val mime = inferMimeType(relPath)
       val bytes = if (mime == "text/html") {
         val rawHtml = targetFile.readText(Charsets.UTF_8)
@@ -458,15 +461,18 @@ class ChromeExtensionManager(context: Context) {
   }
 
   private fun injectPreludeIntoHtml(html: String, extId: String, contextKind: String = "popup"): String {
+    val cleanHtml = html
+      .replace(Regex("""<meta\s+[^>]*http-equiv\s*=\s*['"]?Content-Security-Policy['"]?[^>]*>""", RegexOption.IGNORE_CASE), "")
+      .replace(Regex("""<meta\s+[^>]*http-equiv\s*=\s*['"]?X-Frame-Options['"]?[^>]*>""", RegexOption.IGNORE_CASE), "")
     val prelude = buildChromeApiPrelude(extId, contextKind = contextKind)
     val safePrelude = prelude.replace("</script>", "<\\/script>", ignoreCase = true)
     val scriptTag = "<script>(function(){\n$safePrelude\n})();</script>"
-    val headMatch = Regex("""<head\b[^>]*>""", RegexOption.IGNORE_CASE).find(html)
+    val headMatch = Regex("""<head\b[^>]*>""", RegexOption.IGNORE_CASE).find(cleanHtml)
     return if (headMatch != null) {
       val insertPos = headMatch.range.last + 1
-      html.substring(0, insertPos) + "\n" + scriptTag + "\n" + html.substring(insertPos)
+      cleanHtml.substring(0, insertPos) + "\n" + scriptTag + "\n" + cleanHtml.substring(insertPos)
     } else {
-      scriptTag + "\n" + html
+      scriptTag + "\n" + cleanHtml
     }
   }
 
@@ -592,14 +598,20 @@ class ChromeExtensionManager(context: Context) {
     val quotedId = JSONObject.quote(extId)
     val quotedCtx = JSONObject.quote(contextKind)
     val baseUrl = JSONObject.quote("https://$EXT_VIRTUAL_HOST/$extId/")
+    val quotedManifest = JSONObject.quote(resolvedManifest)
+    val quotedLocales = JSONObject.quote(resolvedLocales)
+    val quotedStorage = JSONObject.quote(resolvedStorage)
 
     return """
       var __kioExtId = $quotedId;
       var __kioCtxKind = $quotedCtx;
       var __kioBaseUrl = $baseUrl;
-      var __kioManifest = $resolvedManifest;
-      var __kioLocales = $resolvedLocales;
-      var __kioStoreMem = $resolvedStorage;
+      var __kioManifest = {};
+      try { __kioManifest = JSON.parse($quotedManifest); } catch(e) {}
+      var __kioLocales = {};
+      try { __kioLocales = JSON.parse($quotedLocales); } catch(e) {}
+      var __kioStoreMem = {};
+      try { __kioStoreMem = JSON.parse($quotedStorage); } catch(e) {}
       var __kioStorageListeners = [];
       var __kioMessageListeners = [];
       var __kioConnectListeners = [];
@@ -671,7 +683,7 @@ class ChromeExtensionManager(context: Context) {
             }
           } catch(e) {}
         }
-        if (!replied && !asyncWait && list.length === 0) {
+        if (!replied && !asyncWait) {
           sendResponse(null);
         }
       };
@@ -974,6 +986,10 @@ class ChromeExtensionManager(context: Context) {
             if (typeof cb === 'function') { try { cb(); } catch(e) {} }
             return Promise.resolve();
           },
+          setAccessLevel: function(o, cb) {
+            if (typeof cb === 'function') { try { cb(); } catch(e) {} }
+            return Promise.resolve();
+          },
           getBytesInUse: function(keys, cb) {
             var sz = JSON.stringify(__kioReadStore()).length;
             if (typeof keys === 'function') { try { keys(sz); } catch(e) {} }
@@ -996,6 +1012,11 @@ class ChromeExtensionManager(context: Context) {
         setIcon: function(d, cb) { if (typeof cb === 'function') try{cb();}catch(e){} return Promise.resolve(); },
         setTitle: function(d, cb) { if (typeof cb === 'function') try{cb();}catch(e){} return Promise.resolve(); },
         setPopup: function(d, cb) { if (typeof cb === 'function') try{cb();}catch(e){} return Promise.resolve(); },
+        getUserSettings: function(cb) { var r = { isOnToolbar: true }; if (typeof cb === 'function') try{cb(r);}catch(e){} return Promise.resolve(r); },
+        openPopup: function(cb) { if (window.__KioExtBridge && window.__KioExtBridge.openPopup) try{window.__KioExtBridge.openPopup(__kioExtId);}catch(e){} if (typeof cb === 'function') try{cb();}catch(e){} return Promise.resolve(); },
+        isEnabled: function(d, cb) { var fn = typeof d === 'function' ? d : cb; if (typeof fn === 'function') try{fn(true);}catch(e){} return Promise.resolve(true); },
+        getTitle: function(d, cb) { var fn = typeof d === 'function' ? d : cb; if (typeof fn === 'function') try{fn('');}catch(e){} return Promise.resolve(''); },
+        getPopup: function(d, cb) { var fn = typeof d === 'function' ? d : cb; if (typeof fn === 'function') try{fn('');}catch(e){} return Promise.resolve(''); },
         enable: function() { return Promise.resolve(); },
         disable: function() { return Promise.resolve(); },
         onClicked: __kioMakeEvent([])
@@ -1090,6 +1111,11 @@ class ChromeExtensionManager(context: Context) {
             return __kioBaseUrl + clean;
           },
           getBackgroundPage: function() { return window; },
+          getViews: function(o) { return [window]; },
+          isAllowedIncognitoAccess: function(cb) { if (typeof cb === 'function') try{cb(false);}catch(e){} return Promise.resolve(false); },
+          isAllowedFileSchemeAccess: function(cb) { if (typeof cb === 'function') try{cb(false);}catch(e){} return Promise.resolve(false); },
+          sendRequest: function(msg, cb) { return __kioChrome.runtime.sendMessage(msg, cb); },
+          onRequest: __kioMakeEvent([]),
           inIncognitoContext: false
         },
         storage: {
@@ -1115,6 +1141,11 @@ class ChromeExtensionManager(context: Context) {
             var langs = [navigator.language || 'en'];
             if (typeof cb === 'function') { try { cb(langs); } catch(e) {} }
             return Promise.resolve(langs);
+          },
+          detectLanguage: function(text, cb) {
+            var r = { isReliable: true, languages: [{ language: 'en', percentage: 100 }] };
+            if (typeof cb === 'function') { try { cb(r); } catch(e) {} }
+            return Promise.resolve(r);
           }
         },
         tabs: {
@@ -1156,13 +1187,40 @@ class ChromeExtensionManager(context: Context) {
           remove: function(ids, cb) { if (typeof cb === 'function') try{cb();}catch(e){} return Promise.resolve(); },
           sendMessage: function(tabId, msg, optsOrCb, maybeCb) {
             var cb = typeof optsOrCb === 'function' ? optsOrCb : maybeCb;
-            try {
-              if (window.__KioExtBridge && window.__KioExtBridge.sendMessageToActiveTab) {
-                window.__KioExtBridge.sendMessageToActiveTab(__kioExtId, JSON.stringify(msg === undefined ? null : msg));
-              }
-            } catch(e) {}
+            if (window.__KioExtBridge && window.__KioExtBridge.routeRuntimeMessage) {
+              var reqId = __kioCtxKind + '_tabrpc_' + (__kioRpcSeq++);
+              return new Promise(function(resolve) {
+                var timer = setTimeout(function() {
+                  if (__kioPendingRpc[reqId]) {
+                    delete __kioPendingRpc[reqId];
+                    if (typeof cb === 'function') { try { cb(undefined); } catch(e) {} }
+                    resolve(undefined);
+                  }
+                }, 4500);
+                __kioPendingRpc[reqId] = { cb: cb, resolve: resolve, timer: timer };
+                try {
+                  window.__KioExtBridge.routeRuntimeMessage(__kioExtId, __kioCtxKind, reqId, JSON.stringify(msg === undefined ? null : msg));
+                } catch(e) {
+                  clearTimeout(timer);
+                  delete __kioPendingRpc[reqId];
+                  if (typeof cb === 'function') { try { cb(undefined); } catch(e2) {} }
+                  resolve(undefined);
+                }
+              });
+            }
             if (typeof cb === 'function') { try { cb(null); } catch(e) {} }
             return Promise.resolve(null);
+          },
+          connect: function(tabId, opts) {
+            var portId = __kioCtxKind + '_tabport_' + (__kioRpcSeq++);
+            var pName = (opts && opts.name) ? String(opts.name) : '';
+            var port = __kioCreatePortObject(portId, pName, 'content');
+            try {
+              if (window.__KioExtBridge && window.__KioExtBridge.routePortConnect) {
+                window.__KioExtBridge.routePortConnect(__kioExtId, __kioCtxKind, portId, pName);
+              }
+            } catch(e) {}
+            return port;
           },
           insertCSS: function(tabIdOrDetails, detailsOrCb, maybeCb) {
             var d = typeof tabIdOrDetails === 'object' ? tabIdOrDetails : detailsOrCb;
@@ -1172,6 +1230,16 @@ class ChromeExtensionManager(context: Context) {
                 window.__KioExtBridge.insertCssInActiveTab(__kioExtId, String(d.code));
               } else if (d && d.file && window.__KioExtBridge && window.__KioExtBridge.insertCssFileInActiveTab) {
                 window.__KioExtBridge.insertCssFileInActiveTab(__kioExtId, String(d.file));
+              }
+            } catch(e) {}
+            if (typeof cb === 'function') { try { cb(); } catch(e) {} }
+            return Promise.resolve();
+          },
+          removeCSS: function(tabIdOrDetails, detailsOrCb, maybeCb) {
+            var cb = typeof detailsOrCb === 'function' ? detailsOrCb : maybeCb;
+            try {
+              if (window.__KioExtBridge && window.__KioExtBridge.removeCssFromActiveTab) {
+                window.__KioExtBridge.removeCssFromActiveTab(__kioExtId);
               }
             } catch(e) {}
             if (typeof cb === 'function') { try { cb(); } catch(e) {} }
@@ -1187,8 +1255,9 @@ class ChromeExtensionManager(context: Context) {
                 window.__KioExtBridge.executeScriptFileInActiveTab(__kioExtId, String(d.file));
               }
             } catch(e) {}
-            if (typeof cb === 'function') { try { cb([]); } catch(e) {} }
-            return Promise.resolve([]);
+            var res = [{ frameId: 0, result: null }];
+            if (typeof cb === 'function') { try { cb(res); } catch(e) {} }
+            return Promise.resolve(res);
           },
           onUpdated: __kioMakeEvent([]),
           onActivated: __kioMakeEvent([]),
@@ -1207,8 +1276,9 @@ class ChromeExtensionManager(context: Context) {
                 }
               }
             } catch(e) {}
-            if (typeof cb === 'function') { try { cb([]); } catch(e) {} }
-            return Promise.resolve([]);
+            var res = [{ frameId: 0, result: null }];
+            if (typeof cb === 'function') { try { cb(res); } catch(e) {} }
+            return Promise.resolve(res);
           },
           insertCSS: function(inj, cb) {
             try {
@@ -1223,7 +1293,15 @@ class ChromeExtensionManager(context: Context) {
             if (typeof cb === 'function') { try { cb(); } catch(e) {} }
             return Promise.resolve();
           },
-          removeCSS: function(inj, cb) { if (typeof cb === 'function') try{cb();}catch(e){} return Promise.resolve(); },
+          removeCSS: function(inj, cb) {
+            try {
+              if (window.__KioExtBridge && window.__KioExtBridge.removeCssFromActiveTab) {
+                window.__KioExtBridge.removeCssFromActiveTab(__kioExtId);
+              }
+            } catch(e) {}
+            if (typeof cb === 'function') { try { cb(); } catch(e) {} }
+            return Promise.resolve();
+          },
           registerContentScripts: function(s, cb) { if (typeof cb === 'function') try{cb();}catch(e){} return Promise.resolve(); },
           unregisterContentScripts: function(s, cb) { if (typeof cb === 'function') try{cb();}catch(e){} return Promise.resolve(); }
         },
@@ -1261,6 +1339,8 @@ class ChromeExtensionManager(context: Context) {
         notifications: { create: function(id, o, cb){ if(typeof cb==='function')try{cb(id||'1');}catch(e){} return Promise.resolve(id||'1'); }, clear: function(){ return Promise.resolve(true); }, onClicked: __kioMakeEvent([]) },
         webNavigation: { onCommitted: __kioMakeEvent([]), onCompleted: __kioMakeEvent([]), onHistoryStateUpdated: __kioMakeEvent([]), onBeforeNavigate: __kioMakeEvent([]) },
         webRequest: {
+          handlerBehaviorChanged: function(cb){ if(typeof cb==='function')try{cb();}catch(e){} return Promise.resolve(); },
+          ResourceType: { MAIN_FRAME: 'main_frame', SUB_FRAME: 'sub_frame', STYLESHEET: 'stylesheet', SCRIPT: 'script', IMAGE: 'image', FONT: 'font', OBJECT: 'object', XMLHTTPREQUEST: 'xmlhttprequest', PING: 'ping', CSP_REPORT: 'csp_report', MEDIA: 'media', WEBSOCKET: 'websocket', OTHER: 'other' },
           onBeforeRequest: __kioMakeEvent([]),
           onBeforeSendHeaders: __kioMakeEvent([]),
           onHeadersReceived: __kioMakeEvent([]),
@@ -1268,7 +1348,14 @@ class ChromeExtensionManager(context: Context) {
           onErrorOccurred: __kioMakeEvent([]),
           onAuthRequired: __kioMakeEvent(__kioAuthListeners)
         },
-        cookies: { get: function(d, cb){ if(typeof cb==='function')try{cb(null);}catch(e){} return Promise.resolve(null); }, getAll: function(d, cb){ if(typeof cb==='function')try{cb([]);}catch(e){} return Promise.resolve([]); }, set: function(d, cb){ if(typeof cb==='function')try{cb(null);}catch(e){} return Promise.resolve(null); }, remove: function(d, cb){ if(typeof cb==='function')try{cb(null);}catch(e){} return Promise.resolve(null); }, onChanged: __kioMakeEvent([]) },
+        cookies: {
+          get: function(d, cb){ if(typeof cb==='function')try{cb(null);}catch(e){} return Promise.resolve(null); },
+          getAll: function(d, cb){ if(typeof cb==='function')try{cb([]);}catch(e){} return Promise.resolve([]); },
+          set: function(d, cb){ if(typeof cb==='function')try{cb(null);}catch(e){} return Promise.resolve(null); },
+          remove: function(d, cb){ if(typeof cb==='function')try{cb(null);}catch(e){} return Promise.resolve(null); },
+          getAllCookieStores: function(cb){ var r = [{ id: '0', tabIds: [1], incognito: false }]; if(typeof cb==='function')try{cb(r);}catch(e){} return Promise.resolve(r); },
+          onChanged: __kioMakeEvent([])
+        },
         windows: {
           getCurrent: function(cb){ var w = { id: 1, focused: true, type: 'normal', tabs: [__kioActiveTabObj()] }; if(typeof cb==='function')try{cb(w);}catch(e){} return Promise.resolve(w); },
           getLastFocused: function(cb){ var w = { id: 1, focused: true, type: 'normal', tabs: [__kioActiveTabObj()] }; if(typeof cb==='function')try{cb(w);}catch(e){} return Promise.resolve(w); },
@@ -1286,6 +1373,15 @@ class ChromeExtensionManager(context: Context) {
           getDynamicRules: function(cb){ if(typeof cb==='function')try{cb([]);}catch(e){} return Promise.resolve([]); },
           updateSessionRules: function(o, cb){ if(typeof cb==='function')try{cb();}catch(e){} return Promise.resolve(); },
           getSessionRules: function(cb){ if(typeof cb==='function')try{cb([]);}catch(e){} return Promise.resolve([]); },
+          getDisabledRuleIds: function(o, cb){ if(typeof cb==='function')try{cb([]);}catch(e){} return Promise.resolve([]); },
+          updateStaticRules: function(o, cb){ if(typeof cb==='function')try{cb();}catch(e){} return Promise.resolve(); },
+          setExtensionActionOptions: function(o, cb){ if(typeof cb==='function')try{cb();}catch(e){} return Promise.resolve(); },
+          getMatchedStyles: function(cb){ if(typeof cb==='function')try{cb([]);}catch(e){} return Promise.resolve([]); },
+          testMatchOutcome: function(o, cb){ var r = { matchedRules: [] }; if(typeof cb==='function')try{cb(r);}catch(e){} return Promise.resolve(r); },
+          onRuleMatchedDebug: __kioMakeEvent([]),
+          RuleActionType: { BLOCK: 'block', REDIRECT: 'redirect', ALLOW: 'allow', UPGRADE_SCHEME: 'upgradeScheme', MODIFY_HEADERS: 'modifyHeaders', ALLOW_ALL_REQUESTS: 'allowAllRequests' },
+          HeaderOperation: { APPEND: 'append', SET: 'set', REMOVE: 'remove' },
+          DomainType: { FIRST_PARTY: 'firstParty', THIRD_PARTY: 'thirdParty' },
           isRegexSupported: function(o, cb){ var r = { isSupported: true }; if(typeof cb==='function')try{cb(r);}catch(e){} return Promise.resolve(r); }
         },
         proxy: {
@@ -1336,6 +1432,14 @@ class ChromeExtensionManager(context: Context) {
           closeDocument: function(cb){ if(typeof cb==='function')try{cb();}catch(e){} return Promise.resolve(); },
           hasDocument: function(cb){ if(typeof cb==='function')try{cb(false);}catch(e){} return Promise.resolve(false); }
         },
+        dom: {
+          openOrClosedShadowRoot: function(el) { return (el && (el.shadowRoot || el.openOrClosedShadowRoot)) || null; }
+        },
+        system: {
+          cpu: { getInfo: function(cb) { var r = { numOfProcessors: 4, archName: 'arm64', modelName: 'ARM', features: [], processors: [{ usage: { user: 0, kernel: 0, idle: 100, total: 100 } }] }; if (typeof cb === 'function') try{cb(r);}catch(e){} return Promise.resolve(r); } },
+          memory: { getInfo: function(cb) { var r = { capacity: 4294967296, availableCapacity: 2147483648 }; if (typeof cb === 'function') try{cb(r);}catch(e){} return Promise.resolve(r); } },
+          storage: { getInfo: function(cb) { if (typeof cb === 'function') try{cb([]);}catch(e){} return Promise.resolve([]); } }
+        },
         management: {
           getSelf: function(cb){ var m = { id: __kioExtId, name: __kioManifest.name || '', version: __kioManifest.version || '1.0', enabled: true, installType: 'normal', type: 'extension' }; if(typeof cb==='function')try{cb(m);}catch(e){} return Promise.resolve(m); },
           getAll: function(cb){ if(typeof cb==='function')try{cb([]);}catch(e){} return Promise.resolve([]); },
@@ -1345,10 +1449,23 @@ class ChromeExtensionManager(context: Context) {
         idle: { queryState: function(i, cb){ if(typeof cb==='function')try{cb('active');}catch(e){} return Promise.resolve('active'); }, onStateChanged: __kioMakeEvent([]) },
         power: { requestKeepAwake: function(){}, releaseKeepAwake: function(){} }
       };
+      if (__kioCtxKind === 'popup') {
+        window.close = function() {
+          try {
+            if (window.__KioExtBridge && window.__KioExtBridge.closePopup) {
+              window.__KioExtBridge.closePopup(__kioExtId);
+            }
+          } catch(e) {}
+        };
+      }
       var chrome = __kioChrome;
       var browser = __kioChrome;
-      if (!window.chrome || !window.chrome.runtime) { window.chrome = __kioChrome; }
-      if (!window.browser || !window.browser.runtime) { window.browser = __kioChrome; }
+      try { window.chrome = __kioChrome; } catch(e) {}
+      try { window.browser = __kioChrome; } catch(e) {}
+      try { self.chrome = __kioChrome; } catch(e) {}
+      try { self.browser = __kioChrome; } catch(e) {}
+      try { if (typeof globalThis !== 'undefined') { globalThis.chrome = __kioChrome; globalThis.browser = __kioChrome; } } catch(e) {}
+      try { if (typeof top !== 'undefined' && top !== window) { top.chrome = __kioChrome; top.browser = __kioChrome; } } catch(e) {}
       // Tampermonkey / Greasemonkey userscript compatibility helpers
       if (typeof window.GM_addStyle !== 'function') {
         window.GM_addStyle = function(css) {
@@ -1699,7 +1816,15 @@ class ChromeExtensionManager(context: Context) {
     val f = File(baseDir, clean)
     return try {
       val baseCanon = baseDir.canonicalPath + File.separator
-      if (f.canonicalPath.startsWith(baseCanon) && f.isFile) f else null
+      if (f.canonicalPath.startsWith(baseCanon) && f.isFile) return f
+      // Case-insensitive lookup fallback for Android ext4 / f2fs
+      val parts = clean.split('/')
+      var curr: File = baseDir
+      for (part in parts) {
+        val match = curr.listFiles()?.firstOrNull { it.name.equals(part, ignoreCase = true) } ?: return null
+        curr = match
+      }
+      if (curr.canonicalPath.startsWith(baseCanon) && curr.isFile) curr else null
     } catch (_: Throwable) {
       null
     }

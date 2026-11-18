@@ -8,12 +8,16 @@
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v1.9.6.apk`](releases/Kio-v1.9.6.apk) and published in GitHub Releases (`v1.9.6`).
+Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v1.9.7.apk`](releases/Kio-v1.9.7.apk) and published in GitHub Releases (`v1.9.7`).
 
 ---
 
-## Core Highlights (v1.9.6 — Build 68)
+## Core Highlights (v1.9.7 — Build 69)
 
+- **Kiwi-Style Chrome Extension Engine Parity & Full WebExtension API Suite:** Complete polyfills for `chrome.storage.session.setAccessLevel`, `chrome.action.getUserSettings`, `openPopup`, `getTitle`, `getPopup`, `isEnabled`, `chrome.extension.getViews`, `isAllowedIncognitoAccess`, `isAllowedFileSchemeAccess`, `sendRequest`, `onRequest`, `chrome.declarativeNetRequest` (static & dynamic rules, options, constants), `chrome.webRequest.handlerBehaviorChanged`, `chrome.cookies.getAllCookieStores`, `chrome.i18n.detectLanguage`, `chrome.dom.openOrClosedShadowRoot`, and `chrome.system` (CPU, memory, storage).
+- **Full Bidirectional Mesh Messaging & Ports:** Robust async `chrome.tabs.sendMessage`, `chrome.tabs.connect`, and `chrome.runtime.sendMessage` routing with fast reply handling between Popups, Background Workers, and Active Tab Content Scripts.
+- **CSP Relaxation & Injected Script Execution:** Strips restrictive `Content-Security-Policy` and `X-Frame-Options` meta tags from extension popups, fixes case-sensitive disk asset resolution on Android filesystems, and auto-dismisses popups via `window.close()` / `WebChromeClient`.
+- **1-Tap Popup Launch:** Installed extension cards in Extensions screen are directly clickable to open extension popups instantly.
 - **3-Dot Menu Overhaul (Modes tile, Block Images, Clean Header):** Cleaned up cluttered header chips, added a dedicated **Modes** tile with instant switching between Desktop, iPhone, and Mobile site viewports, and replaced Extensions with an instant **Block Images** toggle.
 - **Enhanced Settings Sections with Feature Details:** Upgraded all category folder subtitles with rich technical feature details, and embedded the official vector **Kio launcher icon** inside About Kio and the main settings card.
 - **Professional UI Wording:** Streamlined toasts, status labels, and banners for both Standard and Private Browsing modes.

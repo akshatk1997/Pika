@@ -130,6 +130,12 @@ class ExtensionRuntimeHost(
         val bgPath = ext.backgroundPage?.trimStart('/')?.takeIf { it.isNotBlank() }
           ?: ChromeExtensionManager.BG_HOST_VIRTUAL_FILE
         wv.loadUrl("https://${ChromeExtensionManager.EXT_VIRTUAL_HOST}/${ext.id}/$bgPath")
+        // Safety drain: unblock waiting popups/callers within 350ms even if WebView onPageFinished is delayed
+        mainHandler.postDelayed({
+          if (bgReady[extId] != true && bgWebViews[extId] === wv) {
+            markBackgroundReady(extId)
+          }
+        }, 350)
       } catch (_: Throwable) {
         stopBackground(extId)
         drainReadyCallbacks(extId)
@@ -171,7 +177,8 @@ class ExtensionRuntimeHost(
   fun createBridgeObject(
     extId: String,
     contextKind: String,
-    onOpenOptions: ((String) -> Unit)? = null
+    onOpenOptions: ((String) -> Unit)? = null,
+    onClosePopup: (() -> Unit)? = null
   ): Any {
     return object {
       @JavascriptInterface
@@ -274,6 +281,17 @@ class ExtensionRuntimeHost(
       }
 
       @JavascriptInterface
+      fun removeCssFromActiveTab(id: String) {
+        val js = "(function(){try{var els=document.querySelectorAll('style[data-kio-ext=\"$id\"]');for(var i=0;i<els.length;i++){if(els[i].parentNode)els[i].parentNode.removeChild(els[i]);}}catch(e){}})();"
+        mainHandler.post { evaluateOnActiveStandardTab(js) }
+      }
+
+      @JavascriptInterface
+      fun closePopup(id: String) {
+        mainHandler.post { onClosePopup?.invoke() }
+      }
+
+      @JavascriptInterface
       fun reloadActiveTab() {
         mainHandler.post { onReloadActiveTab() }
       }
@@ -300,12 +318,21 @@ class ExtensionRuntimeHost(
   fun routeRuntimeMessage(extId: String, fromCtx: String, reqId: String, msgJson: String) {
     val js = "(function(){try{if(window.__kioHandleIncomingRpc){window.__kioHandleIncomingRpc(" +
       "${JSONObject.quote(extId)},${JSONObject.quote(fromCtx)},${JSONObject.quote(reqId)},${JSONObject.quote(msgJson)});}}catch(e){}})();"
-    if (fromCtx == "background") {
-      evalInPopup(extId, js)
-      mainHandler.post { evaluateOnActiveStandardTab(js) }
-    } else {
-      ensureBackgroundRunning(extId)
-      evalInBackground(extId, js)
+    when (fromCtx) {
+      "background" -> {
+        evalInPopup(extId, js)
+        mainHandler.post { evaluateOnActiveStandardTab(js) }
+      }
+      "popup" -> {
+        ensureBackgroundRunning(extId)
+        evalInBackground(extId, js)
+        mainHandler.post { evaluateOnActiveStandardTab(js) }
+      }
+      else -> {
+        ensureBackgroundRunning(extId)
+        evalInBackground(extId, js)
+        evalInPopup(extId, js)
+      }
     }
   }
 
@@ -315,41 +342,70 @@ class ExtensionRuntimeHost(
     when (targetCtx) {
       "popup" -> evalInPopup(extId, js)
       "background" -> evalInBackground(extId, js)
-      else -> mainHandler.post { evaluateOnActiveStandardTab(js) }
+      "content" -> mainHandler.post { evaluateOnActiveStandardTab(js) }
+      else -> {
+        evalInPopup(extId, js)
+        mainHandler.post { evaluateOnActiveStandardTab(js) }
+      }
     }
   }
 
   fun routePortConnect(extId: String, fromCtx: String, portId: String, name: String) {
     val js = "(function(){try{if(window.__kioHandleIncomingPortConnect){window.__kioHandleIncomingPortConnect(" +
       "${JSONObject.quote(extId)},${JSONObject.quote(fromCtx)},${JSONObject.quote(portId)},${JSONObject.quote(name)});}}catch(e){}})();"
-    if (fromCtx == "background") {
-      evalInPopup(extId, js)
-      mainHandler.post { evaluateOnActiveStandardTab(js) }
-    } else {
-      ensureBackgroundRunning(extId)
-      evalInBackground(extId, js)
+    when (fromCtx) {
+      "background" -> {
+        evalInPopup(extId, js)
+        mainHandler.post { evaluateOnActiveStandardTab(js) }
+      }
+      "popup" -> {
+        ensureBackgroundRunning(extId)
+        evalInBackground(extId, js)
+        mainHandler.post { evaluateOnActiveStandardTab(js) }
+      }
+      else -> {
+        ensureBackgroundRunning(extId)
+        evalInBackground(extId, js)
+        evalInPopup(extId, js)
+      }
     }
   }
 
   fun routePortMessage(extId: String, fromCtx: String, portId: String, msgJson: String) {
     val js = "(function(){try{if(window.__kioHandleIncomingPortMessage){window.__kioHandleIncomingPortMessage(" +
       "${JSONObject.quote(portId)},${JSONObject.quote(msgJson)});}}catch(e){}})();"
-    if (fromCtx == "background") {
-      evalInPopup(extId, js)
-      mainHandler.post { evaluateOnActiveStandardTab(js) }
-    } else {
-      evalInBackground(extId, js)
+    when (fromCtx) {
+      "background" -> {
+        evalInPopup(extId, js)
+        mainHandler.post { evaluateOnActiveStandardTab(js) }
+      }
+      "popup" -> {
+        evalInBackground(extId, js)
+        mainHandler.post { evaluateOnActiveStandardTab(js) }
+      }
+      else -> {
+        evalInBackground(extId, js)
+        evalInPopup(extId, js)
+      }
     }
   }
 
   fun routePortDisconnect(extId: String, fromCtx: String, portId: String) {
     val js = "(function(){try{if(window.__kioHandleIncomingPortDisconnect){window.__kioHandleIncomingPortDisconnect(" +
       "${JSONObject.quote(portId)});}}catch(e){}})();"
-    if (fromCtx == "background") {
-      evalInPopup(extId, js)
-      mainHandler.post { evaluateOnActiveStandardTab(js) }
-    } else {
-      evalInBackground(extId, js)
+    when (fromCtx) {
+      "background" -> {
+        evalInPopup(extId, js)
+        mainHandler.post { evaluateOnActiveStandardTab(js) }
+      }
+      "popup" -> {
+        evalInBackground(extId, js)
+        mainHandler.post { evaluateOnActiveStandardTab(js) }
+      }
+      else -> {
+        evalInBackground(extId, js)
+        evalInPopup(extId, js)
+      }
     }
   }
 

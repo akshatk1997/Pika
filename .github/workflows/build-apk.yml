@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kio-v1.9.6.apk
+          cp "$APK_PATH" releases/Kio-v1.9.7.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kio-v1.9.6.apk
+          git add releases/Kio-v1.9.7.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kio-v1.9.6.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kio-v1.9.7.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.9.6
+      - name: Create or update GitHub Release v1.9.7
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kio-v1.9.6.apk)
-          NOTES="Kio Browser v1.9.6 (Build 68) — 3-Dot Menu Overhaul (Modes tile, Block Images, Clean Header), Enhanced Settings Sections with Feature Details, Kio Launcher Icon in About, and Professional UI Wording (< 2 MB).\n\n- **Refined 3-Dot Quick Menu:**\n  - Removed cluttered header chips (Extensions, Desktop, iPhone, System, Data Saver), leaving a clean theme toggle.\n  - Replaced the bookmark grid action with a dedicated **Modes** tile that reveals tappable **Desktop**, **iPhone**, and **Mobile** options with real-time active mode highlighting.\n  - Replaced the Extensions grid tile with a direct **Block Images** toggle with instant toast feedback.\n- **Enhanced Settings Experience:**\n  - Added rich feature details across all settings categories (MV3 extensions, search & homepage, text zoom & dark web, tracker shield & HTTPS enforcement, bandwidth optimizer, background playback, session restore, and HTML bookmark manager).\n  - Added the official vector **Kio launcher icon** inside the **About Kio** section and main Settings header card.\n- **Professional UI Refinements:**\n  - Streamlined toasts, status labels, and banners for both Standard and Private Browsing modes.\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease strictly under 2 MB."
-          if gh release view v1.9.6 >/dev/null 2>&1; then
-            gh release upload v1.9.6 releases/Kio-v1.9.6.apk --clobber
-            gh release edit v1.9.6 --title "Kio v1.9.6 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kio-v1.9.7.apk)
+          NOTES="Kio Browser v1.9.7 (Build 69) — Comprehensive Kiwi-Style Chrome Extension Engine Parity & Full API Suite (< 2 MB).\n\n- **Comprehensive WebExtension APIs (MV3 & MV2):**\n  - Added full polyfills for chrome.storage.session.setAccessLevel, chrome.action.getUserSettings, openPopup, getTitle, getPopup, isEnabled.\n  - Added chrome.extension.getViews, isAllowedIncognitoAccess, isAllowedFileSchemeAccess, sendRequest, onRequest.\n  - Added chrome.declarativeNetRequest.getDisabledRuleIds, updateStaticRules, setExtensionActionOptions, getMatchedStyles, testMatchOutcome, onRuleMatchedDebug, and rule action / domain constants.\n  - Added chrome.webRequest.handlerBehaviorChanged and ResourceType constant map.\n  - Added chrome.cookies.getAllCookieStores, chrome.i18n.detectLanguage, chrome.dom.openOrClosedShadowRoot, and chrome.system (cpu, memory, storage).\n  - Scripting executeScript now returns resolved injection results ([{ frameId: 0, result: null }]).\n- **Full Bidirectional Mesh Communication & Ports:**\n  - chrome.tabs.sendMessage and chrome.tabs.connect now route seamlessly with async reply resolution between Popup, Background Service Worker, and Active Tab Content Scripts.\n  - Full-duplex chrome.runtime.connect and chrome.tabs.connect port listeners, disconnect notifications, and fast non-blocking message replies.\n- **CSP Relaxation & Instant Popup Rendering:**\n  - Stripped restrictive Content-Security-Policy and X-Frame-Options meta tags from extension popups, ensuring injected script preludes execute immediately without security exceptions.\n  - Set permissive CORS headers and served prelude scripts directly.\n  - Added WebChromeClient onCloseWindow and native closePopup bridge support.\n  - Installed extension cards are now directly clickable to instantly launch popups.\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease strictly under 2 MB."
+          if gh release view v1.9.7 >/dev/null 2>&1; then
+            gh release upload v1.9.7 releases/Kio-v1.9.7.apk --clobber
+            gh release edit v1.9.7 --title "Kio v1.9.7 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.9.6 releases/Kio-v1.9.6.apk \
-              --title "Kio v1.9.6 (< 2 MB)" \
+            gh release create v1.9.7 releases/Kio-v1.9.7.apk \
+              --title "Kio v1.9.7 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi
