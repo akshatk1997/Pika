@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import android.annotation.SuppressLint
+import android.graphics.BitmapFactory
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
@@ -119,6 +120,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
 import com.example.extensions.InstalledExtension
+import java.io.File
 import com.example.model.SecurityState
 import com.example.model.SettingsState
 import com.example.model.TabInfo
@@ -1282,9 +1284,13 @@ fun BrowserScreen(
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
           )
           installedExtensions.filter { it.enabled }.forEach { ext ->
-            val iconBitmap = remember(ext.id, ext.icons) {
-              ext.icons.values.firstOrNull()?.let { iconPath ->
-                viewModel.extensionManager.loadExtensionIconBitmap(ext.id, iconPath)
+            val iconBitmap: androidx.compose.ui.graphics.ImageBitmap? = remember(ext.installDirPath, ext.iconRelativePath) {
+              try {
+                val rel = ext.iconRelativePath ?: return@remember null
+                val f = File(ext.installDirPath, rel.trimStart('/'))
+                if (f.isFile) BitmapFactory.decodeFile(f.absolutePath)?.asImageBitmap() else null
+              } catch (_: Throwable) {
+                null
               }
             }
             Surface(
@@ -1312,7 +1318,7 @@ fun BrowserScreen(
               ) {
                 if (iconBitmap != null) {
                   Image(
-                    bitmap = iconBitmap.asImageBitmap(),
+                    bitmap = iconBitmap,
                     contentDescription = ext.name,
                     modifier = Modifier.size(24.dp)
                   )
@@ -1345,10 +1351,10 @@ fun BrowserScreen(
                   }
                 }
                 Icon(
-                  FeatherIcons.ChevronRight,
+                  Icons.AutoMirrored.Filled.ArrowForward,
                   contentDescription = null,
                   tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                  modifier = Modifier.size(18.dp)
+                  modifier = Modifier.size(16.dp)
                 )
               }
             }
@@ -1708,12 +1714,11 @@ fun BrowserScreen(
   activeExtensionPopup?.let { (ext, popupUrl) ->
     ExtensionPopupDialog(
       extension = ext,
-      popupUrl = popupUrl,
+      relativePagePath = popupUrl,
       extensionManager = viewModel.extensionManager,
       extensionRuntimeHost = viewModel.extensionRuntimeHost,
       activePageUrl = activeTab.url,
       activePageTitle = activeTab.title,
-      onDismiss = { activeExtensionPopup = null },
       onOpenUrlInNewTab = { url ->
         activeExtensionPopup = null
         viewModel.openNewTab(isPrivate = activeTab.isPrivate, initialUrl = url)
@@ -1736,7 +1741,15 @@ fun BrowserScreen(
       onInsertCssFileInActiveTab = { extId, file ->
         viewModel.insertExtensionCssFileOnActiveTab(extId, file)
       },
-      onReloadActiveTab = { viewModel.reloadOrStop() }
+      onReloadActiveTab = { viewModel.reloadOrStop() },
+      onOpenOptionsPage = { page ->
+        activeExtensionPopup = null
+        viewModel.openNewTab(
+          isPrivate = activeTab.isPrivate,
+          initialUrl = "https://${com.example.extensions.ChromeExtensionManager.EXT_VIRTUAL_HOST}/${ext.id}/$page"
+        )
+      },
+      onDismiss = { activeExtensionPopup = null }
     )
   }
 }
