@@ -1073,9 +1073,9 @@ class ExampleRobolectricTest {
     extManager.activePopupExtId = "test_ext_123"
     assertEquals("test_ext_123", extManager.activePopupExtId)
 
-    // Verify stage="all" injection script building
+    // Verify stage="all" injection script building returns null when no extensions are active
     val injectionScript = extManager.buildPageInjectionScript("https://example.com", stage = "all")
-    assertTrue(injectionScript?.isNotBlank() == true)
+    assertNull(injectionScript)
 
     // Verify root-relative URL fallback with Referer header
     val headers = mapOf("Referer" to "https://kio-ext.invalid/myext/popup.html")
