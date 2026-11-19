@@ -563,7 +563,7 @@ private fun InstalledExtensionCard(
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-private fun ExtensionPopupDialog(
+internal fun ExtensionPopupDialog(
   extension: InstalledExtension,
   relativePagePath: String,
   extensionManager: ChromeExtensionManager,
@@ -581,7 +581,9 @@ private fun ExtensionPopupDialog(
   onOpenOptionsPage: (String) -> Unit,
   onDismiss: () -> Unit
 ) {
-  val popupUrl = "https://${ChromeExtensionManager.EXT_VIRTUAL_HOST}/${extension.id}/${relativePagePath.trimStart('/')}"
+  val cleanPath = relativePagePath.removePrefix("./").trimStart('/')
+  val targetFile = if (cleanPath.isNotBlank()) cleanPath else (extension.defaultPopup ?: "popup.html").removePrefix("./").trimStart('/')
+  val popupUrl = "https://${ChromeExtensionManager.EXT_VIRTUAL_HOST}/${extension.id}/$targetFile"
   var popupWebViewRef by remember { mutableStateOf<WebView?>(null) }
 
   Dialog(
@@ -730,7 +732,7 @@ private fun ExtensionPopupDialog(
                   request: WebResourceRequest?
                 ): WebResourceResponse? {
                   val url = request?.url?.toString() ?: return null
-                  return extensionManager.serveVirtualExtensionResource(url)
+                  return extensionManager.serveVirtualExtensionResource(url, request.requestHeaders)
                 }
               }
               if (extensionRuntimeHost != null && extension.hasBackgroundRuntime) {

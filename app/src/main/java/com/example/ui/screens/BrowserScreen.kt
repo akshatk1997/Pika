@@ -15,6 +15,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -97,6 +98,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -116,6 +118,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
+import com.example.extensions.InstalledExtension
 import com.example.model.SecurityState
 import com.example.model.SettingsState
 import com.example.model.TabInfo
@@ -184,6 +187,7 @@ fun BrowserScreen(
   var showPrivateAuditDialog by remember { mutableStateOf(false) }
   var showQuickSheet by remember { mutableStateOf(false) }
   var isNavBarVisible by remember { mutableStateOf(true) }
+  var activeExtensionPopup by remember { mutableStateOf<Pair<InstalledExtension, String>?>(null) }
 
   val systemDark = systemDarkTheme ?: isSystemInDarkTheme()
   val isDarkTheme = resolvedDarkTheme ?: when (settings.themeMode) {
@@ -1164,6 +1168,10 @@ fun BrowserScreen(
               showQuickSheet = false
               viewModel.setOverlay(ActiveOverlay.DOWNLOADS)
             },
+            QuickActionItem(FeatherIcons.Extension, "Extensions", true) {
+              showQuickSheet = false
+              viewModel.setOverlay(ActiveOverlay.EXTENSIONS)
+            },
             QuickActionItem(
               FeatherIcons.Announcer,
               stringResource(R.string.action_announcer),
@@ -1258,6 +1266,91 @@ fun BrowserScreen(
             }
             repeat(4 - rowItems.size) {
               Spacer(modifier = Modifier.weight(1f))
+            }
+          }
+        }
+
+        if (!isPrivate && installedExtensions.any { it.enabled }) {
+          Spacer(modifier = Modifier.height(14.dp))
+          HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+          Spacer(modifier = Modifier.height(10.dp))
+          Text(
+            text = "EXTENSIONS",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+          )
+          installedExtensions.filter { it.enabled }.forEach { ext ->
+            val iconBitmap = remember(ext.id, ext.icons) {
+              ext.icons.values.firstOrNull()?.let { iconPath ->
+                viewModel.extensionManager.loadExtensionIconBitmap(ext.id, iconPath)
+              }
+            }
+            Surface(
+              shape = RoundedCornerShape(12.dp),
+              color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+              modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 3.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .clickable {
+                  showQuickSheet = false
+                  val popup = ext.defaultPopup
+                  if (!popup.isNullOrBlank()) {
+                    activeExtensionPopup = ext to popup
+                  } else {
+                    viewModel.dispatchExtensionActionClicked(ext.id)
+                  }
+                }
+            ) {
+              Row(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                if (iconBitmap != null) {
+                  Image(
+                    bitmap = iconBitmap.asImageBitmap(),
+                    contentDescription = ext.name,
+                    modifier = Modifier.size(24.dp)
+                  )
+                } else {
+                  Icon(
+                    FeatherIcons.Extension,
+                    contentDescription = ext.name,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp)
+                  )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                  Text(
+                    text = ext.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                  )
+                  if (!ext.description.isNullOrBlank()) {
+                    Text(
+                      text = ext.description,
+                      style = MaterialTheme.typography.bodySmall,
+                      color = MaterialTheme.colorScheme.onSurfaceVariant,
+                      maxLines = 1,
+                      overflow = TextOverflow.Ellipsis
+                    )
+                  }
+                }
+                Icon(
+                  FeatherIcons.ChevronRight,
+                  contentDescription = null,
+                  tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                  modifier = Modifier.size(18.dp)
+                )
+              }
             }
           }
         }
@@ -1609,6 +1702,41 @@ fun BrowserScreen(
           Text("Deny")
         }
       }
+    )
+  }
+
+  activeExtensionPopup?.let { (ext, popupUrl) ->
+    ExtensionPopupDialog(
+      extension = ext,
+      popupUrl = popupUrl,
+      extensionManager = viewModel.extensionManager,
+      extensionRuntimeHost = viewModel.extensionRuntimeHost,
+      activePageUrl = activeTab.url,
+      activePageTitle = activeTab.title,
+      onDismiss = { activeExtensionPopup = null },
+      onOpenUrlInNewTab = { url ->
+        activeExtensionPopup = null
+        viewModel.openNewTab(isPrivate = activeTab.isPrivate, initialUrl = url)
+      },
+      onBroadcastStorageChange = { extId, changesJson ->
+        viewModel.broadcastExtensionStorageChange(extId, changesJson)
+      },
+      onSendMessageToActiveTab = { extId, msgJson ->
+        viewModel.dispatchExtensionMessageToActiveTab(extId, msgJson)
+      },
+      onExecuteScriptInActiveTab = { extId, code ->
+        viewModel.executeExtensionScriptOnActiveTab(extId, code)
+      },
+      onExecuteScriptFileInActiveTab = { extId, file ->
+        viewModel.executeExtensionScriptFileOnActiveTab(extId, file)
+      },
+      onInsertCssInActiveTab = { extId, css ->
+        viewModel.insertExtensionCssOnActiveTab(extId, css)
+      },
+      onInsertCssFileInActiveTab = { extId, file ->
+        viewModel.insertExtensionCssFileOnActiveTab(extId, file)
+      },
+      onReloadActiveTab = { viewModel.reloadOrStop() }
     )
   }
 }

@@ -162,6 +162,8 @@ class ChromeExtensionManager(context: Context) {
   private val localesByExt = ConcurrentHashMap<String, Map<String, String>>()
   private val lock = Any()
 
+  @Volatile var activePopupExtId: String? = null
+
   init {
     loadRegistry()
   }
@@ -337,21 +339,63 @@ class ChromeExtensionManager(context: Context) {
    * OR chrome-extension://<extId>/<relativePath> so content scripts, popups, and options pages
    * run cleanly with synchronous chrome.* API initialization before any page script executes.
    */
-  fun serveVirtualExtensionResource(requestUrl: String): WebResourceResponse? {
+  fun serveVirtualExtensionResource(
+    requestUrl: String,
+    requestHeaders: Map<String, String>? = null
+  ): WebResourceResponse? {
     val httpsPrefix = "https://$EXT_VIRTUAL_HOST/"
     val chromeExtPrefix = "chrome-extension://"
-    val remainder = when {
-      requestUrl.startsWith(httpsPrefix, ignoreCase = true) ->
-        requestUrl.substring(httpsPrefix.length).substringBefore('?').substringBefore('#')
-      requestUrl.startsWith(chromeExtPrefix, ignoreCase = true) ->
-        requestUrl.substring(chromeExtPrefix.length).substringBefore('?').substringBefore('#')
-      else -> return null
+    var extId: String? = null
+    var relPath: String? = null
+
+    if (requestUrl.startsWith(httpsPrefix, ignoreCase = true)) {
+      val raw = requestUrl.substring(httpsPrefix.length).substringBefore('?').substringBefore('#')
+      val slashIdx = raw.indexOf('/')
+      if (slashIdx > 0) {
+        val candidate = raw.substring(0, slashIdx)
+        if (getExtension(candidate) != null) {
+          extId = candidate
+          relPath = raw.substring(slashIdx + 1).trimStart('/')
+        }
+      }
+      if (extId == null) {
+        // Fallback 1: check Referer header if a child asset was requested with root slash
+        val referer = requestHeaders?.get("Referer") ?: requestHeaders?.get("referer")
+        if (referer != null && referer.contains(httpsPrefix, ignoreCase = true)) {
+          val refRaw = referer.substring(referer.indexOf(httpsPrefix) + httpsPrefix.length)
+          val refSlash = refRaw.indexOf('/')
+          if (refSlash > 0) {
+            val refExt = refRaw.substring(0, refSlash)
+            if (getExtension(refExt) != null) {
+              extId = refExt
+              relPath = raw.trimStart('/')
+            }
+          }
+        }
+        // Fallback 2: check active popup extension ID
+        if (extId == null) {
+          activePopupExtId?.let { activeId ->
+            if (getExtension(activeId) != null) {
+              extId = activeId
+              relPath = raw.trimStart('/')
+            }
+          }
+        }
+      }
+    } else if (requestUrl.startsWith(chromeExtPrefix, ignoreCase = true)) {
+      val raw = requestUrl.substring(chromeExtPrefix.length).substringBefore('?').substringBefore('#')
+      val slashIdx = raw.indexOf('/')
+      if (slashIdx > 0) {
+        extId = raw.substring(0, slashIdx)
+        relPath = raw.substring(slashIdx + 1).trimStart('/')
+      }
+    } else {
+      return null
     }
-    val slashIdx = remainder.indexOf('/')
-    if (slashIdx <= 0) return null
-    val extId = remainder.substring(0, slashIdx)
-    val relPath = remainder.substring(slashIdx + 1).trimStart('/')
-    if (relPath.isEmpty() || relPath.contains("..")) return null
+
+    if (extId == null || relPath == null) return null
+    val cleanRel = relPath.replace(Regex("^(\\./)+"), "").trimStart('/')
+    if (cleanRel.isEmpty() || cleanRel.contains("..")) return null
 
     val ext = getExtension(extId) ?: return null
     val headers = mapOf(
@@ -361,22 +405,22 @@ class ChromeExtensionManager(context: Context) {
       "Cache-Control" to "no-cache",
       "Content-Security-Policy" to "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;"
     )
-    if (relPath == BG_HOST_VIRTUAL_FILE) {
+    if (cleanRel == BG_HOST_VIRTUAL_FILE) {
       val bgHtml = buildBackgroundHostHtml(ext)
       return WebResourceResponse("text/html", "utf-8", 200, "OK", headers, ByteArrayInputStream(bgHtml.toByteArray(Charsets.UTF_8)))
     }
-    if (relPath == "__kio_prelude.js") {
+    if (cleanRel == "__kio_prelude.js") {
       val prelude = buildChromeApiPrelude(ext.id, contextKind = "popup")
       return WebResourceResponse("application/javascript", "utf-8", 200, "OK", headers, ByteArrayInputStream(prelude.toByteArray(Charsets.UTF_8)))
     }
     val baseDir = File(ext.installDirPath)
-    val targetFile = safeResolveAsset(baseDir, relPath)
+    val targetFile = safeResolveAsset(baseDir, cleanRel)
       ?: return WebResourceResponse("text/plain", "utf-8", 404, "Not Found", emptyMap(), ByteArrayInputStream(ByteArray(0)))
     return try {
-      val mime = inferMimeType(relPath)
+      val mime = inferMimeType(cleanRel)
       val bytes = if (mime == "text/html") {
         val rawHtml = targetFile.readText(Charsets.UTF_8)
-        val isBgPage = ext.backgroundPage?.trimStart('/')?.equals(relPath, ignoreCase = true) == true
+        val isBgPage = ext.backgroundPage?.trimStart('/')?.equals(cleanRel, ignoreCase = true) == true
         injectPreludeIntoHtml(rawHtml, extId, if (isBgPage) "background" else "popup").toByteArray(Charsets.UTF_8)
       } else {
         targetFile.readBytes()
@@ -391,13 +435,13 @@ class ChromeExtensionManager(context: Context) {
     val prelude = buildChromeApiPrelude(ext.id, contextKind = "background")
       .replace("</script>", "<\\/script>", ignoreCase = true)
     val scriptTags = buildString {
-      val sw = ext.backgroundServiceWorker?.trimStart('/')
+      val sw = ext.backgroundServiceWorker?.removePrefix("./")?.trimStart('/')
       if (!sw.isNullOrBlank()) {
         val typeAttr = if (ext.backgroundIsModule) " type=\"module\"" else ""
         append("<script$typeAttr src=\"https://$EXT_VIRTUAL_HOST/${ext.id}/$sw\"></script>\n")
       } else {
         for (sc in ext.backgroundScripts) {
-          val clean = sc.trimStart('/')
+          val clean = sc.removePrefix("./").trimStart('/')
           if (clean.isNotBlank()) {
             append("<script src=\"https://$EXT_VIRTUAL_HOST/${ext.id}/$clean\"></script>\n")
           }
@@ -409,6 +453,7 @@ class ChromeExtensionManager(context: Context) {
       <html>
       <head>
         <meta charset="utf-8">
+        <base href="https://$EXT_VIRTUAL_HOST/${ext.id}/">
         <script>
         (function(){
           // Service Worker global shims for MV3 background scripts running in Kio Background Host
@@ -466,7 +511,8 @@ class ChromeExtensionManager(context: Context) {
       .replace(Regex("""<meta\s+[^>]*http-equiv\s*=\s*['"]?X-Frame-Options['"]?[^>]*>""", RegexOption.IGNORE_CASE), "")
     val prelude = buildChromeApiPrelude(extId, contextKind = contextKind)
     val safePrelude = prelude.replace("</script>", "<\\/script>", ignoreCase = true)
-    val scriptTag = "<script>(function(){\n$safePrelude\n})();</script>"
+    val baseTag = if (!cleanHtml.contains("<base", ignoreCase = true)) "<base href=\"https://$EXT_VIRTUAL_HOST/$extId/\">\n" else ""
+    val scriptTag = "$baseTag<script>(function(){\n$safePrelude\n})();</script>"
     val headMatch = Regex("""<head\b[^>]*>""", RegexOption.IGNORE_CASE).find(cleanHtml)
     return if (headMatch != null) {
       val insertPos = headMatch.range.last + 1
@@ -509,7 +555,7 @@ class ChromeExtensionManager(context: Context) {
    * Builds the Chrome Extension runtime + content scripts injection JS for [pageUrl] and [stage] ("start" or "end").
    * Returns null if no enabled extension matches this page and stage.
    */
-  fun buildPageInjectionScript(pageUrl: String, stage: String): String? {
+  fun buildPageInjectionScript(pageUrl: String, stage: String = "all"): String? {
     if (!UrlValidator.isSafeWebUrl(pageUrl)) return null
     val activeExts = synchronized(lock) {
       extensionsMap.values.filter { it.enabled && it.contentScripts.isNotEmpty() }
@@ -523,7 +569,8 @@ class ChromeExtensionManager(context: Context) {
       val matchingBlocks = ext.contentScripts.filter { cs ->
         val stageMatches = when (stage) {
           "start" -> cs.runAt == "document_start"
-          else -> cs.runAt != "document_start"
+          "end" -> cs.runAt != "document_start"
+          else -> true
         }
         stageMatches &&
           cs.matches.any { matchesChromePattern(it, pageUrl) } &&
@@ -531,7 +578,11 @@ class ChromeExtensionManager(context: Context) {
       }
       if (matchingBlocks.isEmpty()) continue
 
-      val guardKey = "__kio_ext_${ext.id.replace(Regex("[^a-zA-Z0-9_]"), "_")}_$stage"
+      val guardKey = if (stage == "all") {
+        "__kio_ext_${ext.id.replace(Regex("[^a-zA-Z0-9_]"), "_")}"
+      } else {
+        "__kio_ext_${ext.id.replace(Regex("[^a-zA-Z0-9_]"), "_")}_$stage"
+      }
       val baseDir = File(ext.installDirPath)
       val manifestJson = readManifestJsonSafe(baseDir)
       val localeJson = JSONObject(localesByExt[ext.id] ?: emptyMap<String, String>()).toString()
@@ -541,7 +592,7 @@ class ChromeExtensionManager(context: Context) {
       blockSb.append("(function(){\n")
       blockSb.append("if(window.").append(guardKey).append(")return;\n")
       blockSb.append("window.").append(guardKey).append("=true;\n")
-      blockSb.append(buildChromeApiPrelude(ext.id, manifestJson, localeJson, storageJson))
+      blockSb.append(buildChromeApiPrelude(ext.id, manifestJson, localeJson, storageJson, contextKind = "content"))
 
       var blockHasContent = false
       for (cs in matchingBlocks) {
@@ -1004,6 +1055,7 @@ class ChromeExtensionManager(context: Context) {
         var tabTitle = (window.__KioExtBridge && window.__KioExtBridge.getActiveTitle) ? window.__KioExtBridge.getActiveTitle() : document.title;
         return { id: 1, index: 0, windowId: 1, url: tabUrl || '', title: tabTitle || '', active: true, highlighted: true, status: 'complete', incognito: false };
       }
+      var __kioActionClickListeners = [];
       var __kioActionStub = {
         setBadgeText: function(d, cb) { if (typeof cb === 'function') try{cb();}catch(e){} return Promise.resolve(); },
         getBadgeText: function(d, cb) { if (typeof cb === 'function') try{cb('');}catch(e){} return Promise.resolve(''); },
@@ -1019,7 +1071,18 @@ class ChromeExtensionManager(context: Context) {
         getPopup: function(d, cb) { var fn = typeof d === 'function' ? d : cb; if (typeof fn === 'function') try{fn('');}catch(e){} return Promise.resolve(''); },
         enable: function() { return Promise.resolve(); },
         disable: function() { return Promise.resolve(); },
-        onClicked: __kioMakeEvent([])
+        onClicked: {
+          addListener: function(fn) { if (typeof fn === 'function' && __kioActionClickListeners.indexOf(fn) === -1) __kioActionClickListeners.push(fn); },
+          removeListener: function(fn) { var idx = __kioActionClickListeners.indexOf(fn); if (idx >= 0) __kioActionClickListeners.splice(idx, 1); },
+          hasListener: function(fn) { return __kioActionClickListeners.indexOf(fn) >= 0; },
+          hasListeners: function() { return __kioActionClickListeners.length > 0; },
+          __deliver: function() {
+            var tab = __kioActiveTabObj();
+            for (var i = 0; i < __kioActionClickListeners.length; i++) {
+              try { __kioActionClickListeners[i](tab); } catch(e) {}
+            }
+          }
+        }
       };
       var __kioChrome = {
         runtime: {
@@ -1187,7 +1250,9 @@ class ChromeExtensionManager(context: Context) {
           remove: function(ids, cb) { if (typeof cb === 'function') try{cb();}catch(e){} return Promise.resolve(); },
           sendMessage: function(tabId, msg, optsOrCb, maybeCb) {
             var cb = typeof optsOrCb === 'function' ? optsOrCb : maybeCb;
-            if (window.__KioExtBridge && window.__KioExtBridge.routeRuntimeMessage) {
+            var bridge = window.__KioExtBridge;
+            var routeFn = (bridge && bridge.routeTabMessage) ? bridge.routeTabMessage.bind(bridge) : (bridge && bridge.routeRuntimeMessage ? bridge.routeRuntimeMessage.bind(bridge) : null);
+            if (routeFn) {
               var reqId = __kioCtxKind + '_tabrpc_' + (__kioRpcSeq++);
               return new Promise(function(resolve) {
                 var timer = setTimeout(function() {
@@ -1199,7 +1264,7 @@ class ChromeExtensionManager(context: Context) {
                 }, 4500);
                 __kioPendingRpc[reqId] = { cb: cb, resolve: resolve, timer: timer };
                 try {
-                  window.__KioExtBridge.routeRuntimeMessage(__kioExtId, __kioCtxKind, reqId, JSON.stringify(msg === undefined ? null : msg));
+                  routeFn(__kioExtId, __kioCtxKind, reqId, JSON.stringify(msg === undefined ? null : msg));
                 } catch(e) {
                   clearTimeout(timer);
                   delete __kioPendingRpc[reqId];
@@ -1525,11 +1590,18 @@ class ChromeExtensionManager(context: Context) {
       } catch (_: Throwable) {
         conn.errorStream
       }
+      val encoding = conn.getHeaderField("Content-Encoding")
+      val isGzip = encoding?.contains("gzip", ignoreCase = true) == true
+      val decompressStream = if (isGzip && stream != null) {
+        try { java.util.zip.GZIPInputStream(stream) } catch (_: Throwable) { stream }
+      } else {
+        stream
+      }
       val out = ByteArrayOutputStream()
-      if (stream != null) {
+      if (decompressStream != null) {
         val buf = ByteArray(16 * 1024)
         var total = 0
-        stream.use { s ->
+        decompressStream.use { s ->
           while (true) {
             val r = s.read(buf)
             if (r <= 0) break
@@ -1810,15 +1882,15 @@ class ChromeExtensionManager(context: Context) {
     }
   }
 
-  private fun safeResolveAsset(baseDir: File, relativePath: String): File? {
-    val clean = relativePath.trimStart('/')
+  fun safeResolveAsset(baseDir: File, relativePath: String): File? {
+    val clean = relativePath.replace(Regex("^(\\./)+"), "").trimStart('/')
     if (clean.isEmpty() || clean.contains("..")) return null
     val f = File(baseDir, clean)
     return try {
       val baseCanon = baseDir.canonicalPath + File.separator
       if (f.canonicalPath.startsWith(baseCanon) && f.isFile) return f
       // Case-insensitive lookup fallback for Android ext4 / f2fs
-      val parts = clean.split('/')
+      val parts = clean.split('/').filter { it.isNotEmpty() && it != "." }
       var curr: File = baseDir
       for (part in parts) {
         val match = curr.listFiles()?.firstOrNull { it.name.equals(part, ignoreCase = true) } ?: return null

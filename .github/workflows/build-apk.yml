@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kio-v1.9.7.apk
+          cp "$APK_PATH" releases/Kio-v1.9.8.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kio-v1.9.7.apk
+          git add releases/Kio-v1.9.8.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kio-v1.9.7.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kio-v1.9.8.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.9.7
+      - name: Create or update GitHub Release v1.9.8
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kio-v1.9.7.apk)
-          NOTES="Kio Browser v1.9.7 (Build 69) — Comprehensive Kiwi-Style Chrome Extension Engine Parity & Full API Suite (< 2 MB).\n\n- **Comprehensive WebExtension APIs (MV3 & MV2):**\n  - Added full polyfills for chrome.storage.session.setAccessLevel, chrome.action.getUserSettings, openPopup, getTitle, getPopup, isEnabled.\n  - Added chrome.extension.getViews, isAllowedIncognitoAccess, isAllowedFileSchemeAccess, sendRequest, onRequest.\n  - Added chrome.declarativeNetRequest.getDisabledRuleIds, updateStaticRules, setExtensionActionOptions, getMatchedStyles, testMatchOutcome, onRuleMatchedDebug, and rule action / domain constants.\n  - Added chrome.webRequest.handlerBehaviorChanged and ResourceType constant map.\n  - Added chrome.cookies.getAllCookieStores, chrome.i18n.detectLanguage, chrome.dom.openOrClosedShadowRoot, and chrome.system (cpu, memory, storage).\n  - Scripting executeScript now returns resolved injection results ([{ frameId: 0, result: null }]).\n- **Full Bidirectional Mesh Communication & Ports:**\n  - chrome.tabs.sendMessage and chrome.tabs.connect now route seamlessly with async reply resolution between Popup, Background Service Worker, and Active Tab Content Scripts.\n  - Full-duplex chrome.runtime.connect and chrome.tabs.connect port listeners, disconnect notifications, and fast non-blocking message replies.\n- **CSP Relaxation & Instant Popup Rendering:**\n  - Stripped restrictive Content-Security-Policy and X-Frame-Options meta tags from extension popups, ensuring injected script preludes execute immediately without security exceptions.\n  - Set permissive CORS headers and served prelude scripts directly.\n  - Added WebChromeClient onCloseWindow and native closePopup bridge support.\n  - Installed extension cards are now directly clickable to instantly launch popups.\n- **Checks Passed:** :app:testDebugUnitTest (API 26 & 36), :app:lintVitalRelease, and :app:assembleRelease strictly under 2 MB."
-          if gh release view v1.9.7 >/dev/null 2>&1; then
-            gh release upload v1.9.7 releases/Kio-v1.9.7.apk --clobber
-            gh release edit v1.9.7 --title "Kio v1.9.7 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kio-v1.9.8.apk)
+          NOTES="Kio Browser v1.9.8 (Build 70) — Complete Kiwi-Style Chrome Extension Architecture & Runtime Parity (< 2 MB).\n\n- **Kiwi-Style Extension Access in 3-Dot Menu:**\n  - Added dedicated 'Extensions' tile in the 3-dot menu grid for standard browsing.\n  - Added Kiwi-style 'EXTENSIONS' section at the bottom of the 3-dot menu listing all enabled extensions with icons and titles.\n  - Tapping an extension immediately launches its popup dialog directly over the active webpage, or dispatches chrome.action.onClicked for background-only extensions.\n- **Single-Source RPC Message Routing & Port Fixes:**\n  - Resolved premature null reply race condition by separating popup->background RPC routing (routeRuntimeMessage) from tab content script messaging (routeTabMessage).\n  - chrome.tabs.sendMessage and chrome.tabs.connect route directly to the active web tab content script.\n- **Content Script Stage='all' Injection:**\n  - Guaranteed reliable injection for extensions specifying run_at: document_start (e.g. Dark Reader) alongside document_end/idle scripts with per-extension single-run idempotency guards.\n- **Root-Relative Asset Resolution & Decompression:**\n  - Support root-relative asset URLs (/static/..., /assets/...) in virtual extension resource loader via HTTP Referer header parsing and activePopupExtId tracking.\n  - Transparent GZIP stream decompression in privileged fetch.\n- **Strict Constraint:** Release APK strictly under 2 MB (2,097,152 bytes)."
+          if gh release view v1.9.8 >/dev/null 2>&1; then
+            gh release upload v1.9.8 releases/Kio-v1.9.8.apk --clobber
+            gh release edit v1.9.8 --title "Kio v1.9.8 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.9.7 releases/Kio-v1.9.7.apk \
-              --title "Kio v1.9.7 (< 2 MB)" \
+            gh release create v1.9.8 releases/Kio-v1.9.8.apk \
+              --title "Kio v1.9.8 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

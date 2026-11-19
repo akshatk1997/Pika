@@ -8,12 +8,17 @@
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v1.9.7.apk`](releases/Kio-v1.9.7.apk) and published in GitHub Releases (`v1.9.7`).
+Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v1.9.8.apk`](releases/Kio-v1.9.8.apk) and published in GitHub Releases (`v1.9.8`).
 
 ---
 
-## Core Highlights (v1.9.7 — Build 69)
+## Core Highlights (v1.9.8 — Build 70)
 
+- **Kiwi-Style Chrome Extension Architecture & Runtime Parity:**
+  - **Kiwi-Style 3-Dot Menu Extension Entry Point:** Dedicated 'Extensions' tile in the 3-dot menu grid, plus an 'EXTENSIONS' section at the bottom of the 3-dot menu listing all enabled extensions with icons and names. Tapping any extension launches its popup dialog directly over the active web page (or triggers `chrome.action.onClicked`).
+  - **Single-Source RPC Message Routing:** Solved race condition where tab scripts prematurely responded `null` and closed pending popup RPCs. Runtime messages from popups route strictly to the background worker (`routeRuntimeMessage`), while `tabs.sendMessage` routes to active tab content scripts (`routeTabMessage`).
+  - **Content Script Stage='all' Injection:** Guarantees all content scripts execute reliably—including `run_at: "document_start"` extensions (such as Dark Reader)—with single-run idempotency guards per page.
+  - **Root-Relative Virtual Asset Resolution & GZIP Decompression:** Virtual extension resource loader safely resolves root-relative paths (`/static/...`, `/assets/...`) using HTTP Referer headers and active popup extension tracking; transparent GZIP stream decompression in privileged fetch.
 - **Kiwi-Style Chrome Extension Engine Parity & Full WebExtension API Suite:** Complete polyfills for `chrome.storage.session.setAccessLevel`, `chrome.action.getUserSettings`, `openPopup`, `getTitle`, `getPopup`, `isEnabled`, `chrome.extension.getViews`, `isAllowedIncognitoAccess`, `isAllowedFileSchemeAccess`, `sendRequest`, `onRequest`, `chrome.declarativeNetRequest` (static & dynamic rules, options, constants), `chrome.webRequest.handlerBehaviorChanged`, `chrome.cookies.getAllCookieStores`, `chrome.i18n.detectLanguage`, `chrome.dom.openOrClosedShadowRoot`, and `chrome.system` (CPU, memory, storage).
 - **Full Bidirectional Mesh Messaging & Ports:** Robust async `chrome.tabs.sendMessage`, `chrome.tabs.connect`, and `chrome.runtime.sendMessage` routing with fast reply handling between Popups, Background Workers, and Active Tab Content Scripts.
 - **CSP Relaxation & Injected Script Execution:** Strips restrictive `Content-Security-Policy` and `X-Frame-Options` meta tags from extension popups, fixes case-sensitive disk asset resolution on Android filesystems, and auto-dismisses popups via `window.close()` / `WebChromeClient`.

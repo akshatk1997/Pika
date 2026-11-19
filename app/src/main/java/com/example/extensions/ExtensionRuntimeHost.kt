@@ -109,13 +109,14 @@ class ExtensionRuntimeHost(
           userAgentString = ChromeExtensionManager.DESKTOP_CHROME_UA
         }
         wv.addJavascriptInterface(createBridgeObject(extId, "background"), "__KioExtBridge")
+        wv.webChromeClient = object : android.webkit.WebChromeClient() {}
         wv.webViewClient = object : WebViewClient() {
           override fun shouldInterceptRequest(
             view: WebView?,
             request: WebResourceRequest?
           ): WebResourceResponse? {
             val url = request?.url?.toString() ?: return null
-            return extensionManager.serveVirtualExtensionResource(url)
+            return extensionManager.serveVirtualExtensionResource(url, request.requestHeaders)
           }
 
           override fun onPageFinished(view: WebView?, url: String?) {
@@ -166,11 +167,15 @@ class ExtensionRuntimeHost(
 
   fun attachPopupWebView(extId: String, webView: WebView) {
     activePopupViews[extId] = webView
+    extensionManager.activePopupExtId = extId
   }
 
   fun detachPopupWebView(extId: String, webView: WebView) {
     if (activePopupViews[extId] === webView) {
       activePopupViews.remove(extId)
+    }
+    if (extensionManager.activePopupExtId == extId) {
+      extensionManager.activePopupExtId = null
     }
   }
 
@@ -203,6 +208,11 @@ class ExtensionRuntimeHost(
       @JavascriptInterface
       fun routeRuntimeMessage(id: String, fromCtx: String, reqId: String, msgJson: String) {
         this@ExtensionRuntimeHost.routeRuntimeMessage(id, fromCtx, reqId, msgJson)
+      }
+
+      @JavascriptInterface
+      fun routeTabMessage(id: String, fromCtx: String, reqId: String, msgJson: String) {
+        this@ExtensionRuntimeHost.routeTabMessage(id, fromCtx, reqId, msgJson)
       }
 
       @JavascriptInterface
@@ -321,12 +331,10 @@ class ExtensionRuntimeHost(
     when (fromCtx) {
       "background" -> {
         evalInPopup(extId, js)
-        mainHandler.post { evaluateOnActiveStandardTab(js) }
       }
       "popup" -> {
         ensureBackgroundRunning(extId)
         evalInBackground(extId, js)
-        mainHandler.post { evaluateOnActiveStandardTab(js) }
       }
       else -> {
         ensureBackgroundRunning(extId)
@@ -334,6 +342,12 @@ class ExtensionRuntimeHost(
         evalInPopup(extId, js)
       }
     }
+  }
+
+  fun routeTabMessage(extId: String, fromCtx: String, reqId: String, msgJson: String) {
+    val js = "(function(){try{if(window.__kioHandleIncomingRpc){window.__kioHandleIncomingRpc(" +
+      "${JSONObject.quote(extId)},${JSONObject.quote(fromCtx)},${JSONObject.quote(reqId)},${JSONObject.quote(msgJson)});}}catch(e){}})();"
+    mainHandler.post { evaluateOnActiveStandardTab(js) }
   }
 
   fun replyRuntimeMessage(extId: String, targetCtx: String, reqId: String, replyJson: String) {
@@ -356,12 +370,10 @@ class ExtensionRuntimeHost(
     when (fromCtx) {
       "background" -> {
         evalInPopup(extId, js)
-        mainHandler.post { evaluateOnActiveStandardTab(js) }
       }
       "popup" -> {
         ensureBackgroundRunning(extId)
         evalInBackground(extId, js)
-        mainHandler.post { evaluateOnActiveStandardTab(js) }
       }
       else -> {
         ensureBackgroundRunning(extId)
@@ -377,11 +389,9 @@ class ExtensionRuntimeHost(
     when (fromCtx) {
       "background" -> {
         evalInPopup(extId, js)
-        mainHandler.post { evaluateOnActiveStandardTab(js) }
       }
       "popup" -> {
         evalInBackground(extId, js)
-        mainHandler.post { evaluateOnActiveStandardTab(js) }
       }
       else -> {
         evalInBackground(extId, js)
@@ -396,17 +406,19 @@ class ExtensionRuntimeHost(
     when (fromCtx) {
       "background" -> {
         evalInPopup(extId, js)
-        mainHandler.post { evaluateOnActiveStandardTab(js) }
       }
       "popup" -> {
         evalInBackground(extId, js)
-        mainHandler.post { evaluateOnActiveStandardTab(js) }
       }
       else -> {
         evalInBackground(extId, js)
         evalInPopup(extId, js)
       }
     }
+  }
+
+  fun evalInBackgroundPublic(extId: String, js: String) {
+    evalInBackground(extId, js)
   }
 
   private fun performNativeFetchAsync(extId: String, targetCtx: String, fetchId: String, url: String, optionsJson: String) {

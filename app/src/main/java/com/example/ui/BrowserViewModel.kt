@@ -326,6 +326,17 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     webViewPool.dispatchExtensionMessage(_activeTabId.value, extId, msgJson)
   }
 
+  fun dispatchExtensionActionClicked(extId: String) {
+    if (activeTab().isPrivate) return
+    val script = "(function(){try{if(window.chrome&&window.chrome.action&&window.chrome.action.onClicked){" +
+      "window.chrome.action.onClicked.__deliver();" +
+      "}else if(window.chrome&&window.chrome.browserAction&&window.chrome.browserAction.onClicked){" +
+      "window.chrome.browserAction.onClicked.__deliver();" +
+      "}}catch(e){}})();"
+    extensionRuntimeHost.ensureBackgroundRunning(extId)
+    extensionRuntimeHost.evalInBackgroundPublic(extId, script)
+  }
+
   fun executeExtensionScriptOnActiveTab(extId: String, code: String) {
     webViewPool.executeExtensionScript(_activeTabId.value, extId, code)
   }

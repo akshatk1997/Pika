@@ -357,7 +357,7 @@ class WebViewPool(
       if (isChromeWebStoreUrl(url)) {
         applyChromeWebStoreBridge(wv, url)
       }
-      val script = extMgr.buildPageInjectionScript(url, "end") ?: continue
+      val script = extMgr.buildPageInjectionScript(url, "all") ?: continue
       try {
         wv.evaluateJavascript(script, null)
       } catch (_: Throwable) {
@@ -2242,6 +2242,11 @@ class WebViewPool(
             }
 
             @JavascriptInterface
+            fun routeTabMessage(extId: String, fromCtx: String, reqId: String, msgJson: String) {
+              extensionRuntimeHost?.routeTabMessage(extId, fromCtx, reqId, msgJson)
+            }
+
+            @JavascriptInterface
             fun replyRuntimeMessage(extId: String, targetCtx: String, reqId: String, replyJson: String) {
               extensionRuntimeHost?.replyRuntimeMessage(extId, targetCtx, reqId, replyJson)
             }
@@ -2463,7 +2468,7 @@ class WebViewPool(
           val reqUrl = request?.url?.toString() ?: return null
           // Serve local Chrome Extension virtual assets ONLY in Standard Mode (never in Private Mode)
           if (!isPrivate) {
-            extensionManager?.serveVirtualExtensionResource(reqUrl)?.let { return it }
+            extensionManager?.serveVirtualExtensionResource(reqUrl, request?.requestHeaders)?.let { return it }
           }
           // Allow internal browser schemes (blob:, data:) to be processed natively by Chromium (MediaSource MSE, inline assets)
           if (reqUrl.startsWith("blob:", ignoreCase = true) || reqUrl.startsWith("data:", ignoreCase = true)) {
@@ -2580,7 +2585,7 @@ class WebViewPool(
             if (isChromeWebStoreUrl(url)) {
               applyChromeWebStoreBridge(view, url)
             }
-            extensionManager?.buildPageInjectionScript(url, "end")?.let { extJs ->
+            extensionManager?.buildPageInjectionScript(url, "all")?.let { extJs ->
               try { view.evaluateJavascript(extJs, null) } catch (_: Throwable) {}
             }
           }

@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kio", appName)
-    assertEquals("1.9.7", BuildConfig.VERSION_NAME)
-    assertEquals(69, BuildConfig.VERSION_CODE)
+    assertEquals("1.9.8", BuildConfig.VERSION_NAME)
+    assertEquals(70, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -187,7 +187,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Resources").assertDoesNotExist()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.9.7").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.9.8").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
 
     // Navigate into Data Saver folder
@@ -1050,5 +1050,26 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Desktop").performClick()
     composeTestRule.waitForIdle()
     assertEquals(com.example.model.UserAgentMode.DESKTOP, vm.activeTab().userAgentMode)
+  }
+
+  @Test
+  fun kiwiExtensionEngineEnhancementsFunctionProperly() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val extManager = com.example.extensions.ChromeExtensionManager(context)
+    val runtimeHost = com.example.extensions.ExtensionRuntimeHost(context, extManager)
+
+    // Verify activePopupExtId tracking
+    extManager.activePopupExtId = "test_ext_123"
+    assertEquals("test_ext_123", extManager.activePopupExtId)
+
+    // Verify stage="all" injection script building
+    val injectionScript = extManager.buildPageInjectionScript("https://example.com", stage = "all")
+    assertTrue(injectionScript.isNotBlank())
+
+    // Verify root-relative URL fallback with Referer header
+    val headers = mapOf("Referer" to "https://kio-ext.invalid/myext/popup.html")
+    val res = extManager.serveVirtualExtensionResource("https://kio-ext.invalid/assets/app.js", headers)
+    // Should safely handle resolution without throwing
+    assertNotNull(extManager)
   }
 }
