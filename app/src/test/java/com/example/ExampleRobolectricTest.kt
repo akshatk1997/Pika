@@ -1056,7 +1056,18 @@ class ExampleRobolectricTest {
   fun kiwiExtensionEngineEnhancementsFunctionProperly() {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val extManager = com.example.extensions.ChromeExtensionManager(context)
-    val runtimeHost = com.example.extensions.ExtensionRuntimeHost(context, extManager)
+    val runtimeHost = com.example.extensions.ExtensionRuntimeHost(
+      context = context,
+      extensionManager = extManager,
+      activeTabUrlProvider = { "https://example.com" },
+      activeTabTitleProvider = { "Example" },
+      evaluateOnActiveStandardTab = {},
+      broadcastStorageToStandardTabs = { _, _ -> },
+      onOpenTab = {},
+      onReloadActiveTab = {},
+      onToast = {}
+    )
+    assertNotNull(runtimeHost)
 
     // Verify activePopupExtId tracking
     extManager.activePopupExtId = "test_ext_123"
@@ -1064,7 +1075,7 @@ class ExampleRobolectricTest {
 
     // Verify stage="all" injection script building
     val injectionScript = extManager.buildPageInjectionScript("https://example.com", stage = "all")
-    assertTrue(injectionScript.isNotBlank())
+    assertTrue(injectionScript?.isNotBlank() == true)
 
     // Verify root-relative URL fallback with Referer header
     val headers = mapOf("Referer" to "https://kio-ext.invalid/myext/popup.html")
