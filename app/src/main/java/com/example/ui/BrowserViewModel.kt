@@ -749,11 +749,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         } else {
           null
         }
-        val effectiveUa = if (!tab.isPrivate && WebViewPool.isChromeWebStoreUrl(res.url)) {
-          UserAgentMode.DESKTOP
-        } else {
-          tab.userAgentMode
-        }
+        val effectiveUa = tab.userAgentMode
         updateTab(tab.id) {
           it.copy(
             url = res.url,
