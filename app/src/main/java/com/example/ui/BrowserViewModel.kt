@@ -21,11 +21,6 @@ import com.example.data.BookmarkImportExport
 import com.example.data.LocalBrowserDatabase
 import com.example.data.SettingsRepository
 import com.example.download.DownloadController
-import com.example.extensions.ChromeExtensionManager
-import com.example.extensions.CrxUnpacker
-import com.example.extensions.ExtensionInstallResult
-import com.example.extensions.ExtensionRuntimeHost
-import com.example.extensions.InstalledExtension
 import com.example.media.MediaPlaybackService
 import com.example.model.BookmarkItem
 import com.example.model.ClearDataOptions
@@ -82,7 +77,6 @@ enum class ActiveOverlay {
   BOOKMARKS,
   HISTORY,
   DOWNLOADS,
-  EXTENSIONS,
   SETTINGS
 }
 
@@ -142,14 +136,6 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   private val contentAnnouncer = NlpContentAnnouncer(appContext) { state ->
     _narratorState.value = state
   }
-
-  val extensionManager = ChromeExtensionManager(appContext)
-
-  private val _installedExtensions = MutableStateFlow<List<InstalledExtension>>(extensionManager.listExtensions())
-  val installedExtensions: StateFlow<List<InstalledExtension>> = _installedExtensions.asStateFlow()
-
-  private val _isInstallingExtension = MutableStateFlow(false)
-  val isInstallingExtension: StateFlow<Boolean> = _isInstallingExtension.asStateFlow()
 
   private val _pageSource = MutableStateFlow<Pair<String, String>?>(null)
   val pageSource: StateFlow<Pair<String, String>?> = _pageSource.asStateFlow()
@@ -237,122 +223,6 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   fun dismissPhishingWarning(url: String) {
     _dismissedPhishingUrls.add(url)
     _phishingAssessment.value = null
-  }
-
-  // Desktop Chrome Extensions Manager Actions
-  fun installExtensionFromStore(urlOrId: String) {
-    if (_isInstallingExtension.value) return
-    _isInstallingExtension.value = true
-    viewModelScope.launch(Dispatchers.IO) {
-      val result = extensionManager.installFromChromeWebStore(urlOrId)
-      withContext(Dispatchers.Main) {
-        _isInstallingExtension.value = false
-        when (result) {
-          is ExtensionInstallResult.Success -> {
-            _installedExtensions.value = extensionManager.listExtensions()
-            if (result.extension.hasBackgroundRuntime && !activeTab().isPrivate) {
-              extensionRuntimeHost.ensureBackgroundRunning(result.extension.id)
-            }
-            webViewPool.applyExtensionsToLiveTabs()
-            showToast("Installed ${result.extension.name}")
-          }
-          is ExtensionInstallResult.Failure -> {
-            showToast(result.reason)
-          }
-        }
-      }
-    }
-  }
-
-  fun installExtensionFromBytes(bytes: ByteArray, fileNameHint: String) {
-    if (_isInstallingExtension.value) return
-    _isInstallingExtension.value = true
-    viewModelScope.launch(Dispatchers.IO) {
-      val result = extensionManager.installFromBytes(bytes, fileNameHint)
-      withContext(Dispatchers.Main) {
-        _isInstallingExtension.value = false
-        when (result) {
-          is ExtensionInstallResult.Success -> {
-            _installedExtensions.value = extensionManager.listExtensions()
-            if (result.extension.hasBackgroundRuntime && !activeTab().isPrivate) {
-              extensionRuntimeHost.ensureBackgroundRunning(result.extension.id)
-            }
-            webViewPool.applyExtensionsToLiveTabs()
-            showToast("Installed ${result.extension.name}")
-          }
-          is ExtensionInstallResult.Failure -> {
-            showToast(result.reason)
-          }
-        }
-      }
-    }
-  }
-
-  fun toggleExtensionEnabled(extId: String, enabled: Boolean) {
-    _installedExtensions.value = extensionManager.setExtensionEnabled(extId, enabled)
-    if (enabled) {
-      if (!activeTab().isPrivate) {
-        extensionRuntimeHost.ensureBackgroundRunning(extId)
-      }
-      webViewPool.applyExtensionsToLiveTabs()
-      showToast("Extension enabled")
-    } else {
-      extensionRuntimeHost.stopBackground(extId)
-      showToast("Extension disabled")
-    }
-  }
-
-  fun removeExtension(extId: String) {
-    extensionRuntimeHost.stopBackground(extId)
-    _installedExtensions.value = extensionManager.removeExtension(extId)
-    showToast("Extension removed")
-  }
-
-  fun openChromeWebStore() {
-    _activeOverlay.value = ActiveOverlay.NONE
-    val tab = activeTab()
-    updateTab(tab.id) { it.copy(userAgentMode = UserAgentMode.DESKTOP) }
-    webViewPool.applyUserAgentMode(tab.id, tab.isPrivate, UserAgentMode.DESKTOP)
-    navigateActiveTab(ChromeExtensionManager.CHROME_WEB_STORE_URL)
-  }
-
-  fun detectChromeWebStoreExtensionId(url: String): String? = CrxUnpacker.extractChromeStoreId(url)
-
-  fun broadcastExtensionStorageChange(extId: String, changesJson: String) {
-    webViewPool.broadcastExtensionStorageChange(extId, changesJson)
-  }
-
-  fun dispatchExtensionMessageToActiveTab(extId: String, msgJson: String) {
-    webViewPool.dispatchExtensionMessage(_activeTabId.value, extId, msgJson)
-  }
-
-  fun dispatchExtensionActionClicked(extId: String) {
-    if (activeTab().isPrivate) return
-    val script = "(function(){try{if(window.chrome&&window.chrome.action&&window.chrome.action.onClicked){" +
-      "window.chrome.action.onClicked.__deliver();" +
-      "}else if(window.chrome&&window.chrome.browserAction&&window.chrome.browserAction.onClicked){" +
-      "window.chrome.browserAction.onClicked.__deliver();" +
-      "}}catch(e){}})();"
-    extensionRuntimeHost.ensureBackgroundRunning(extId)
-    extensionRuntimeHost.evalInBackgroundPublic(extId, script)
-  }
-
-  fun executeExtensionScriptOnActiveTab(extId: String, code: String) {
-    webViewPool.executeExtensionScript(_activeTabId.value, extId, code)
-  }
-
-  fun executeExtensionScriptFileOnActiveTab(extId: String, file: String) {
-    val code = extensionManager.readExtensionFileText(extId, file) ?: return
-    webViewPool.executeExtensionScript(_activeTabId.value, extId, code)
-  }
-
-  fun insertExtensionCssOnActiveTab(extId: String, css: String) {
-    webViewPool.insertExtensionCss(_activeTabId.value, extId, css)
-  }
-
-  fun insertExtensionCssFileOnActiveTab(extId: String, file: String) {
-    val css = extensionManager.readExtensionFileText(extId, file) ?: return
-    webViewPool.insertExtensionCss(_activeTabId.value, extId, css)
   }
 
   fun onSystemTrimMemory(level: Int) {
@@ -717,66 +587,19 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         closeTab(tabId)
       }
     }
-
-    override fun onInstallExtensionFromStore(extensionId: String) {
-      runOnMain {
-        if (!activeTab().isPrivate) {
-          installExtensionFromStore(extensionId)
-        }
-      }
-    }
-
-    override fun onOpenExtensionsManager() {
-      runOnMain {
-        if (!activeTab().isPrivate) {
-          setOverlay(ActiveOverlay.EXTENSIONS)
-        }
-      }
-    }
   }
 
   val webViewPool = WebViewPool(
     context = appContext,
     settingsProvider = { _settings.value },
-    callbacks = webCallbacks,
-    extensionManager = extensionManager
-  )
-
-  val extensionRuntimeHost = ExtensionRuntimeHost(
-    context = appContext,
-    extensionManager = extensionManager,
-    activeTabUrlProvider = { activeTab().url },
-    activeTabTitleProvider = { activeTab().title },
-    evaluateOnActiveStandardTab = { js ->
-      val current = activeTab()
-      if (!current.isPrivate) {
-        webViewPool.evaluateJsOnStandardTab(current.id, js)
-      }
-    },
-    broadcastStorageToStandardTabs = { extId, changesJson ->
-      webViewPool.broadcastExtensionStorageChange(extId, changesJson)
-    },
-    onOpenTab = { url ->
-      runOnMain {
-        if (!activeTab().isPrivate && UrlValidator.isSafeWebUrl(url) && url != "about:blank") {
-          openNewTab(isPrivate = false, initialUrl = url)
-        }
-      }
-    },
-    onReloadActiveTab = {
-      runOnMain { reloadOrStop() }
-    },
-    onToast = { msg ->
-      runOnMain { showToast(msg) }
-    }
+    callbacks = webCallbacks
   )
 
   init {
-    webViewPool.setExtensionRuntimeHost(extensionRuntimeHost)
+    cleanExtensionStorage(appContext)
     refreshBookmarks()
     refreshHistory()
     webViewPool.trimMemoryAndDiskCaches(_activeTabId.value, aggressive = false)
-    extensionRuntimeHost.startAllEnabledBackgrounds()
 
     MediaPlaybackService.mediaControlListener = { action ->
       runOnMain {
@@ -992,7 +815,6 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   private fun applyModeBoundaryTransition(wasPrivate: Boolean, nowPrivate: Boolean) {
     webViewPool.syncActiveModeBoundary(nowPrivate)
-    extensionRuntimeHost.setPrivateModeSuspended(nowPrivate)
     if (wasPrivate && !nowPrivate && clipboardWrittenInPrivate) {
       wipeClipboard(silent = true)
     }
@@ -2181,7 +2003,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   fun setOverlay(overlay: ActiveOverlay) {
     if (activeTab().isPrivate &&
-      (overlay == ActiveOverlay.BOOKMARKS || overlay == ActiveOverlay.HISTORY || overlay == ActiveOverlay.EXTENSIONS)
+      (overlay == ActiveOverlay.BOOKMARKS || overlay == ActiveOverlay.HISTORY)
     ) {
       showToast("Unavailable in Private Mode")
       return
@@ -2189,7 +2011,6 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     _activeOverlay.value = overlay
     if (overlay == ActiveOverlay.BOOKMARKS) refreshBookmarks("")
     if (overlay == ActiveOverlay.HISTORY) refreshHistory("")
-    if (overlay == ActiveOverlay.EXTENSIONS) _installedExtensions.value = extensionManager.listExtensions()
   }
 
   fun showToast(message: String) {
@@ -2202,10 +2023,27 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   override fun onCleared() {
     super.onCleared()
-    extensionRuntimeHost.stopAll()
     contentAnnouncer.shutdown()
     MediaPlaybackService.mediaControlListener = null
     MediaPlaybackService.stop(appContext)
     webViewPool.destroyAll()
+  }
+
+  companion object {
+    fun cleanExtensionStorage(context: Context) {
+      try {
+        val extDir = context.getDir("chrome_extensions", Context.MODE_PRIVATE)
+        if (extDir.exists()) {
+          extDir.deleteRecursively()
+        }
+        val cacheExtDir = java.io.File(context.cacheDir, "extensions_download")
+        if (cacheExtDir.exists()) {
+          cacheExtDir.deleteRecursively()
+        }
+        val prefs = context.getSharedPreferences("chrome_extensions_prefs", Context.MODE_PRIVATE)
+        prefs.edit().clear().apply()
+      } catch (_: Throwable) {
+      }
+    }
   }
 }

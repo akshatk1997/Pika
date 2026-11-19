@@ -1,7 +1,6 @@
 package com.example.ui.screens
 
 import android.annotation.SuppressLint
-import android.graphics.BitmapFactory
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
@@ -119,8 +118,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
-import com.example.extensions.InstalledExtension
-import java.io.File
 import com.example.model.SecurityState
 import com.example.model.SettingsState
 import com.example.model.TabInfo
@@ -154,7 +151,6 @@ fun BrowserScreen(
   systemDarkTheme: Boolean? = null,
   onExportBookmarks: () -> Unit,
   onImportBookmarks: () -> Unit,
-  onPickLocalExtensionFile: () -> Unit = {},
   onSavePdf: () -> Unit,
   onPinHomeShortcut: (String, String) -> Unit
 ) {
@@ -171,9 +167,6 @@ fun BrowserScreen(
   val readerArticle by viewModel.readerArticle.collectAsStateWithLifecycle()
   val readerSegments by viewModel.readerSegments.collectAsStateWithLifecycle()
   val narratorState by viewModel.narratorState.collectAsStateWithLifecycle()
-  val installedExtensions by viewModel.installedExtensions.collectAsStateWithLifecycle()
-  val activeExtensionProxy by viewModel.extensionRuntimeHost.activeProxy.collectAsStateWithLifecycle()
-  val isInstallingExtension by viewModel.isInstallingExtension.collectAsStateWithLifecycle()
   val pageSource by viewModel.pageSource.collectAsStateWithLifecycle()
   val isBrowserFullscreen by viewModel.isBrowserFullscreen.collectAsStateWithLifecycle()
   val pendingDownload by viewModel.pendingDownloadConsent.collectAsStateWithLifecycle()
@@ -189,7 +182,6 @@ fun BrowserScreen(
   var showPrivateAuditDialog by remember { mutableStateOf(false) }
   var showQuickSheet by remember { mutableStateOf(false) }
   var isNavBarVisible by remember { mutableStateOf(true) }
-  var activeExtensionPopup by remember { mutableStateOf<Pair<InstalledExtension, String>?>(null) }
 
   val systemDark = systemDarkTheme ?: isSystemInDarkTheme()
   val isDarkTheme = resolvedDarkTheme ?: when (settings.themeMode) {
@@ -279,7 +271,6 @@ fun BrowserScreen(
             BrowserToolbar(
               activeTab = activeTab,
               tabCount = tabs.size,
-              extensionsCount = installedExtensions.count { it.enabled },
               isDarkTheme = isDarkTheme,
               settings = settings,
               compactSingleRow = isWideWidth,
@@ -299,86 +290,11 @@ fun BrowserScreen(
               onToggleDesktopMode = { viewModel.toggleDesktopMode() },
               onOpenBookmarks = { viewModel.setOverlay(ActiveOverlay.BOOKMARKS) },
               onOpenDownloads = { viewModel.setOverlay(ActiveOverlay.DOWNLOADS) },
-              onOpenExtensions = { viewModel.setOverlay(ActiveOverlay.EXTENSIONS) },
               onNewTab = { viewModel.openNewTab(isPrivate = activeTab.isPrivate) }
             )
           }
 
-            // Kiwi-style 1-tap Chrome Web Store Extension Installer Banner (Standard Mode only)
-            val detectedStoreExtId = remember(activeTab.url, activeTab.isPrivate) {
-              if (activeTab.isPrivate) return@remember null
-              viewModel.detectChromeWebStoreExtensionId(activeTab.url)
-            }
-            val detectedExtAlreadyInstalled = remember(detectedStoreExtId, installedExtensions) {
-              detectedStoreExtId != null && installedExtensions.any { it.id == detectedStoreExtId }
-            }
-            AnimatedVisibility(
-              visible = !isBrowserFullscreen && detectedStoreExtId != null,
-              enter = expandVertically() + fadeIn(),
-              exit = shrinkVertically() + fadeOut()
-            ) {
-              val bannerAccent = if (detectedExtAlreadyInstalled) {
-                FeatherSecureGreen
-              } else if (isDarkTheme) {
-                Color(0xFF38BDF8)
-              } else {
-                Color(0xFF0284C7)
-              }
-              Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = if (isDarkTheme) Color(0xFF0E1A2B) else Color(0xFFE0F2FE),
-                border = BorderStroke(1.dp, bannerAccent.copy(alpha = 0.45f)),
-                modifier = Modifier
-                  .fillMaxWidth()
-                  .padding(horizontal = 12.dp, vertical = 6.dp)
-              ) {
-                Row(
-                  modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                  verticalAlignment = Alignment.CenterVertically,
-                  horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                  Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                    Icon(
-                      FeatherIcons.Extension,
-                      contentDescription = null,
-                      tint = bannerAccent,
-                      modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                      text = if (detectedExtAlreadyInstalled) "Extension installed in Kio" else "Chrome extension ready",
-                      style = MaterialTheme.typography.labelMedium,
-                      color = if (isDarkTheme) Color(0xFFF8FAFC) else Color(0xFF0F172A),
-                      fontWeight = FontWeight.SemiBold,
-                      maxLines = 1,
-                      overflow = TextOverflow.Ellipsis
-                    )
-                  }
-                  TextButton(
-                    enabled = !isInstallingExtension,
-                    onClick = {
-                      if (detectedExtAlreadyInstalled) {
-                        viewModel.setOverlay(ActiveOverlay.EXTENSIONS)
-                      } else {
-                        detectedStoreExtId?.let { viewModel.installExtensionFromStore(it) }
-                      }
-                    }
-                  ) {
-                    Text(
-                      text = when {
-                        isInstallingExtension -> "Installing..."
-                        detectedExtAlreadyInstalled -> "Manage"
-                        else -> "Add to Kio"
-                      },
-                      color = bannerAccent,
-                      fontWeight = FontWeight.Bold
-                    )
-                  }
-                }
-              }
-            }
-
-            if (activeTab.isLoading && activeTab.progress in 1..99) {
+          if (activeTab.isLoading && activeTab.progress in 1..99) {
               val animatedProgress by animateFloatAsState(
                 targetValue = (activeTab.progress / 100f).coerceIn(0.05f, 1f),
                 animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing),
@@ -852,31 +768,6 @@ fun BrowserScreen(
               onClose = { viewModel.setOverlay(ActiveOverlay.NONE) }
             )
           }
-          activeOverlay == ActiveOverlay.EXTENSIONS && !activeTab.isPrivate -> {
-            ExtensionsScreen(
-              extensions = installedExtensions,
-              isInstalling = isInstallingExtension,
-              extensionManager = viewModel.extensionManager,
-              extensionRuntimeHost = viewModel.extensionRuntimeHost,
-              activeProxyExtId = activeExtensionProxy?.extensionId,
-              activePageUrl = activeTab.url,
-              activePageTitle = activeTab.title,
-              onInstallFromStoreInput = { viewModel.installExtensionFromStore(it) },
-              onPickLocalExtensionFile = onPickLocalExtensionFile,
-              onOpenChromeWebStore = { viewModel.openChromeWebStore() },
-              onToggleEnabled = { id, enabled -> viewModel.toggleExtensionEnabled(id, enabled) },
-              onRemoveExtension = { viewModel.removeExtension(it) },
-              onOpenUrlInNewTab = { url -> viewModel.openNewTab(isPrivate = activeTab.isPrivate, initialUrl = url) },
-              onBroadcastStorageChange = { extId, changesJson -> viewModel.broadcastExtensionStorageChange(extId, changesJson) },
-              onSendMessageToActiveTab = { extId, msgJson -> viewModel.dispatchExtensionMessageToActiveTab(extId, msgJson) },
-              onExecuteScriptInActiveTab = { extId, code -> viewModel.executeExtensionScriptOnActiveTab(extId, code) },
-              onExecuteScriptFileInActiveTab = { extId, file -> viewModel.executeExtensionScriptFileOnActiveTab(extId, file) },
-              onInsertCssInActiveTab = { extId, css -> viewModel.insertExtensionCssOnActiveTab(extId, css) },
-              onInsertCssFileInActiveTab = { extId, file -> viewModel.insertExtensionCssFileOnActiveTab(extId, file) },
-              onReloadActiveTab = { viewModel.reloadOrStop() },
-              onClose = { viewModel.setOverlay(ActiveOverlay.NONE) }
-            )
-          }
           activeOverlay == ActiveOverlay.SETTINGS -> {
             val shareableUrl = if (!activeTab.isPrivate &&
               UrlValidator.isSafeWebUrl(activeTab.url) &&
@@ -892,9 +783,7 @@ fun BrowserScreen(
               isPrivateMode = activeTab.isPrivate,
               systemDarkTheme = systemDark,
               sitePermissions = sitePermissions,
-              installedExtensionsCount = installedExtensions.size,
               systemWebViewInfo = viewModel.systemWebViewPackageInfo,
-              onOpenExtensions = { viewModel.setOverlay(ActiveOverlay.EXTENSIONS) },
               onUpdateSettings = { viewModel.updateSettings(it) },
               onAddCustomBlockedHost = { host -> viewModel.addCustomBlockedHost(host) },
               onRemoveCustomBlockedHost = { host -> viewModel.removeCustomBlockedHost(host) },
@@ -1048,7 +937,7 @@ fun BrowserScreen(
           }
         }
 
-        // 4-Column Crisp Grid Actions: Private Mode excludes Bookmarks/History/Extensions/Share/External/Shortcut
+        // 4-Column Crisp Grid Actions: Private Mode excludes Bookmarks/History/Share/External/Shortcut
         // and provides exclusive Private-Mode-Only Safety Tools instead.
         val gridActions = if (isPrivate) {
           listOf(
@@ -1170,10 +1059,6 @@ fun BrowserScreen(
               showQuickSheet = false
               viewModel.setOverlay(ActiveOverlay.DOWNLOADS)
             },
-            QuickActionItem(FeatherIcons.Extension, "Extensions", true) {
-              showQuickSheet = false
-              viewModel.setOverlay(ActiveOverlay.EXTENSIONS)
-            },
             QuickActionItem(
               FeatherIcons.Announcer,
               stringResource(R.string.action_announcer),
@@ -1271,95 +1156,6 @@ fun BrowserScreen(
             }
           }
         }
-
-        if (!isPrivate && installedExtensions.any { it.enabled }) {
-          Spacer(modifier = Modifier.height(14.dp))
-          HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
-          Spacer(modifier = Modifier.height(10.dp))
-          Text(
-            text = "EXTENSIONS",
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
-          )
-          installedExtensions.filter { it.enabled }.forEach { ext ->
-            val iconBitmap: androidx.compose.ui.graphics.ImageBitmap? = remember(ext.installDirPath, ext.iconRelativePath) {
-              try {
-                val rel = ext.iconRelativePath ?: return@remember null
-                val f = File(ext.installDirPath, rel.trimStart('/'))
-                if (f.isFile) BitmapFactory.decodeFile(f.absolutePath)?.asImageBitmap() else null
-              } catch (_: Throwable) {
-                null
-              }
-            }
-            Surface(
-              shape = RoundedCornerShape(12.dp),
-              color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-              modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 3.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .clickable {
-                  showQuickSheet = false
-                  val popup = ext.defaultPopup
-                  if (!popup.isNullOrBlank()) {
-                    activeExtensionPopup = ext to popup
-                  } else {
-                    viewModel.dispatchExtensionActionClicked(ext.id)
-                  }
-                }
-            ) {
-              Row(
-                modifier = Modifier
-                  .fillMaxWidth()
-                  .padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-              ) {
-                if (iconBitmap != null) {
-                  Image(
-                    bitmap = iconBitmap,
-                    contentDescription = ext.name,
-                    modifier = Modifier.size(24.dp)
-                  )
-                } else {
-                  Icon(
-                    FeatherIcons.Extension,
-                    contentDescription = ext.name,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp)
-                  )
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                  Text(
-                    text = ext.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                  )
-                  if (!ext.description.isNullOrBlank()) {
-                    Text(
-                      text = ext.description,
-                      style = MaterialTheme.typography.bodySmall,
-                      color = MaterialTheme.colorScheme.onSurfaceVariant,
-                      maxLines = 1,
-                      overflow = TextOverflow.Ellipsis
-                    )
-                  }
-                }
-                Icon(
-                  Icons.AutoMirrored.Filled.ArrowForward,
-                  contentDescription = null,
-                  tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                  modifier = Modifier.size(16.dp)
-                )
-              }
-            }
-          }
-        }
       }
     }
   }
@@ -1390,7 +1186,7 @@ fun BrowserScreen(
           Text("• Cookie Vault Barrier: Active (0 cross-mode cookies)", style = MaterialTheme.typography.bodySmall)
           Text("• RAM-Only Storage Sandbox: Active (localStorage & sessionStorage isolated in RAM)", style = MaterialTheme.typography.bodySmall)
           Text("• Third-Party Cookies & IndexedDB: Strictly Blocked", style = MaterialTheme.typography.bodySmall)
-          Text("• Bookmarks, History & Extensions: Completely Disabled", style = MaterialTheme.typography.bodySmall)
+          Text("• Bookmarks & History: Completely Disabled", style = MaterialTheme.typography.bodySmall)
           Text("• Share, Shortcuts & External Apps: Blocked (zero external leaks)", style = MaterialTheme.typography.bodySmall)
           Text("• Anti-Screenshot (FLAG_SECURE) & Fingerprint Noise: Active", style = MaterialTheme.typography.bodySmall)
           Text(
@@ -1710,48 +1506,6 @@ fun BrowserScreen(
       }
     )
   }
-
-  activeExtensionPopup?.let { (ext, popupUrl) ->
-    ExtensionPopupDialog(
-      extension = ext,
-      relativePagePath = popupUrl,
-      extensionManager = viewModel.extensionManager,
-      extensionRuntimeHost = viewModel.extensionRuntimeHost,
-      activePageUrl = activeTab.url,
-      activePageTitle = activeTab.title,
-      onOpenUrlInNewTab = { url ->
-        activeExtensionPopup = null
-        viewModel.openNewTab(isPrivate = activeTab.isPrivate, initialUrl = url)
-      },
-      onBroadcastStorageChange = { extId, changesJson ->
-        viewModel.broadcastExtensionStorageChange(extId, changesJson)
-      },
-      onSendMessageToActiveTab = { extId, msgJson ->
-        viewModel.dispatchExtensionMessageToActiveTab(extId, msgJson)
-      },
-      onExecuteScriptInActiveTab = { extId, code ->
-        viewModel.executeExtensionScriptOnActiveTab(extId, code)
-      },
-      onExecuteScriptFileInActiveTab = { extId, file ->
-        viewModel.executeExtensionScriptFileOnActiveTab(extId, file)
-      },
-      onInsertCssInActiveTab = { extId, css ->
-        viewModel.insertExtensionCssOnActiveTab(extId, css)
-      },
-      onInsertCssFileInActiveTab = { extId, file ->
-        viewModel.insertExtensionCssFileOnActiveTab(extId, file)
-      },
-      onReloadActiveTab = { viewModel.reloadOrStop() },
-      onOpenOptionsPage = { page ->
-        activeExtensionPopup = null
-        viewModel.openNewTab(
-          isPrivate = activeTab.isPrivate,
-          initialUrl = "https://${com.example.extensions.ChromeExtensionManager.EXT_VIRTUAL_HOST}/${ext.id}/$page"
-        )
-      },
-      onDismiss = { activeExtensionPopup = null }
-    )
-  }
 }
 
 private data class QuickActionItem(
@@ -1780,7 +1534,6 @@ private fun ContextActionRow(label: String, onClick: () -> Unit) {
 private fun BrowserToolbar(
   activeTab: TabInfo,
   tabCount: Int,
-  extensionsCount: Int = 0,
   isDarkTheme: Boolean = true,
   settings: SettingsState,
   compactSingleRow: Boolean,
@@ -1797,7 +1550,6 @@ private fun BrowserToolbar(
   onToggleDesktopMode: () -> Unit = {},
   onOpenBookmarks: () -> Unit = {},
   onOpenDownloads: () -> Unit = {},
-  onOpenExtensions: () -> Unit = {},
   onNewTab: () -> Unit = {},
   modifier: Modifier = Modifier
 ) {
@@ -2116,21 +1868,6 @@ private fun BrowserToolbar(
               tint = headerTextMuted
             )
           }
-          if (!isPrivate) {
-            IconButton(
-              onClick = {
-                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                onOpenExtensions()
-              },
-              modifier = Modifier.minimumInteractiveComponentSize().testTag("tablet_extensions_button")
-            ) {
-              Icon(
-                imageVector = FeatherIcons.Extension,
-                contentDescription = stringResource(R.string.action_extensions),
-                tint = if (extensionsCount > 0) headerAccent else headerTextMuted
-              )
-            }
-          }
           IconButton(
             onClick = {
               haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -2230,23 +1967,6 @@ private fun BrowserToolbar(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-              if (!isPrivate) {
-                IconButton(
-                  onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    onOpenExtensions()
-                  },
-                  modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_extensions_button")
-                ) {
-                  Icon(
-                    FeatherIcons.Extension,
-                    contentDescription = stringResource(R.string.action_extensions),
-                    tint = if (extensionsCount > 0) headerAccent else headerTextMuted,
-                    modifier = Modifier.size(19.dp)
-                  )
-                }
-              }
-
               Surface(
                 shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(
@@ -2327,23 +2047,6 @@ private fun BrowserToolbar(
                   imageVector = if (activeTab.isLoading) Icons.Filled.Close else Icons.Filled.Refresh,
                   contentDescription = if (activeTab.isLoading) stringResource(R.string.cd_stop) else stringResource(R.string.cd_reload)
                 )
-              }
-
-              if (!isPrivate) {
-                IconButton(
-                  onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onOpenExtensions()
-                  },
-                  modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_extensions_button")
-                ) {
-                  Icon(
-                    FeatherIcons.Extension,
-                    contentDescription = stringResource(R.string.action_extensions),
-                    tint = if (extensionsCount > 0) headerAccent else headerTextPrimary,
-                    modifier = Modifier.size(19.dp)
-                  )
-                }
               }
 
               Surface(

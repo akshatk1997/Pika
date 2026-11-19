@@ -2,8 +2,6 @@ package com.example
 
 import com.example.data.BookmarkImportExport
 import com.example.download.DownloadController
-import com.example.extensions.ChromeExtensionManager
-import com.example.extensions.CrxUnpacker
 import com.example.model.BookmarkItem
 import com.example.model.ReaderArticle
 import com.example.model.SearchEngine
@@ -132,39 +130,6 @@ class FeatherSecurityAndDataTest {
     assertTrue(TrackerBlocker.isMediaOrStreamRequest("https://cdn.example.org/video.mp4"))
     assertTrue(TrackerBlocker.isMediaOrStreamRequest("https://cdn.example.org/chunk.ts"))
     assertTrue(TrackerBlocker.isMediaOrStreamRequest("https://rr3---sn-ab5sznzl.googlevideo.com/videoplayback?expire=123"))
-  }
-
-  @Test
-  fun chromeExtensionUnpackerAndPatternMatcherWorkAccurately() {
-    // 1. Chrome Web Store URL & raw ID extraction
-    assertEquals(
-      "eimadpbcbfnmbkopoojfekhnkhdbieeh",
-      CrxUnpacker.extractChromeStoreId("https://chromewebstore.google.com/detail/dark-reader/eimadpbcbfnmbkopoojfekhnkhdbieeh?hl=en")
-    )
-    assertEquals(
-      "ddkjiahejlhfcafbddmgiahcphecmpfh",
-      CrxUnpacker.extractChromeStoreId("ddkjiahejlhfcafbddmgiahcphecmpfh")
-    )
-    assertNull(CrxUnpacker.extractChromeStoreId("https://example.com/not-an-extension"))
-
-    // 2. CRX3 binary header offset parsing (Cr24 + ver=3 + headerLen=8 -> ZIP starts at byte 20)
-    val crx3 = ByteArray(32)
-    crx3[0] = 'C'.code.toByte(); crx3[1] = 'r'.code.toByte(); crx3[2] = '2'.code.toByte(); crx3[3] = '4'.code.toByte()
-    crx3[4] = 3 // version 3 (little endian)
-    crx3[8] = 8 // header length = 8
-    assertEquals(20, CrxUnpacker.findZipOffsetInBytes(crx3))
-
-    // 3. Standard ZIP offset = 0
-    val zipHeader = byteArrayOf(0x50, 0x4B, 0x03, 0x04, 0x00, 0x00)
-    assertEquals(0, CrxUnpacker.findZipOffsetInBytes(zipHeader))
-
-    // 4. Chrome URL Match Patterns
-    assertTrue(ChromeExtensionManager.matchesChromePattern("<all_urls>", "https://www.youtube.com/watch?v=1"))
-    assertTrue(ChromeExtensionManager.matchesChromePattern("https://*.youtube.com/*", "https://m.youtube.com/watch?v=1"))
-    assertTrue(ChromeExtensionManager.matchesChromePattern("https://*.youtube.com/*", "https://youtube.com/"))
-    assertFalse(ChromeExtensionManager.matchesChromePattern("https://*.youtube.com/*", "https://example.org/"))
-    assertFalse(ChromeExtensionManager.matchesChromePattern("https://example.org/docs/*", "https://example.org/blog/post"))
-    assertTrue(ChromeExtensionManager.matchesChromePattern("https://example.org/docs/*", "https://example.org/docs/intro"))
   }
 
   @Test

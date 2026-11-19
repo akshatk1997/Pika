@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kio", appName)
-    assertEquals("1.9.8", BuildConfig.VERSION_NAME)
-    assertEquals(70, BuildConfig.VERSION_CODE)
+    assertEquals("1.9.9", BuildConfig.VERSION_NAME)
+    assertEquals(71, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -136,15 +136,6 @@ class ExampleRobolectricTest {
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("home_search_go").assertIsDisplayed()
 
-    // Open Extensions directly from the toolbar puzzle icon (replaces removed AI Assistant)
-    composeTestRule.onNodeWithTag("nav_extensions_button").performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("extensions_store_input").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("extensions_open_webstore_button").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("extensions_pick_file_button").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("extensions_back_button").performClick()
-    composeTestRule.waitForIdle()
-
     // Open Tab Switcher and create a Private Tab
     composeTestRule.onNodeWithTag("nav_tabs_button").performClick()
     composeTestRule.waitForIdle()
@@ -187,7 +178,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Resources").assertDoesNotExist()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.9.8").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 1.9.9").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
 
     // Navigate into Data Saver folder
@@ -253,7 +244,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithTag("tablet_desktop_mode_button").assertIsDisplayed()
     composeTestRule.onNodeWithTag("tablet_bookmarks_button").assertIsDisplayed()
     composeTestRule.onNodeWithTag("tablet_downloads_button").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("tablet_extensions_button").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("tablet_extensions_button").assertDoesNotExist()
     composeTestRule.onNodeWithTag("tablet_new_tab_button").assertIsDisplayed()
 
     // Open a new tab directly from the toolbar '+' button
@@ -394,42 +385,28 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithTag("home_mode_standard").assertDoesNotExist()
     composeTestRule.onNodeWithTag("nav_ai_button").assertDoesNotExist()
 
-    // Verify clean Kio home logo and Extensions button are displayed
+    // Verify clean Kio home logo is displayed and extensions button is permanently removed
     composeTestRule.onNodeWithTag("kio_home_logo").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("nav_extensions_button").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("nav_extensions_button").assertDoesNotExist()
   }
 
   @Test
-  fun extensionManagerLocalInstallToggleAndRemoveLifecycle() {
+  fun cleanExtensionStorageRemovesAllExtensionDirectoriesAndPrefs() {
     val context = ApplicationProvider.getApplicationContext<Context>()
-    val mgr = com.example.extensions.ChromeExtensionManager(context)
-    val sampleUserscript = """
-      // ==UserScript==
-      // @name         Kio Test Helper
-      // @version      1.2.3
-      // @description  Verifies extension install and injection
-      // @match        https://example.org/*
-      // ==/UserScript==
-      window.__kio_test_ext_ran = true;
-    """.trimIndent().toByteArray(Charsets.UTF_8)
+    val extDir = context.getDir("chrome_extensions", Context.MODE_PRIVATE)
+    extDir.mkdirs()
+    File(extDir, "test.txt").writeText("temp")
+    val cacheExtDir = File(context.cacheDir, "extensions_download")
+    cacheExtDir.mkdirs()
+    File(cacheExtDir, "temp.crx").writeText("data")
+    val prefs = context.getSharedPreferences("chrome_extensions_prefs", Context.MODE_PRIVATE)
+    prefs.edit().putString("installed", "[]").commit()
 
-    val result = mgr.installFromBytes(sampleUserscript, "kio_helper.user.js", preferredId = "testext001")
-    assertTrue(result is com.example.extensions.ExtensionInstallResult.Success)
-    val ext = (result as com.example.extensions.ExtensionInstallResult.Success).extension
-    assertEquals("Kio Test Helper", ext.name)
-    assertEquals("1.2.3", ext.version)
-    assertTrue(ext.enabled)
+    com.example.ui.BrowserViewModel.cleanExtensionStorage(context)
 
-    val injected = mgr.buildPageInjectionScript("https://example.org/page", "end")
-    assertNotNull(injected)
-    assertTrue(injected!!.contains("__kio_test_ext_ran"))
-    assertNull(mgr.buildPageInjectionScript("https://other-site.com/", "end"))
-
-    mgr.setExtensionEnabled("testext001", false)
-    assertNull(mgr.buildPageInjectionScript("https://example.org/page", "end"))
-
-    mgr.removeExtension("testext001")
-    assertNull(mgr.getExtension("testext001"))
+    assertFalse(File(extDir, "test.txt").exists())
+    assertFalse(File(cacheExtDir, "temp.crx").exists())
+    assertTrue(prefs.all.isEmpty())
   }
 
   @Test
@@ -707,8 +684,6 @@ class ExampleRobolectricTest {
       assertEquals(com.example.ui.ActiveOverlay.NONE, vm.activeOverlay.value)
       vm.setOverlay(com.example.ui.ActiveOverlay.HISTORY)
       assertEquals(com.example.ui.ActiveOverlay.NONE, vm.activeOverlay.value)
-      vm.setOverlay(com.example.ui.ActiveOverlay.EXTENSIONS)
-      assertEquals(com.example.ui.ActiveOverlay.NONE, vm.activeOverlay.value)
       vm.toggleCurrentBookmark()
     }
     composeTestRule.waitForIdle()
@@ -756,77 +731,6 @@ class ExampleRobolectricTest {
     assertTrue(vm.webViewPool.resolveIsDark(vm.settings.value))
     val darkController = androidx.core.view.WindowCompat.getInsetsController(activity.window, activity.window.decorView)
     assertFalse("Dark mode must render light status bar icons on dark background", darkController.isAppearanceLightStatusBars)
-  }
-
-  @Test
-  fun chromeWebStoreExtensionsEngineDesktopCrxEndpointsAndSynchronousPopupHtmlPreludeWork() {
-    val context = ApplicationProvider.getApplicationContext<Context>()
-    // 1. Verify Chrome Web Store URL detection & full desktop CRX3 candidate endpoints
-    assertTrue(com.example.webview.WebViewPool.isChromeWebStoreUrl("https://chromewebstore.google.com/detail/free-vpn-for-chrome-vpn-p/majdfhpaihoncoakbjgbdhglocklcgno"))
-    assertTrue(com.example.webview.WebViewPool.isChromeWebStoreUrl("https://chrome.google.com/webstore/detail/eimadpbcbfnmbkopoojfekhnkhdbieeh"))
-    assertFalse(com.example.webview.WebViewPool.isChromeWebStoreUrl("https://example.org/detail/eimadpbcbfnmbkopoojfekhnkhdbieeh"))
-
-    val extId = com.example.extensions.CrxUnpacker.extractChromeStoreId(
-      "https://chromewebstore.google.com/detail/free-vpn-for-chrome-vpn-p/majdfhpaihoncoakbjgbdhglocklcgno"
-    )
-    assertEquals("majdfhpaihoncoakbjgbdhglocklcgno", extId)
-
-    val candidates = com.example.extensions.CrxUnpacker.buildChromeWebStoreCrxCandidateUrls(extId!!)
-    assertTrue(candidates.size >= 3)
-    assertTrue(candidates.first().contains("os=win"))
-    assertTrue(candidates.first().contains("arch=x64"))
-    assertTrue(candidates.first().contains("prod=chromecrx"))
-    assertTrue(candidates.first().contains("acceptformat=crx2,crx3"))
-
-    // 2. Build a real ZIP extension package containing manifest.json + popup.html and verify synchronous prelude injection
-    val baos = java.io.ByteArrayOutputStream()
-    java.util.zip.ZipOutputStream(baos).use { zos ->
-      zos.putNextEntry(java.util.zip.ZipEntry("manifest.json"))
-      zos.write(
-        """
-        {
-          "manifest_version": 3,
-          "name": "Popup Test Ext",
-          "version": "2.0.0",
-          "action": { "default_popup": "popup.html" },
-          "content_scripts": [{ "matches": ["https://example.org/*"], "js": ["content.js"] }]
-        }
-        """.trimIndent().toByteArray(Charsets.UTF_8)
-      )
-      zos.closeEntry()
-
-      zos.putNextEntry(java.util.zip.ZipEntry("popup.html"))
-      zos.write("<html><head><title>Popup</title></head><body><script src=\"popup.js\"></script></body></html>".toByteArray(Charsets.UTF_8))
-      zos.closeEntry()
-
-      zos.putNextEntry(java.util.zip.ZipEntry("content.js"))
-      zos.write("window.__kio_ext_v2 = true;".toByteArray(Charsets.UTF_8))
-      zos.closeEntry()
-    }
-
-    val mgr = com.example.extensions.ChromeExtensionManager(context)
-    val installRes = mgr.installFromBytes(baos.toByteArray(), "popup_test.zip", preferredId = "popuptestext0001")
-    assertTrue(installRes is com.example.extensions.ExtensionInstallResult.Success)
-
-    // Serve popup.html via both virtual https://kio-ext.invalid/ and chrome-extension:// URLs
-    val httpsResp = mgr.serveVirtualExtensionResource("https://kio-ext.invalid/popuptestext0001/popup.html")
-    assertNotNull(httpsResp)
-    val htmlText = httpsResp!!.data.bufferedReader().readText()
-    assertTrue("HTML must inject chrome API prelude synchronously inside <head>", htmlText.contains("var __kioChrome"))
-    assertTrue("HTML must expose chrome.scripting API", htmlText.contains("scripting:"))
-    assertTrue(htmlText.indexOf("var __kioChrome") < htmlText.indexOf("popup.js"))
-
-    val chromeSchemeResp = mgr.serveVirtualExtensionResource("chrome-extension://popuptestext0001/content.js")
-    assertNotNull(chromeSchemeResp)
-    assertTrue(chromeSchemeResp!!.data.bufferedReader().readText().contains("__kio_ext_v2"))
-
-    // Verify storage & message live dispatch scripts
-    val storageScript = mgr.buildStorageChangeBroadcastScript("popuptestext0001", "{\"enabled\":{\"newValue\":true}}")
-    assertTrue(storageScript.contains("__kioExtNotifyStorage"))
-    val msgScript = mgr.buildMessageDispatchScript("popuptestext0001", "{\"action\":\"toggle\"}")
-    assertTrue(msgScript.contains("__kioExtDeliverMessage"))
-
-    mgr.removeExtension("popuptestext0001")
   }
 
   @Test
@@ -939,85 +843,6 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun extensionBackgroundWorkerHostRpcPortsCorsFreeFetchAndProxyParsingWork() {
-    val context = ApplicationProvider.getApplicationContext<Context>()
-    val baos = java.io.ByteArrayOutputStream()
-    java.util.zip.ZipOutputStream(baos).use { zos ->
-      zos.putNextEntry(java.util.zip.ZipEntry("manifest.json"))
-      zos.write(
-        """
-        {
-          "manifest_version": 3,
-          "name": "VPN Worker Test",
-          "version": "5.0.0",
-          "permissions": ["proxy", "storage", "webRequest", "privacy", "alarms"],
-          "host_permissions": ["<all_urls>"],
-          "background": { "service_worker": "bg/worker.js", "type": "module" },
-          "action": { "default_popup": "popup.html" }
-        }
-        """.trimIndent().toByteArray(Charsets.UTF_8)
-      )
-      zos.closeEntry()
-
-      zos.putNextEntry(java.util.zip.ZipEntry("bg/worker.js"))
-      zos.write("chrome.runtime.onMessage.addListener((m, s, r) => r({ ok: true }));".toByteArray(Charsets.UTF_8))
-      zos.closeEntry()
-
-      zos.putNextEntry(java.util.zip.ZipEntry("popup.html"))
-      zos.write("<html><head></head><body><script src=\"popup.js\"></script></body></html>".toByteArray(Charsets.UTF_8))
-      zos.closeEntry()
-    }
-
-    val mgr = com.example.extensions.ChromeExtensionManager(context)
-    val res = mgr.installFromBytes(baos.toByteArray(), "vpn_worker.zip", preferredId = "vpnworkertest001")
-    assertTrue(res is com.example.extensions.ExtensionInstallResult.Success)
-    val ext = (res as com.example.extensions.ExtensionInstallResult.Success).extension
-    assertTrue(ext.hasBackgroundRuntime)
-    assertEquals("bg/worker.js", ext.backgroundServiceWorker)
-    assertTrue(ext.backgroundIsModule)
-    assertTrue(ext.hostPermissions.contains("<all_urls>"))
-
-    // Verify virtual Background Host HTML includes Service Worker shims, module script, RPC/Port router, CORS-free fetch & XHR
-    val bgResp = mgr.serveVirtualExtensionResource("https://kio-ext.invalid/vpnworkertest001/__kio_bg_host.html")
-    assertNotNull(bgResp)
-    val bgHtml = bgResp!!.data.bufferedReader().readText()
-    assertTrue(bgHtml.contains("type=\"module\""))
-    assertTrue(bgHtml.contains("bg/worker.js"))
-    assertTrue(bgHtml.contains("__kioHandleIncomingRpc"))
-    assertTrue(bgHtml.contains("__kioHandleIncomingPortConnect"))
-    assertTrue(bgHtml.contains("__kioFetchPatched"))
-    assertTrue(bgHtml.contains("__kioXhrPatched"))
-    assertTrue(bgHtml.contains("webRTCIPHandlingPolicy"))
-    assertTrue(bgHtml.contains("onAuthRequired"))
-    assertTrue(bgHtml.contains("setAccessLevel"))
-    assertTrue(bgHtml.contains("getUserSettings"))
-    assertTrue(bgHtml.contains("getViews"))
-    assertTrue(bgHtml.contains("handlerBehaviorChanged"))
-    assertTrue(bgHtml.contains("openOrClosedShadowRoot"))
-
-    // Verify chrome.proxy fixed_servers and pac_script parsing
-    val fixedProxy = mgr.parseProxyConfigFromJson(
-      "vpnworkertest001",
-      """{"value":{"mode":"fixed_servers","rules":{"singleProxy":{"scheme":"https","host":"us1.proxy.example","port":443},"bypassList":["*.local"]}}}"""
-    )
-    assertNotNull(fixedProxy)
-    assertEquals("fixed_servers", fixedProxy!!.mode)
-    assertEquals(listOf("https://us1.proxy.example:443"), fixedProxy.proxyRules)
-    assertEquals(listOf("*.local"), fixedProxy.bypassList)
-
-    val pacProxy = mgr.parseProxyConfigFromJson(
-      "vpnworkertest001",
-      """{"value":{"mode":"pac_script","pacScript":{"data":"function FindProxyForURL(u,h){ return 'HTTPS eu2.vpn.example:8443; PROXY fallback.example:8080; DIRECT'; }"}}}"""
-    )
-    assertNotNull(pacProxy)
-    assertEquals("pac_script", pacProxy!!.mode)
-    assertTrue(pacProxy.proxyRules.contains("https://eu2.vpn.example:8443"))
-    assertTrue(pacProxy.proxyRules.contains("http://fallback.example:8080"))
-
-    mgr.removeExtension("vpnworkertest001")
-  }
-
-  @Test
   fun quickMenuHasModesAndBlockImagesAction() {
     val activity = composeTestRule.activity
     val vm = activity.viewModel
@@ -1050,37 +875,5 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Desktop").performClick()
     composeTestRule.waitForIdle()
     assertEquals(com.example.model.UserAgentMode.DESKTOP, vm.activeTab().userAgentMode)
-  }
-
-  @Test
-  fun kiwiExtensionEngineEnhancementsFunctionProperly() {
-    val context = ApplicationProvider.getApplicationContext<Context>()
-    val extManager = com.example.extensions.ChromeExtensionManager(context)
-    val runtimeHost = com.example.extensions.ExtensionRuntimeHost(
-      context = context,
-      extensionManager = extManager,
-      activeTabUrlProvider = { "https://example.com" },
-      activeTabTitleProvider = { "Example" },
-      evaluateOnActiveStandardTab = {},
-      broadcastStorageToStandardTabs = { _, _ -> },
-      onOpenTab = {},
-      onReloadActiveTab = {},
-      onToast = {}
-    )
-    assertNotNull(runtimeHost)
-
-    // Verify activePopupExtId tracking
-    extManager.activePopupExtId = "test_ext_123"
-    assertEquals("test_ext_123", extManager.activePopupExtId)
-
-    // Verify stage="all" injection script building returns null when no extensions are active
-    val injectionScript = extManager.buildPageInjectionScript("https://example.com", stage = "all")
-    assertNull(injectionScript)
-
-    // Verify root-relative URL fallback with Referer header
-    val headers = mapOf("Referer" to "https://kio-ext.invalid/myext/popup.html")
-    val res = extManager.serveVirtualExtensionResource("https://kio-ext.invalid/assets/app.js", headers)
-    // Should safely handle resolution without throwing
-    assertNotNull(extManager)
   }
 }

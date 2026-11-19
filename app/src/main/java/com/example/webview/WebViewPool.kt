@@ -37,8 +37,6 @@ import android.webkit.WebStorage
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.webkit.WebViewDatabase
-import com.example.extensions.ChromeExtensionManager
-import com.example.extensions.ExtensionRuntimeHost
 import com.example.model.ClearDataOptions
 import com.example.model.PageError
 import com.example.model.PageErrorType
@@ -83,8 +81,6 @@ interface WebViewCallbacks {
   fun onNewTabRequested(parentTabId: String, url: String, isPrivate: Boolean) {}
   fun onNewTabCreated(newTabId: String, isPrivate: Boolean, initialUrl: String = "") {}
   fun onCloseTabRequested(tabId: String) {}
-  fun onInstallExtensionFromStore(extensionId: String) {}
-  fun onOpenExtensionsManager() {}
 }
 
 /**
@@ -131,8 +127,7 @@ open class BackgroundMediaWebView(
 class WebViewPool(
   private val context: Context,
   private val settingsProvider: () -> SettingsState,
-  private val callbacks: WebViewCallbacks,
-  private val extensionManager: ChromeExtensionManager? = null
+  private val callbacks: WebViewCallbacks
 ) {
 
   companion object {
@@ -141,13 +136,6 @@ class WebViewPool(
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
     private const val IPHONE_USER_AGENT =
       "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1"
-
-    fun isChromeWebStoreUrl(url: String): Boolean {
-      if (url.isBlank()) return false
-      val host = UrlValidator.extractHost(url)
-      return host == "chromewebstore.google.com" ||
-        (host == "chrome.google.com" && url.contains("/webstore", ignoreCase = true))
-    }
   }
 
   private val appContext: Context = context.applicationContext
@@ -164,14 +152,9 @@ class WebViewPool(
   // Bidirectional Standard <-> Private Isolation Vault
   @Volatile private var currentlyInPrivateMode: Boolean = false
   @Volatile private var liveSystemDarkMode: Boolean? = null
-  @Volatile private var extensionRuntimeHost: ExtensionRuntimeHost? = null
   private val visitedStandardOrigins = ConcurrentHashMap.newKeySet<String>()
   private val vaultedStandardCookies = ConcurrentHashMap<String, List<String>>()
   private val cookieBarrierLock = Any()
-
-  fun setExtensionRuntimeHost(host: ExtensionRuntimeHost?) {
-    extensionRuntimeHost = host
-  }
 
   fun evaluateJsOnStandardTab(tabId: String, js: String) {
     if (tabPrivacyFlags[tabId] == true || !settingsProvider().javascriptEnabled) return
@@ -345,87 +328,6 @@ class WebViewPool(
 
   fun getLiveWebView(tabId: String): WebView? = liveViews[tabId]?.takeIf { !destroyedViews.contains(it) }
 
-  fun applyExtensionsToLiveTabs() {
-    val extMgr = extensionManager ?: return
-    if (!settingsProvider().javascriptEnabled) return
-    for ((id, wv) in liveViews.toMap()) {
-      if (destroyedViews.contains(wv)) continue
-      // Never inject Chrome Extensions into Private tabs
-      if (tabPrivacyFlags[id] == true) continue
-      val url = currentPageUrls[id].orEmpty()
-      if (url.isBlank()) continue
-      if (isChromeWebStoreUrl(url)) {
-        applyChromeWebStoreBridge(wv, url)
-      }
-      val script = extMgr.buildPageInjectionScript(url, "all") ?: continue
-      try {
-        wv.evaluateJavascript(script, null)
-      } catch (_: Throwable) {
-      }
-    }
-  }
-
-  fun broadcastExtensionStorageChange(extId: String, changesJson: String) {
-    val extMgr = extensionManager ?: return
-    if (!settingsProvider().javascriptEnabled) return
-    val script = extMgr.buildStorageChangeBroadcastScript(extId, changesJson)
-    for ((id, wv) in liveViews.toMap()) {
-      if (destroyedViews.contains(wv) || tabPrivacyFlags[id] == true) continue
-      try {
-        wv.post {
-          if (!destroyedViews.contains(wv)) {
-            wv.evaluateJavascript(script, null)
-          }
-        }
-      } catch (_: Throwable) {
-      }
-    }
-  }
-
-  fun dispatchExtensionMessage(tabId: String, extId: String, msgJson: String) {
-    val extMgr = extensionManager ?: return
-    if (tabPrivacyFlags[tabId] == true || !settingsProvider().javascriptEnabled) return
-    val wv = getLiveWebView(tabId) ?: return
-    val script = extMgr.buildMessageDispatchScript(extId, msgJson)
-    try {
-      wv.post {
-        if (!destroyedViews.contains(wv)) {
-          wv.evaluateJavascript(script, null)
-        }
-      }
-    } catch (_: Throwable) {
-    }
-  }
-
-  fun executeExtensionScript(tabId: String, extId: String, code: String) {
-    if (tabPrivacyFlags[tabId] == true || !settingsProvider().javascriptEnabled || code.isBlank()) return
-    val wv = getLiveWebView(tabId) ?: return
-    val prelude = extensionManager?.buildChromeApiPrelude(extId).orEmpty()
-    val wrapped = "(function(){\n$prelude\ntry{\n$code\n}catch(e){}\n})();"
-    try {
-      wv.post {
-        if (!destroyedViews.contains(wv)) {
-          wv.evaluateJavascript(wrapped, null)
-        }
-      }
-    } catch (_: Throwable) {
-    }
-  }
-
-  fun insertExtensionCss(tabId: String, extId: String, css: String) {
-    if (tabPrivacyFlags[tabId] == true || !settingsProvider().javascriptEnabled || css.isBlank()) return
-    val wv = getLiveWebView(tabId) ?: return
-    val js = "(function(){try{var s=document.createElement('style');s.setAttribute('data-kio-ext',${JSONObject.quote(extId)});s.textContent=${JSONObject.quote(css)};(document.head||document.documentElement).appendChild(s);}catch(e){}})();"
-    try {
-      wv.post {
-        if (!destroyedViews.contains(wv)) {
-          wv.evaluateJavascript(js, null)
-        }
-      }
-    } catch (_: Throwable) {
-    }
-  }
-
   /**
    * Releases idle background WebViews, trims favicon memory/disk caches, and cleans orphan temp files
    * so Kio keeps Android RAM and storage footprint ultra-minimal without sacrificing speed.
@@ -460,174 +362,6 @@ class WebViewPool(
         }
         safelyDestroyWebView(wv)
       }
-    }
-  }
-
-  /**
-   * Kiwi-style Chrome Web Store Bridge:
-   * - Spoofs Desktop Windows Chrome identity (navigator.userAgentData / platform) on chromewebstore.google.com
-   * - Hides the false Android-WebView "Item currently unavailable" banner on valid extension pages
-   * - Enables the disabled "Add to Chrome" button directly on the store page and wires it to Kio's CRX3 installer!
-   */
-  private fun applyChromeWebStoreBridge(webView: WebView, url: String) {
-    if (!settingsProvider().javascriptEnabled || destroyedViews.contains(webView) || !isChromeWebStoreUrl(url)) return
-    val js = """
-      (function() {
-        try {
-          Object.defineProperty(navigator, 'platform', { get: function() { return 'Win32'; }, configurable: true });
-          var brands = [
-            { brand: 'Chromium', version: '134' },
-            { brand: 'Google Chrome', version: '134' },
-            { brand: 'Not-A.Brand', version: '99' }
-          ];
-          Object.defineProperty(navigator, 'userAgentData', {
-            get: function() {
-              return {
-                brands: brands,
-                mobile: false,
-                platform: 'Windows',
-                getHighEntropyValues: function() {
-                  return Promise.resolve({
-                    architecture: 'x86',
-                    bitness: '64',
-                    brands: brands,
-                    fullVersionList: [
-                      { brand: 'Chromium', version: '134.0.6998.166' },
-                      { brand: 'Google Chrome', version: '134.0.6998.166' },
-                      { brand: 'Not-A.Brand', version: '99.0.0.0' }
-                    ],
-                    mobile: false,
-                    model: '',
-                    platform: 'Windows',
-                    platformVersion: '15.0.0',
-                    uaFullVersion: '134.0.6998.166'
-                  });
-                },
-                toJSON: function() { return { brands: brands, mobile: false, platform: 'Windows' }; }
-              };
-            },
-            configurable: true
-          });
-          if (!window.chrome) { window.chrome = {}; }
-        } catch(e) {}
-
-        function extractExtId() {
-          var m = window.location.href.match(/\/detail\/(?:[^\/?#]+\/)?([a-p]{32})/i);
-          return m ? m[1].toLowerCase() : null;
-        }
-
-        function patchChromeWebStoreUi() {
-          try {
-            var extId = extractExtId();
-            var isInstalled = false;
-            try {
-              if (extId && window.__KioExtBridge && window.__KioExtBridge.isExtensionInstalled) {
-                isInstalled = !!window.__KioExtBridge.isExtensionInstalled(extId);
-              }
-            } catch(e) {}
-
-            if (extId) {
-              var allDivs = document.querySelectorAll('div, section, aside, [role="alert"], [role="status"]');
-              for (var i = 0; i < allDivs.length; i++) {
-                var el = allDivs[i];
-                if (!el || el.offsetHeight <= 0 || el.offsetHeight > 140) continue;
-                var txt = (el.textContent || '').trim();
-                if (txt.length > 0 && txt.length < 220 && (
-                  txt.indexOf('Item currently unavailable') !== -1 ||
-                  txt.indexOf('Switch to Chrome to install') !== -1 ||
-                  (txt.indexOf('Available on Chrome') !== -1 && txt.indexOf('troubleshooting') !== -1)
-                )) {
-                  if (!el.querySelector('h1') && el.children.length <= 6) {
-                    el.style.setProperty('display', 'none', 'important');
-                  }
-                }
-              }
-            }
-
-            if (!extId) return;
-
-            var buttons = document.querySelectorAll('button, [role="button"]');
-            for (var j = 0; j < buttons.length; j++) {
-              var btn = buttons[j];
-              var label = (btn.textContent || '').trim().toLowerCase();
-              var isStoreInstallBtn = label === 'add to chrome' ||
-                label === 'add to kio' ||
-                label === 'installed in kio' ||
-                label === 'available on chrome' ||
-                (label.indexOf('add to chrome') !== -1 && label.length < 36) ||
-                btn.getAttribute('data-kio-cws-btn') === '1';
-              if (!isStoreInstallBtn) continue;
-
-              btn.setAttribute('data-kio-cws-btn', '1');
-              btn.setAttribute('data-kio-ext-id', extId);
-              btn.disabled = false;
-              btn.removeAttribute('disabled');
-              btn.removeAttribute('aria-disabled');
-              btn.style.setProperty('opacity', '1', 'important');
-              btn.style.setProperty('pointer-events', 'auto', 'important');
-              btn.style.setProperty('cursor', 'pointer', 'important');
-              btn.style.setProperty('background-color', isInstalled ? '#059669' : '#1A73E8', 'important');
-              btn.style.setProperty('color', '#FFFFFF', 'important');
-              btn.style.setProperty('border-radius', '24px', 'important');
-
-              var desiredText = isInstalled ? 'Installed in Kio' : 'Add to Kio';
-              var spans = btn.querySelectorAll('span');
-              var updatedSpan = false;
-              for (var s = 0; s < spans.length; s++) {
-                var st = (spans[s].textContent || '').trim().toLowerCase();
-                if (st.indexOf('add to') !== -1 || st.indexOf('installed in kio') !== -1 || st.indexOf('available on chrome') !== -1) {
-                  spans[s].textContent = desiredText;
-                  spans[s].style.setProperty('color', '#FFFFFF', 'important');
-                  updatedSpan = true;
-                }
-              }
-              if (!updatedSpan) {
-                btn.textContent = desiredText;
-              }
-
-              if (!btn.__kioCwsBound) {
-                btn.__kioCwsBound = true;
-                btn.addEventListener('click', function(ev) {
-                  try {
-                    ev.preventDefault();
-                    ev.stopPropagation();
-                    ev.stopImmediatePropagation();
-                    var id = this.getAttribute('data-kio-ext-id') || extractExtId();
-                    if (!id || !window.__KioExtBridge) return;
-                    if (window.__KioExtBridge.isExtensionInstalled && window.__KioExtBridge.isExtensionInstalled(id)) {
-                      if (window.__KioExtBridge.openExtensionsManager) window.__KioExtBridge.openExtensionsManager();
-                    } else if (window.__KioExtBridge.installFromStore) {
-                      this.textContent = 'Installing...';
-                      window.__KioExtBridge.installFromStore(id);
-                    }
-                  } catch(e) {}
-                }, true);
-              }
-            }
-          } catch(e) {}
-        }
-
-        patchChromeWebStoreUi();
-        if (!window.__kio_cws_observer) {
-          var timer = null;
-          var obs = new MutationObserver(function() {
-            if (timer) return;
-            timer = setTimeout(function() {
-              timer = null;
-              patchChromeWebStoreUi();
-            }, 250);
-          });
-          var root = document.body || document.documentElement;
-          if (root) {
-            obs.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled', 'aria-disabled'] });
-            window.__kio_cws_observer = obs;
-          }
-        }
-      })();
-    """.trimIndent()
-    try {
-      webView.evaluateJavascript(js, null)
-    } catch (_: Throwable) {
     }
   }
 
@@ -679,16 +413,12 @@ class WebViewPool(
     currentPageHosts[tabId] = UrlValidator.extractHost(url)
     currentPageUrls[tabId] = url
     val s = settingsProvider()
-    if (!isPriv && isChromeWebStoreUrl(url) && tabUserAgentModes[tabId] != UserAgentMode.DESKTOP) {
-      tabUserAgentModes[tabId] = UserAgentMode.DESKTOP
-      applySettings(webView, false, UserAgentMode.DESKTOP, s)
-    }
     val headers = mutableMapOf(
       "Sec-GPC" to "1",
       "DNT" to "1",
       "Sec-CH-Prefers-Color-Scheme" to if (resolveIsDark(s)) "dark" else "light"
     )
-    if (tabUserAgentModes[tabId] == UserAgentMode.DESKTOP || (!isPriv && isChromeWebStoreUrl(url))) {
+    if (tabUserAgentModes[tabId] == UserAgentMode.DESKTOP) {
       headers["Sec-CH-UA-Mobile"] = "?0"
       headers["Sec-CH-UA-Platform"] = "\"Windows\""
       headers["Sec-CH-UA"] = "\"Chromium\";v=\"134\", \"Google Chrome\";v=\"134\", \"Not-A.Brand\";v=\"99\""
@@ -2217,131 +1947,10 @@ class WebViewPool(
     applySettings(webView, isPrivate, userAgentMode, settingsProvider())
 
     try {
-      webView.setLayerType(View.LAYER_TYPE_NONE, null)
+      webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+      webView.isNestedScrollingEnabled = true
+      webView.overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
     } catch (_: Throwable) {
-    }
-
-    if (!isPrivate && extensionManager != null) {
-      try {
-        webView.addJavascriptInterface(
-          object {
-            @JavascriptInterface
-            fun storageGetAll(extId: String): String = extensionManager.readStorageJson(extId)
-
-            @JavascriptInterface
-            fun storageSetAll(extId: String, json: String) = extensionManager.writeStorageJson(extId, json)
-
-            @JavascriptInterface
-            fun broadcastStorageChange(extId: String, changesJson: String) {
-              broadcastExtensionStorageChange(extId, changesJson)
-            }
-
-            @JavascriptInterface
-            fun routeRuntimeMessage(extId: String, fromCtx: String, reqId: String, msgJson: String) {
-              extensionRuntimeHost?.routeRuntimeMessage(extId, fromCtx, reqId, msgJson)
-            }
-
-            @JavascriptInterface
-            fun routeTabMessage(extId: String, fromCtx: String, reqId: String, msgJson: String) {
-              extensionRuntimeHost?.routeTabMessage(extId, fromCtx, reqId, msgJson)
-            }
-
-            @JavascriptInterface
-            fun replyRuntimeMessage(extId: String, targetCtx: String, reqId: String, replyJson: String) {
-              extensionRuntimeHost?.replyRuntimeMessage(extId, targetCtx, reqId, replyJson)
-            }
-
-            @JavascriptInterface
-            fun routePortConnect(extId: String, fromCtx: String, portId: String, name: String) {
-              extensionRuntimeHost?.routePortConnect(extId, fromCtx, portId, name)
-            }
-
-            @JavascriptInterface
-            fun routePortMessage(extId: String, fromCtx: String, portId: String, msgJson: String) {
-              extensionRuntimeHost?.routePortMessage(extId, fromCtx, portId, msgJson)
-            }
-
-            @JavascriptInterface
-            fun routePortDisconnect(extId: String, fromCtx: String, portId: String) {
-              extensionRuntimeHost?.routePortDisconnect(extId, fromCtx, portId)
-            }
-
-            @JavascriptInterface
-            fun sendMessageToActiveTab(extId: String, msgJson: String) {
-              dispatchExtensionMessage(tabId, extId, msgJson)
-            }
-
-            @JavascriptInterface
-            fun executeScriptInActiveTab(extId: String, code: String) {
-              executeExtensionScript(tabId, extId, code)
-            }
-
-            @JavascriptInterface
-            fun executeScriptFileInActiveTab(extId: String, file: String) {
-              val code = extensionManager.readExtensionFileText(extId, file) ?: return
-              executeExtensionScript(tabId, extId, code)
-            }
-
-            @JavascriptInterface
-            fun insertCssInActiveTab(extId: String, css: String) {
-              insertExtensionCss(tabId, extId, css)
-            }
-
-            @JavascriptInterface
-            fun insertCssFileInActiveTab(extId: String, file: String) {
-              val css = extensionManager.readExtensionFileText(extId, file) ?: return
-              insertExtensionCss(tabId, extId, css)
-            }
-
-            @JavascriptInterface
-            fun reloadActiveTab() {
-              webView.post {
-                if (!destroyedViews.contains(webView)) {
-                  try { webView.reload() } catch (_: Throwable) {}
-                }
-              }
-            }
-
-            @JavascriptInterface
-            fun installFromStore(extId: String) {
-              val clean = extId.trim().lowercase()
-              if (clean.length == 32) {
-                callbacks.onInstallExtensionFromStore(clean)
-              }
-            }
-
-            @JavascriptInterface
-            fun isExtensionInstalled(extId: String): Boolean {
-              return extensionManager.getExtension(extId.trim().lowercase()) != null
-            }
-
-            @JavascriptInterface
-            fun openExtensionsManager() {
-              callbacks.onOpenExtensionsManager()
-            }
-
-            @JavascriptInterface
-            fun openOptionsPage(extId: String) {
-              callbacks.onOpenExtensionsManager()
-            }
-
-            @JavascriptInterface
-            fun openTab(url: String) {
-              if (UrlValidator.isSafeWebUrl(url) && url != "about:blank") {
-                callbacks.onNewTabRequested(tabId, url, isPrivate)
-              }
-            }
-
-            @JavascriptInterface
-            fun getActiveUrl(): String = currentPageUrls[tabId].orEmpty()
-
-            @JavascriptInterface
-            fun getActiveTitle(): String = currentPageTitles[tabId].orEmpty()
-          },
-          "__KioExtBridge"
-        )
-      } catch (_: Throwable) {
-      }
     }
 
     webView.setOnLongClickListener { v ->
@@ -2450,12 +2059,6 @@ class WebViewPool(
         }
         if (request.isForMainFrame) {
           currentPageHosts[tabId] = host
-          if (!isPrivate && isChromeWebStoreUrl(url) && tabUserAgentModes[tabId] != UserAgentMode.DESKTOP && view != null) {
-            tabUserAgentModes[tabId] = UserAgentMode.DESKTOP
-            applySettings(view, false, UserAgentMode.DESKTOP, currentSettings)
-            loadUrl(tabId, url)
-            return true
-          }
         }
         return false
       }
@@ -2466,10 +2069,6 @@ class WebViewPool(
       ): WebResourceResponse? {
         return try {
           val reqUrl = request?.url?.toString() ?: return null
-          // Serve local Chrome Extension virtual assets ONLY in Standard Mode (never in Private Mode)
-          if (!isPrivate) {
-            extensionManager?.serveVirtualExtensionResource(reqUrl, request?.requestHeaders)?.let { return it }
-          }
           // Allow internal browser schemes (blob:, data:) to be processed natively by Chromium (MediaSource MSE, inline assets)
           if (reqUrl.startsWith("blob:", ignoreCase = true) || reqUrl.startsWith("data:", ignoreCase = true)) {
             return null
@@ -2490,8 +2089,7 @@ class WebViewPool(
           }
           val pageHost = currentPageHosts[tabId].orEmpty()
           val customSet = currentSettings.customBlockedHosts.toSet()
-          val blockedByDnr = !isPrivate && extensionManager?.shouldBlockByDnrRules(reqUrl, pageHost) == true
-          if (blockedByDnr || TrackerBlocker.shouldBlockRequest(reqUrl, pageHost, currentSettings.trackerBlockingEnabled, customSet)) {
+          if (TrackerBlocker.shouldBlockRequest(reqUrl, pageHost, currentSettings.trackerBlockingEnabled, customSet)) {
             callbacks.onTrackerBlocked(tabId)
             val acceptHeader = request?.requestHeaders?.get("Accept")?.lowercase() ?: ""
             val isVast = reqUrl.contains("vast", ignoreCase = true) ||
@@ -2540,14 +2138,6 @@ class WebViewPool(
             if (s.dataSaverEnabled) {
               applyDataSaver(view, true)
             }
-            if (!isPrivate && s.javascriptEnabled) {
-              if (isChromeWebStoreUrl(url)) {
-                applyChromeWebStoreBridge(view, url)
-              }
-              extensionManager?.buildPageInjectionScript(url, "start")?.let { extJs ->
-                try { view.evaluateJavascript(extJs, null) } catch (_: Throwable) {}
-              }
-            }
           }
           callbacks.onPageStarted(tabId, url)
         }
@@ -2581,14 +2171,6 @@ class WebViewPool(
           if (s.dataSaverEnabled) {
             applyDataSaver(view, true)
           }
-          if (!isPrivate && s.javascriptEnabled) {
-            if (isChromeWebStoreUrl(url)) {
-              applyChromeWebStoreBridge(view, url)
-            }
-            extensionManager?.buildPageInjectionScript(url, "all")?.let { extJs ->
-              try { view.evaluateJavascript(extJs, null) } catch (_: Throwable) {}
-            }
-          }
           val safeTitle = try { view.title } catch (_: Throwable) { null }
           if (!safeTitle.isNullOrBlank()) {
             currentPageTitles[tabId] = safeTitle
@@ -2611,20 +2193,6 @@ class WebViewPool(
         host: String?,
         realm: String?
       ) {
-        val runtime = extensionRuntimeHost
-        if (!isPrivate && runtime != null && handler != null && !host.isNullOrBlank()) {
-          runtime.resolveProxyAuth(host, 443, realm.orEmpty()) { user, pass ->
-            try {
-              if (!user.isNullOrBlank()) {
-                handler.proceed(user, pass.orEmpty())
-              } else {
-                handler.cancel()
-              }
-            } catch (_: Throwable) {
-            }
-          }
-          return
-        }
         try {
           handler?.cancel()
         } catch (_: Throwable) {
@@ -2772,14 +2340,6 @@ class WebViewPool(
           applyLinkTargetTrackerEngine(view)
           applyVideoCompatibilityEngine(view)
           applyStealthPrivacyShield(view)
-          if (!isPrivate && settingsProvider().javascriptEnabled && liveUrl.isNotBlank()) {
-            if (isChromeWebStoreUrl(liveUrl)) {
-              applyChromeWebStoreBridge(view, liveUrl)
-            }
-            extensionManager?.buildPageInjectionScript(liveUrl, "start")?.let { extJs ->
-              try { view.evaluateJavascript(extJs, null) } catch (_: Throwable) {}
-            }
-          }
         }
         if (newProgress >= 35 && stage < 2) {
           pageEarlyInjectedStage[tabId] = 2

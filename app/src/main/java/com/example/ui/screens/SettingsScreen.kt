@@ -118,9 +118,7 @@ fun SettingsScreen(
   isPrivateMode: Boolean = false,
   systemDarkTheme: Boolean? = null,
   sitePermissions: List<SitePermissionRule>,
-  installedExtensionsCount: Int = 0,
   systemWebViewInfo: String? = null,
-  onOpenExtensions: () -> Unit = {},
   onUpdateSettings: ((SettingsState) -> SettingsState) -> Unit,
   onAddCustomBlockedHost: (String) -> Boolean,
   onRemoveCustomBlockedHost: (String) -> Unit,
@@ -261,17 +259,6 @@ fun SettingsScreen(
             modifier = Modifier.widthIn(max = 720.dp).fillMaxWidth()
           ) {
             Column(modifier = Modifier.fillMaxWidth()) {
-              if (!isPrivateMode) {
-                SettingsFolderRow(
-                  icon = FeatherIcons.Extension,
-                  iconTint = Color(0xFF38BDF8),
-                  title = "Extensions",
-                  subtitle = if (installedExtensionsCount > 0) "$installedExtensionsCount active · MV3 Service Worker · Web Store & CRX" else "Desktop Chrome extensions · MV3 Background Worker · CRX & ZIP support",
-                  tag = "settings_folder_extensions",
-                  onClick = onOpenExtensions
-                )
-                FolderDivider()
-              }
               val homeSummary = if (settings.homepageUrl.isBlank()) "Start page" else UrlValidator.extractHost(settings.homepageUrl).ifEmpty { "Custom" }
               SettingsFolderRow(
                 icon = Icons.Filled.Search,
@@ -744,8 +731,8 @@ fun SettingsScreen(
         SettingsFolder.HELP_FEEDBACK -> {
           val faqs = remember {
             listOf(
-              "How do I install desktop Chrome extensions?" to
-                "Tap the Extensions puzzle button in the toolbar or open the menu (⋮) → Extensions. You can install directly from the Chrome Web Store, paste an Extension ID/URL, or load local .crx, .zip, and .user.js packages.",
+              "Why is Kio so fast and lightweight?" to
+                "Kio is architected with zero tracking bloat, hardware-accelerated 120Hz/60Hz rendering, and direct native memory management — all engineered strictly under 2 MB.",
               "How does the Content Announcer / Reader Mode protect my privacy?" to
                 "Open the menu (⋮) → Narrate to read and listen to any page with pure on-device NLP narration. Text exists only in volatile RAM while open, cannot be copied or exported, and is wiped immediately when closed.",
               "How do I toggle Full Screen mode?" to
@@ -753,7 +740,7 @@ fun SettingsScreen(
               "How do I switch viewing modes?" to
                 "Tap the menu button (⋮) and tap Modes to select Desktop, iPhone, or Mobile. Kio instantly adjusts the User-Agent and viewport layout to match your preference.",
               "How does Private Mode keep my browsing safe?" to
-                "Private Mode runs isolated from Standard Mode: cookies, cache, and history are never shared or saved. Extensions, bookmarks, and sharing are disabled for isolation, screenshots are blocked, and all private session data is wiped on exit.",
+                "Private Mode runs isolated from Standard Mode: cookies, cache, and history are never shared or saved. Bookmarks and sharing are disabled for isolation, screenshots are blocked, and all private session data is wiped on exit.",
               "Why are streaming popups and ad redirects blocked?" to
                 "Kio intercepts popunder ad redirects (including tsyndicate, ad.* subdomains, and click-hijack overlays) before they can open spam tabs or interrupt video playback."
             )
@@ -919,7 +906,7 @@ fun SettingsScreen(
               )
               Spacer(modifier = Modifier.height(8.dp))
               Text(
-                text = "High-performance, privacy-hardened Android web browser with Desktop Chrome Extensions and on-device text narration — engineered strictly under 2 MB.",
+                text = "High-performance, privacy-hardened Android web browser with hardware-accelerated rendering and on-device text narration — engineered strictly under 2 MB.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
               )
@@ -941,7 +928,7 @@ fun SettingsScreen(
           SettingsSectionCard("Policies & Licenses", Modifier.widthIn(max = 720.dp)) {
             AboutPolicyRow("Privacy Policy") {
               infoDialogContent = "Privacy Policy" to
-                "Kio collects zero analytics, zero telemetry, and zero personal data. Bookmarks, history, extensions, and preferences stay strictly on your device. Content Announcer & Reader Mode processes text exclusively in volatile RAM with zero saving or copying. Private tabs run in RAM, block screenshots, and wipe all cookies, cache, and storage on exit."
+                "Kio collects zero analytics, zero telemetry, and zero personal data. Bookmarks, history, and preferences stay strictly on your device. Content Announcer & Reader Mode processes text exclusively in volatile RAM with zero saving or copying. Private tabs run in RAM, block screenshots, and wipe all cookies, cache, and storage on exit."
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
             AboutPolicyRow("Security Architecture") {
@@ -949,7 +936,6 @@ fun SettingsScreen(
                 "• Powered by the OS-maintained Android System WebView with Google Safe Browsing.\n" +
                 "• Local settings encrypted via Android Keystore AES-256-GCM.\n" +
                 "• Strict URL scheme filtering, intent sanitization, and HTTPS-Only warnings.\n" +
-                "• Zip-Slip hardened CRX/ZIP extension unpacker and sandboxed virtual origin serving.\n" +
                 "• Built-in ad, tracker, popunder, and WebRTC LAN IP leak protection."
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))

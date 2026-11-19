@@ -105,7 +105,7 @@ fun IntroScreen(
           modifier = Modifier.fillMaxWidth().testTag("intro_thought_process")
         ) {
           Text(
-            text = "Kio: Pure speed, desktop Chrome extensions, stealth privacy, and zero nonsense.",
+            text = "Kio: Pure speed, stealth privacy, ultra-lean footprint, and zero bloat.",
             style = MaterialTheme.typography.bodyMedium,
             fontStyle = FontStyle.Italic,
             fontWeight = FontWeight.Medium,
@@ -119,9 +119,9 @@ fun IntroScreen(
 
         // Key Pillars
         IntroPillarCard(
-          icon = FeatherIcons.Extension,
-          title = "Desktop Chrome Extensions (< 2 MB)",
-          subtitle = "Install .crx, .zip, or Chrome Web Store extensions inside a lightning-fast engine."
+          icon = FeatherIcons.DataSaver,
+          title = "Hardware-Accelerated 120Hz Speed (< 2 MB)",
+          subtitle = "Silky smooth browsing with instantaneous rendering and zero tracking bloat."
         )
 
         Spacer(modifier = Modifier.height(10.dp))

@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kio-v1.9.8.apk
+          cp "$APK_PATH" releases/Kio-v1.9.9.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kio-v1.9.8.apk
+          git add releases/Kio-v1.9.9.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kio-v1.9.8.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kio-v1.9.9.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.9.8
+      - name: Create or update GitHub Release v1.9.9
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kio-v1.9.8.apk)
-          NOTES="Kio Browser v1.9.8 (Build 70) — Complete Kiwi-Style Chrome Extension Architecture & Runtime Parity (< 2 MB).\n\n- **Kiwi-Style Extension Access in 3-Dot Menu:**\n  - Added dedicated 'Extensions' tile in the 3-dot menu grid for standard browsing.\n  - Added Kiwi-style 'EXTENSIONS' section at the bottom of the 3-dot menu listing all enabled extensions with icons and titles.\n  - Tapping an extension immediately launches its popup dialog directly over the active webpage, or dispatches chrome.action.onClicked for background-only extensions.\n- **Single-Source RPC Message Routing & Port Fixes:**\n  - Resolved premature null reply race condition by separating popup->background RPC routing (routeRuntimeMessage) from tab content script messaging (routeTabMessage).\n  - chrome.tabs.sendMessage and chrome.tabs.connect route directly to the active web tab content script.\n- **Content Script Stage='all' Injection:**\n  - Guaranteed reliable injection for extensions specifying run_at: document_start (e.g. Dark Reader) alongside document_end/idle scripts with per-extension single-run idempotency guards.\n- **Root-Relative Asset Resolution & Decompression:**\n  - Support root-relative asset URLs (/static/..., /assets/...) in virtual extension resource loader via HTTP Referer header parsing and activePopupExtId tracking.\n  - Transparent GZIP stream decompression in privileged fetch.\n- **Strict Constraint:** Release APK strictly under 2 MB (2,097,152 bytes)."
-          if gh release view v1.9.8 >/dev/null 2>&1; then
-            gh release upload v1.9.8 releases/Kio-v1.9.8.apk --clobber
-            gh release edit v1.9.8 --title "Kio v1.9.8 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kio-v1.9.9.apk)
+          NOTES="Kio Browser v1.9.9 (Build 71) — Premium, Ultra-Fast & Hardware-Accelerated Lightweight Engine (< 2 MB).\n\n- **Complete Extension Engine Removal:**\n  - Permanently removed Chrome extension engine, unpacker, polyfills, virtual origins, and injection bridges.\n  - Significantly reduced memory overhead, APK bytecode size, and cold-start latency.\n- **Automated Storage & Cache Reclamation:**\n  - Automatically cleans and wipes all legacy extension storage, downloaded CRX packages, and preferences on startup.\n- **Silky Smooth 120Hz/60Hz Hardware Acceleration:**\n  - WebViews enabled with hardware-accelerated layer type, smooth nested scrolling, and overscroll.\n  - Eliminated script evaluation overhead and network request interception bottlenecks.\n- **Refined Premium UI:**\n  - Ultra-clean Omnibox pill with balanced spacing, streamlined 3-dot menu with Modes (Desktop, iPhone, Mobile) and Block Images.\n  - Untouched, iconic homepage logo emblem.\n- **Strict Constraint:** Release APK strictly under 2 MB (2,097,152 bytes)."
+          if gh release view v1.9.9 >/dev/null 2>&1; then
+            gh release upload v1.9.9 releases/Kio-v1.9.9.apk --clobber
+            gh release edit v1.9.9 --title "Kio v1.9.9 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.9.8 releases/Kio-v1.9.8.apk \
-              --title "Kio v1.9.8 (< 2 MB)" \
+            gh release create v1.9.9 releases/Kio-v1.9.9.apk \
+              --title "Kio v1.9.9 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi
