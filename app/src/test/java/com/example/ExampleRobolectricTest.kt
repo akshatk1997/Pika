@@ -176,7 +176,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Extensions").assertDoesNotExist()
     composeTestRule.onNodeWithText("AI Assistant").assertDoesNotExist()
     composeTestRule.onNodeWithText("Resources").assertDoesNotExist()
-    composeTestRule.onNodeWithText("Settings").performClick()
+    composeTestRule.onNodeWithText("Settings").performScrollTo().performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("Version 2.0.0").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
