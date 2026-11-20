@@ -8,12 +8,19 @@
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v1.9.9.apk`](releases/Kio-v1.9.9.apk) and published in GitHub Releases (`v1.9.9`).
+Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.0.0.apk`](releases/Kio-v2.0.0.apk) and published in GitHub Releases (`v2.0.0`).
 
 ---
 
-## Core Highlights (v1.9.9 — Build 71)
+## Core Highlights (v2.0.0 — Build 72)
 
+- **Soul Browser Power-User Feature Suite:**
+  - **Media & Video Downloader / Sniffer:** Automatically sniffs video and audio streams (MP4, WEBM, M3U8/HLS, M4V, MP3) playing or loaded on any page, showing a live detected badge count in the 3-dot menu and opening a dialog with 1-tap Download, External Player launch (VLC/MX Player), and direct link copying.
+  - **Save All Images / Image Sniffer & Batch Downloader ("Image Box"):** Scrapes all images (`img`, `picture source`, CSS `background-image`) into a gallery dialog with "Select All" toggle and batch downloads them directly to Pictures.
+  - **Scrolling Screenshot / Full Page Long Screenshot ("Scroll Capture"):** Captures the entire vertical document as a high-resolution PNG image directly into the device's Pictures/Kio directory and Android Gallery.
+  - **Screen Filter (Night Dimmer & Blue Light Eye Care):** Built-in in-app overlay with Warm Amber and OLED Night Dimmer modes and customizable 10%-80% opacity slider, allowing seamless touch pass-through.
+  - **Clean Mode (Distraction-Free Browsing):** Automatically strips cookie consent walls, newsletter overlays, sticky banner ads, and floating promo bars without breaking layout.
+  - **Go Back Without Refresh:** Instant cache-first history navigation eliminating page reloads and white flashes.
 - **Complete Extension Engine Removal & Storage Reclamation:**
   - Permanently removed Chrome extension engine, unpacker, polyfills, virtual origins, and injection bridges for an ultra-clean, bloat-free foundation.
   - Automatically wipes and reclaims all legacy extension disk directories, downloaded CRX packages, and preferences on startup.

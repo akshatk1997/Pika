@@ -66,32 +66,32 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kio-v1.9.9.apk
+          cp "$APK_PATH" releases/Kio-v2.0.0.apk
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kio-v1.9.9.apk
+          git add releases/Kio-v2.0.0.apk
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kio-v1.9.9.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kio-v2.0.0.apk (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v1.9.9
+      - name: Create or update GitHub Release v2.0.0
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kio-v1.9.9.apk)
-          NOTES="Kio Browser v1.9.9 (Build 71) — Premium, Ultra-Fast & Hardware-Accelerated Lightweight Engine (< 2 MB).\n\n- **Complete Extension Engine Removal:**\n  - Permanently removed Chrome extension engine, unpacker, polyfills, virtual origins, and injection bridges.\n  - Significantly reduced memory overhead, APK bytecode size, and cold-start latency.\n- **Automated Storage & Cache Reclamation:**\n  - Automatically cleans and wipes all legacy extension storage, downloaded CRX packages, and preferences on startup.\n- **Silky Smooth 120Hz/60Hz Hardware Acceleration:**\n  - WebViews enabled with hardware-accelerated layer type, smooth nested scrolling, and overscroll.\n  - Eliminated script evaluation overhead and network request interception bottlenecks.\n- **Refined Premium UI:**\n  - Ultra-clean Omnibox pill with balanced spacing, streamlined 3-dot menu with Modes (Desktop, iPhone, Mobile) and Block Images.\n  - Untouched, iconic homepage logo emblem.\n- **Strict Constraint:** Release APK strictly under 2 MB (2,097,152 bytes)."
-          if gh release view v1.9.9 >/dev/null 2>&1; then
-            gh release upload v1.9.9 releases/Kio-v1.9.9.apk --clobber
-            gh release edit v1.9.9 --title "Kio v1.9.9 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kio-v2.0.0.apk)
+          NOTES="Kio Browser v2.0.0 (Build 72) — Full Soul Browser Power-User Suite (< 2 MB).\n\n- **Media & Video Downloader / Sniffer (Soul Browser Style):**\n  - Real-time video and audio stream sniffer detecting MP4, WEBM, M3U8/HLS, and audio resources from network requests and HTML5 media elements.\n  - Dedicated 3-dot menu Media tile with live detected badge count.\n  - 1-tap direct stream download, external player launch (VLC/MX Player), and link copying.\n- **Save All Images / Image Sniffer (Soul Browser Image Box):**\n  - 1-tap scraper extracting all images (img tags, srcset, picture elements, CSS background-images).\n  - Image gallery dialog with selection controls and batch download into Pictures.\n- **Full Page Scroll Screenshot (Scroll Capture):**\n  - High-resolution full-document screenshot capture saving the entire scrolling page to Pictures/Kio and Android Gallery.\n- **Screen Filter (Night Dimmer & Blue Light Eye Care):**\n  - Built-in eye protection overlay with Warm Amber and OLED Night Dimmer modes and customizable 10%-80% opacity slider, allowing seamless touch pass-through.\n- **Clean Mode (Distraction-Free Browsing):**\n  - 1-tap clutter remover automatically hiding cookie consent walls, newsletter overlays, sticky banner ads, and floating promo bars.\n- **Go Back Without Refresh:**\n  - Instant cache-first history navigation eliminating page reloads and white flashes.\n- **Strict Constraint:** Release APK strictly under 2 MB (2,097,152 bytes)."
+          if gh release view v2.0.0 >/dev/null 2>&1; then
+            gh release upload v2.0.0 releases/Kio-v2.0.0.apk --clobber
+            gh release edit v2.0.0 --title "Kio v2.0.0 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v1.9.9 releases/Kio-v1.9.9.apk \
-              --title "Kio v1.9.9 (< 2 MB)" \
+            gh release create v2.0.0 releases/Kio-v2.0.0.apk \
+              --title "Kio v2.0.0 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

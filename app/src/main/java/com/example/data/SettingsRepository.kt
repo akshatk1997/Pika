@@ -1,6 +1,7 @@
 package com.example.data
 
 import android.content.Context
+import com.example.model.ScreenFilterType
 import com.example.model.SearchEngine
 import com.example.model.SecurityState
 import com.example.model.SettingsState
@@ -118,7 +119,11 @@ class SettingsRepository(context: Context) {
         readerFontSizeSp = obj.optInt("readerFontSizeSp", 18).coerceIn(14, 28),
         readerDarkMode = obj.optBoolean("readerDarkMode", false),
         backgroundPlayEnabled = obj.optBoolean("backgroundPlayEnabled", true),
-        dataSaverEnabled = obj.optBoolean("dataSaverEnabled", false)
+        dataSaverEnabled = obj.optBoolean("dataSaverEnabled", false),
+        screenFilterEnabled = obj.optBoolean("screenFilterEnabled", false),
+        screenFilterType = ScreenFilterType.fromId(obj.optString("screenFilterType", ScreenFilterType.WARM_AMBER.id)),
+        screenFilterOpacity = obj.optDouble("screenFilterOpacity", 0.35).toFloat().coerceIn(0.1f, 0.8f),
+        cleanModeEnabled = obj.optBoolean("cleanModeEnabled", false)
       )
     } catch (_: Throwable) {
       SettingsState()
@@ -147,6 +152,10 @@ class SettingsRepository(context: Context) {
       put("readerDarkMode", state.readerDarkMode)
       put("backgroundPlayEnabled", state.backgroundPlayEnabled)
       put("dataSaverEnabled", state.dataSaverEnabled)
+      put("screenFilterEnabled", state.screenFilterEnabled)
+      put("screenFilterType", state.screenFilterType.id)
+      put("screenFilterOpacity", state.screenFilterOpacity.toDouble())
+      put("cleanModeEnabled", state.cleanModeEnabled)
     }
     writePayload(SETTINGS_FILE, obj.toString())
   }

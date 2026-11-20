@@ -812,4 +812,95 @@ object FeatherIcons {
       }
     }.build()
   }
+
+  val Video: ImageVector by lazy {
+    ImageVector.Builder("Video", 24.dp, 24.dp, 24f, 24f).apply {
+      path(fill = SolidColor(Color.Black)) {
+        moveTo(17f, 10.5f)
+        verticalLineTo(7f)
+        curveTo(17f, 6.45f, 16.55f, 6f, 16f, 6f)
+        horizontalLineTo(4f)
+        curveTo(3.45f, 6f, 3f, 6.45f, 3f, 7f)
+        verticalLineTo(17f)
+        curveTo(3f, 17.55f, 3.45f, 18f, 4f, 18f)
+        horizontalLineTo(16f)
+        curveTo(16.55f, 18f, 17f, 17.55f, 17f, 17f)
+        verticalLineTo(13.5f)
+        lineTo(21f, 17.5f)
+        verticalLineTo(6.5f)
+        lineTo(17f, 10.5f)
+        close()
+      }
+    }.build()
+  }
+
+  val ImageBox: ImageVector by lazy {
+    ImageVector.Builder("ImageBox", 24.dp, 24.dp, 24f, 24f).apply {
+      path(fill = SolidColor(Color.Black)) {
+        moveTo(21f, 19f)
+        verticalLineTo(5f)
+        curveTo(21f, 3.9f, 20.1f, 3f, 19f, 3f)
+        horizontalLineTo(5f)
+        curveTo(3.9f, 3f, 3f, 3.9f, 3f, 5f)
+        verticalLineTo(19f)
+        curveTo(3f, 20.1f, 3.9f, 21f, 5f, 21f)
+        horizontalLineTo(19f)
+        curveTo(20.1f, 21f, 21f, 20.1f, 21f, 19f)
+        close()
+        moveTo(8.5f, 13.5f)
+        lineTo(11f, 16.51f)
+        lineTo(14.5f, 12f)
+        lineTo(19f, 18f)
+        horizontalLineTo(5f)
+        lineTo(8.5f, 13.5f)
+        close()
+      }
+    }.build()
+  }
+
+  val CameraCapture: ImageVector by lazy {
+    ImageVector.Builder("CameraCapture", 24.dp, 24.dp, 24f, 24f).apply {
+      path(fill = SolidColor(Color.Black)) {
+        moveTo(9f, 2f)
+        lineTo(7.17f, 4f)
+        horizontalLineTo(4f)
+        curveTo(2.9f, 4f, 2f, 4.9f, 2f, 6f)
+        verticalLineTo(18f)
+        curveTo(2f, 19.1f, 2.9f, 20f, 4f, 20f)
+        horizontalLineTo(20f)
+        curveTo(21.1f, 20f, 22f, 19.1f, 22f, 18f)
+        verticalLineTo(6f)
+        curveTo(22f, 4.9f, 21.1f, 4f, 20f, 4f)
+        horizontalLineTo(16.83f)
+        lineTo(15f, 2f)
+        horizontalLineTo(9f)
+        close()
+        moveTo(12f, 17f)
+        curveTo(9.24f, 17f, 7f, 14.76f, 7f, 12f)
+        curveTo(7f, 9.24f, 9.24f, 7f, 12f, 7f)
+        curveTo(14.76f, 7f, 17f, 9.24f, 17f, 12f)
+        curveTo(17f, 14.76f, 14.76f, 17f, 12f, 17f)
+        close()
+      }
+    }.build()
+  }
+
+  val EyeFilter: ImageVector by lazy {
+    ImageVector.Builder("EyeFilter", 24.dp, 24.dp, 24f, 24f).apply {
+      path(fill = SolidColor(Color.Black)) {
+        moveTo(12f, 4.5f)
+        curveTo(7f, 4.5f, 2.73f, 7.61f, 1f, 12f)
+        curveTo(2.73f, 16.39f, 7f, 19.5f, 12f, 19.5f)
+        curveTo(17f, 19.5f, 21.27f, 16.39f, 23f, 12f)
+        curveTo(21.27f, 7.61f, 17f, 4.5f, 12f, 4.5f)
+        close()
+        moveTo(12f, 17f)
+        curveTo(9.24f, 17f, 7f, 14.76f, 7f, 12f)
+        curveTo(7f, 9.24f, 9.24f, 7f, 12f, 7f)
+        curveTo(14.76f, 7f, 17f, 9.24f, 17f, 12f)
+        curveTo(17f, 14.76f, 14.76f, 17f, 12f, 17f)
+        close()
+      }
+    }.build()
+  }
 }

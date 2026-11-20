@@ -38,6 +38,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.webkit.WebViewDatabase
 import com.example.model.ClearDataOptions
+import com.example.model.DetectedMedia
 import com.example.model.PageError
 import com.example.model.PageErrorType
 import com.example.model.ReaderArticle
@@ -48,8 +49,14 @@ import com.example.model.WebPermissionKind
 import com.example.security.TrackerBlocker
 import com.example.security.UrlValidator
 import com.example.ui.components.SiteFaviconCache
+import android.content.ContentValues
+import android.os.Environment
+import android.provider.MediaStore
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
+import java.io.File
+import java.io.FileOutputStream
 import java.nio.charset.StandardCharsets
 import java.util.Collections
 import java.util.LinkedHashMap
@@ -78,6 +85,7 @@ interface WebViewCallbacks {
     onLongPressLink(tabId, url, isImage)
   }
   fun onAudioPermissionNeeded() {}
+  fun onMediaDetected(tabId: String, media: DetectedMedia) {}
   fun onNewTabRequested(parentTabId: String, url: String, isPrivate: Boolean) {}
   fun onNewTabCreated(newTabId: String, isPrivate: Boolean, initialUrl: String = "") {}
   fun onCloseTabRequested(tabId: String) {}
@@ -1010,6 +1018,245 @@ class WebViewPool(
     } catch (_: Throwable) {
       onResult(null)
     }
+  }
+
+  fun captureFullPageScreenshot(
+    context: Context,
+    tabId: String,
+    title: String,
+    onResult: (String?, Boolean) -> Unit
+  ) {
+    val webView = getLiveWebView(tabId) ?: run {
+      onResult("Page not loaded", false)
+      return
+    }
+    try {
+      val scale = webView.scale
+      val contentWidth = webView.width.coerceAtLeast(1)
+      val contentHeight = (webView.contentHeight * scale).toInt().coerceIn(webView.height, 16000)
+      val bitmap = Bitmap.createBitmap(contentWidth, contentHeight, Bitmap.Config.ARGB_8888)
+      val canvas = android.graphics.Canvas(bitmap)
+      webView.draw(canvas)
+
+      val safeTitle = UrlValidator.sanitizeFilename(title.ifEmpty { "Kio_Page" })
+      val fileName = "Screenshot_${safeTitle}_${System.currentTimeMillis()}.png"
+
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        val values = ContentValues().apply {
+          put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
+          put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+          put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Kio")
+          put(MediaStore.Images.Media.IS_PENDING, 1)
+        }
+        val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+        if (uri != null) {
+          context.contentResolver.openOutputStream(uri)?.use { out ->
+            bitmap.compress(Bitmap.CompressFormat.PNG, 95, out)
+          }
+          values.clear()
+          values.put(MediaStore.Images.Media.IS_PENDING, 0)
+          context.contentResolver.update(uri, values, null, null)
+          bitmap.recycle()
+          onResult(fileName, true)
+          return
+        }
+      }
+
+      val picturesDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "Kio")
+      if (!picturesDir.exists()) picturesDir.mkdirs()
+      val outFile = File(picturesDir, fileName)
+      FileOutputStream(outFile).use { out ->
+        bitmap.compress(Bitmap.CompressFormat.PNG, 95, out)
+      }
+      bitmap.recycle()
+      android.media.MediaScannerConnection.scanFile(context, arrayOf(outFile.absolutePath), arrayOf("image/png"), null)
+      onResult(fileName, true)
+    } catch (e: Throwable) {
+      onResult(e.message, false)
+    }
+  }
+
+  fun extractPageImages(tabId: String, onResult: (List<String>) -> Unit) {
+    val webView = getLiveWebView(tabId) ?: run {
+      onResult(emptyList())
+      return
+    }
+    val script = """
+      (function() {
+        try {
+          var set = new Set();
+          var imgs = document.getElementsByTagName('img');
+          for (var i = 0; i < imgs.length; i++) {
+            var s = imgs[i].currentSrc || imgs[i].src;
+            if (s && (s.startsWith('http://') || s.startsWith('https://') || s.startsWith('data:image/'))) {
+              set.add(s);
+            }
+          }
+          var sources = document.getElementsByTagName('source');
+          for (var j = 0; j < sources.length; j++) {
+            var sc = sources[j].srcset || sources[j].src;
+            if (sc) {
+              var parts = sc.split(',');
+              for (var k = 0; k < parts.length; k++) {
+                var u = parts[k].trim().split(' ')[0];
+                if (u && (u.startsWith('http://') || u.startsWith('https://'))) set.add(u);
+              }
+            }
+          }
+          return JSON.stringify(Array.from(set).slice(0, 120));
+        } catch (e) {
+          return '[]';
+        }
+      })();
+    """.trimIndent()
+
+    try {
+      webView.evaluateJavascript(script) { raw ->
+        if (raw.isNullOrBlank() || raw == "null") {
+          onResult(emptyList())
+          return@evaluateJavascript
+        }
+        try {
+          val jsonStr = if (raw.startsWith("\"") && raw.endsWith("\"")) {
+            org.json.JSONTokener(raw).nextValue().toString()
+          } else raw
+          val arr = JSONArray(jsonStr)
+          val list = mutableListOf<String>()
+          for (idx in 0 until arr.length()) {
+            val url = arr.optString(idx, "").trim()
+            if (url.isNotEmpty() && url !in list) list.add(url)
+          }
+          onResult(list)
+        } catch (_: Throwable) {
+          onResult(emptyList())
+        }
+      }
+    } catch (_: Throwable) {
+      onResult(emptyList())
+    }
+  }
+
+  fun applyCleanModeCss(view: WebView) {
+    val js = """
+      (function() {
+        try {
+          if (document.getElementById('kio-clean-mode-style')) return;
+          var style = document.createElement('style');
+          style.id = 'kio-clean-mode-style';
+          style.textContent = `
+            [class*="cookie-banner"], [id*="cookie-banner"],
+            [class*="cookie-consent"], [id*="cookie-consent"],
+            [class*="consent-banner"], [id*="consent-banner"],
+            [class*="gdpr"], [id*="gdpr"],
+            [class*="newsletter-popup"], [id*="newsletter-popup"],
+            [class*="promo-banner"], [id*="promo-banner"],
+            [class*="floating-ad"], [id*="floating-ad"],
+            [class*="sticky-bottom-ad"], [id*="sticky-bottom-ad"],
+            .ad-banner, .advertisement, #advertisement {
+              display: none !important;
+              visibility: hidden !important;
+              opacity: 0 !important;
+              pointer-events: none !important;
+            }
+          `;
+          (document.head || document.documentElement).appendChild(style);
+        } catch (e) {}
+      })();
+    """.trimIndent()
+    try {
+      view.evaluateJavascript(js, null)
+    } catch (_: Throwable) {}
+  }
+
+  fun sniffPageMediaElements(webView: WebView, tabId: String) {
+    val js = """
+      (function() {
+        try {
+          var mediaList = [];
+          var nodes = document.querySelectorAll('video, audio, source');
+          for (var i = 0; i < nodes.length; i++) {
+            var src = nodes[i].currentSrc || nodes[i].src;
+            if (src && (src.startsWith('http://') || src.startsWith('https://'))) {
+              var type = nodes[i].type || '';
+              mediaList.push({ url: src, type: type });
+            }
+          }
+          return JSON.stringify(mediaList);
+        } catch (e) { return '[]'; }
+      })();
+    """.trimIndent()
+    try {
+      webView.evaluateJavascript(js) { res ->
+        if (!res.isNullOrBlank() && res != "null") {
+          try {
+            val jsonStr = if (res.startsWith("\"") && res.endsWith("\"")) {
+              org.json.JSONTokener(res).nextValue().toString()
+            } else res
+            val arr = JSONArray(jsonStr)
+            for (i in 0 until arr.length()) {
+              val obj = arr.getJSONObject(i)
+              val u = obj.optString("url")
+              if (u.isNotBlank()) {
+                val format = determineMediaFormat(u)
+                callbacks.onMediaDetected(
+                  tabId,
+                  DetectedMedia(
+                    url = u,
+                    title = currentPageTitles[tabId] ?: UrlValidator.extractHost(u),
+                    mimeType = obj.optString("type").ifBlank { guessMediaMime(u) },
+                    formatLabel = format
+                  )
+                )
+              }
+            }
+          } catch (_: Throwable) {}
+        }
+      }
+    } catch (_: Throwable) {}
+  }
+
+  fun determineMediaFormat(url: String): String {
+    val lower = url.lowercase()
+    return when {
+      lower.contains(".m3u8") || lower.contains("/hls") -> "HLS/M3U8"
+      lower.contains(".mp4") -> "MP4"
+      lower.contains(".webm") -> "WEBM"
+      lower.contains(".mp3") -> "MP3"
+      lower.contains(".m4v") -> "M4V"
+      lower.contains(".aac") || lower.contains(".ogg") || lower.contains(".wav") -> "AUDIO"
+      lower.contains(".flv") -> "FLV"
+      lower.contains(".mov") -> "MOV"
+      else -> "STREAM"
+    }
+  }
+
+  fun guessMediaMime(url: String): String {
+    val lower = url.lowercase()
+    return when {
+      lower.contains(".mp4") || lower.contains(".m4v") -> "video/mp4"
+      lower.contains(".webm") -> "video/webm"
+      lower.contains(".m3u8") -> "application/x-mpegURL"
+      lower.contains(".mp3") -> "audio/mpeg"
+      lower.contains(".aac") -> "audio/aac"
+      lower.contains(".ogg") -> "audio/ogg"
+      lower.contains(".wav") -> "audio/wav"
+      lower.contains(".flv") -> "video/x-flv"
+      lower.contains(".mov") -> "video/quicktime"
+      else -> "video/mp4"
+    }
+  }
+
+  fun isMediaRequest(url: String, headers: Map<String, String>?): Boolean {
+    val lower = url.lowercase()
+    if (lower.endsWith(".mp4") || lower.endsWith(".webm") || lower.endsWith(".m3u8") ||
+        lower.endsWith(".m4v") || lower.endsWith(".mp3") || lower.endsWith(".aac") ||
+        lower.endsWith(".ogg") || lower.endsWith(".mov") || lower.endsWith(".flv") ||
+        lower.contains(".m3u8?") || lower.contains(".mp4?") || lower.contains(".webm?") ||
+        lower.contains("/videoplayback") || lower.contains("googlevideo.com")) {
+      return true
+    }
+    val accept = headers?.get("Accept")?.lowercase().orEmpty()
+    return accept.startsWith("video/") || accept.startsWith("audio/")
   }
 
   fun extractReaderArticle(tabId: String, pageUrl: String, onResult: (ReaderArticle?) -> Unit) {
@@ -2103,6 +2350,19 @@ class WebViewPool(
               acceptHeader.contains("application/json")
             return if (isJson) emptyBlockedJsonResponse() else emptyBlockedResponse()
           }
+          if (isMediaRequest(reqUrl, request?.requestHeaders)) {
+            val format = determineMediaFormat(reqUrl)
+            val title = currentPageTitles[tabId] ?: UrlValidator.extractHost(reqUrl)
+            callbacks.onMediaDetected(
+              tabId,
+              DetectedMedia(
+                url = reqUrl,
+                title = title,
+                mimeType = guessMediaMime(reqUrl),
+                formatLabel = format
+              )
+            )
+          }
           null
         } catch (_: Throwable) {
           null
@@ -2138,6 +2398,9 @@ class WebViewPool(
             if (s.dataSaverEnabled) {
               applyDataSaver(view, true)
             }
+            if (s.cleanModeEnabled) {
+              applyCleanModeCss(view)
+            }
           }
           callbacks.onPageStarted(tabId, url)
         }
@@ -2171,6 +2434,13 @@ class WebViewPool(
           if (s.dataSaverEnabled) {
             applyDataSaver(view, true)
           }
+          if (s.cleanModeEnabled) {
+            applyCleanModeCss(view)
+          }
+          sniffPageMediaElements(view, tabId)
+          try {
+            view.settings.cacheMode = WebSettings.LOAD_DEFAULT
+          } catch (_: Throwable) {}
           val safeTitle = try { view.title } catch (_: Throwable) { null }
           if (!safeTitle.isNullOrBlank()) {
             currentPageTitles[tabId] = safeTitle

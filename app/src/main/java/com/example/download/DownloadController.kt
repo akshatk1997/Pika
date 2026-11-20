@@ -100,6 +100,30 @@ class DownloadController(
     launchDownload(initialRecord)
   }
 
+  fun enqueueDirectDownload(
+    url: String,
+    fileName: String? = null,
+    mimeType: String? = null,
+    isPrivateTab: Boolean = false
+  ) {
+    if (!UrlValidator.isSafeWebUrl(url)) return
+    val guessedName = fileName?.ifBlank { null } ?: guessFileName(url, null, mimeType)
+    val safeName = UrlValidator.sanitizeFilename(guessedName)
+    val cleanMime = sanitizeMimeType(mimeType)
+    val record = DownloadRecord(
+      id = UUID.randomUUID().toString(),
+      url = url,
+      fileName = safeName,
+      mimeType = cleanMime,
+      totalBytes = 0L,
+      downloadedBytes = 0L,
+      status = DownloadStatus.DOWNLOADING,
+      isPrivate = isPrivateTab
+    )
+    _downloads.update { listOf(record) + it }
+    launchDownload(record)
+  }
+
   fun retryDownload(record: DownloadRecord) {
     if (!UrlValidator.isSafeWebUrl(record.url)) return
     activeJobs.remove(record.id)?.cancel()

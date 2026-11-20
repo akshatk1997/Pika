@@ -108,6 +108,10 @@ class MainActivity : ComponentActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    try {
+      WebView.enableSlowWholeDocumentDraw()
+    } catch (_: Throwable) {
+    }
     enableEdgeToEdge()
     val initialSysDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
     viewModel.onSystemThemeChanged(initialSysDark)
@@ -326,6 +330,23 @@ class MainActivity : ComponentActivity() {
           },
           onPinHomeShortcut = { url, title ->
             pinHomeScreenShortcut(url, title)
+          },
+          onCaptureFullPageScreenshot = {
+            viewModel.captureFullPage(this)
+          },
+          onPlayMediaExternal = { media ->
+            try {
+              val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(
+                  Uri.parse(media.url),
+                  if (media.mimeType.startsWith("audio/")) "audio/*" else "video/*"
+                )
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+              }
+              startActivity(intent)
+            } catch (_: Throwable) {
+              viewModel.showToast("No external media player found")
+            }
           }
         )
       }

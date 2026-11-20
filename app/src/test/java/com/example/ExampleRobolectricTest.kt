@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kio", appName)
-    assertEquals("1.9.9", BuildConfig.VERSION_NAME)
-    assertEquals(71, BuildConfig.VERSION_CODE)
+    assertEquals("2.0.0", BuildConfig.VERSION_NAME)
+    assertEquals(72, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -178,7 +178,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Resources").assertDoesNotExist()
     composeTestRule.onNodeWithText("Settings").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 1.9.9").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 2.0.0").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
 
     // Navigate into Data Saver folder
@@ -875,5 +875,37 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Desktop").performClick()
     composeTestRule.waitForIdle()
     assertEquals(com.example.model.UserAgentMode.DESKTOP, vm.activeTab().userAgentMode)
+  }
+
+  @Test
+  fun soulBrowserFeaturesMediaDownloaderImagesAndScreenFilterWork() {
+    val activity = composeTestRule.activity
+    val vm = activity.viewModel
+
+    // 1. Verify detected media sniffing and download dispatch
+    val sampleMedia = com.example.model.DetectedMedia(
+      url = "https://example.org/video.mp4",
+      title = "Test Video",
+      mimeType = "video/mp4",
+      formatLabel = "MP4"
+    )
+    vm.downloadMedia(sampleMedia)
+    val downloads = vm.downloadController.downloads.value
+    assertTrue(downloads.any { it.url == "https://example.org/video.mp4" })
+
+    // 2. Verify screen filter and clean mode toggles
+    assertFalse(vm.settings.value.screenFilterEnabled)
+    vm.toggleScreenFilter()
+    assertTrue(vm.settings.value.screenFilterEnabled)
+
+    assertFalse(vm.settings.value.cleanModeEnabled)
+    vm.toggleCleanMode()
+    assertTrue(vm.settings.value.cleanModeEnabled)
+
+    // 3. Verify media format recognition
+    assertEquals("MP4", vm.webViewPool.determineMediaFormat("https://cdn.example.com/movie.mp4"))
+    assertEquals("HLS/M3U8", vm.webViewPool.determineMediaFormat("https://cdn.example.com/playlist.m3u8"))
+    assertEquals("WEBM", vm.webViewPool.determineMediaFormat("https://cdn.example.com/clip.webm"))
+    assertEquals("AUDIO", vm.webViewPool.determineMediaFormat("https://cdn.example.com/audio.aac"))
   }
 }

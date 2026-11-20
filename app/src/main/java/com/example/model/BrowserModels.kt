@@ -209,7 +209,28 @@ data class SettingsState(
   val readerFontSizeSp: Int = 18,
   val readerDarkMode: Boolean = false,
   val backgroundPlayEnabled: Boolean = true,
-  val dataSaverEnabled: Boolean = false
+  val dataSaverEnabled: Boolean = false,
+  val screenFilterEnabled: Boolean = false,
+  val screenFilterType: ScreenFilterType = ScreenFilterType.WARM_AMBER,
+  val screenFilterOpacity: Float = 0.35f,
+  val cleanModeEnabled: Boolean = false
+)
+
+enum class ScreenFilterType(val id: String, val label: String, val colorHex: Long) {
+  WARM_AMBER("warm_amber", "Warm Amber (Eye Care)", 0xFFFFB74D),
+  NIGHT_DIMMER("night_dimmer", "Night Dimmer (OLED)", 0xFF000000);
+
+  companion object {
+    fun fromId(id: String): ScreenFilterType = entries.firstOrNull { it.id == id } ?: WARM_AMBER
+  }
+}
+
+data class DetectedMedia(
+  val url: String,
+  val title: String,
+  val mimeType: String,
+  val formatLabel: String = "MEDIA",
+  val detectedAt: Long = System.currentTimeMillis()
 )
 
 data class ReaderArticle(

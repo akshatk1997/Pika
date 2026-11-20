@@ -86,6 +86,7 @@ import androidx.compose.ui.unit.dp
 import com.example.BuildConfig
 import com.example.R
 import com.example.model.ClearDataOptions
+import com.example.model.ScreenFilterType
 import com.example.model.SearchEngine
 import com.example.model.SettingsState
 import com.example.model.SitePermissionRule
@@ -504,6 +505,32 @@ fun SettingsScreen(
               tag = "setting_night_web",
               onCheckedChange = { v -> onUpdateSettings { it.copy(nightWebMode = v) } }
             )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            SettingSwitchRow(
+              title = "Clean mode (distraction-free)",
+              subtitle = "Hides cookie walls, popups, and sticky banner overlays",
+              checked = settings.cleanModeEnabled,
+              tag = "setting_clean_mode",
+              onCheckedChange = { v -> onUpdateSettings { it.copy(cleanModeEnabled = v) } }
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            SettingSwitchRow(
+              title = "Screen filter (eye care & dimmer)",
+              subtitle = "Dims screen below system minimum with blue-light reduction",
+              checked = settings.screenFilterEnabled,
+              tag = "setting_screen_filter",
+              onCheckedChange = { v -> onUpdateSettings { it.copy(screenFilterEnabled = v) } }
+            )
+            if (settings.screenFilterEnabled) {
+              Spacer(modifier = Modifier.height(8.dp))
+              Text("Filter Intensity: ${(settings.screenFilterOpacity * 100).toInt()}%", style = MaterialTheme.typography.bodyMedium)
+              Slider(
+                value = settings.screenFilterOpacity,
+                onValueChange = { v -> onUpdateSettings { it.copy(screenFilterOpacity = v) } },
+                valueRange = 0.10f..0.80f,
+                steps = 14
+              )
+            }
             Spacer(modifier = Modifier.height(10.dp))
             Text("Text zoom: ${settings.textZoomPercent}%", style = MaterialTheme.typography.titleMedium)
             Slider(
@@ -733,6 +760,14 @@ fun SettingsScreen(
             listOf(
               "Why is Kio so fast and lightweight?" to
                 "Kio is architected with zero tracking bloat, hardware-accelerated 120Hz/60Hz rendering, and direct native memory management — all engineered strictly under 2 MB.",
+              "How do I sniff and download videos and media?" to
+                "Tap the menu (⋮) → Media to view detected video/audio streams on the current page. You can download the stream, copy its direct URL, or play it in external video players like VLC.",
+              "How do I save all images from a webpage?" to
+                "Tap the menu (⋮) → Images to scrape all images on the page into an image gallery, choose which ones to keep, and batch download them directly to your Pictures folder.",
+              "How do I capture a full page scrolling screenshot?" to
+                "Tap the menu (⋮) → Capture to render the entire vertical document into a high-resolution PNG image saved directly to your device's gallery under Pictures/Kio.",
+              "What is Screen Filter and Clean Mode?" to
+                "Screen Filter dims your display below standard Android brightness with eye-care amber or OLED night dimmer. Clean Mode automatically hides intrusive cookie walls, popup banners, and sticky ad overlays.",
               "How does the Content Announcer / Reader Mode protect my privacy?" to
                 "Open the menu (⋮) → Narrate to read and listen to any page with pure on-device NLP narration. Text exists only in volatile RAM while open, cannot be copied or exported, and is wiped immediately when closed.",
               "How do I toggle Full Screen mode?" to

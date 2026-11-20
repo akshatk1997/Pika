@@ -118,6 +118,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
+import com.example.model.DetectedMedia
 import com.example.model.SecurityState
 import com.example.model.SettingsState
 import com.example.model.TabInfo
@@ -130,10 +131,13 @@ import com.example.ui.BrowserViewModel
 import com.example.ui.components.FeatherIcons
 import com.example.ui.components.FindInPageBar
 import com.example.ui.components.HttpWarningOverlay
+import com.example.ui.components.ImageSnifferDialog
+import com.example.ui.components.MediaDownloaderDialog
 import com.example.ui.components.NewTabHomeView
 import com.example.ui.components.PageErrorOverlay
 import com.example.ui.components.PageSourceOverlay
 import com.example.ui.components.ReaderModeOverlay
+import com.example.ui.components.ScreenFilterDialog
 import com.example.ui.theme.FeatherDangerRed
 import com.example.ui.theme.FeatherMintDark
 import com.example.ui.theme.FeatherPrivateAccent
@@ -152,7 +156,9 @@ fun BrowserScreen(
   onExportBookmarks: () -> Unit,
   onImportBookmarks: () -> Unit,
   onSavePdf: () -> Unit,
-  onPinHomeShortcut: (String, String) -> Unit
+  onPinHomeShortcut: (String, String) -> Unit,
+  onCaptureFullPageScreenshot: () -> Unit = {},
+  onPlayMediaExternal: (DetectedMedia) -> Unit = {}
 ) {
   val tabs by viewModel.tabs.collectAsStateWithLifecycle()
   val activeTabId by viewModel.activeTabId.collectAsStateWithLifecycle()
@@ -177,6 +183,8 @@ fun BrowserScreen(
   val statusToast by viewModel.statusToast.collectAsStateWithLifecycle()
   val showIntro by viewModel.showIntro.collectAsStateWithLifecycle()
   val phishingAssessment by viewModel.phishingAssessment.collectAsStateWithLifecycle()
+  val detectedMediaMap by viewModel.detectedMediaMap.collectAsStateWithLifecycle()
+  val extractedImages by viewModel.extractedImages.collectAsStateWithLifecycle()
 
   var showSiteInfoDialog by remember { mutableStateOf(false) }
   var showPrivateAuditDialog by remember { mutableStateOf(false) }
@@ -191,6 +199,9 @@ fun BrowserScreen(
   }
 
   val activeTab = tabs.firstOrNull { it.id == activeTabId } ?: tabs.first()
+  val detectedMediaList = remember(detectedMediaMap, activeTab.id) {
+    detectedMediaMap[activeTab.id].orEmpty()
+  }
   val snackbarHostState = remember { SnackbarHostState() }
   val focusManager = LocalFocusManager.current
 
@@ -554,6 +565,14 @@ fun BrowserScreen(
                 }
               }
 
+              if (settings.screenFilterEnabled) {
+                Box(
+                  modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(settings.screenFilterType.colorHex).copy(alpha = settings.screenFilterOpacity))
+                )
+              }
+
               if (isBrowserFullscreen) {
                 Surface(
                   shape = RoundedCornerShape(16.dp),
@@ -796,6 +815,33 @@ fun BrowserScreen(
               onClose = { viewModel.setOverlay(ActiveOverlay.NONE) }
             )
           }
+          activeOverlay == ActiveOverlay.MEDIA_DOWNLOADER -> {
+            MediaDownloaderDialog(
+              mediaList = detectedMediaList,
+              onDownload = { viewModel.downloadMedia(it) },
+              onCopyUrl = { viewModel.copyTextToClipboard(it, "Media URL copied") },
+              onPlayExternal = onPlayMediaExternal,
+              onClose = { viewModel.setOverlay(ActiveOverlay.NONE) }
+            )
+          }
+          activeOverlay == ActiveOverlay.IMAGE_SNIFFER -> {
+            ImageSnifferDialog(
+              images = extractedImages,
+              onDownloadImages = { viewModel.downloadImages(it) },
+              onClose = { viewModel.setOverlay(ActiveOverlay.NONE) }
+            )
+          }
+          activeOverlay == ActiveOverlay.SCREEN_FILTER_SETTINGS -> {
+            ScreenFilterDialog(
+              enabled = settings.screenFilterEnabled,
+              selectedType = settings.screenFilterType,
+              opacity = settings.screenFilterOpacity,
+              onToggleEnabled = { viewModel.toggleScreenFilter() },
+              onSelectType = { viewModel.setScreenFilterType(it) },
+              onOpacityChange = { viewModel.setScreenFilterOpacity(it) },
+              onClose = { viewModel.setOverlay(ActiveOverlay.NONE) }
+            )
+          }
         }
       }
     }
@@ -1016,6 +1062,40 @@ fun BrowserScreen(
               showQuickSheet = false
               viewModel.translateActivePage()
             },
+            QuickActionItem(
+              FeatherIcons.Video,
+              if (detectedMediaList.isNotEmpty()) "Media (${detectedMediaList.size})" else "Media",
+              hasUrl,
+              accentTint = if (detectedMediaList.isNotEmpty()) MaterialTheme.colorScheme.primary else null
+            ) {
+              showQuickSheet = false
+              viewModel.setOverlay(ActiveOverlay.MEDIA_DOWNLOADER)
+            },
+            QuickActionItem(FeatherIcons.ImageBox, "Images", hasUrl) {
+              showQuickSheet = false
+              viewModel.openImageSniffer()
+            },
+            QuickActionItem(FeatherIcons.CameraCapture, "Capture", hasUrl) {
+              showQuickSheet = false
+              onCaptureFullPageScreenshot()
+            },
+            QuickActionItem(
+              FeatherIcons.EyeFilter,
+              "Screen Filter",
+              true,
+              accentTint = if (settings.screenFilterEnabled) FeatherWarningAmber else null
+            ) {
+              showQuickSheet = false
+              viewModel.setOverlay(ActiveOverlay.SCREEN_FILTER_SETTINGS)
+            },
+            QuickActionItem(
+              FeatherIcons.BroomWipe,
+              "Clean Mode",
+              true,
+              accentTint = if (settings.cleanModeEnabled) FeatherSecureGreen else null
+            ) {
+              viewModel.toggleCleanMode()
+            },
             QuickActionItem(Icons.Filled.Settings, stringResource(R.string.action_settings), true) {
               showQuickSheet = false
               viewModel.setOverlay(ActiveOverlay.SETTINGS)
@@ -1058,6 +1138,40 @@ fun BrowserScreen(
             QuickActionItem(FeatherIcons.Download, stringResource(R.string.action_downloads), true) {
               showQuickSheet = false
               viewModel.setOverlay(ActiveOverlay.DOWNLOADS)
+            },
+            QuickActionItem(
+              FeatherIcons.Video,
+              if (detectedMediaList.isNotEmpty()) "Media (${detectedMediaList.size})" else "Media",
+              hasUrl,
+              accentTint = if (detectedMediaList.isNotEmpty()) MaterialTheme.colorScheme.primary else null
+            ) {
+              showQuickSheet = false
+              viewModel.setOverlay(ActiveOverlay.MEDIA_DOWNLOADER)
+            },
+            QuickActionItem(FeatherIcons.ImageBox, "Images", hasUrl) {
+              showQuickSheet = false
+              viewModel.openImageSniffer()
+            },
+            QuickActionItem(FeatherIcons.CameraCapture, "Capture", hasUrl) {
+              showQuickSheet = false
+              onCaptureFullPageScreenshot()
+            },
+            QuickActionItem(
+              FeatherIcons.EyeFilter,
+              "Screen Filter",
+              true,
+              accentTint = if (settings.screenFilterEnabled) FeatherWarningAmber else null
+            ) {
+              showQuickSheet = false
+              viewModel.setOverlay(ActiveOverlay.SCREEN_FILTER_SETTINGS)
+            },
+            QuickActionItem(
+              FeatherIcons.BroomWipe,
+              "Clean Mode",
+              true,
+              accentTint = if (settings.cleanModeEnabled) FeatherSecureGreen else null
+            ) {
+              viewModel.toggleCleanMode()
             },
             QuickActionItem(
               FeatherIcons.Announcer,

@@ -93,6 +93,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Slider
+import com.example.model.DetectedMedia
+import com.example.model.ScreenFilterType
 import com.example.model.BookmarkItem
 import com.example.model.HttpWarningState
 import com.example.model.PageError
@@ -1043,4 +1051,339 @@ fun PageSourceOverlay(
       )
     }
   }
+}
+
+@Composable
+fun MediaDownloaderDialog(
+  mediaList: List<DetectedMedia>,
+  onDownload: (DetectedMedia) -> Unit,
+  onCopyUrl: (String) -> Unit,
+  onPlayExternal: (DetectedMedia) -> Unit,
+  onClose: () -> Unit
+) {
+  AlertDialog(
+    onDismissRequest = onClose,
+    title = {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(FeatherIcons.Video, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+        Spacer(modifier = Modifier.width(8.dp))
+        Text("Media Downloader (${mediaList.size})", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+      }
+    },
+    text = {
+      if (mediaList.isEmpty()) {
+        Column(
+          modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp),
+          horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+          Text(
+            "No media streams detected yet on this page.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+          )
+          Spacer(modifier = Modifier.height(6.dp))
+          Text(
+            "Play video or audio on the webpage to automatically sniff downloadable streams.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+          )
+        }
+      } else {
+        LazyColumn(
+          modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
+          verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+          items(mediaList) { item ->
+            Card(
+              shape = RoundedCornerShape(12.dp),
+              colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)),
+              modifier = Modifier.fillMaxWidth()
+            ) {
+              Column(modifier = Modifier.padding(10.dp)) {
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+                  ) {
+                    Text(
+                      text = item.formatLabel,
+                      style = MaterialTheme.typography.labelSmall,
+                      fontWeight = FontWeight.Bold,
+                      color = MaterialTheme.colorScheme.primary,
+                      modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                  }
+                  Text(
+                    text = UrlValidator.extractHost(item.url),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                  )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                  text = item.title.ifEmpty { item.url },
+                  style = MaterialTheme.typography.bodySmall,
+                  fontWeight = FontWeight.Medium,
+                  maxLines = 2,
+                  overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.End,
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  TextButton(
+                    onClick = { onCopyUrl(item.url) },
+                    contentPadding = PaddingValues(horizontal = 8.dp)
+                  ) {
+                    Text("Copy", style = MaterialTheme.typography.labelMedium)
+                  }
+                  TextButton(
+                    onClick = { onPlayExternal(item) },
+                    contentPadding = PaddingValues(horizontal = 8.dp)
+                  ) {
+                    Text("Play", style = MaterialTheme.typography.labelMedium)
+                  }
+                  Button(
+                    onClick = { onDownload(item) },
+                    contentPadding = PaddingValues(horizontal = 12.dp),
+                    modifier = Modifier.height(34.dp)
+                  ) {
+                    Text("Download", style = MaterialTheme.typography.labelMedium)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    confirmButton = {
+      TextButton(onClick = onClose) {
+        Text("Done")
+      }
+    }
+  )
+}
+
+@Composable
+fun ImageSnifferDialog(
+  images: List<String>,
+  onDownloadImages: (List<String>) -> Unit,
+  onClose: () -> Unit
+) {
+  var selectedUrls by remember(images) { mutableStateOf(images.toSet()) }
+
+  AlertDialog(
+    onDismissRequest = onClose,
+    title = {
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Icon(FeatherIcons.ImageBox, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+          Spacer(modifier = Modifier.width(8.dp))
+          Text("Save Images (${images.size})", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        }
+        if (images.isNotEmpty()) {
+          val allSelected = selectedUrls.size == images.size
+          TextButton(
+            onClick = {
+              selectedUrls = if (allSelected) emptySet() else images.toSet()
+            },
+            contentPadding = PaddingValues(horizontal = 6.dp)
+          ) {
+            Text(if (allSelected) "Deselect" else "Select All", style = MaterialTheme.typography.labelSmall)
+          }
+        }
+      }
+    },
+    text = {
+      if (images.isEmpty()) {
+        Column(
+          modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp),
+          horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+          Text(
+            "No images detected on this page.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+          )
+        }
+      } else {
+        LazyColumn(
+          modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
+          verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+          itemsIndexed(images) { index, url ->
+            val isChecked = selectedUrls.contains(url)
+            Card(
+              shape = RoundedCornerShape(10.dp),
+              colors = CardDefaults.cardColors(
+                containerColor = if (isChecked) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+              ),
+              modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                  selectedUrls = if (isChecked) selectedUrls - url else selectedUrls + url
+                }
+            ) {
+              Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                Checkbox(
+                  checked = isChecked,
+                  onCheckedChange = { checked ->
+                    selectedUrls = if (checked) selectedUrls + url else selectedUrls - url
+                  }
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                  Text(
+                    text = "Image #${index + 1} · ${UrlValidator.extractHost(url)}",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold
+                  )
+                  Text(
+                    text = url,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                  )
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    confirmButton = {
+      if (images.isNotEmpty()) {
+        Button(
+          onClick = {
+            onDownloadImages(selectedUrls.toList())
+            onClose()
+          },
+          enabled = selectedUrls.isNotEmpty()
+        ) {
+          Text("Save (${selectedUrls.size})")
+        }
+      } else {
+        TextButton(onClick = onClose) {
+          Text("Close")
+        }
+      }
+    },
+    dismissButton = {
+      if (images.isNotEmpty()) {
+        TextButton(onClick = onClose) {
+          Text("Cancel")
+        }
+      }
+    }
+  )
+}
+
+@Composable
+fun ScreenFilterDialog(
+  enabled: Boolean,
+  selectedType: ScreenFilterType,
+  opacity: Float,
+  onToggleEnabled: () -> Unit,
+  onSelectType: (ScreenFilterType) -> Unit,
+  onOpacityChange: (Float) -> Unit,
+  onClose: () -> Unit
+) {
+  AlertDialog(
+    onDismissRequest = onClose,
+    title = {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(FeatherIcons.EyeFilter, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+        Spacer(modifier = Modifier.width(8.dp))
+        Text("Screen Filter (Night & Eye Care)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+      }
+    },
+    text = {
+      Column(
+        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+      ) {
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Column(modifier = Modifier.weight(1f)) {
+            Text("Enable Filter", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text("Dims screen below system minimum and reduces blue-light strain", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+          }
+          Switch(checked = enabled, onCheckedChange = { onToggleEnabled() })
+        }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+
+        Text("Filter Mode", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+
+        ScreenFilterType.entries.forEach { type ->
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .clickable { onSelectType(type) }
+              .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            RadioButton(
+              selected = selectedType == type,
+              onClick = { onSelectType(type) }
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Surface(
+              shape = CircleShape,
+              color = Color(type.colorHex),
+              border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+              modifier = Modifier.size(16.dp)
+            ) {}
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(type.label, style = MaterialTheme.typography.bodyMedium)
+          }
+        }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+
+        Column(modifier = Modifier.fillMaxWidth()) {
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+          ) {
+            Text("Filter Intensity", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            Text("${(opacity * 100).toInt()}%", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+          }
+          Slider(
+            value = opacity,
+            onValueChange = onOpacityChange,
+            valueRange = 0.10f..0.80f,
+            steps = 14,
+            modifier = Modifier.fillMaxWidth()
+          )
+        }
+      }
+    },
+    confirmButton = {
+      Button(onClick = onClose) {
+        Text("Done")
+      }
+    }
+  )
 }

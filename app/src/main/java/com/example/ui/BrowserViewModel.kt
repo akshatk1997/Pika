@@ -25,6 +25,7 @@ import com.example.media.MediaPlaybackService
 import com.example.model.BookmarkItem
 import com.example.model.ClearDataOptions
 import com.example.model.ClosedTabRecord
+import com.example.model.DetectedMedia
 import com.example.model.DownloadRecord
 import com.example.model.ExternalLinkPrompt
 import com.example.model.HistoryItem
@@ -34,6 +35,7 @@ import com.example.model.PageError
 import com.example.model.PageErrorType
 import com.example.model.PendingDownloadConsent
 import com.example.model.ReaderArticle
+import com.example.model.ScreenFilterType
 import com.example.model.SecurityState
 import com.example.model.SettingsState
 import com.example.model.SitePermissionRule
@@ -77,7 +79,10 @@ enum class ActiveOverlay {
   BOOKMARKS,
   HISTORY,
   DOWNLOADS,
-  SETTINGS
+  SETTINGS,
+  MEDIA_DOWNLOADER,
+  IMAGE_SNIFFER,
+  SCREEN_FILTER_SETTINGS
 }
 
 data class FindState(
@@ -139,6 +144,12 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   private val _pageSource = MutableStateFlow<Pair<String, String>?>(null)
   val pageSource: StateFlow<Pair<String, String>?> = _pageSource.asStateFlow()
+
+  private val _detectedMediaMap = MutableStateFlow<Map<String, List<DetectedMedia>>>(emptyMap())
+  val detectedMediaMap: StateFlow<Map<String, List<DetectedMedia>>> = _detectedMediaMap.asStateFlow()
+
+  private val _extractedImages = MutableStateFlow<List<String>>(emptyList())
+  val extractedImages: StateFlow<List<String>> = _extractedImages.asStateFlow()
 
   private val _isBrowserFullscreen = MutableStateFlow(false)
   val isBrowserFullscreen: StateFlow<Boolean> = _isBrowserFullscreen.asStateFlow()
@@ -255,6 +266,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   private val webCallbacks = object : WebViewCallbacks {
     override fun onPageStarted(tabId: String, url: String) {
       runOnMain {
+        _detectedMediaMap.update { it - tabId }
         val sec = when {
           tabById(tabId)?.isPrivate == true -> SecurityState.PRIVATE
           UrlValidator.isHttpsUrl(url) -> SecurityState.SECURE_HTTPS
@@ -536,6 +548,17 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     override fun onLongPressLinkWithImage(tabId: String, url: String, isImage: Boolean, imageUrl: String?) {
       runOnMain {
         _linkContextTarget.value = LinkContextTarget(url = url, isImage = isImage, imageUrl = imageUrl)
+      }
+    }
+
+    override fun onMediaDetected(tabId: String, media: DetectedMedia) {
+      runOnMain {
+        _detectedMediaMap.update { map ->
+          val current = map[tabId].orEmpty()
+          if (current.none { it.url == media.url }) {
+            map + (tabId to (current + media))
+          } else map
+        }
       }
     }
 
@@ -1123,12 +1146,99 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
     try {
       if (wv != null && wv.canGoBack()) {
+        try {
+          wv.settings.cacheMode = android.webkit.WebSettings.LOAD_CACHE_ELSE_NETWORK
+        } catch (_: Throwable) {}
         wv.goBack()
         return true
       }
     } catch (_: Throwable) {
     }
     return false
+  }
+
+  fun activeTabDetectedMedia(): List<DetectedMedia> {
+    return _detectedMediaMap.value[_activeTabId.value].orEmpty()
+  }
+
+  fun captureFullPage(context: Context) {
+    val tab = activeTab()
+    if (tab.url.isBlank() || tab.url == "about:blank") {
+      showToast("Open a webpage first")
+      return
+    }
+    showToast("Capturing full page...")
+    webViewPool.captureFullPageScreenshot(context, tab.id, tab.title) { fileName, success ->
+      if (success) {
+        showToast("Full page saved to Pictures/Kio: $fileName")
+      } else {
+        showToast("Capture failed: ${fileName ?: "Unknown error"}")
+      }
+    }
+  }
+
+  fun openImageSniffer() {
+    val tab = activeTab()
+    if (tab.url.isBlank() || tab.url == "about:blank") {
+      showToast("Open a webpage first")
+      return
+    }
+    webViewPool.extractPageImages(tab.id) { images ->
+      runOnMain {
+        _extractedImages.value = images
+        setOverlay(ActiveOverlay.IMAGE_SNIFFER)
+      }
+    }
+  }
+
+  fun downloadMedia(media: DetectedMedia) {
+    val ext = when (media.formatLabel) {
+      "MP4" -> ".mp4"
+      "WEBM" -> ".webm"
+      "MP3" -> ".mp3"
+      "AUDIO" -> ".m4a"
+      else -> ".mp4"
+    }
+    val name = UrlValidator.sanitizeFilename("${media.title.ifEmpty { "video" }}_${System.currentTimeMillis()}$ext")
+    downloadController.enqueueDirectDownload(media.url, name, media.mimeType, activeTab().isPrivate)
+    showToast("Downloading ${media.formatLabel}...")
+  }
+
+  fun downloadImages(images: List<String>) {
+    if (images.isEmpty()) {
+      showToast("No images selected")
+      return
+    }
+    val isPriv = activeTab().isPrivate
+    images.forEachIndexed { i, url ->
+      val safeName = "Image_${i + 1}_${System.currentTimeMillis()}.jpg"
+      downloadController.enqueueDirectDownload(url, safeName, "image/jpeg", isPriv)
+    }
+    showToast("Downloading ${images.size} images to Pictures...")
+  }
+
+  fun toggleScreenFilter() {
+    val next = !_settings.value.screenFilterEnabled
+    updateSettings { it.copy(screenFilterEnabled = next) }
+    showToast(if (next) "Screen Filter enabled" else "Screen Filter disabled")
+  }
+
+  fun setScreenFilterType(type: ScreenFilterType) {
+    updateSettings { it.copy(screenFilterType = type) }
+  }
+
+  fun setScreenFilterOpacity(opacity: Float) {
+    updateSettings { it.copy(screenFilterOpacity = opacity.coerceIn(0.1f, 0.8f)) }
+  }
+
+  fun toggleCleanMode() {
+    val next = !_settings.value.cleanModeEnabled
+    updateSettings { it.copy(cleanModeEnabled = next) }
+    val wv = webViewPool.getLiveWebView(_activeTabId.value)
+    if (wv != null && next) {
+      webViewPool.applyCleanModeCss(wv)
+    }
+    showToast(if (next) "Clean Mode on (ad/banner clutter hidden)" else "Clean Mode off")
   }
 
   fun goForward() {
