@@ -23,6 +23,7 @@ namespace Kio.Desktop
         public UserAgentMode UaMode { get; set; }
         public bool BlockImages { get; set; }
         public bool CleanModeEnabled { get; set; }
+        public bool IsHomeView { get; private set; }
 
         public List<DetectedMediaItem> DetectedMediaList { get; private set; }
         public WebView2 WebView { get; private set; }
@@ -40,6 +41,7 @@ namespace Kio.Desktop
             Title = isPrivate ? "Private Tab" : "New Tab";
             Url = "about:blank";
             IsPrivate = isPrivate;
+            IsHomeView = true;
             ZoomFactor = 1.0;
             UaMode = UserAgentMode.Desktop;
             DetectedMediaList = new List<DetectedMediaItem>();
@@ -138,12 +140,20 @@ namespace Kio.Desktop
             WebView.CoreWebView2.SourceChanged += delegate(object sender, CoreWebView2SourceChangedEventArgs e)
             {
                 Url = WebView.Source != null ? WebView.Source.ToString() : "";
+                IsHomeView = string.IsNullOrEmpty(Url) || Url == "about:blank" || Url.StartsWith("data:text/html");
+                if (IsHomeView)
+                {
+                    Title = IsPrivate ? "Private Tab" : "New Tab";
+                }
                 if (StateChanged != null) StateChanged(this, EventArgs.Empty);
             };
 
             WebView.CoreWebView2.DocumentTitleChanged += delegate(object sender, object e)
             {
-                Title = WebView.CoreWebView2.DocumentTitle;
+                if (!IsHomeView)
+                {
+                    Title = WebView.CoreWebView2.DocumentTitle;
+                }
                 if (string.IsNullOrEmpty(Title)) Title = IsPrivate ? "Private Tab" : "New Tab";
                 if (StateChanged != null) StateChanged(this, EventArgs.Empty);
             };
@@ -153,16 +163,19 @@ namespace Kio.Desktop
                 IsLoading = false;
                 if (StateChanged != null) StateChanged(this, EventArgs.Empty);
 
-                if (CleanModeEnabled)
+                if (!IsHomeView)
                 {
-                    await InjectCleanModeCssAsync();
+                    if (CleanModeEnabled)
+                    {
+                        await InjectCleanModeCssAsync();
+                    }
+                    await SniffMediaAsync();
                 }
-
-                await SniffMediaAsync();
             };
 
             WebView.CoreWebView2.WebResourceResponseReceived += delegate(object sender, CoreWebView2WebResourceResponseReceivedEventArgs e)
             {
+                if (IsHomeView) return;
                 try
                 {
                     string reqUrl = e.Request.Uri;
@@ -170,6 +183,24 @@ namespace Kio.Desktop
                     if (IsMediaMime(mime) || IsMediaExtension(reqUrl))
                     {
                         AddDetectedMedia(reqUrl, mime);
+                    }
+                }
+                catch { }
+            };
+
+            WebView.CoreWebView2.WebMessageReceived += delegate(object sender, CoreWebView2WebMessageReceivedEventArgs e)
+            {
+                try
+                {
+                    string msg = e.TryGetWebMessageAsString();
+                    if (!string.IsNullOrEmpty(msg))
+                    {
+                        Match m = Regex.Match(msg, @"url"":""([^""]+)""");
+                        if (m.Success)
+                        {
+                            string dest = m.Groups[1].Value.Replace("\\/", "/");
+                            Navigate(dest);
+                        }
                     }
                 }
                 catch { }
@@ -218,13 +249,12 @@ namespace Kio.Desktop
 
         public async Task SniffMediaAsync()
         {
-            if (WebView == null || WebView.CoreWebView2 == null) return;
+            if (WebView == null || WebView.CoreWebView2 == null || IsHomeView) return;
             try
             {
                 string json = await WebView.CoreWebView2.ExecuteScriptAsync(SoulBrowserFeatures.MediaSnifferScript);
                 if (!string.IsNullOrEmpty(json) && json != "[]" && json != "\"[]\"")
                 {
-                    // Basic parse of media stream URLs
                     MatchCollection matches = Regex.Matches(json, @"url"":""([^""]+)""");
                     foreach (Match m in matches)
                     {
@@ -241,7 +271,7 @@ namespace Kio.Desktop
 
         public async Task InjectCleanModeCssAsync()
         {
-            if (WebView == null || WebView.CoreWebView2 == null) return;
+            if (WebView == null || WebView.CoreWebView2 == null || IsHomeView) return;
             try
             {
                 string js = string.Format(
@@ -255,7 +285,7 @@ namespace Kio.Desktop
 
         public async Task RemoveCleanModeCssAsync()
         {
-            if (WebView == null || WebView.CoreWebView2 == null) return;
+            if (WebView == null || WebView.CoreWebView2 == null || IsHomeView) return;
             try
             {
                 await WebView.CoreWebView2.ExecuteScriptAsync(
@@ -265,15 +295,34 @@ namespace Kio.Desktop
             catch { }
         }
 
-        public void Navigate(string target)
+        public void NavigateHome(bool isDarkTheme = true)
         {
-            if (string.IsNullOrWhiteSpace(target)) return;
+            IsHomeView = true;
+            Url = "about:blank";
+            Title = IsPrivate ? "Private Tab" : "New Tab";
+            DetectedMediaList.Clear();
+            if (WebView != null && WebView.CoreWebView2 != null)
+            {
+                string html = KioHomeHtml.GetHtml(IsPrivate, isDarkTheme);
+                WebView.NavigateToString(html);
+            }
+            if (StateChanged != null) StateChanged(this, EventArgs.Empty);
+            if (MediaListUpdated != null) MediaListUpdated(this, EventArgs.Empty);
+        }
 
+        public void Navigate(string target, bool isDarkTheme = true)
+        {
+            if (string.IsNullOrWhiteSpace(target) || target == "about:blank" || target == "kio://home" || target == "kio://newtab")
+            {
+                NavigateHome(isDarkTheme);
+                return;
+            }
+
+            IsHomeView = false;
             string dest = target.Trim();
             if (!dest.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
                 !dest.StartsWith("https://", StringComparison.OrdinalIgnoreCase) &&
-                !dest.StartsWith("file://", StringComparison.OrdinalIgnoreCase) &&
-                !dest.StartsWith("about:", StringComparison.OrdinalIgnoreCase))
+                !dest.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
             {
                 if (dest.Contains(".") && !dest.Contains(" "))
                 {
@@ -291,9 +340,10 @@ namespace Kio.Desktop
             }
         }
 
-        public void GoBack()
+        public void GoBack(bool isDarkTheme = true)
         {
             if (WebView != null && WebView.CanGoBack) WebView.GoBack();
+            else NavigateHome(isDarkTheme);
         }
 
         public void GoForward()
@@ -303,7 +353,8 @@ namespace Kio.Desktop
 
         public void Reload()
         {
-            if (WebView != null && WebView.CoreWebView2 != null) WebView.Reload();
+            if (IsHomeView) NavigateHome();
+            else if (WebView != null && WebView.CoreWebView2 != null) WebView.Reload();
         }
 
         public void Stop()

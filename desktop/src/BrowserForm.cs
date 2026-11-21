@@ -15,8 +15,7 @@ namespace Kio.Desktop
         private List<BrowserTab> _tabs;
         private BrowserTab _activeTab;
 
-        private Panel _titlePanel;
-        private Panel _tabBarPanel;
+        private Panel _topBarPanel;
         private Panel _navBarPanel;
         private Panel _webContainer;
         private StatusStrip _statusStrip;
@@ -32,22 +31,19 @@ namespace Kio.Desktop
         private TextBox _txtOmnibox;
         private Button _btnGo;
 
-        // Soul Browser Feature Buttons
+        // Right Action Cluster
         private Button _btnMedia;
-        private Button _btnImages;
-        private Button _btnCapture;
-        private Button _btnScreenFilter;
-        private Button _btnCleanMode;
-        private Button _btnUserAgent;
-        private Button _btnBlockImages;
-        private Button _btnReader;
+        private Button _btnCleanIndicator;
         private Button _btnTheme;
+        private Button _btnThreeDotMenu;
 
         // Theme and Screen Filter State
         private bool _isDarkTheme = true;
         private ScreenFilterMode _filterMode = ScreenFilterMode.None;
         private float _filterOpacity = 0.35f;
         private FilterOverlayControl _filterOverlay;
+
+        public bool IsFilterActive { get { return _filterMode != ScreenFilterMode.None; } }
 
         public BrowserForm()
         {
@@ -60,58 +56,49 @@ namespace Kio.Desktop
             Width = 1200;
             Height = 800;
             StartPosition = FormStartPosition.CenterScreen;
-            MinimumSize = new Size(800, 500);
+            MinimumSize = new Size(820, 520);
 
             InitializeComponents();
             ApplyTheme();
 
-            AddNewTab(false, "https://duckduckgo.com");
+            AddNewTab(false, "about:blank");
         }
 
         private void InitializeComponents()
         {
-            // 1. Title Bar Panel (Kio Logo + Title)
-            _titlePanel = new Panel
+            // 1. Top Bar Panel (Kio Logo + Tab Bar)
+            _topBarPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 36,
-                Padding = new Padding(8, 0, 8, 0)
+                Height = 42,
+                Padding = new Padding(8, 4, 8, 0)
             };
-            _titlePanel.Paint += TitlePanel_Paint;
+            _topBarPanel.Paint += TopBarPanel_Paint;
+            _topBarPanel.MouseClick += TopBarPanel_MouseClick;
 
-            // 2. Tab Bar Panel
-            _tabBarPanel = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 38,
-                Padding = new Padding(6, 2, 6, 0)
-            };
-            _tabBarPanel.Paint += TabBarPanel_Paint;
-            _tabBarPanel.MouseClick += TabBarPanel_MouseClick;
-
-            // 3. Navigation Bar Panel
+            // 2. Navigation Bar Panel
             _navBarPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 44,
-                Padding = new Padding(8, 5, 8, 5)
+                Height = 46,
+                Padding = new Padding(10, 6, 10, 6)
             };
 
-            // Back, Forward, Reload, Home buttons
-            _btnBack = CreateNavButton("◄", "Back (Alt+Left)", delegate { if (_activeTab != null) _activeTab.GoBack(); });
-            _btnForward = CreateNavButton("►", "Forward (Alt+Right)", delegate { if (_activeTab != null) _activeTab.GoForward(); });
-            _btnReload = CreateNavButton("⟳", "Reload (Ctrl+R)", delegate { if (_activeTab != null) _activeTab.Reload(); });
-            _btnHome = CreateNavButton("🏠", "Home (Alt+Home)", delegate { if (_activeTab != null) _activeTab.Navigate("https://duckduckgo.com"); });
+            // Rounded Nav Icon Buttons
+            _btnBack = CreatePillButton("◄", "Back (Alt+Left)", delegate { if (_activeTab != null) _activeTab.GoBack(_isDarkTheme); });
+            _btnForward = CreatePillButton("►", "Forward (Alt+Right)", delegate { if (_activeTab != null) _activeTab.GoForward(); });
+            _btnReload = CreatePillButton("⟳", "Reload (Ctrl+R / F5)", delegate { if (_activeTab != null) _activeTab.Reload(); });
+            _btnHome = CreatePillButton("🏠", "Home", delegate { if (_activeTab != null) _activeTab.NavigateHome(_isDarkTheme); });
 
-            // Security Indicator Badge
+            // Security Lock Indicator
             _lblSecurity = new Label
             {
                 Text = "🔒",
                 AutoSize = false,
-                Width = 28,
-                Height = 28,
+                Width = 26,
+                Height = 26,
                 TextAlign = ContentAlignment.MiddleCenter,
-                Font = new Font("Segoe UI", 10f),
+                Font = new Font("Segoe UI", 9.5f),
                 Cursor = Cursors.Hand
             };
 
@@ -119,25 +106,21 @@ namespace Kio.Desktop
             _txtOmnibox = new TextBox
             {
                 Font = new Font("Segoe UI", 10.5f),
-                BorderStyle = BorderStyle.FixedSingle,
-                Height = 28
+                BorderStyle = BorderStyle.None,
+                Height = 26
             };
             _txtOmnibox.KeyDown += TxtOmnibox_KeyDown;
 
-            _btnGo = CreateNavButton("➔", "Go", delegate { NavigateActiveTab(); });
+            _btnGo = CreatePillButton("➔", "Navigate", delegate { NavigateActiveTab(); });
 
-            // Soul Browser Feature Action Buttons
-            _btnMedia = CreateNavButton("🎬 Media", "Media Downloader / Sniffer", delegate { ShowMediaDownloaderDialog(); });
-            _btnImages = CreateNavButton("🖼️ Images", "Save All Images (Image Box)", delegate { ShowImageScraperDialog(); });
-            _btnCapture = CreateNavButton("📸 Capture", "Full Page Scrolling Screenshot", async delegate { await CaptureFullPageScreenshotAsync(); });
-            _btnScreenFilter = CreateNavButton("👁️ Filter", "Screen Filter (Night Dimmer & Eye Care)", delegate { ShowScreenFilterDialog(); });
-            _btnCleanMode = CreateNavButton("🧹 Clean", "Clean Mode (Distraction-Free Browsing)", delegate { ToggleCleanMode(); });
-            _btnUserAgent = CreateNavButton("📱 UA", "Switch User-Agent (Desktop/Mobile/iPhone)", delegate { ShowUserAgentMenu(); });
-            _btnBlockImages = CreateNavButton("🖼️🚫", "Toggle Block Images", delegate { ToggleBlockImages(); });
-            _btnReader = CreateNavButton("📖 Read", "Reader Mode & Speech Announcer", async delegate { await ToggleReaderAnnouncerAsync(); });
-            _btnTheme = CreateNavButton("🌙", "Toggle Dark/Light Theme", delegate { ToggleTheme(); });
+            // Right Action Cluster
+            _btnMedia = CreatePillButton("🎬 Media", "Media Downloader (Live Sniffer)", delegate { ShowMediaDownloader(); });
+            _btnCleanIndicator = CreatePillButton("🧹 Clean", "Clean Mode Active", delegate { ToggleCleanMode(); });
+            _btnTheme = CreatePillButton("🌙", "Toggle Theme", delegate { ToggleTheme(); });
+            _btnThreeDotMenu = CreatePillButton("⋮", "Quick Actions & Power Tools", delegate { OpenThreeDotMenu(); });
+            _btnThreeDotMenu.Font = new Font("Segoe UI", 13f, FontStyle.Bold);
 
-            // Layout Nav Bar
+            // Add Controls to Nav Bar
             _navBarPanel.Controls.Add(_btnBack);
             _navBarPanel.Controls.Add(_btnForward);
             _navBarPanel.Controls.Add(_btnReload);
@@ -146,23 +129,18 @@ namespace Kio.Desktop
             _navBarPanel.Controls.Add(_txtOmnibox);
             _navBarPanel.Controls.Add(_btnGo);
             _navBarPanel.Controls.Add(_btnMedia);
-            _navBarPanel.Controls.Add(_btnImages);
-            _navBarPanel.Controls.Add(_btnCapture);
-            _navBarPanel.Controls.Add(_btnScreenFilter);
-            _navBarPanel.Controls.Add(_btnCleanMode);
-            _navBarPanel.Controls.Add(_btnUserAgent);
-            _navBarPanel.Controls.Add(_btnBlockImages);
-            _navBarPanel.Controls.Add(_btnReader);
+            _navBarPanel.Controls.Add(_btnCleanIndicator);
             _navBarPanel.Controls.Add(_btnTheme);
-            _navBarPanel.Resize += delegate { LayoutNavBarControls(); };
+            _navBarPanel.Controls.Add(_btnThreeDotMenu);
+            _navBarPanel.Resize += delegate { LayoutNavBar(); };
 
-            // 4. Web Content Container Panel
+            // 3. Web Container
             _webContainer = new Panel
             {
                 Dock = DockStyle.Fill
             };
 
-            // 5. Screen Filter Overlay Control
+            // Screen Filter Overlay
             _filterOverlay = new FilterOverlayControl
             {
                 Dock = DockStyle.Fill,
@@ -171,33 +149,32 @@ namespace Kio.Desktop
             _webContainer.Controls.Add(_filterOverlay);
             _filterOverlay.BringToFront();
 
-            // 6. Status Strip
+            // 4. Status Strip
             _statusStrip = new StatusStrip();
             _statusLabel = new ToolStripStatusLabel { Text = "Ready", Spring = true, TextAlign = ContentAlignment.MiddleLeft };
             _zoomLabel = new ToolStripStatusLabel { Text = "100%", AutoToolTip = true, ToolTipText = "Zoom Level" };
             _statusStrip.Items.Add(_statusLabel);
             _statusStrip.Items.Add(_zoomLabel);
 
-            // Add all panels to Form in reverse dock order
+            // Add all panels to Form
             Controls.Add(_webContainer);
             Controls.Add(_statusStrip);
             Controls.Add(_navBarPanel);
-            Controls.Add(_tabBarPanel);
-            Controls.Add(_titlePanel);
+            Controls.Add(_topBarPanel);
 
             KeyPreview = true;
             KeyDown += BrowserForm_KeyDown;
         }
 
-        private Button CreateNavButton(string text, string tooltip, EventHandler onClick)
+        private Button CreatePillButton(string text, string tooltip, EventHandler onClick)
         {
             Button btn = new Button
             {
                 Text = text,
                 AutoSize = true,
-                Height = 28,
+                Height = 30,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9f),
+                Font = new Font("Segoe UI", 9.5f),
                 Cursor = Cursors.Hand,
                 Margin = new Padding(2, 0, 2, 0)
             };
@@ -208,9 +185,9 @@ namespace Kio.Desktop
             return btn;
         }
 
-        private void LayoutNavBarControls()
+        private void LayoutNavBar()
         {
-            int left = 8;
+            int left = 12;
             Button[] navLeft = { _btnBack, _btnForward, _btnReload, _btnHome };
             foreach (var b in navLeft)
             {
@@ -218,41 +195,39 @@ namespace Kio.Desktop
                 left += b.Width + 4;
             }
 
-            _lblSecurity.Location = new Point(left, 8);
-            left += _lblSecurity.Width + 2;
+            _lblSecurity.Location = new Point(left, 10);
+            left += _lblSecurity.Width + 4;
 
-            int right = _navBarPanel.Width - 8;
-            Button[] navRight = { _btnTheme, _btnReader, _btnBlockImages, _btnUserAgent, _btnCleanMode, _btnScreenFilter, _btnCapture, _btnImages, _btnMedia, _btnGo };
+            int right = _navBarPanel.Width - 12;
+            Button[] navRight = { _btnThreeDotMenu, _btnTheme, _btnCleanIndicator, _btnMedia, _btnGo };
             foreach (var b in navRight)
             {
                 right -= b.Width;
                 b.Location = new Point(right, 8);
-                right -= 4;
+                right -= 6;
             }
 
-            int omniWidth = Math.Max(120, right - left - 4);
-            _txtOmnibox.Location = new Point(left, 8);
+            int omniWidth = Math.Max(140, right - left - 6);
+            _txtOmnibox.Location = new Point(left, 10);
             _txtOmnibox.Width = omniWidth;
         }
 
-        private void ApplyTheme()
+        public void ApplyTheme()
         {
             Color bg = _isDarkTheme ? KioTheme.DarkBackground : KioTheme.LightBackground;
             Color surface = _isDarkTheme ? KioTheme.DarkSurface : KioTheme.LightSurface;
             Color text = _isDarkTheme ? KioTheme.DarkText : KioTheme.LightText;
-            Color border = _isDarkTheme ? KioTheme.DarkBorder : KioTheme.LightBorder;
 
             BackColor = bg;
             ForeColor = text;
 
-            _titlePanel.BackColor = bg;
-            _tabBarPanel.BackColor = bg;
+            _topBarPanel.BackColor = bg;
             _navBarPanel.BackColor = surface;
 
             _txtOmnibox.BackColor = _isDarkTheme ? Color.FromArgb(20, 27, 45) : Color.White;
             _txtOmnibox.ForeColor = text;
 
-            Button[] buttons = { _btnBack, _btnForward, _btnReload, _btnHome, _btnGo, _btnMedia, _btnImages, _btnCapture, _btnScreenFilter, _btnCleanMode, _btnUserAgent, _btnBlockImages, _btnReader, _btnTheme };
+            Button[] buttons = { _btnBack, _btnForward, _btnReload, _btnHome, _btnGo, _btnMedia, _btnCleanIndicator, _btnTheme, _btnThreeDotMenu };
             foreach (var btn in buttons)
             {
                 btn.BackColor = _isDarkTheme ? Color.FromArgb(24, 32, 53) : Color.FromArgb(241, 245, 249);
@@ -265,47 +240,31 @@ namespace Kio.Desktop
 
             _btnTheme.Text = _isDarkTheme ? "🌙" : "☀️";
 
-            _titlePanel.Invalidate();
-            _tabBarPanel.Invalidate();
-            LayoutNavBarControls();
+            _topBarPanel.Invalidate();
+            LayoutNavBar();
+
+            if (_activeTab != null && _activeTab.IsHomeView)
+            {
+                _activeTab.NavigateHome(_isDarkTheme);
+            }
         }
 
-        private void TitlePanel_Paint(object sender, PaintEventArgs e)
+        private void TopBarPanel_Paint(object sender, PaintEventArgs e)
         {
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            // Draw Kio Concentric Orbital Emblem
+            // 1. Draw Authentic Kio Logo on Top-Left
             bool isPriv = _activeTab != null && _activeTab.IsPrivate;
-            Rectangle emblemRect = new Rectangle(10, 6, 24, 24);
-            KioTheme.DrawKioEmblem(g, emblemRect, isPriv);
+            Rectangle logoRect = new Rectangle(10, 8, 26, 26);
+            KioTheme.DrawKioEmblem(g, logoRect, isPriv);
 
-            // Draw Browser Title
-            string title = isPriv ? "Kio Stealth Browser (Private)" : "Kio Browser";
-            using (Font titleFont = new Font("Segoe UI", 10.5f, FontStyle.Bold))
-            using (SolidBrush brush = new SolidBrush(isPriv ? KioTheme.PrivateAccent : KioTheme.AccentCyan))
-            {
-                g.DrawString(title, titleFont, brush, 42, 7);
-            }
+            int tabX = 46;
+            int tabY = 6;
+            int tabH = 32;
+            int tabW = 190;
 
-            // Draw Version / Tag
-            using (Font subFont = new Font("Segoe UI", 8f))
-            using (SolidBrush subBrush = new SolidBrush(KioTheme.DarkTextMuted))
-            {
-                g.DrawString("v2.0 Desktop (< 2 MB)", subFont, subBrush, 220, 9);
-            }
-        }
-
-        private void TabBarPanel_Paint(object sender, PaintEventArgs e)
-        {
-            Graphics g = e.Graphics;
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-
-            int tabX = 8;
-            int tabY = 4;
-            int tabH = 30;
-            int tabW = 180;
-
+            // 2. Draw Tab Strips
             for (int i = 0; i < _tabs.Count; i++)
             {
                 BrowserTab tab = _tabs[i];
@@ -317,7 +276,7 @@ namespace Kio.Desktop
                     ? (tab.IsPrivate ? KioTheme.PrivateSurface : (_isDarkTheme ? KioTheme.DarkSurface : KioTheme.LightSurface))
                     : (_isDarkTheme ? Color.FromArgb(14, 20, 36) : Color.FromArgb(235, 240, 248));
 
-                using (GraphicsPath path = RoundedRect(tabRect, 8, 8, 0, 0))
+                using (GraphicsPath path = RoundedRect(tabRect, 10, 10, 0, 0))
                 using (SolidBrush brush = new SolidBrush(tabBg))
                 {
                     g.FillPath(brush, path);
@@ -325,10 +284,10 @@ namespace Kio.Desktop
 
                 if (isActive)
                 {
-                    // Glowing active line
-                    using (Pen pen = new Pen(tab.IsPrivate ? KioTheme.PrivateAccent : KioTheme.AccentCyan, 2f))
+                    // Luminous accent active line
+                    using (Pen pen = new Pen(tab.IsPrivate ? KioTheme.PrivateAccent : KioTheme.AccentCyan, 2.5f))
                     {
-                        g.DrawLine(pen, tabX + 4, tabY, tabX + tabW - 4, tabY);
+                        g.DrawLine(pen, tabX + 6, tabY + 1, tabX + tabW - 6, tabY + 1);
                     }
                 }
 
@@ -337,30 +296,30 @@ namespace Kio.Desktop
                 using (Font iconFont = new Font("Segoe UI", 9f))
                 using (SolidBrush iconBrush = new SolidBrush(tab.IsPrivate ? KioTheme.PrivateAccent : KioTheme.AccentSky))
                 {
-                    g.DrawString(iconText, iconFont, iconBrush, tabX + 8, tabY + 6);
+                    g.DrawString(iconText, iconFont, iconBrush, tabX + 8, tabY + 7);
                 }
 
                 // Title
                 string dispTitle = tab.Title ?? "New Tab";
-                if (dispTitle.Length > 16) dispTitle = dispTitle.Substring(0, 16) + "…";
+                if (dispTitle.Length > 17) dispTitle = dispTitle.Substring(0, 17) + "…";
                 using (Font f = new Font("Segoe UI", 9f, isActive ? FontStyle.Bold : FontStyle.Regular))
                 using (SolidBrush textBrush = new SolidBrush(_isDarkTheme ? KioTheme.DarkText : KioTheme.LightText))
                 {
-                    g.DrawString(dispTitle, f, textBrush, tabX + 30, tabY + 7);
+                    g.DrawString(dispTitle, f, textBrush, tabX + 30, tabY + 8);
                 }
 
                 // Close Button (×)
-                using (Font closeFont = new Font("Segoe UI", 9f))
+                using (Font closeFont = new Font("Segoe UI", 9.5f))
                 using (SolidBrush closeBrush = new SolidBrush(KioTheme.DarkTextMuted))
                 {
-                    g.DrawString("×", closeFont, closeBrush, tabX + tabW - 18, tabY + 6);
+                    g.DrawString("×", closeFont, closeBrush, tabX + tabW - 20, tabY + 7);
                 }
 
-                tabX += tabW + 4;
+                tabX += tabW + 5;
             }
 
             // New Standard Tab Button (+)
-            Rectangle plusRect = new Rectangle(tabX, tabY + 2, 26, 26);
+            Rectangle plusRect = new Rectangle(tabX, tabY + 3, 26, 26);
             using (SolidBrush plusBg = new SolidBrush(_isDarkTheme ? Color.FromArgb(24, 32, 53) : Color.FromArgb(230, 235, 245)))
             {
                 g.FillEllipse(plusBg, plusRect);
@@ -373,7 +332,7 @@ namespace Kio.Desktop
             tabX += 32;
 
             // New Private Tab Button (🛡️+)
-            Rectangle privRect = new Rectangle(tabX, tabY + 2, 34, 26);
+            Rectangle privRect = new Rectangle(tabX, tabY + 3, 36, 26);
             using (SolidBrush privBg = new SolidBrush(KioTheme.PrivateSurface))
             {
                 g.FillEllipse(privBg, privRect);
@@ -381,20 +340,28 @@ namespace Kio.Desktop
             using (Font privFont = new Font("Segoe UI", 9f, FontStyle.Bold))
             using (SolidBrush privText = new SolidBrush(KioTheme.PrivateAccent))
             {
-                g.DrawString("🛡️+", privFont, privText, tabX + 4, tabY + 5);
+                g.DrawString("🛡️+", privFont, privText, tabX + 5, tabY + 6);
             }
         }
 
-        private void TabBarPanel_MouseClick(object sender, MouseEventArgs e)
+        private void TopBarPanel_MouseClick(object sender, MouseEventArgs e)
         {
-            int tabX = 8;
-            int tabW = 180;
-            int tabH = 30;
+            // Click Logo -> Go Home
+            Rectangle logoRect = new Rectangle(10, 8, 26, 26);
+            if (logoRect.Contains(e.Location))
+            {
+                if (_activeTab != null) _activeTab.NavigateHome(_isDarkTheme);
+                return;
+            }
+
+            int tabX = 46;
+            int tabW = 190;
+            int tabH = 32;
 
             for (int i = 0; i < _tabs.Count; i++)
             {
-                Rectangle tabRect = new Rectangle(tabX, 4, tabW, tabH);
-                Rectangle closeRect = new Rectangle(tabX + tabW - 22, 4, 20, tabH);
+                Rectangle tabRect = new Rectangle(tabX, 6, tabW, tabH);
+                Rectangle closeRect = new Rectangle(tabX + tabW - 24, 6, 22, tabH);
 
                 if (closeRect.Contains(e.Location))
                 {
@@ -407,23 +374,23 @@ namespace Kio.Desktop
                     return;
                 }
 
-                tabX += tabW + 4;
+                tabX += tabW + 5;
             }
 
             // New standard tab (+)
-            Rectangle plusRect = new Rectangle(tabX, 6, 26, 26);
+            Rectangle plusRect = new Rectangle(tabX, 9, 26, 26);
             if (plusRect.Contains(e.Location))
             {
-                AddNewTab(false, "https://duckduckgo.com");
+                AddNewTab(false, "about:blank");
                 return;
             }
             tabX += 32;
 
             // New private tab (🛡️+)
-            Rectangle privRect = new Rectangle(tabX, 6, 34, 26);
+            Rectangle privRect = new Rectangle(tabX, 9, 36, 26);
             if (privRect.Contains(e.Location))
             {
-                AddNewTab(true, "https://duckduckgo.com");
+                AddNewTab(true, "about:blank");
                 return;
             }
         }
@@ -433,11 +400,18 @@ namespace Kio.Desktop
             BrowserTab tab = new BrowserTab(isPrivate);
             _tabs.Add(tab);
 
-            tab.StateChanged += delegate { UpdateNavBarState(); _tabBarPanel.Invalidate(); };
-            tab.MediaListUpdated += delegate { UpdateMediaButtonState(); };
+            tab.StateChanged += delegate { UpdateNavBar(); _topBarPanel.Invalidate(); };
+            tab.MediaListUpdated += delegate { UpdateMediaButton(); };
 
             await tab.InitializeAsync();
-            tab.Navigate(startUrl);
+            if (string.IsNullOrEmpty(startUrl) || startUrl == "about:blank")
+            {
+                tab.NavigateHome(_isDarkTheme);
+            }
+            else
+            {
+                tab.Navigate(startUrl, _isDarkTheme);
+            }
 
             SetActiveTab(tab);
         }
@@ -446,8 +420,7 @@ namespace Kio.Desktop
         {
             if (_tabs.Count <= 1)
             {
-                // Never close the last tab, reset to home
-                tab.Navigate("https://duckduckgo.com");
+                tab.NavigateHome(_isDarkTheme);
                 return;
             }
 
@@ -460,15 +433,8 @@ namespace Kio.Desktop
             }
             tab.Dispose();
 
-            if (tab == _activeTab)
-            {
-                int nextIndex = Math.Max(0, index - 1);
-                SetActiveTab(_tabs[nextIndex]);
-            }
-            else
-            {
-                _tabBarPanel.Invalidate();
-            }
+            int nextIndex = Math.Max(0, index - 1);
+            SetActiveTab(_tabs[nextIndex]);
         }
 
         public void SetActiveTab(BrowserTab tab)
@@ -481,13 +447,12 @@ namespace Kio.Desktop
             _webContainer.Controls.Add(_filterOverlay);
             _filterOverlay.BringToFront();
 
-            UpdateNavBarState();
-            UpdateMediaButtonState();
-            _titlePanel.Invalidate();
-            _tabBarPanel.Invalidate();
+            UpdateNavBar();
+            UpdateMediaButton();
+            _topBarPanel.Invalidate();
         }
 
-        private void UpdateNavBarState()
+        private void UpdateNavBar()
         {
             if (_activeTab == null) return;
 
@@ -497,10 +462,10 @@ namespace Kio.Desktop
 
             if (!_txtOmnibox.Focused)
             {
-                _txtOmnibox.Text = _activeTab.Url == "about:blank" ? "" : _activeTab.Url;
+                _txtOmnibox.Text = _activeTab.IsHomeView ? "" : _activeTab.Url;
             }
 
-            // Security Lock
+            // Security Lock Indicator
             if (_activeTab.IsPrivate)
             {
                 _lblSecurity.Text = "🛡️";
@@ -525,23 +490,22 @@ namespace Kio.Desktop
             _statusLabel.Text = _activeTab.IsLoading ? "Loading: " + _activeTab.Url : "Ready";
             _zoomLabel.Text = string.Format("{0}%", (int)(_activeTab.ZoomFactor * 100));
 
-            _btnCleanMode.ForeColor = _activeTab.CleanModeEnabled ? KioTheme.AccentGreen : (_isDarkTheme ? KioTheme.DarkText : KioTheme.LightText);
-            _btnBlockImages.ForeColor = _activeTab.BlockImages ? KioTheme.AccentRed : (_isDarkTheme ? KioTheme.DarkText : KioTheme.LightText);
+            _btnCleanIndicator.Visible = _activeTab.CleanModeEnabled;
         }
 
-        private void UpdateMediaButtonState()
+        private void UpdateMediaButton()
         {
             if (_activeTab == null) return;
             int count = _activeTab.DetectedMediaList.Count;
             if (count > 0)
             {
+                _btnMedia.Visible = true;
                 _btnMedia.Text = string.Format("🎬 Media ({0})", count);
                 _btnMedia.ForeColor = KioTheme.AccentCyan;
             }
             else
             {
-                _btnMedia.Text = "🎬 Media";
-                _btnMedia.ForeColor = _isDarkTheme ? KioTheme.DarkText : KioTheme.LightText;
+                _btnMedia.Visible = false;
             }
         }
 
@@ -559,23 +523,35 @@ namespace Kio.Desktop
         {
             if (_activeTab != null && !string.IsNullOrWhiteSpace(_txtOmnibox.Text))
             {
-                _activeTab.Navigate(_txtOmnibox.Text);
+                _activeTab.Navigate(_txtOmnibox.Text, _isDarkTheme);
             }
         }
 
-        // --- Soul Browser Power-User Features Dialogs & Actions ---
+        // --- Android 3-Dot Quick Menu Trigger ---
 
-        private void ShowMediaDownloaderDialog()
+        private void OpenThreeDotMenu()
+        {
+            QuickMenuDialog menu = new QuickMenuDialog(this, _activeTab, _isDarkTheme);
+            Point screenPos = _btnThreeDotMenu.PointToScreen(new Point(0, _btnThreeDotMenu.Height + 4));
+            // Ensure fits on screen
+            int menuX = Math.Min(screenPos.X, Screen.FromControl(this).WorkingArea.Right - menu.Width - 10);
+            menu.Location = new Point(menuX, screenPos.Y);
+            menu.Show(this);
+        }
+
+        // --- Soul Browser Features & Dialogs ---
+
+        public void ShowMediaDownloader()
         {
             if (_activeTab == null) return;
 
             Form dlg = new Form
             {
                 Text = "Kio Media Sniffer & Downloader",
-                Width = 650,
+                Width = 660,
                 Height = 420,
                 StartPosition = FormStartPosition.CenterParent,
-                BackColor = _isDarkTheme ? KioTheme.DarkSurface : Color.White,
+                BackColor = _isDarkTheme ? Color.FromArgb(14, 18, 28) : Color.White,
                 ForeColor = _isDarkTheme ? KioTheme.DarkText : KioTheme.LightText,
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 MaximizeBox = false,
@@ -589,11 +565,12 @@ namespace Kio.Desktop
                 View = View.Details,
                 FullRowSelect = true,
                 BackColor = _isDarkTheme ? Color.FromArgb(20, 27, 45) : Color.FromArgb(248, 250, 252),
-                ForeColor = _isDarkTheme ? KioTheme.DarkText : KioTheme.LightText
+                ForeColor = _isDarkTheme ? KioTheme.DarkText : KioTheme.LightText,
+                BorderStyle = BorderStyle.None
             };
             lv.Columns.Add("Format", 90);
             lv.Columns.Add("Title", 220);
-            lv.Columns.Add("Stream URL", 300);
+            lv.Columns.Add("Stream URL", 320);
 
             foreach (var m in _activeTab.DetectedMediaList)
             {
@@ -603,12 +580,7 @@ namespace Kio.Desktop
             }
 
             Panel btnPanel = new Panel { Dock = DockStyle.Bottom, Height = 55, Padding = new Padding(10) };
-            Button btnDownload = new Button { Text = "⬇ Download", AutoSize = true, Left = 10, Top = 12 };
-            Button btnPlay = new Button { Text = "▶ Play in Player", AutoSize = true, Left = 120, Top = 12 };
-            Button btnCopy = new Button { Text = "📋 Copy Link", AutoSize = true, Left = 245, Top = 12 };
-            Button btnClose = new Button { Text = "Close", AutoSize = true, Left = 530, Top = 12 };
-
-            btnDownload.Click += delegate
+            Button btnDownload = CreatePillButton("⬇ Download", "Download stream", delegate
             {
                 if (lv.SelectedItems.Count > 0)
                 {
@@ -616,18 +588,20 @@ namespace Kio.Desktop
                     SoulBrowserFeatures.DownloadMediaDirect(m.Url, m.Title);
                     MessageBox.Show("Download enqueued to Downloads\\Kio\\", "Kio Download", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
-            };
+            });
+            btnDownload.Location = new Point(10, 10);
 
-            btnPlay.Click += delegate
+            Button btnPlay = CreatePillButton("▶ Play External", "Open in VLC / system player", delegate
             {
                 if (lv.SelectedItems.Count > 0)
                 {
                     var m = (DetectedMediaItem)lv.SelectedItems[0].Tag;
                     SoulBrowserFeatures.PlayMediaExternal(m.Url);
                 }
-            };
+            });
+            btnPlay.Location = new Point(130, 10);
 
-            btnCopy.Click += delegate
+            Button btnCopy = CreatePillButton("📋 Copy Link", "Copy direct URL", delegate
             {
                 if (lv.SelectedItems.Count > 0)
                 {
@@ -635,9 +609,11 @@ namespace Kio.Desktop
                     Clipboard.SetText(m.Url);
                     MessageBox.Show("Stream URL copied to clipboard!", "Kio", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
-            };
+            });
+            btnCopy.Location = new Point(270, 10);
 
-            btnClose.Click += delegate { dlg.Close(); };
+            Button btnClose = CreatePillButton("Close", "Close dialog", delegate { dlg.Close(); });
+            btnClose.Location = new Point(560, 10);
 
             btnPanel.Controls.Add(btnDownload);
             btnPanel.Controls.Add(btnPlay);
@@ -649,7 +625,7 @@ namespace Kio.Desktop
             dlg.ShowDialog(this);
         }
 
-        private async void ShowImageScraperDialog()
+        public async void ShowImageScraper()
         {
             if (_activeTab == null || _activeTab.WebView == null) return;
 
@@ -672,7 +648,7 @@ namespace Kio.Desktop
                 Width = 700,
                 Height = 450,
                 StartPosition = FormStartPosition.CenterParent,
-                BackColor = _isDarkTheme ? KioTheme.DarkSurface : Color.White,
+                BackColor = _isDarkTheme ? Color.FromArgb(14, 18, 28) : Color.White,
                 ForeColor = _isDarkTheme ? KioTheme.DarkText : KioTheme.LightText
             };
 
@@ -682,27 +658,22 @@ namespace Kio.Desktop
                 Height = 330,
                 CheckOnClick = true,
                 BackColor = _isDarkTheme ? Color.FromArgb(20, 27, 45) : Color.FromArgb(248, 250, 252),
-                ForeColor = _isDarkTheme ? KioTheme.DarkText : KioTheme.LightText
+                ForeColor = _isDarkTheme ? KioTheme.DarkText : KioTheme.LightText,
+                BorderStyle = BorderStyle.None
             };
 
-            for (int i = 0; i < images.Count; i++)
-            {
-                clb.Items.Add(images[i].Url, true);
-            }
+            for (int i = 0; i < images.Count; i++) clb.Items.Add(images[i].Url, true);
 
             Panel pnl = new Panel { Dock = DockStyle.Bottom, Height = 55, Padding = new Padding(10) };
-            Button btnSelectAll = new Button { Text = "Toggle All", Left = 10, Top = 12, AutoSize = true };
-            Button btnSave = new Button { Text = "💾 Save Selected to Pictures", Left = 120, Top = 12, AutoSize = true };
-            Button btnClose = new Button { Text = "Close", Left = 580, Top = 12, AutoSize = true };
-
-            bool allChecked = true;
-            btnSelectAll.Click += delegate
+            Button btnSelectAll = CreatePillButton("Toggle All", "", delegate
             {
-                allChecked = !allChecked;
-                for (int i = 0; i < clb.Items.Count; i++) clb.SetItemChecked(i, allChecked);
-            };
+                bool anyUnchecked = false;
+                for (int i = 0; i < clb.Items.Count; i++) if (!clb.GetItemChecked(i)) { anyUnchecked = true; break; }
+                for (int i = 0; i < clb.Items.Count; i++) clb.SetItemChecked(i, anyUnchecked);
+            });
+            btnSelectAll.Location = new Point(10, 10);
 
-            btnSave.Click += delegate
+            Button btnSave = CreatePillButton("💾 Save Selected to Pictures", "", delegate
             {
                 List<ExtractedImageItem> selected = new List<ExtractedImageItem>();
                 for (int i = 0; i < clb.Items.Count; i++)
@@ -710,11 +681,13 @@ namespace Kio.Desktop
                     if (clb.GetItemChecked(i)) selected.Add(images[i]);
                 }
                 SoulBrowserFeatures.BatchDownloadImages(selected);
-                MessageBox.Show(string.Format("Saving {0} images directly to Pictures\\Kio\\", selected.Count), "Kio Image Box", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(string.Format("Saving {0} images to Pictures\\Kio\\", selected.Count), "Kio Image Box", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 dlg.Close();
-            };
+            });
+            btnSave.Location = new Point(120, 10);
 
-            btnClose.Click += delegate { dlg.Close(); };
+            Button btnClose = CreatePillButton("Close", "", delegate { dlg.Close(); });
+            btnClose.Location = new Point(590, 10);
 
             pnl.Controls.Add(btnSelectAll);
             pnl.Controls.Add(btnSave);
@@ -725,15 +698,15 @@ namespace Kio.Desktop
             dlg.ShowDialog(this);
         }
 
-        private async Task CaptureFullPageScreenshotAsync()
+        public async void CaptureFullPage()
         {
             if (_activeTab == null) return;
             string savedPath = await SoulBrowserFeatures.CaptureFullPageAsync(_activeTab.WebView);
             if (!string.IsNullOrEmpty(savedPath))
             {
                 DialogResult res = MessageBox.Show(
-                    "Full page screenshot captured successfully!\n\nSaved to: " + savedPath + "\n\nWould you like to open the image?",
-                    "Kio Full Page Capture",
+                    "Full page scrolling screenshot captured!\n\nSaved to: " + savedPath + "\n\nWould you like to open the image?",
+                    "Kio Scroll Capture",
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Information
                 );
@@ -744,18 +717,18 @@ namespace Kio.Desktop
             }
         }
 
-        private void ShowScreenFilterDialog()
+        public void ShowScreenFilter()
         {
             Form dlg = new Form
             {
                 Text = "Screen Filter (Eye Care & Dimmer)",
                 Width = 380,
-                Height = 260,
+                Height = 250,
                 StartPosition = FormStartPosition.CenterParent,
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 MaximizeBox = false,
                 MinimizeBox = false,
-                BackColor = _isDarkTheme ? KioTheme.DarkSurface : Color.White,
+                BackColor = _isDarkTheme ? Color.FromArgb(14, 18, 28) : Color.White,
                 ForeColor = _isDarkTheme ? KioTheme.DarkText : KioTheme.LightText
             };
 
@@ -763,13 +736,13 @@ namespace Kio.Desktop
             RadioButton rbAmber = new RadioButton { Text = "Warm Amber (Blue Light Eye Care)", Left = 20, Top = 50, Checked = _filterMode == ScreenFilterMode.WarmAmber };
             RadioButton rbOled = new RadioButton { Text = "Night Dimmer (OLED Dark Mode)", Left = 20, Top = 80, Checked = _filterMode == ScreenFilterMode.NightDimmer };
 
-            Label lblOpacity = new Label { Text = string.Format("Intensity / Opacity: {0}%", (int)(_filterOpacity * 100)), Left = 20, Top = 120, AutoSize = true };
+            Label lblOpacity = new Label { Text = string.Format("Intensity: {0}%", (int)(_filterOpacity * 100)), Left = 20, Top = 120, AutoSize = true };
             TrackBar tb = new TrackBar { Left = 20, Top = 145, Width = 320, Minimum = 10, Maximum = 80, Value = (int)(_filterOpacity * 100) };
 
             tb.Scroll += delegate
             {
                 _filterOpacity = tb.Value / 100f;
-                lblOpacity.Text = string.Format("Intensity / Opacity: {0}%", tb.Value);
+                lblOpacity.Text = string.Format("Intensity: {0}%", tb.Value);
                 ApplyScreenFilter();
             };
 
@@ -799,18 +772,16 @@ namespace Kio.Desktop
             if (_filterMode == ScreenFilterMode.None)
             {
                 _filterOverlay.Visible = false;
-                _btnScreenFilter.ForeColor = _isDarkTheme ? KioTheme.DarkText : KioTheme.LightText;
             }
             else
             {
                 Color filterColor = _filterMode == ScreenFilterMode.WarmAmber ? Color.FromArgb(255, 183, 77) : Color.Black;
                 _filterOverlay.SetFilter(filterColor, _filterOpacity);
                 _filterOverlay.Visible = true;
-                _btnScreenFilter.ForeColor = KioTheme.AccentAmber;
             }
         }
 
-        private async void ToggleCleanMode()
+        public async void ToggleCleanMode()
         {
             if (_activeTab == null) return;
             _activeTab.CleanModeEnabled = !_activeTab.CleanModeEnabled;
@@ -822,26 +793,17 @@ namespace Kio.Desktop
             {
                 await _activeTab.RemoveCleanModeCssAsync();
             }
-            UpdateNavBarState();
+            UpdateNavBar();
         }
 
-        private void ToggleBlockImages()
+        public void ToggleBlockImages()
         {
             if (_activeTab == null) return;
             _activeTab.SetBlockImages(!_activeTab.BlockImages);
-            UpdateNavBarState();
+            UpdateNavBar();
         }
 
-        private void ShowUserAgentMenu()
-        {
-            ContextMenuStrip menu = new ContextMenuStrip();
-            menu.Items.Add("Desktop PC (Default)", null, delegate { if (_activeTab != null) _activeTab.SetUserAgentMode(UserAgentMode.Desktop); });
-            menu.Items.Add("Mobile (Android Pixel)", null, delegate { if (_activeTab != null) _activeTab.SetUserAgentMode(UserAgentMode.Mobile); });
-            menu.Items.Add("iPhone (Safari iOS)", null, delegate { if (_activeTab != null) _activeTab.SetUserAgentMode(UserAgentMode.iPhone); });
-            menu.Show(_btnUserAgent, new Point(0, _btnUserAgent.Height));
-        }
-
-        private async Task ToggleReaderAnnouncerAsync()
+        public async void ToggleReaderAnnouncer()
         {
             if (_activeTab == null || _activeTab.WebView == null) return;
 
@@ -855,13 +817,13 @@ namespace Kio.Desktop
 
             if (string.IsNullOrWhiteSpace(text))
             {
-                MessageBox.Show("No readable article text detected on this page.", "Kio Reader", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("No readable article text found on this page.", "Kio Narrate", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
             Form dlg = new Form
             {
-                Text = "Kio Reader Mode & On-Device Announcer",
+                Text = "Kio Narrator & Reader Mode",
                 Width = 720,
                 Height = 520,
                 StartPosition = FormStartPosition.CenterParent,
@@ -884,14 +846,14 @@ namespace Kio.Desktop
             };
 
             Panel pnl = new Panel { Dock = DockStyle.Bottom, Height = 55, Padding = new Padding(10) };
-            Button btnSpeak = new Button { Text = "🔊 Speak On-Device", Left = 10, Top = 12, AutoSize = true };
-            Button btnStop = new Button { Text = "⏹ Stop", Left = 150, Top = 12, AutoSize = true };
-            Button btnClose = new Button { Text = "Close", Left = 600, Top = 12, AutoSize = true };
+            Button btnSpeak = CreatePillButton("🔊 Speak (On-Device)", "", delegate { SoulBrowserFeatures.SpeakTextOnDevice(text); });
+            btnSpeak.Location = new Point(10, 10);
 
-            btnSpeak.Click += delegate { SoulBrowserFeatures.SpeakTextOnDevice(text); };
-            btnStop.Click += delegate { SoulBrowserFeatures.StopSpeaking(); };
-            btnClose.Click += delegate { SoulBrowserFeatures.StopSpeaking(); dlg.Close(); };
-            dlg.FormClosing += delegate { SoulBrowserFeatures.StopSpeaking(); };
+            Button btnStop = CreatePillButton("⏹ Stop", "", delegate { SoulBrowserFeatures.StopSpeaking(); });
+            btnStop.Location = new Point(180, 10);
+
+            Button btnClose = CreatePillButton("Close", "", delegate { SoulBrowserFeatures.StopSpeaking(); dlg.Close(); });
+            btnClose.Location = new Point(610, 10);
 
             pnl.Controls.Add(btnSpeak);
             pnl.Controls.Add(btnStop);
@@ -899,25 +861,76 @@ namespace Kio.Desktop
 
             dlg.Controls.Add(txt);
             dlg.Controls.Add(pnl);
+            dlg.FormClosing += delegate { SoulBrowserFeatures.StopSpeaking(); };
             dlg.ShowDialog(this);
         }
 
-        private void ToggleTheme()
+        public void ToggleTheme()
         {
             _isDarkTheme = !_isDarkTheme;
             ApplyTheme();
         }
 
+        // --- Exclusive Private Tools ---
+
+        public void BurnPrivateSession()
+        {
+            List<BrowserTab> privTabs = new List<BrowserTab>();
+            foreach (var t in _tabs) if (t.IsPrivate) privTabs.Add(t);
+            foreach (var t in privTabs) CloseTab(t);
+            PurgeRam();
+            MessageBox.Show("Private session incinerated! All temporary cache and memory purged.", "Kio Private Mode", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        public void NewPrivateIdentity()
+        {
+            AddNewTab(true, "about:blank");
+            MessageBox.Show("New isolated Private Identity generated.", "Kio New Identity", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        public void PurgeRam()
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+        }
+
+        public void ToggleFullscreen()
+        {
+            if (!_isFullscreen)
+            {
+                _prevWindowState = WindowState;
+                _prevBorderStyle = FormBorderStyle;
+                FormBorderStyle = FormBorderStyle.None;
+                WindowState = FormWindowState.Maximized;
+                _topBarPanel.Visible = false;
+                _statusStrip.Visible = false;
+                _isFullscreen = true;
+            }
+            else
+            {
+                FormBorderStyle = _prevBorderStyle;
+                WindowState = _prevWindowState;
+                _topBarPanel.Visible = true;
+                _statusStrip.Visible = true;
+                _isFullscreen = false;
+            }
+        }
+
+        private bool _isFullscreen = false;
+        private FormWindowState _prevWindowState;
+        private FormBorderStyle _prevBorderStyle;
+
         private void BrowserForm_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Control && e.KeyCode == Keys.T)
             {
-                AddNewTab(false, "https://duckduckgo.com");
+                AddNewTab(false, "about:blank");
                 e.Handled = true;
             }
             else if (e.Control && e.Shift && e.KeyCode == Keys.P)
             {
-                AddNewTab(true, "https://duckduckgo.com");
+                AddNewTab(true, "about:blank");
                 e.Handled = true;
             }
             else if (e.Control && e.KeyCode == Keys.W)
@@ -938,7 +951,7 @@ namespace Kio.Desktop
             }
             else if (e.Alt && e.KeyCode == Keys.Left)
             {
-                if (_activeTab != null) _activeTab.GoBack();
+                if (_activeTab != null) _activeTab.GoBack(_isDarkTheme);
                 e.Handled = true;
             }
             else if (e.Alt && e.KeyCode == Keys.Right)
@@ -948,54 +961,28 @@ namespace Kio.Desktop
             }
             else if (e.Alt && e.KeyCode == Keys.Home)
             {
-                if (_activeTab != null) _activeTab.Navigate("https://duckduckgo.com");
+                if (_activeTab != null) _activeTab.NavigateHome(_isDarkTheme);
                 e.Handled = true;
             }
             else if (e.Control && (e.KeyCode == Keys.Oemplus || e.KeyCode == Keys.Add))
             {
-                if (_activeTab != null) { _activeTab.ZoomFactor = Math.Min(3.0, _activeTab.ZoomFactor + 0.1); _activeTab.WebView.ZoomFactor = _activeTab.ZoomFactor; UpdateNavBarState(); }
+                if (_activeTab != null) { _activeTab.ZoomFactor = Math.Min(3.0, _activeTab.ZoomFactor + 0.1); _activeTab.WebView.ZoomFactor = _activeTab.ZoomFactor; UpdateNavBar(); }
                 e.Handled = true;
             }
             else if (e.Control && (e.KeyCode == Keys.OemMinus || e.KeyCode == Keys.Subtract))
             {
-                if (_activeTab != null) { _activeTab.ZoomFactor = Math.Max(0.5, _activeTab.ZoomFactor - 0.1); _activeTab.WebView.ZoomFactor = _activeTab.ZoomFactor; UpdateNavBarState(); }
+                if (_activeTab != null) { _activeTab.ZoomFactor = Math.Max(0.5, _activeTab.ZoomFactor - 0.1); _activeTab.WebView.ZoomFactor = _activeTab.ZoomFactor; UpdateNavBar(); }
                 e.Handled = true;
             }
             else if (e.Control && e.KeyCode == Keys.D0)
             {
-                if (_activeTab != null) { _activeTab.ZoomFactor = 1.0; _activeTab.WebView.ZoomFactor = 1.0; UpdateNavBarState(); }
+                if (_activeTab != null) { _activeTab.ZoomFactor = 1.0; _activeTab.WebView.ZoomFactor = 1.0; UpdateNavBar(); }
                 e.Handled = true;
             }
             else if (e.KeyCode == Keys.F11)
             {
                 ToggleFullscreen();
                 e.Handled = true;
-            }
-        }
-
-        private bool _isFullscreen = false;
-        private FormWindowState _prevWindowState;
-        private FormBorderStyle _prevBorderStyle;
-
-        private void ToggleFullscreen()
-        {
-            if (!_isFullscreen)
-            {
-                _prevWindowState = WindowState;
-                _prevBorderStyle = FormBorderStyle;
-                FormBorderStyle = FormBorderStyle.None;
-                WindowState = FormWindowState.Maximized;
-                _titlePanel.Visible = false;
-                _statusStrip.Visible = false;
-                _isFullscreen = true;
-            }
-            else
-            {
-                FormBorderStyle = _prevBorderStyle;
-                WindowState = _prevWindowState;
-                _titlePanel.Visible = true;
-                _statusStrip.Visible = true;
-                _isFullscreen = false;
             }
         }
 
@@ -1025,8 +1012,8 @@ namespace Kio.Desktop
     }
 
     /// <summary>
-    /// Lightweight transparent overlay that applies color and dimming over web content
-    /// with WS_EX_TRANSPARENT so mouse clicks pass right through to the webpage.
+    /// Transparent overlay control that applies color and dimming over web content
+    /// with WS_EX_TRANSPARENT so mouse clicks pass right through to the underlying WebView2.
     /// </summary>
     public class FilterOverlayControl : Control
     {
@@ -1044,7 +1031,7 @@ namespace Kio.Desktop
             get
             {
                 CreateParams cp = base.CreateParams;
-                cp.ExStyle |= 0x20; // WS_EX_TRANSPARENT: passes all mouse/keyboard events through to underlying WebView
+                cp.ExStyle |= 0x20; // WS_EX_TRANSPARENT
                 return cp;
             }
         }

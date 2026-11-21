@@ -19,9 +19,12 @@
 
 ## Kio for PC Desktop Highlights
 
-- **Ultra-Lightweight Portable Footprint (< 1 MB Uncompressed, ~256 KB Zipped):**
+- **Ultra-Lightweight Portable Footprint (< 1 MB Uncompressed, ~260 KB Zipped):**
   - Requires zero heavy installation. Just extract and double-click `Kio.exe` to run immediately.
   - Leverages the OS pre-installed Microsoft Edge WebView2 Runtime (installed on 100% of Windows 10/11 PCs), keeping the entire app directory under 0.9 MB with zero system bloat.
+- **Authentic Android-Style UI/UX on PC Desktop:**
+  - **Identical Kio Start Page:** Animated concentric orbital Kio Logo in SVG (dual rotating orbits, pulsing core, celestial satellites), omnibox search pill with DuckDuckGo/Google integration, speed dial shortcut cards with smooth hover lift, and live privacy shield badges.
+  - **Android 3-Dot Quick Action Menu (`⋮`):** Flyout menu featuring Viewing Mode chips (Desktop, Mobile, iPhone), 3-column action tile grid (Media, Images, Capture, Filter, Clean, Block Images, Narrate, Full Screen, Theme), and exclusive Private Stealth tools (Burn Session, New Identity, Purge RAM).
 - **Full Soul Browser Power-User Suite for PC:**
   - **Media & Video Downloader / Sniffer:** Live toolbar badge (`🎬 Media (N)`) sniffs audio/video streams (`.mp4`, `.webm`, `.m3u8`, `.mp3`) with 1-tap download into `Downloads\Kio\`, launch in VLC / system media player, and direct stream URL copying.
   - **Save All Images ("Image Box"):** 1-tap scraper extracting all images (`<img>`, `<picture>`, CSS background-images) with interactive gallery preview, "Select All", and batch download into `Pictures\Kio\`.

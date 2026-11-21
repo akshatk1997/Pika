@@ -40,8 +40,10 @@
   <ItemGroup>
     <Compile Include="src\BrowserModels.cs" />
     <Compile Include="src\KioTheme.cs" />
+    <Compile Include="src\KioHomeHtml.cs" />
     <Compile Include="src\SoulBrowserFeatures.cs" />
     <Compile Include="src\BrowserTab.cs" />
+    <Compile Include="src\QuickMenuDialog.cs" />
     <Compile Include="src\BrowserForm.cs" />
     <Compile Include="src\Program.cs" />
   </ItemGroup>
