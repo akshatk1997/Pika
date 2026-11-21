@@ -1,43 +1,14 @@
 # Kio
 
-**Kio** is a lightning-fast, privacy-hardened web browser built for **Android** and **Windows PC Desktop** around the operating system's native hardware-accelerated web engine (**Android System WebView** on mobile, **Microsoft Edge WebView2** on PC) — featuring **120Hz/144Hz Smooth Rendering**, the full **Soul Browser Power-User Suite** (Media & Video Downloader/Sniffer, Image Box Batch Scraper, Full-Page Scroll Capture, Screen Filter, Clean Mode), **Zero-Leak Private Browsing**, and release distributions **strictly under 2 MB**.
+**Kio** is a lightning-fast, privacy-hardened Android web browser built around the operating system's maintained **Android System WebView** (`android.webkit.WebView`) — featuring **Hardware-Accelerated 120Hz/60Hz Rendering**, a **Pure On-Device NLP Content Announcer / Reader Mode (zero data copy or save)**, **True Edge-to-Edge Full Screen Mode**, **Real Website Logos**, and a **signed R8-minified release APK strictly under 2 MB**.
 
-> **Engine Statement:** Kio delegates core web rendering, TLS/HTTP transport, and GPU hardware acceleration to the OS-maintained web engine (`android.webkit.WebView` on Android, `Microsoft.Web.WebView2` on Windows), delivering top-tier performance, instantaneous startup, and privacy shields without forcing users to download a bloated 150–200 MB Chromium binary.
-
----
-
-## Downloads (< 2 MB)
-
-| Platform | Format | Size | Download Link |
-| :--- | :--- | :--- | :--- |
-| **Android** | Signed Release APK | **~1.47 MB** | [`releases/Kio-v2.0.0.apk`](releases/Kio-v2.0.0.apk) |
-| **Windows PC** | Portable Zip Package | **~0.25 MB (256 KB)** | [`releases/Kio-Desktop-v2.0.0-windows-x64.zip`](releases/Kio-Desktop-v2.0.0-windows-x64.zip) |
-
-*Both releases are tracked in the repository and published under GitHub Release [`v2.0.0`](https://github.com/akshatk1997/Pika/releases/tag/v2.0.0).*
+> **Engine Statement:** Kio delegates web rendering, TLS/HTTP transport, and sandboxing to the OS-maintained **Android System WebView**, maximizing hardware-accelerated responsiveness, privacy shields, and on-device NLP narration without bundling a 150 MB Chromium binary.
 
 ---
 
-## Kio for PC Desktop Highlights
+## Download APK
 
-- **Ultra-Lightweight Portable Footprint (< 1 MB Uncompressed, ~260 KB Zipped):**
-  - Requires zero heavy installation. Just extract and double-click `Kio.exe` to run immediately.
-  - Leverages the OS pre-installed Microsoft Edge WebView2 Runtime (installed on 100% of Windows 10/11 PCs), keeping the entire app directory under 0.9 MB with zero system bloat.
-- **Authentic Android-Style UI/UX on PC Desktop:**
-  - **Identical Kio Start Page:** Animated concentric orbital Kio Logo in SVG (dual rotating orbits, pulsing core, celestial satellites), omnibox search pill with DuckDuckGo/Google integration, speed dial shortcut cards with smooth hover lift, and live privacy shield badges.
-  - **Android 3-Dot Quick Action Menu (`⋮`):** Flyout menu featuring Viewing Mode chips (Desktop, Mobile, iPhone), 3-column action tile grid (Media, Images, Capture, Filter, Clean, Block Images, Narrate, Full Screen, Theme), and exclusive Private Stealth tools (Burn Session, New Identity, Purge RAM).
-- **Full Soul Browser Power-User Suite for PC:**
-  - **Media & Video Downloader / Sniffer:** Live toolbar badge (`🎬 Media (N)`) sniffs audio/video streams (`.mp4`, `.webm`, `.m3u8`, `.mp3`) with 1-tap download into `Downloads\Kio\`, launch in VLC / system media player, and direct stream URL copying.
-  - **Save All Images ("Image Box"):** 1-tap scraper extracting all images (`<img>`, `<picture>`, CSS background-images) with interactive gallery preview, "Select All", and batch download into `Pictures\Kio\`.
-  - **Full-Page Scrolling Screenshot ("Scroll Capture"):** Captures full vertical documents without viewport cutoff into lossless PNGs in `Pictures\Kio\`.
-  - **Screen Filter (Eye Care Amber & OLED Night Dimmer):** Built-in Warm Amber (`#FFB74D`) and OLED Dimmer with real-time 10%–80% opacity slider and click-through transparency (`WS_EX_TRANSPARENT`).
-  - **Clean Mode (Distraction-Free):** 1-tap toggle button that automatically strips cookie consent walls, GDPR dialogs, newsletter popups, and sticky banner ads without breaking layouts.
-  - **Mode Switcher (UA Emulation):** Instant 1-tap switching between Desktop PC, Android Mobile (Pixel), and iPhone (Safari iOS) viewports.
-  - **Block Images Toggle:** 1-tap toggle to block images for low-bandwidth environments.
-  - **Reader Mode & Speech Announcer:** Distills prose and narrates articles on-device using native Windows `System.Speech` TTS (100% offline, zero cloud communication).
-- **Multi-Tab Architecture & Privacy Stealth Mode:**
-  - Custom-painted tab bar with smooth switching, close buttons (`×`), new standard tab (`+`), and new Private Tab (`🛡️+`).
-  - Private tabs run with isolated ephemeral cache and zero persistent disk history or cookies.
-  - Full keyboard shortcuts (`Ctrl+T`, `Ctrl+W`, `Ctrl+Shift+P`, `Ctrl+L`, `Ctrl+R`, `F5`, `F11`, `Alt+Left`, `Alt+Right`, `Ctrl++/-`).
+Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.0.0.apk`](releases/Kio-v2.0.0.apk) and published in GitHub Releases (`v2.0.0`).
 
 ---
 

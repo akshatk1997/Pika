@@ -19,7 +19,3 @@ debug.keystore
 *.keystore
 *.jks
 .antigravity/
-bin/
-obj/
-desktop/bin/
-desktop/obj/
