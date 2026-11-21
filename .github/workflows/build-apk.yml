@@ -89,9 +89,16 @@ jobs:
           NOTES="Kio Browser v2.0.0 (Build 72) — Full Soul Browser Power-User Suite (< 2 MB).\n\n- **Media & Video Downloader / Sniffer (Soul Browser Style):**\n  - Real-time video and audio stream sniffer detecting MP4, WEBM, M3U8/HLS, and audio resources from network requests and HTML5 media elements.\n  - Dedicated 3-dot menu Media tile with live detected badge count.\n  - 1-tap direct stream download, external player launch (VLC/MX Player), and link copying.\n- **Save All Images / Image Sniffer (Soul Browser Image Box):**\n  - 1-tap scraper extracting all images (img tags, srcset, picture elements, CSS background-images).\n  - Image gallery dialog with selection controls and batch download into Pictures.\n- **Full Page Scroll Screenshot (Scroll Capture):**\n  - High-resolution full-document screenshot capture saving the entire scrolling page to Pictures/Kio and Android Gallery.\n- **Screen Filter (Night Dimmer & Blue Light Eye Care):**\n  - Built-in eye protection overlay with Warm Amber and OLED Night Dimmer modes and customizable 10%-80% opacity slider, allowing seamless touch pass-through.\n- **Clean Mode (Distraction-Free Browsing):**\n  - 1-tap clutter remover automatically hiding cookie consent walls, newsletter overlays, sticky banner ads, and floating promo bars.\n- **Go Back Without Refresh:**\n  - Instant cache-first history navigation eliminating page reloads and white flashes.\n- **Strict Constraint:** Release APK strictly under 2 MB (2,097,152 bytes)."
           if gh release view v2.0.0 >/dev/null 2>&1; then
             gh release upload v2.0.0 releases/Kio-v2.0.0.apk --clobber
+            if [ -f "releases/Kio-Desktop-v2.0.0-windows-x64.zip" ]; then
+              gh release upload v2.0.0 releases/Kio-Desktop-v2.0.0-windows-x64.zip --clobber
+            fi
             gh release edit v2.0.0 --title "Kio v2.0.0 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v2.0.0 releases/Kio-v2.0.0.apk \
+            ASSETS="releases/Kio-v2.0.0.apk"
+            if [ -f "releases/Kio-Desktop-v2.0.0-windows-x64.zip" ]; then
+              ASSETS="$ASSETS releases/Kio-Desktop-v2.0.0-windows-x64.zip"
+            fi
+            gh release create v2.0.0 $ASSETS \
               --title "Kio v2.0.0 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi
