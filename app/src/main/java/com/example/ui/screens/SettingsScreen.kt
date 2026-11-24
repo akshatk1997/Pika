@@ -141,7 +141,9 @@ fun SettingsScreen(
   var activeFolder by remember { mutableStateOf<SettingsFolder?>(null) }
 
   LaunchedEffect(Unit) {
-    onCheckForUpdates()
+    if (availableUpdate == null) {
+      onCheckForUpdates()
+    }
   }
 
   BackHandler {

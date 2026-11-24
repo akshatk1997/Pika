@@ -136,7 +136,9 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
   fun checkForUpdates(silent: Boolean = true, onComplete: ((AppUpdateInfo?) -> Unit)? = null) {
     viewModelScope.launch {
       val info = UpdateChecker.checkUpdate(com.example.BuildConfig.VERSION_NAME)
-      availableUpdate.value = info
+      if (info != null || !silent) {
+        availableUpdate.value = info
+      }
       if (!silent) {
         if (info != null) {
           showToast("Update available: v${info.versionName}")

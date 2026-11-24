@@ -948,12 +948,12 @@ class ExampleRobolectricTest {
     composeTestRule.waitForIdle()
 
     // Verify update banner card appears at the top of Settings
-    composeTestRule.onNodeWithTag("settings_update_available_card").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("settings_update_available_card").assertIsDisplayed()
     composeTestRule.onNodeWithText("New Update Available!").assertIsDisplayed()
     composeTestRule.onNodeWithText("v2.0.2").assertIsDisplayed()
 
     // Click on Update button to trigger automatic download
-    composeTestRule.onNodeWithTag("settings_download_update_button").performScrollTo().performClick()
+    composeTestRule.onNodeWithTag("settings_download_update_button").performClick()
     composeTestRule.waitForIdle()
 
     // Verify download was enqueued in downloads list
