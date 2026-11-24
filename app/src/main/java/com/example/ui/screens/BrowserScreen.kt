@@ -834,6 +834,7 @@ fun BrowserScreen(
             } else {
               ""
             }
+            val availableUpdate by viewModel.availableUpdate.collectAsStateWithLifecycle()
             SettingsScreen(
               settings = settings,
               currentUrl = shareableUrl,
@@ -841,6 +842,9 @@ fun BrowserScreen(
               systemDarkTheme = systemDark,
               sitePermissions = sitePermissions,
               systemWebViewInfo = viewModel.systemWebViewPackageInfo,
+              availableUpdate = availableUpdate,
+              onCheckForUpdates = { viewModel.checkForUpdates(silent = true) },
+              onDownloadUpdate = { url, ver -> viewModel.downloadAppUpdate(url, ver) },
               onUpdateSettings = { viewModel.updateSettings(it) },
               onAddCustomBlockedHost = { host -> viewModel.addCustomBlockedHost(host) },
               onRemoveCustomBlockedHost = { host -> viewModel.removeCustomBlockedHost(host) },

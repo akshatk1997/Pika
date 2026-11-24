@@ -20,8 +20,10 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.BookmarkImportExport
 import com.example.data.LocalBrowserDatabase
 import com.example.data.SettingsRepository
+import com.example.data.UpdateChecker
 import com.example.download.DownloadController
 import com.example.media.MediaPlaybackService
+import com.example.model.AppUpdateInfo
 import com.example.model.BookmarkItem
 import com.example.model.ClearDataOptions
 import com.example.model.ClosedTabRecord
@@ -128,6 +130,52 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
   private val _findState = MutableStateFlow(FindState())
   val findState: StateFlow<FindState> = _findState.asStateFlow()
+
+  val availableUpdate = MutableStateFlow<AppUpdateInfo?>(null)
+
+  fun checkForUpdates(silent: Boolean = true, onComplete: ((AppUpdateInfo?) -> Unit)? = null) {
+    viewModelScope.launch {
+      val info = UpdateChecker.checkUpdate(com.example.BuildConfig.VERSION_NAME)
+      availableUpdate.value = info
+      if (!silent) {
+        if (info != null) {
+          showToast("Update available: v${info.versionName}")
+        } else {
+          showToast("Kio is up to date (v${com.example.BuildConfig.VERSION_NAME})")
+        }
+      }
+      onComplete?.invoke(info)
+    }
+  }
+
+  fun downloadAppUpdate(downloadUrl: String, versionName: String) {
+    val fileName = "Kio-v$versionName.apk"
+    val mime = "application/vnd.android.package-archive"
+    downloadController.enqueueDirectDownload(
+      url = downloadUrl,
+      fileName = fileName,
+      mimeType = mime,
+      isPrivateTab = false
+    )
+    showToast("Downloading update v$versionName...")
+
+    try {
+      val dm = appContext.getSystemService(android.content.Context.DOWNLOAD_SERVICE) as? android.app.DownloadManager
+      if (dm != null) {
+        val req = android.app.DownloadManager.Request(android.net.Uri.parse(downloadUrl)).apply {
+          setTitle("Kio Browser Update v$versionName")
+          setDescription("Downloading Kio v$versionName APK update...")
+          setNotificationVisibility(android.app.DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+          setMimeType(mime)
+          setDestinationInExternalPublicDir(android.os.Environment.DIRECTORY_DOWNLOADS, fileName)
+          setAllowedOverMetered(true)
+          setAllowedOverRoaming(true)
+        }
+        dm.enqueue(req)
+      }
+    } catch (_: Throwable) {
+    }
+  }
 
   private val _readerArticle = MutableStateFlow<ReaderArticle?>(null)
   val readerArticle: StateFlow<ReaderArticle?> = _readerArticle.asStateFlow()

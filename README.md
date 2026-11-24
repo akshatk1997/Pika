@@ -14,6 +14,10 @@ Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.0.1.apk`](
 
 ## Core Highlights (v2.0.1 — Build 73)
 
+- **Automatic In-Settings Release Update Detection & Instant Downloader:**
+  - Automatically queries official releases on opening Settings.
+  - When a new version is released, a prominent update banner automatically appears at the top of Settings.
+  - Tapping anywhere on the banner or "Update" button immediately triggers background APK download into Downloads with system notifications and direct install capability without hassle.
 - **Collapsible Lock Symbol Address Bar:**
   - Removed permanent upper omnibox bar on web pages, merging control into a balanced bottom navigation bar.
   - Symmetrical 5-button toolbar with center lock icon (`[←] [→] [ 🔒 ] [3] [⋮]`).

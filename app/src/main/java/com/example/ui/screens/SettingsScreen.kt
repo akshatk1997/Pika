@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -65,6 +66,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -85,6 +87,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.BuildConfig
 import com.example.R
+import com.example.model.AppUpdateInfo
 import com.example.model.ClearDataOptions
 import com.example.model.ScreenFilterType
 import com.example.model.SearchEngine
@@ -129,9 +132,16 @@ fun SettingsScreen(
   onImportBookmarks: () -> Unit,
   onCopyText: (String, String) -> Unit = { _, _ -> },
   onShowMessage: (String) -> Unit,
+  availableUpdate: AppUpdateInfo? = null,
+  onCheckForUpdates: () -> Unit = {},
+  onDownloadUpdate: (String, String) -> Unit = { _, _ -> },
   onClose: () -> Unit
 ) {
   var activeFolder by remember { mutableStateOf<SettingsFolder?>(null) }
+
+  LaunchedEffect(Unit) {
+    onCheckForUpdates()
+  }
 
   BackHandler {
     if (activeFolder != null) {
@@ -193,6 +203,104 @@ fun SettingsScreen(
       ) {
       when (activeFolder) {
         null -> {
+          // New Update Available Option / Banner Card at the Top of Settings
+          if (availableUpdate != null) {
+            Card(
+              shape = RoundedCornerShape(18.dp),
+              border = BorderStroke(1.2.dp, Color(0xFF38BDF8)),
+              colors = CardDefaults.cardColors(
+                containerColor = if (resolvedDark) Color(0xFF0C1929) else Color(0xFFE0F2FE)
+              ),
+              modifier = Modifier
+                .widthIn(max = 720.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(18.dp))
+                .clickable {
+                  onDownloadUpdate(availableUpdate.downloadUrl, availableUpdate.versionName)
+                }
+                .testTag("settings_update_available_card")
+            ) {
+              Row(
+                modifier = Modifier.padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                Surface(
+                  shape = RoundedCornerShape(12.dp),
+                  color = Color(0xFF38BDF8).copy(alpha = 0.2f),
+                  modifier = Modifier.size(44.dp)
+                ) {
+                  Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                      imageVector = FeatherIcons.Download,
+                      contentDescription = "New update available",
+                      tint = Color(0xFF38BDF8),
+                      modifier = Modifier.size(24.dp)
+                    )
+                  }
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                  Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                      text = "New Update Available!",
+                      style = MaterialTheme.typography.titleSmall,
+                      fontWeight = FontWeight.Bold,
+                      color = if (resolvedDark) Color(0xFFF0F9FF) else Color(0xFF0369A1)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Surface(
+                      shape = RoundedCornerShape(6.dp),
+                      color = Color(0xFF38BDF8)
+                    ) {
+                      Text(
+                        text = "v${availableUpdate.versionName}",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black,
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                      )
+                    }
+                  }
+                  Spacer(modifier = Modifier.height(2.dp))
+                  Text(
+                    text = "Tap to download automatically without hassle",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (resolvedDark) Color(0xFFBAE6FD) else Color(0xFF0284C7)
+                  )
+                }
+                Surface(
+                  shape = RoundedCornerShape(12.dp),
+                  color = Color(0xFF38BDF8),
+                  modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable {
+                      onDownloadUpdate(availableUpdate.downloadUrl, availableUpdate.versionName)
+                    }
+                    .testTag("settings_download_update_button")
+                ) {
+                  Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                  ) {
+                    Icon(
+                      imageVector = FeatherIcons.Download,
+                      contentDescription = "Download",
+                      tint = Color.Black,
+                      modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                      text = "Update",
+                      style = MaterialTheme.typography.labelMedium,
+                      fontWeight = FontWeight.Bold,
+                      color = Color.Black
+                    )
+                  }
+                }
+              }
+            }
+          }
+
           // Brand & Version Summary Header Card
           Card(
             shape = RoundedCornerShape(18.dp),
@@ -945,6 +1053,45 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
               )
+            }
+          }
+
+          SettingsSectionCard("Software Update", Modifier.widthIn(max = 720.dp)) {
+            Row(
+              modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Column(modifier = Modifier.weight(1f)) {
+                Text(
+                  text = if (availableUpdate != null) "Update Available: v${availableUpdate.versionName}" else "Version ${BuildConfig.VERSION_NAME}",
+                  style = MaterialTheme.typography.bodyMedium,
+                  fontWeight = FontWeight.Medium
+                )
+                Text(
+                  text = if (availableUpdate != null) "Tap download to start update without hassle" else "Kio is up to date",
+                  style = MaterialTheme.typography.bodySmall,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+              }
+              Button(
+                onClick = {
+                  if (availableUpdate != null) {
+                    onDownloadUpdate(availableUpdate.downloadUrl, availableUpdate.versionName)
+                  } else {
+                    onCheckForUpdates()
+                  }
+                },
+                colors = ButtonDefaults.buttonColors(
+                  containerColor = if (availableUpdate != null) Color(0xFF38BDF8) else MaterialTheme.colorScheme.primaryContainer,
+                  contentColor = if (availableUpdate != null) Color.Black else MaterialTheme.colorScheme.onPrimaryContainer
+                ),
+                shape = RoundedCornerShape(10.dp)
+              ) {
+                Text(if (availableUpdate != null) "Download" else "Check Now")
+              }
             }
           }
 

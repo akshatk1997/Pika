@@ -238,3 +238,10 @@ data class ReaderArticle(
   val siteHost: String,
   val paragraphs: List<String>
 )
+
+data class AppUpdateInfo(
+  val versionName: String,
+  val downloadUrl: String,
+  val releaseNotes: String = "",
+  val sizeBytes: Long = 0L
+)

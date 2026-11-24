@@ -67,15 +67,22 @@ jobs:
           fi
           mkdir -p releases
           cp "$APK_PATH" releases/Kio-v2.0.1.apk
+          cat <<EOF > releases/latest.json
+          {
+            "version": "2.0.1",
+            "downloadUrl": "https://github.com/akshatk1997/Pika/releases/download/v2.0.1/Kio-v2.0.1.apk",
+            "notes": "Kio Browser v2.0.1 release"
+          }
+          EOF
           rm -f debug.keystore
 
       - name: Commit APK into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kio-v2.0.1.apk
+          git add releases/Kio-v2.0.1.apk releases/latest.json
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kio-v2.0.1.apk (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kio-v2.0.1.apk and latest.json (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."

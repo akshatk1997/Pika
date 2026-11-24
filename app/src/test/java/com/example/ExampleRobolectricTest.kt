@@ -908,4 +908,57 @@ class ExampleRobolectricTest {
     assertEquals("WEBM", vm.webViewPool.determineMediaFormat("https://cdn.example.com/clip.webm"))
     assertEquals("AUDIO", vm.webViewPool.determineMediaFormat("https://cdn.example.com/audio.aac"))
   }
+
+  @Test
+  fun updateCheckerSemverAndSettingsUpdateCardTriggerDownload() {
+    val vm = composeTestRule.activity.viewModel
+    composeTestRule.waitForIdle()
+
+    // 1. Verify semver comparison logic
+    assertTrue(com.example.data.UpdateChecker.isNewerVersion("v2.0.2", "2.0.1"))
+    assertTrue(com.example.data.UpdateChecker.isNewerVersion("v2.1.0", "2.0.1"))
+    assertTrue(com.example.data.UpdateChecker.isNewerVersion("3.0.0", "2.0.1"))
+    assertFalse(com.example.data.UpdateChecker.isNewerVersion("v2.0.1", "2.0.1"))
+    assertFalse(com.example.data.UpdateChecker.isNewerVersion("v2.0.0", "2.0.1"))
+    assertFalse(com.example.data.UpdateChecker.isNewerVersion("1.9.9", "2.0.1"))
+
+    // 2. Open Settings overlay
+    composeTestRule.runOnUiThread {
+      vm.setOverlay(com.example.ui.ActiveOverlay.SETTINGS)
+    }
+    composeTestRule.waitForIdle()
+
+    // Initially with no update available, the update card is not shown
+    composeTestRule.onNodeWithTag("settings_update_available_card").assertDoesNotExist()
+
+    // Simulate new update available detection
+    composeTestRule.runOnUiThread {
+      vm.availableUpdate.value = com.example.model.AppUpdateInfo(
+        versionName = "2.0.2",
+        downloadUrl = "https://github.com/akshatk1997/Pika/releases/download/v2.0.2/Kio-v2.0.2.apk",
+        releaseNotes = "New speed optimizations"
+      )
+    }
+    composeTestRule.waitForIdle()
+
+    // Verify update banner card appears at the top of Settings
+    composeTestRule.onNodeWithTag("settings_update_available_card").assertIsDisplayed()
+    composeTestRule.onNodeWithText("New Update Available!").assertIsDisplayed()
+    composeTestRule.onNodeWithText("v2.0.2").assertIsDisplayed()
+
+    // Click on Update button to trigger automatic download
+    composeTestRule.onNodeWithTag("settings_download_update_button").performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify download was enqueued in downloads list
+    val downloads = vm.downloads.value
+    assertTrue(downloads.any { it.fileName.contains("Kio-v2.0.2.apk") })
+
+    // Clean up
+    composeTestRule.runOnUiThread {
+      vm.availableUpdate.value = null
+      vm.setOverlay(com.example.ui.ActiveOverlay.NONE)
+    }
+    composeTestRule.waitForIdle()
+  }
 }
