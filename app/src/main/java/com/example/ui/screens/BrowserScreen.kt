@@ -735,8 +735,9 @@ fun BrowserScreen(
                 }
               }
             }
+          }
 
-            if (settings.oneHandedModeEnabled && !isOneHandedActive) {
+          if (settings.oneHandedModeEnabled && !isOneHandedActive) {
               Surface(
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.primaryContainer,
