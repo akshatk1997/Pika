@@ -1039,22 +1039,22 @@ class ExampleRobolectricTest {
     composeTestRule.waitForIdle()
 
     // 1. Verify Cursive Script typography header matching reference image
-    composeTestRule.onNodeWithText("One browser,").assertIsDisplayed()
-    composeTestRule.onNodeWithText("every thing you are.").assertIsDisplayed()
+    composeTestRule.onNodeWithText("One browser,").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithText("every thing you are.").performScrollTo().assertIsDisplayed()
 
     // 2. Verify Privacy-First badge and thought process
-    composeTestRule.onNodeWithText("STEALTH PRIVACY FIRST · ZERO TELEMETRY").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("intro_thought_process").assertIsDisplayed()
+    composeTestRule.onNodeWithText("STEALTH PRIVACY FIRST · ZERO TELEMETRY").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("intro_thought_process").performScrollTo().assertIsDisplayed()
 
     // 3. Verify Unique Pillar Cards are present without 2mb mention
-    composeTestRule.onNodeWithText("Stealth Privacy & Zero Leaks").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Integrated Ad & Video Shield").assertIsDisplayed()
-    composeTestRule.onNodeWithText("One-Handed & Grayscale Modes").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Pure On-Device NLP Announcer").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Tactile Gestures & Pull-to-Refresh").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Stealth Privacy & Zero Leaks").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithText("Integrated Ad & Video Shield").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithText("One-Handed & Grayscale Modes").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithText("Pure On-Device NLP Announcer").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithText("Tactile Gestures & Pull-to-Refresh").performScrollTo().assertIsDisplayed()
 
     // 4. Verify Start Browsing button is present and dismisses intro
-    composeTestRule.onNodeWithTag("intro_get_started").performClick()
+    composeTestRule.onNodeWithTag("intro_get_started").performScrollTo().performClick()
     composeTestRule.waitForIdle()
     assertFalse(vm.showIntro.value)
   }

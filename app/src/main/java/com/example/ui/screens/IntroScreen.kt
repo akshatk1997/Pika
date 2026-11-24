@@ -189,7 +189,7 @@ fun IntroScreen(
         // Privacy Positioning Card
         AnimatedVisibility(
           visible = isVisible,
-          enter = fadeIn(tween(550, delayMillis = 120)) + slideInVertically(
+          enter = fadeIn(tween(350)) + slideInVertically(
             spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow)
           ) { 30 }
         ) {
@@ -218,7 +218,7 @@ fun IntroScreen(
         // Unique Privacy & Power Pillars (Staggered Animation)
         AnimatedVisibility(
           visible = isVisible,
-          enter = fadeIn(tween(600, delayMillis = 200)) + slideInVertically(
+          enter = fadeIn(tween(400)) + slideInVertically(
             spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow)
           ) { 40 }
         ) {
@@ -270,7 +270,7 @@ fun IntroScreen(
         // Start Browsing Button with Breathing Glow Accent
         AnimatedVisibility(
           visible = isVisible,
-          enter = fadeIn(tween(650, delayMillis = 350)) + slideInVertically(
+          enter = fadeIn(tween(450)) + slideInVertically(
             spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow)
           ) { 50 }
         ) {
