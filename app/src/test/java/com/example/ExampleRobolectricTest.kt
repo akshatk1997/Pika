@@ -184,7 +184,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Resources").assertDoesNotExist()
     composeTestRule.onNodeWithText("Settings").performScrollTo().performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 2.0.1").assertIsDisplayed()
+    composeTestRule.onNodeWithText("General & Search").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
 
     // Navigate into Data Saver folder
@@ -979,7 +979,7 @@ class ExampleRobolectricTest {
     composeTestRule.waitForIdle()
 
     // 1. Verify Kio Browser brand & version summary card is removed from settings header
-    composeTestRule.onNodeWithText("Browser Settings").assertIsDisplayed()
+    composeTestRule.onNodeWithText("General & Search").assertIsDisplayed()
     composeTestRule.onNodeWithText("Version ${com.example.BuildConfig.VERSION_NAME}").assertDoesNotExist()
 
     // 2. Open Appearance & Display folder
