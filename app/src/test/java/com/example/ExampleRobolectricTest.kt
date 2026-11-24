@@ -1044,7 +1044,7 @@ class ExampleRobolectricTest {
 
     // 2. Verify Privacy-First badge and thought process
     composeTestRule.onNodeWithText("STEALTH PRIVACY FIRST · ZERO TELEMETRY").assertExists()
-    composeTestRule.onNodeWithTag("intro_thought_process").assertExists()
+    composeTestRule.onNodeWithTag("intro_thought_process", useUnmergedTree = true).assertExists()
 
     // 3. Verify Unique Pillar Cards are present without 2mb mention
     composeTestRule.onNodeWithText("Stealth Privacy & Zero Leaks").assertExists()
@@ -1054,7 +1054,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Tactile Gestures & Pull-to-Refresh").assertExists()
 
     // 4. Verify Start Browsing button is present and dismisses intro
-    composeTestRule.onNodeWithTag("intro_get_started").assertExists()
+    composeTestRule.onNodeWithTag("intro_get_started", useUnmergedTree = true).assertExists()
     composeTestRule.runOnUiThread {
       vm.dismissIntro()
     }
