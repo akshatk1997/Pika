@@ -212,6 +212,11 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     settingsRepo.setIntroSeen(true)
   }
 
+  fun resetIntro() {
+    _showIntro.value = true
+    settingsRepo.setIntroSeen(false)
+  }
+
   private val _externalLinkPrompt = MutableStateFlow<ExternalLinkPrompt?>(null)
   val externalLinkPrompt: StateFlow<ExternalLinkPrompt?> = _externalLinkPrompt.asStateFlow()
 

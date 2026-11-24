@@ -1032,10 +1032,9 @@ class ExampleRobolectricTest {
 
   @Test
   fun animatedCursiveIntroScreenAndPrivacyPositioningVerified() {
-    composeTestRule.waitForIdle()
-    // Test IntroScreen directly
-    composeTestRule.setContent {
-      com.example.ui.screens.IntroScreen(onGetStarted = {})
+    val vm = composeTestRule.activity.viewModel
+    composeTestRule.runOnUiThread {
+      vm.resetIntro()
     }
     composeTestRule.waitForIdle()
 
@@ -1054,7 +1053,9 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Pure On-Device NLP Announcer").assertIsDisplayed()
     composeTestRule.onNodeWithText("Tactile Gestures & Pull-to-Refresh").assertIsDisplayed()
 
-    // 4. Verify Start Browsing button is present
-    composeTestRule.onNodeWithTag("intro_get_started").assertIsDisplayed()
+    // 4. Verify Start Browsing button is present and dismisses intro
+    composeTestRule.onNodeWithTag("intro_get_started").performClick()
+    composeTestRule.waitForIdle()
+    assertFalse(vm.showIntro.value)
   }
 }
