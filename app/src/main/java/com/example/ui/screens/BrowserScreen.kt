@@ -188,6 +188,7 @@ fun BrowserScreen(
   val phishingAssessment by viewModel.phishingAssessment.collectAsStateWithLifecycle()
   val detectedMediaMap by viewModel.detectedMediaMap.collectAsStateWithLifecycle()
   val extractedImages by viewModel.extractedImages.collectAsStateWithLifecycle()
+  val availableUpdate by viewModel.availableUpdate.collectAsStateWithLifecycle()
 
   var showSiteInfoDialog by remember { mutableStateOf(false) }
   var showPrivateAuditDialog by remember { mutableStateOf(false) }
@@ -953,7 +954,6 @@ fun BrowserScreen(
             } else {
               ""
             }
-            val availableUpdate by viewModel.availableUpdate.collectAsStateWithLifecycle()
             SettingsScreen(
               settings = settings,
               currentUrl = shareableUrl,
