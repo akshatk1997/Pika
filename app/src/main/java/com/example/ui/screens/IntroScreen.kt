@@ -3,6 +3,7 @@ package com.example.ui.screens
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -73,12 +75,32 @@ fun IntroScreen(
   val haptic = LocalHapticFeedback.current
   val entranceProgress = remember { Animatable(0f) }
 
+  val line1Full = "One browser,"
+  val line2Full = "every thing you are."
+
+  val line1Progress = remember { Animatable(0f) }
+  val line2Progress = remember { Animatable(0f) }
+
   LaunchedEffect(Unit) {
     entranceProgress.animateTo(
       targetValue = 1f,
-      animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing)
+      animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing)
+    )
+    line1Progress.animateTo(
+      targetValue = line1Full.length.toFloat(),
+      animationSpec = tween(durationMillis = 350, easing = LinearEasing)
+    )
+    line2Progress.animateTo(
+      targetValue = line2Full.length.toFloat(),
+      animationSpec = tween(durationMillis = 480, easing = LinearEasing)
     )
   }
+
+  val line1Chars = line1Progress.value.toInt().coerceIn(0, line1Full.length)
+  val line2Chars = line2Progress.value.toInt().coerceIn(0, line2Full.length)
+
+  val displayLine1 = line1Full.take(line1Chars)
+  val displayLine2 = line2Full.take(line2Chars)
 
   // Infinite breathing glow for Start button
   val infiniteTransition = rememberInfiniteTransition(label = "intro_glow")
@@ -127,40 +149,12 @@ fun IntroScreen(
           contentDescription = stringResource(R.string.app_name)
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(18.dp))
 
-        // Privacy-Focused Tag Pill
-        Surface(
-          shape = RoundedCornerShape(20.dp),
-          color = Color(0xFF10B981).copy(alpha = 0.12f),
-          border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.45f)),
-          modifier = Modifier.padding(bottom = 12.dp)
-        ) {
-          Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp),
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Icon(
-              imageVector = FeatherIcons.PrivateMask,
-              contentDescription = null,
-              tint = Color(0xFF10B981),
-              modifier = Modifier.size(15.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-              text = "STEALTH PRIVACY FIRST · ZERO TELEMETRY",
-              style = MaterialTheme.typography.labelSmall,
-              fontWeight = FontWeight.Bold,
-              color = Color(0xFF10B981),
-              letterSpacing = 0.8.sp
-            )
-          }
-        }
-
-        // Prominent Cursive Script Header matching reference typography:
+        // Prominent Cursive Script Header with Typewriter Typing Animation:
         // "One browser,\nevery thing you are."
         Text(
-          text = "One browser,",
+          text = displayLine1,
           fontFamily = FontFamily.Cursive,
           fontSize = 38.sp,
           fontWeight = FontWeight.Normal,
@@ -168,39 +162,22 @@ fun IntroScreen(
           lineHeight = 44.sp,
           color = MaterialTheme.colorScheme.onBackground
         )
-        Text(
-          text = "every thing you are.",
-          fontFamily = FontFamily.Cursive,
-          fontSize = 38.sp,
-          fontWeight = FontWeight.Normal,
-          textAlign = TextAlign.Center,
-          lineHeight = 44.sp,
-          color = MaterialTheme.colorScheme.onBackground
-        )
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // Privacy Positioning Card
-        Surface(
-          shape = RoundedCornerShape(18.dp),
-          color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-          border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
-          modifier = Modifier
-            .fillMaxWidth()
-            .testTag("intro_thought_process")
+        Box(
+          modifier = Modifier.defaultMinSize(minHeight = 44.dp),
+          contentAlignment = Alignment.Center
         ) {
           Text(
-            text = "Architected for absolute privacy: zero telemetry, zero analytics, RAM-only private isolation, and lightning-fast speed.",
-            style = MaterialTheme.typography.bodyMedium,
-            fontStyle = FontStyle.Italic,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onSurface,
+            text = displayLine2,
+            fontFamily = FontFamily.Cursive,
+            fontSize = 38.sp,
+            fontWeight = FontWeight.Normal,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 13.dp)
+            lineHeight = 44.sp,
+            color = MaterialTheme.colorScheme.onBackground
           )
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         // Unique Privacy & Power Pillars
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -235,17 +212,9 @@ fun IntroScreen(
             title = "Pure On-Device NLP Announcer",
             subtitle = "Clean article reader with text-to-speech voice narration running 100% in RAM with zero data stored."
           )
-
-          IntroPillarCard(
-            icon = FeatherIcons.DataSaver,
-            badgeText = "120Hz FLUID",
-            badgeColor = Color(0xFF06B6D4),
-            title = "Tactile Gestures & Pull-to-Refresh",
-            subtitle = "Slide down anywhere to reload, tap the security lock to toggle the omnibox, and fluid high-refresh page navigation."
-          )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(28.dp))
 
         // Start Browsing Button with Breathing Glow Accent
         Surface(

@@ -504,11 +504,12 @@ fun BrowserScreen(
                 }
                 else -> {
                   val density = LocalDensity.current
-                  val slopPx = remember(density) { with(density) { 16.dp.toPx() } }
-                  val triggerPx = remember(density) { with(density) { 72.dp.toPx() } }
+                  val slopPx = remember(density) { with(density) { 20.dp.toPx() } }
+                  val triggerPx = remember(density) { with(density) { 92.dp.toPx() } }
                   var pullProgress by remember { mutableFloatStateOf(0f) }
                   val pullStartX = remember { mutableFloatStateOf(0f) }
                   val pullStartY = remember { mutableFloatStateOf(0f) }
+                  var isPressSlideEngaged by remember { mutableStateOf(false) }
                   val pullHaptic = LocalHapticFeedback.current
                   val webContainerVisibility = if (hasFullOverlay && !settings.backgroundPlayEnabled) View.INVISIBLE else View.VISIBLE
 
@@ -614,6 +615,7 @@ fun BrowserScreen(
                                   pullStartX.floatValue = event.x
                                   pullStartY.floatValue = event.y
                                   pullProgress = 0f
+                                  isPressSlideEngaged = false
                                   if (!isNavBarVisible) isNavBarVisible = true
                                 }
                                 MotionEvent.ACTION_MOVE -> {
@@ -621,9 +623,17 @@ fun BrowserScreen(
                                     pullStartX.floatValue = event.x
                                     pullStartY.floatValue = event.y
                                   }
+                                  val pressDuration = event.eventTime - event.downTime
                                   val dy = event.y - pullStartY.floatValue
                                   val dx = kotlin.math.abs(event.x - pullStartX.floatValue)
-                                  if (dy > slopPx && dy > dx * 1.2f && pullStartY.floatValue > 0f) {
+
+                                  // Only activate reload when user deliberately presses (>= 130ms) and slides down, not on normal rapid scrolling
+                                  if (!isPressSlideEngaged && pressDuration >= 130L && dy > slopPx * 0.75f && dy > dx * 1.4f) {
+                                    isPressSlideEngaged = true
+                                    pullHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                  }
+
+                                  if (isPressSlideEngaged && dy > slopPx && dy > dx * 1.25f && pullStartY.floatValue > 0f) {
                                     val newProgress = ((dy - slopPx) / triggerPx).coerceIn(0f, 1f)
                                     if (newProgress >= 0.85f && pullProgress < 0.85f) {
                                       pullHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -631,20 +641,23 @@ fun BrowserScreen(
                                     pullProgress = newProgress
                                   } else if (dy <= 0f) {
                                     pullProgress = 0f
+                                    isPressSlideEngaged = false
                                   }
                                 }
                                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                                  if (pullProgress >= 0.85f) {
+                                  if (isPressSlideEngaged && pullProgress >= 0.85f) {
                                     pullHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     viewModel.reloadOrStop()
                                   }
                                   pullProgress = 0f
+                                  isPressSlideEngaged = false
                                   pullStartX.floatValue = 0f
                                   pullStartY.floatValue = 0f
                                 }
                               }
                             } else {
                               pullProgress = 0f
+                              isPressSlideEngaged = false
                               pullStartX.floatValue = 0f
                               pullStartY.floatValue = 0f
                             }

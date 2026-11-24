@@ -66,12 +66,12 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kio-v2.0.3.apk
+          cp "$APK_PATH" releases/Kio-v2.0.4.apk
           cat <<EOF > releases/latest.json
           {
-            "version": "2.0.3",
-            "downloadUrl": "https://github.com/akshatk1997/Pika/releases/download/v2.0.3/Kio-v2.0.3.apk",
-            "notes": "Kio Browser v2.0.3 release with animated cursive intro, privacy positioning, and hardware rendering acceleration"
+            "version": "2.0.4",
+            "downloadUrl": "https://github.com/akshatk1997/Pika/releases/download/v2.0.4/Kio-v2.0.4.apk",
+            "notes": "Kio Browser v2.0.4 release with typewriter animated cursive intro, press-slide reload gesture, and streamlined layout"
           }
           EOF
           rm -f debug.keystore
@@ -80,25 +80,25 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kio-v2.0.3.apk releases/latest.json
+          git add releases/Kio-v2.0.4.apk releases/latest.json
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kio-v2.0.3.apk and latest.json (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kio-v2.0.4.apk and latest.json (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v2.0.3
+      - name: Create or update GitHub Release v2.0.4
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kio-v2.0.3.apk)
-          NOTES="Kio Browser v2.0.3 (Build 75) — Animated Cursive Script Intro, Stealth Privacy Positioning & Hardware Acceleration (< 2 MB).\n\n- **Animated Cursive Script Intro Header:**\n  - Distinctive cursive script typography ('One browser,\nevery thing you are.') matching the reference handwritten aesthetic.\n  - Staggered entrance animations, subtle ambient glow, and tactile haptic feedback.\n- **Stealth Privacy Positioning:**\n  - Positioned as a privacy-focused browser with zero telemetry, zero analytics, RAM-only private isolation, and strict cookie barrier.\n  - Highlighted unique capabilities: One-Handed Reachability, Grayscale Mode, Ad & Video Shield, On-Device NLP Voice Announcer, and 120Hz Pull-to-Refresh Gestures.\n- **Performance & Smoothness:**\n  - Hardware-accelerated rendering, priority scheduler, and lag-free Compose recomposition scopes.\n- **Strict Constraint:** Release APK strictly under 2 MB (2,097,152 bytes)."
-          if gh release view v2.0.3 >/dev/null 2>&1; then
-            gh release upload v2.0.3 releases/Kio-v2.0.3.apk --clobber
-            gh release edit v2.0.3 --title "Kio v2.0.3 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kio-v2.0.4.apk)
+          NOTES="Kio Browser v2.0.4 (Build 76) — Typewriter Animated Cursive Intro, Press-Slide Reload Gesture & Streamlined Layout (< 2 MB).\n\n- **Typewriter Animated Cursive Header:**\n  - Distinctive cursive script typography ('One browser,\nevery thing you are.') dynamically typed out letter by letter upon launch.\n- **Press-Slide Reload Gesture:**\n  - Intentional press & downward slide triggers reload with tactile haptics; normal scrolling is 100% unaffected.\n- **Streamlined Intro Layout:**\n  - Removed clutter cards for a cleaner, high-end presentation.\n- **Strict Constraint:** Release APK strictly under 2 MB (2,097,152 bytes)."
+          if gh release view v2.0.4 >/dev/null 2>&1; then
+            gh release upload v2.0.4 releases/Kio-v2.0.4.apk --clobber
+            gh release edit v2.0.4 --title "Kio v2.0.4 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v2.0.3 releases/Kio-v2.0.3.apk \
-              --title "Kio v2.0.3 (< 2 MB)" \
+            gh release create v2.0.4 releases/Kio-v2.0.4.apk \
+              --title "Kio v2.0.4 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

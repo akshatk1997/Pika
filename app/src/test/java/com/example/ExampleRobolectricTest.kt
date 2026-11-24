@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kio", appName)
-    assertEquals("2.0.3", BuildConfig.VERSION_NAME)
-    assertEquals(75, BuildConfig.VERSION_CODE)
+    assertEquals("2.0.4", BuildConfig.VERSION_NAME)
+    assertEquals(76, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -940,8 +940,8 @@ class ExampleRobolectricTest {
     // Simulate new update available detection
     composeTestRule.runOnUiThread {
       vm.availableUpdate.value = com.example.model.AppUpdateInfo(
-        versionName = "2.0.4",
-        downloadUrl = "https://github.com/akshatk1997/Pika/releases/download/v2.0.4/Kio-v2.0.4.apk",
+        versionName = "2.0.5",
+        downloadUrl = "https://github.com/akshatk1997/Pika/releases/download/v2.0.5/Kio-v2.0.5.apk",
         releaseNotes = "New speed optimizations"
       )
     }
@@ -950,7 +950,7 @@ class ExampleRobolectricTest {
     // Verify update banner card appears at the top of Settings
     composeTestRule.onNodeWithTag("settings_update_available_card").assertIsDisplayed()
     composeTestRule.onNodeWithText("New Update Available!").assertIsDisplayed()
-    composeTestRule.onNodeWithText("v2.0.4").assertIsDisplayed()
+    composeTestRule.onNodeWithText("v2.0.5").assertIsDisplayed()
 
     // Click on Update button to trigger automatic download
     composeTestRule.onNodeWithTag("settings_download_update_button").performClick()
@@ -958,7 +958,7 @@ class ExampleRobolectricTest {
 
     // Verify download was enqueued in downloads list
     val downloads = vm.downloads.value
-    assertTrue(downloads.any { it.fileName.contains("Kio-v2.0.4.apk") })
+    assertTrue(downloads.any { it.fileName.contains("Kio-v2.0.5.apk") })
 
     // Clean up
     composeTestRule.runOnUiThread {
@@ -1042,16 +1042,16 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("One browser,").assertExists()
     composeTestRule.onNodeWithText("every thing you are.").assertExists()
 
-    // 2. Verify Privacy-First badge and thought process
-    composeTestRule.onNodeWithText("STEALTH PRIVACY FIRST · ZERO TELEMETRY").assertExists()
-    composeTestRule.onNodeWithTag("intro_thought_process", useUnmergedTree = true).assertExists()
+    // 2. Verify removed items from user images are completely gone
+    composeTestRule.onNodeWithText("STEALTH PRIVACY FIRST · ZERO TELEMETRY").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("intro_thought_process", useUnmergedTree = true).assertDoesNotExist()
+    composeTestRule.onNodeWithText("Tactile Gestures & Pull-to-Refresh").assertDoesNotExist()
 
     // 3. Verify Unique Pillar Cards are present without 2mb mention
     composeTestRule.onNodeWithText("Stealth Privacy & Zero Leaks").assertExists()
     composeTestRule.onNodeWithText("Integrated Ad & Video Shield").assertExists()
     composeTestRule.onNodeWithText("One-Handed & Grayscale Modes").assertExists()
     composeTestRule.onNodeWithText("Pure On-Device NLP Announcer").assertExists()
-    composeTestRule.onNodeWithText("Tactile Gestures & Pull-to-Refresh").assertExists()
 
     // 4. Verify Start Browsing button is present and dismisses intro
     composeTestRule.onNodeWithTag("intro_get_started", useUnmergedTree = true).assertExists()
