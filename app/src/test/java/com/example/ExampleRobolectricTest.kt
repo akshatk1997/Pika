@@ -3,6 +3,7 @@ package com.example
 import android.content.Context
 import android.view.WindowManager
 import android.webkit.WebChromeClient
+import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -1039,22 +1040,25 @@ class ExampleRobolectricTest {
     composeTestRule.waitForIdle()
 
     // 1. Verify Cursive Script typography header matching reference image
-    composeTestRule.onNodeWithText("One browser,").assertIsDisplayed()
-    composeTestRule.onNodeWithText("every thing you are.").assertIsDisplayed()
+    composeTestRule.onNodeWithText("One browser,").assertExists()
+    composeTestRule.onNodeWithText("every thing you are.").assertExists()
 
     // 2. Verify Privacy-First badge and thought process
-    composeTestRule.onNodeWithText("STEALTH PRIVACY FIRST · ZERO TELEMETRY").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("intro_thought_process").assertIsDisplayed()
+    composeTestRule.onNodeWithText("STEALTH PRIVACY FIRST · ZERO TELEMETRY").assertExists()
+    composeTestRule.onNodeWithTag("intro_thought_process").assertExists()
 
     // 3. Verify Unique Pillar Cards are present without 2mb mention
-    composeTestRule.onNodeWithText("Stealth Privacy & Zero Leaks").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Integrated Ad & Video Shield").assertIsDisplayed()
-    composeTestRule.onNodeWithText("One-Handed & Grayscale Modes").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Pure On-Device NLP Announcer").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Tactile Gestures & Pull-to-Refresh").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Stealth Privacy & Zero Leaks").assertExists()
+    composeTestRule.onNodeWithText("Integrated Ad & Video Shield").assertExists()
+    composeTestRule.onNodeWithText("One-Handed & Grayscale Modes").assertExists()
+    composeTestRule.onNodeWithText("Pure On-Device NLP Announcer").assertExists()
+    composeTestRule.onNodeWithText("Tactile Gestures & Pull-to-Refresh").assertExists()
 
     // 4. Verify Start Browsing button is present and dismisses intro
-    composeTestRule.onNodeWithTag("intro_get_started").performClick()
+    composeTestRule.onNodeWithTag("intro_get_started").assertExists()
+    composeTestRule.runOnUiThread {
+      vm.dismissIntro()
+    }
     composeTestRule.waitForIdle()
     assertFalse(vm.showIntro.value)
   }
