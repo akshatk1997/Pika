@@ -3,7 +3,6 @@ package com.example
 import android.content.Context
 import android.view.WindowManager
 import android.webkit.WebChromeClient
-import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
