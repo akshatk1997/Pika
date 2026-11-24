@@ -221,7 +221,7 @@ fun BrowserScreen(
     }
   }
 
-  var isOneHandedActive by rememberSaveable { mutableStateOf(false) }
+  var isOneHandedActive by remember { mutableStateOf(false) }
 
   LaunchedEffect(settings.oneHandedModeEnabled) {
     isOneHandedActive = settings.oneHandedModeEnabled
@@ -414,7 +414,8 @@ fun BrowserScreen(
                 label = "one_handed_offset"
               )
 
-              if (isOneHanded || animatedOffsetFraction > 0.01f) {
+              Box(modifier = Modifier.fillMaxSize()) {
+                if (isOneHanded || animatedOffsetFraction > 0.01f) {
                 Box(
                   modifier = Modifier
                     .fillMaxWidth()
