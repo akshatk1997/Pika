@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kio", appName)
-    assertEquals("2.0.0", BuildConfig.VERSION_NAME)
-    assertEquals(72, BuildConfig.VERSION_CODE)
+    assertEquals("2.0.1", BuildConfig.VERSION_NAME)
+    assertEquals(73, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -178,7 +178,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Resources").assertDoesNotExist()
     composeTestRule.onNodeWithText("Settings").performScrollTo().performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Version 2.0.0").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version 2.0.1").assertIsDisplayed()
     composeTestRule.onNodeWithText("Address bar position").assertDoesNotExist()
 
     // Navigate into Data Saver folder

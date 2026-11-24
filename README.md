@@ -8,12 +8,18 @@
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.0.0.apk`](releases/Kio-v2.0.0.apk) and published in GitHub Releases (`v2.0.0`).
+Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.0.1.apk`](releases/Kio-v2.0.1.apk) and published in GitHub Releases (`v2.0.1`).
 
 ---
 
-## Core Highlights (v2.0.0 — Build 72)
+## Core Highlights (v2.0.1 — Build 73)
 
+- **Collapsible Lock Symbol Address Bar:**
+  - Removed permanent upper omnibox bar on web pages, merging control into a balanced bottom navigation bar.
+  - Symmetrical 5-button toolbar with center lock icon (`[←] [→] [ 🔒 ] [3] [⋮]`).
+  - Tapping lock option reveals full address bar (security state, URL, copy URL, and blocked tracker shield badge count). Tapping again collapses it smoothly.
+- **Natural Slide-Down Pull-to-Refresh Gesture:**
+  - Intuitive pull-down gesture on web pages with a floating circular refresh card indicator, live spinning animation, and tactile haptic feedback to reload the page.
 - **Soul Browser Power-User Feature Suite:**
   - **Media & Video Downloader / Sniffer:** Automatically sniffs video and audio streams (MP4, WEBM, M3U8/HLS, M4V, MP3) playing or loaded on any page, showing a live detected badge count in the 3-dot menu and opening a dialog with 1-tap Download, External Player launch (VLC/MX Player), and direct link copying.
   - **Save All Images / Image Sniffer & Batch Downloader ("Image Box"):** Scrapes all images (`img`, `picture source`, CSS `background-image`) into a gallery dialog with "Select All" toggle and batch downloads them directly to Pictures.

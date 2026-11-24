@@ -44,7 +44,9 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -94,6 +96,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -423,11 +426,12 @@ fun BrowserScreen(
                 }
                 else -> {
                   val density = LocalDensity.current
-                  val slopPx = remember(density) { with(density) { 18.dp.toPx() } }
-                  val triggerPx = remember(density) { with(density) { 120.dp.toPx() } }
+                  val slopPx = remember(density) { with(density) { 16.dp.toPx() } }
+                  val triggerPx = remember(density) { with(density) { 72.dp.toPx() } }
                   var pullProgress by remember { mutableFloatStateOf(0f) }
                   val pullStartX = remember { mutableFloatStateOf(0f) }
                   val pullStartY = remember { mutableFloatStateOf(0f) }
+                  val pullHaptic = LocalHapticFeedback.current
                   val webContainerVisibility = if (hasFullOverlay && !settings.backgroundPlayEnabled) View.INVISIBLE else View.VISIBLE
 
                   Box(modifier = Modifier.fillMaxSize()) {
@@ -509,7 +513,8 @@ fun BrowserScreen(
                             }
                           }
                           targetWebView.setOnTouchListener { v, event ->
-                            if (v.scrollY == 0) {
+                            val isAtTop = v.scrollY <= 0 || !v.canScrollVertically(-1)
+                            if (isAtTop) {
                               when (event.actionMasked) {
                                 MotionEvent.ACTION_DOWN -> {
                                   pullStartX.floatValue = event.x
@@ -518,16 +523,25 @@ fun BrowserScreen(
                                   if (!isNavBarVisible) isNavBarVisible = true
                                 }
                                 MotionEvent.ACTION_MOVE -> {
+                                  if (pullStartY.floatValue <= 0f) {
+                                    pullStartX.floatValue = event.x
+                                    pullStartY.floatValue = event.y
+                                  }
                                   val dy = event.y - pullStartY.floatValue
                                   val dx = kotlin.math.abs(event.x - pullStartX.floatValue)
-                                  if (dy > slopPx && dy > dx * 1.4f && pullStartY.floatValue > 0f) {
-                                    pullProgress = ((dy - slopPx) / triggerPx).coerceIn(0f, 1f)
-                                  } else {
+                                  if (dy > slopPx && dy > dx * 1.2f && pullStartY.floatValue > 0f) {
+                                    val newProgress = ((dy - slopPx) / triggerPx).coerceIn(0f, 1f)
+                                    if (newProgress >= 0.85f && pullProgress < 0.85f) {
+                                      pullHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    }
+                                    pullProgress = newProgress
+                                  } else if (dy <= 0f) {
                                     pullProgress = 0f
                                   }
                                 }
                                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                                  if (pullProgress >= 0.95f) {
+                                  if (pullProgress >= 0.85f) {
+                                    pullHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     viewModel.reloadOrStop()
                                   }
                                   pullProgress = 0f
@@ -537,6 +551,8 @@ fun BrowserScreen(
                               }
                             } else {
                               pullProgress = 0f
+                              pullStartX.floatValue = 0f
+                              pullStartY.floatValue = 0f
                             }
                             false
                           }
@@ -555,11 +571,33 @@ fun BrowserScreen(
                         modifier = Modifier.fillMaxSize().testTag("webview_container")
                       )
                     }
-                    if (pullProgress > 0.1f) {
-                      LinearProgressIndicator(
-                        progress = { pullProgress },
-                        modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter)
-                      )
+                    if (pullProgress > 0.06f) {
+                      val pullRotation = pullProgress * 360f
+                      Surface(
+                        shape = CircleShape,
+                        color = if (isDarkTheme) Color(0xFF1E2330) else Color.White,
+                        shadowElevation = 6.dp,
+                        border = BorderStroke(1.dp, if (isDarkTheme) Color(0xFF333C4E) else Color(0xFFE2E8F0)),
+                        modifier = Modifier
+                          .align(Alignment.TopCenter)
+                          .offset(y = (pullProgress * 50).dp)
+                          .size(40.dp)
+                      ) {
+                        Box(contentAlignment = Alignment.Center) {
+                          Icon(
+                            imageVector = Icons.Filled.Refresh,
+                            contentDescription = stringResource(R.string.cd_reload),
+                            tint = if (pullProgress >= 0.85f) {
+                              if (activeTab.isPrivate) FeatherPrivateAccent else if (isDarkTheme) Color(0xFF38BDF8) else Color(0xFF0284C7)
+                            } else {
+                              if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
+                            },
+                            modifier = Modifier
+                              .size(20.dp)
+                              .rotate(pullRotation)
+                          )
+                        }
+                      }
                     }
                   }
                 }
@@ -995,6 +1033,14 @@ fun BrowserScreen(
               showQuickSheet = false
               viewModel.toggleBrowserFullscreen()
             },
+            QuickActionItem(
+              Icons.Filled.Refresh,
+              stringResource(R.string.cd_reload),
+              hasUrl
+            ) {
+              showQuickSheet = false
+              viewModel.reloadOrStop()
+            },
             QuickActionItem(FeatherIcons.PrivateMask, stringResource(R.string.action_new_private_tab), true) {
               showQuickSheet = false
               viewModel.openNewTab(isPrivate = true)
@@ -1110,6 +1156,14 @@ fun BrowserScreen(
             ) {
               showQuickSheet = false
               viewModel.toggleBrowserFullscreen()
+            },
+            QuickActionItem(
+              Icons.Filled.Refresh,
+              stringResource(R.string.cd_reload),
+              hasUrl
+            ) {
+              showQuickSheet = false
+              viewModel.reloadOrStop()
             },
             QuickActionItem(FeatherIcons.PrivateMask, stringResource(R.string.action_new_private_tab), true) {
               showQuickSheet = false
@@ -1670,6 +1724,7 @@ private fun BrowserToolbar(
   var omniboxValue by remember(activeTab.id, activeTab.url) {
     mutableStateOf(TextFieldValue(activeTab.url, TextRange(0, activeTab.url.length)))
   }
+  var isAddressBarExpanded by remember(activeTab.id, activeTab.url) { mutableStateOf(false) }
   var isFocused by remember { mutableStateOf(false) }
   var clipboardCandidate by remember { mutableStateOf<String?>(null) }
   val focusManager = LocalFocusManager.current
@@ -1800,6 +1855,7 @@ private fun BrowserToolbar(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
             keyboardActions = KeyboardActions(onGo = {
               if (omniboxValue.text.isNotBlank()) {
+                isAddressBarExpanded = false
                 focusManager.clearFocus()
                 onNavigate(omniboxValue.text)
               }
@@ -2039,90 +2095,99 @@ private fun BrowserToolbar(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
           ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = secTint.copy(alpha = 0.14f),
-                modifier = Modifier
-                  .size(34.dp)
-                  .clickable { onOpenSiteInfo() }
-                  .testTag("security_badge_button")
-              ) {
-                Box(contentAlignment = Alignment.Center) {
-                  Icon(
-                    imageVector = secIcon,
-                    contentDescription = secDesc,
-                    tint = secTint,
-                    modifier = Modifier.size(18.dp)
-                  )
+            IconButton(
+              onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onBack()
+              },
+              enabled = activeTab.canGoBack || activeTab.httpWarning != null || activeTab.errorState != null,
+              modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_back_button")
+            ) {
+              Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
+            }
+            IconButton(
+              onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onForward()
+              },
+              enabled = activeTab.canGoForward,
+              modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_forward_button")
+            ) {
+              Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = stringResource(R.string.cd_forward))
+            }
+
+            Surface(
+              shape = RoundedCornerShape(12.dp),
+              color = secTint.copy(alpha = 0.14f),
+              border = BorderStroke(1.dp, secTint.copy(alpha = 0.35f)),
+              modifier = Modifier
+                .minimumInteractiveComponentSize()
+                .clickable {
+                  haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                  onOpenSiteInfo()
                 }
-              }
-              Spacer(modifier = Modifier.width(4.dp))
-              IconButton(
-                onClick = {
-                  haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                  onBack()
-                },
-                enabled = activeTab.canGoBack || activeTab.httpWarning != null || activeTab.errorState != null,
-                modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_back_button")
-              ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
-              }
-              IconButton(
-                onClick = {
-                  haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                  onForward()
-                },
-                enabled = activeTab.canGoForward,
-                modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_forward_button")
-              ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = stringResource(R.string.cd_forward))
+                .testTag("security_badge_button")
+            ) {
+              Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+                Icon(
+                  imageVector = secIcon,
+                  contentDescription = secDesc,
+                  tint = secTint,
+                  modifier = Modifier.size(20.dp)
+                )
               }
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Surface(
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(
-                  1.5.dp,
-                  if (isPrivate) privateAccent else headerTextPrimary.copy(alpha = 0.85f)
-                ),
-                color = tabBadgeBg,
-                modifier = Modifier
-                  .minimumInteractiveComponentSize()
-                  .clickable {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onOpenTabs()
-                  }
-                  .testTag("nav_tabs_button")
-              ) {
-                Box(
-                  contentAlignment = Alignment.Center,
-                  modifier = Modifier.padding(horizontal = 11.dp, vertical = 5.dp)
-                ) {
-                  Text(
-                    text = tabCount.toString(),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isPrivate) privateAccent else headerTextPrimary
-                  )
+            Surface(
+              shape = RoundedCornerShape(12.dp),
+              border = BorderStroke(
+                1.5.dp,
+                if (isPrivate) privateAccent else headerTextPrimary.copy(alpha = 0.85f)
+              ),
+              color = tabBadgeBg,
+              modifier = Modifier
+                .minimumInteractiveComponentSize()
+                .clickable {
+                  haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                  onOpenTabs()
                 }
-              }
-
-              IconButton(
-                onClick = {
-                  haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                  onOpenQuickMenu()
-                },
-                modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_menu_button")
+                .testTag("nav_tabs_button")
+            ) {
+              Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.padding(horizontal = 11.dp, vertical = 5.dp)
               ) {
-                Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.cd_menu))
+                Text(
+                  text = tabCount.toString(),
+                  style = MaterialTheme.typography.labelMedium,
+                  fontWeight = FontWeight.Bold,
+                  color = if (isPrivate) privateAccent else headerTextPrimary
+                )
               }
+            }
+
+            IconButton(
+              onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onOpenQuickMenu()
+              },
+              modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_menu_button")
+            ) {
+              Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.cd_menu))
             }
           }
         } else {
           Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp)) {
-            omniboxPill(Modifier.fillMaxWidth())
+            AnimatedVisibility(
+              visible = isAddressBarExpanded || isFocused,
+              enter = expandVertically() + fadeIn(),
+              exit = shrinkVertically() + fadeOut()
+            ) {
+              Column {
+                omniboxPill(Modifier.fillMaxWidth())
+                Spacer(modifier = Modifier.height(6.dp))
+              }
+            }
 
             Row(
               modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
@@ -2149,18 +2214,30 @@ private fun BrowserToolbar(
               ) {
                 Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = stringResource(R.string.cd_forward))
               }
-              IconButton(
-                onClick = {
-                  haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                  onReloadOrStop()
-                },
-                enabled = activeTab.url.isNotBlank() || activeTab.errorState != null,
-                modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_reload_button")
+
+              Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = if (isAddressBarExpanded) headerAccent.copy(alpha = 0.22f) else secTint.copy(alpha = 0.14f),
+                border = BorderStroke(
+                  1.dp,
+                  if (isAddressBarExpanded) headerAccent.copy(alpha = 0.6f) else secTint.copy(alpha = 0.35f)
+                ),
+                modifier = Modifier
+                  .minimumInteractiveComponentSize()
+                  .clickable {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    isAddressBarExpanded = !isAddressBarExpanded
+                  }
+                  .testTag("nav_lock_button")
               ) {
-                Icon(
-                  imageVector = if (activeTab.isLoading) Icons.Filled.Close else Icons.Filled.Refresh,
-                  contentDescription = if (activeTab.isLoading) stringResource(R.string.cd_stop) else stringResource(R.string.cd_reload)
-                )
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+                  Icon(
+                    imageVector = secIcon,
+                    contentDescription = if (isAddressBarExpanded) "Hide address bar" else "Show address bar: $secDesc",
+                    tint = secTint,
+                    modifier = Modifier.size(20.dp)
+                  )
+                }
               }
 
               Surface(
@@ -2212,6 +2289,7 @@ private fun BrowserToolbar(
             .fillMaxWidth()
             .clickable {
               val clip = clipboardCandidate ?: return@clickable
+              isAddressBarExpanded = false
               focusManager.clearFocus()
               onNavigate(clip)
             }
