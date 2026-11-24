@@ -764,6 +764,7 @@ fun BrowserScreen(
           }
         }
       }
+    }
 
     if (hasFullOverlay) {
       Box(
