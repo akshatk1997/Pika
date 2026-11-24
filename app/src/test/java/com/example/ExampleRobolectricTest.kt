@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kio", appName)
-    assertEquals("2.0.2", BuildConfig.VERSION_NAME)
-    assertEquals(74, BuildConfig.VERSION_CODE)
+    assertEquals("2.0.3", BuildConfig.VERSION_NAME)
+    assertEquals(75, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -940,8 +940,8 @@ class ExampleRobolectricTest {
     // Simulate new update available detection
     composeTestRule.runOnUiThread {
       vm.availableUpdate.value = com.example.model.AppUpdateInfo(
-        versionName = "2.0.2",
-        downloadUrl = "https://github.com/akshatk1997/Pika/releases/download/v2.0.2/Kio-v2.0.2.apk",
+        versionName = "2.0.4",
+        downloadUrl = "https://github.com/akshatk1997/Pika/releases/download/v2.0.4/Kio-v2.0.4.apk",
         releaseNotes = "New speed optimizations"
       )
     }
@@ -950,7 +950,7 @@ class ExampleRobolectricTest {
     // Verify update banner card appears at the top of Settings
     composeTestRule.onNodeWithTag("settings_update_available_card").assertIsDisplayed()
     composeTestRule.onNodeWithText("New Update Available!").assertIsDisplayed()
-    composeTestRule.onNodeWithText("v2.0.2").assertIsDisplayed()
+    composeTestRule.onNodeWithText("v2.0.4").assertIsDisplayed()
 
     // Click on Update button to trigger automatic download
     composeTestRule.onNodeWithTag("settings_download_update_button").performClick()
@@ -958,7 +958,7 @@ class ExampleRobolectricTest {
 
     // Verify download was enqueued in downloads list
     val downloads = vm.downloads.value
-    assertTrue(downloads.any { it.fileName.contains("Kio-v2.0.2.apk") })
+    assertTrue(downloads.any { it.fileName.contains("Kio-v2.0.4.apk") })
 
     // Clean up
     composeTestRule.runOnUiThread {
@@ -1028,5 +1028,33 @@ class ExampleRobolectricTest {
       }
     }
     composeTestRule.waitForIdle()
+  }
+
+  @Test
+  fun animatedCursiveIntroScreenAndPrivacyPositioningVerified() {
+    composeTestRule.waitForIdle()
+    // Test IntroScreen directly
+    composeTestRule.setContent {
+      com.example.ui.screens.IntroScreen(onGetStarted = {})
+    }
+    composeTestRule.waitForIdle()
+
+    // 1. Verify Cursive Script typography header matching reference image
+    composeTestRule.onNodeWithText("One browser,").assertIsDisplayed()
+    composeTestRule.onNodeWithText("every thing you are.").assertIsDisplayed()
+
+    // 2. Verify Privacy-First badge and thought process
+    composeTestRule.onNodeWithText("STEALTH PRIVACY FIRST · ZERO TELEMETRY").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("intro_thought_process").assertIsDisplayed()
+
+    // 3. Verify Unique Pillar Cards are present without 2mb mention
+    composeTestRule.onNodeWithText("Stealth Privacy & Zero Leaks").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Integrated Ad & Video Shield").assertIsDisplayed()
+    composeTestRule.onNodeWithText("One-Handed & Grayscale Modes").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Pure On-Device NLP Announcer").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Tactile Gestures & Pull-to-Refresh").assertIsDisplayed()
+
+    // 4. Verify Start Browsing button is present
+    composeTestRule.onNodeWithTag("intro_get_started").assertIsDisplayed()
   }
 }

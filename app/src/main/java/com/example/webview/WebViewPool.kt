@@ -2081,10 +2081,16 @@ class WebViewPool(
       webView.isVerticalScrollBarEnabled = true
       webView.isHorizontalScrollBarEnabled = true
       webView.scrollBarStyle = View.SCROLLBARS_INSIDE_OVERLAY
+      webView.overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+      if (!settingsState.grayscaleModeEnabled) {
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+      }
     } catch (_: Throwable) {
     }
     try {
       webView.settings.apply {
+        @Suppress("DEPRECATION")
+        setRenderPriority(WebSettings.RenderPriority.HIGH)
         javaScriptEnabled = settingsState.javascriptEnabled
         javaScriptCanOpenWindowsAutomatically = false
         mediaPlaybackRequiresUserGesture = false

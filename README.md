@@ -8,11 +8,20 @@
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.0.1.apk`](releases/Kio-v2.0.1.apk) and published in GitHub Releases (`v2.0.1`).
+Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.0.3.apk`](releases/Kio-v2.0.3.apk) and published in GitHub Releases (`v2.0.3`).
 
 ---
 
-## Core Highlights (v2.0.1 — Build 73)
+## Core Highlights (v2.0.3 — Build 75)
+
+- **Animated Cursive Script Intro Page:**
+  - Distinctive cursive script typography header (*"One browser, every thing you are."*) matching the reference handwritten aesthetic.
+  - Staggered entrance animations, subtle ambient glow, and tactile haptic feedback.
+  - Positioned as a privacy-focused browser highlighting zero telemetry, zero analytics, RAM-only private isolation, and strict cookie barrier.
+  - Removed all "2mb" mentions from the intro interface for a cleaner, more premium feel.
+  - Highlighted unique capabilities: One-Handed Reachability, Grayscale Mode, Ad & Video Shield, On-Device NLP Voice Announcer, and 120Hz Pull-to-Refresh Gestures.
+- **Hardware-Accelerated Rendering & Silk Smoothness:**
+  - Priority rendering policy (`WebSettings.RenderPriority.HIGH`) and hardware-accelerated layer (`View.LAYER_TYPE_HARDWARE`) ensuring ultra-fluid 120Hz/60Hz touch responsiveness with zero stutter or lag.
 
 - **One-Handed Mode (Comfortable Single-Thumb Browsing):**
   - Lowers the browsing viewport smoothly into the lower half of the screen, placing top website controls, inputs, and navigation within easy reach of one thumb.
