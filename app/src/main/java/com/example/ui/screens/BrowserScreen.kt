@@ -1033,14 +1033,6 @@ fun BrowserScreen(
               showQuickSheet = false
               viewModel.toggleBrowserFullscreen()
             },
-            QuickActionItem(
-              Icons.Filled.Refresh,
-              stringResource(R.string.cd_reload),
-              hasUrl
-            ) {
-              showQuickSheet = false
-              viewModel.reloadOrStop()
-            },
             QuickActionItem(FeatherIcons.PrivateMask, stringResource(R.string.action_new_private_tab), true) {
               showQuickSheet = false
               viewModel.openNewTab(isPrivate = true)
@@ -1156,14 +1148,6 @@ fun BrowserScreen(
             ) {
               showQuickSheet = false
               viewModel.toggleBrowserFullscreen()
-            },
-            QuickActionItem(
-              Icons.Filled.Refresh,
-              stringResource(R.string.cd_reload),
-              hasUrl
-            ) {
-              showQuickSheet = false
-              viewModel.reloadOrStop()
             },
             QuickActionItem(FeatherIcons.PrivateMask, stringResource(R.string.action_new_private_tab), true) {
               showQuickSheet = false
