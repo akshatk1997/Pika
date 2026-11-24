@@ -213,8 +213,21 @@ data class SettingsState(
   val screenFilterEnabled: Boolean = false,
   val screenFilterType: ScreenFilterType = ScreenFilterType.WARM_AMBER,
   val screenFilterOpacity: Float = 0.35f,
-  val cleanModeEnabled: Boolean = false
+  val cleanModeEnabled: Boolean = false,
+  val oneHandedModeEnabled: Boolean = false,
+  val oneHandedHandPreference: OneHandedPreference = OneHandedPreference.RIGHT,
+  val grayscaleModeEnabled: Boolean = false
 )
+
+enum class OneHandedPreference(val id: String, val label: String) {
+  RIGHT("right", "Right Hand"),
+  LEFT("left", "Left Hand"),
+  CENTER("center", "Centered");
+
+  companion object {
+    fun fromId(id: String): OneHandedPreference = entries.firstOrNull { it.id == id } ?: RIGHT
+  }
+}
 
 enum class ScreenFilterType(val id: String, val label: String, val colorHex: Long) {
   WARM_AMBER("warm_amber", "Warm Amber (Eye Care)", 0xFFFFB74D),

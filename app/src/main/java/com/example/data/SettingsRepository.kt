@@ -123,7 +123,10 @@ class SettingsRepository(context: Context) {
         screenFilterEnabled = obj.optBoolean("screenFilterEnabled", false),
         screenFilterType = ScreenFilterType.fromId(obj.optString("screenFilterType", ScreenFilterType.WARM_AMBER.id)),
         screenFilterOpacity = obj.optDouble("screenFilterOpacity", 0.35).toFloat().coerceIn(0.1f, 0.8f),
-        cleanModeEnabled = obj.optBoolean("cleanModeEnabled", false)
+        cleanModeEnabled = obj.optBoolean("cleanModeEnabled", false),
+        oneHandedModeEnabled = obj.optBoolean("oneHandedModeEnabled", false),
+        oneHandedHandPreference = com.example.model.OneHandedPreference.fromId(obj.optString("oneHandedHandPreference", com.example.model.OneHandedPreference.RIGHT.id)),
+        grayscaleModeEnabled = obj.optBoolean("grayscaleModeEnabled", false)
       )
     } catch (_: Throwable) {
       SettingsState()
@@ -156,6 +159,9 @@ class SettingsRepository(context: Context) {
       put("screenFilterType", state.screenFilterType.id)
       put("screenFilterOpacity", state.screenFilterOpacity.toDouble())
       put("cleanModeEnabled", state.cleanModeEnabled)
+      put("oneHandedModeEnabled", state.oneHandedModeEnabled)
+      put("oneHandedHandPreference", state.oneHandedHandPreference.id)
+      put("grayscaleModeEnabled", state.grayscaleModeEnabled)
     }
     writePayload(SETTINGS_FILE, obj.toString())
   }

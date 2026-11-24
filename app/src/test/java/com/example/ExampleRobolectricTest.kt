@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kio", appName)
-    assertEquals("2.0.1", BuildConfig.VERSION_NAME)
-    assertEquals(73, BuildConfig.VERSION_CODE)
+    assertEquals("2.0.2", BuildConfig.VERSION_NAME)
+    assertEquals(74, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -55,7 +55,10 @@ class ExampleRobolectricTest {
       retainOpenTabs = true,
       nightWebMode = true,
       backgroundPlayEnabled = true,
-      dataSaverEnabled = true
+      dataSaverEnabled = true,
+      oneHandedModeEnabled = true,
+      oneHandedHandPreference = com.example.model.OneHandedPreference.LEFT,
+      grayscaleModeEnabled = true
     )
     repo1.saveSettings(customSettings)
 
@@ -77,6 +80,9 @@ class ExampleRobolectricTest {
     assertTrue(loadedSettings.nightWebMode)
     assertTrue(loadedSettings.backgroundPlayEnabled)
     assertTrue(loadedSettings.dataSaverEnabled)
+    assertTrue(loadedSettings.oneHandedModeEnabled)
+    assertEquals(com.example.model.OneHandedPreference.LEFT, loadedSettings.oneHandedHandPreference)
+    assertTrue(loadedSettings.grayscaleModeEnabled)
 
     val restored = repo2.loadRetainedTabs()
     assertNotNull(restored)
@@ -958,6 +964,68 @@ class ExampleRobolectricTest {
     composeTestRule.runOnUiThread {
       vm.availableUpdate.value = null
       vm.setOverlay(com.example.ui.ActiveOverlay.NONE)
+    }
+    composeTestRule.waitForIdle()
+  }
+
+  @Test
+  fun oneHandedModeAndGrayscaleModeAndSettingsHeaderRemoved() {
+    val vm = composeTestRule.activity.viewModel
+    composeTestRule.waitForIdle()
+    composeTestRule.runOnUiThread {
+      vm.dismissIntro()
+      vm.setOverlay(com.example.ui.ActiveOverlay.SETTINGS)
+    }
+    composeTestRule.waitForIdle()
+
+    // 1. Verify Kio Browser brand & version summary card is removed from settings header
+    composeTestRule.onNodeWithText("Browser Settings").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Version ${com.example.BuildConfig.VERSION_NAME}").assertDoesNotExist()
+
+    // 2. Open Appearance & Display folder
+    composeTestRule.onNodeWithTag("settings_folder_appearance").performClick()
+    composeTestRule.waitForIdle()
+
+    // 3. Verify Grayscale mode switch row exists and toggles
+    composeTestRule.onNodeWithTag("setting_grayscale_mode").performScrollTo().assertIsDisplayed()
+    assertFalse(vm.settings.value.grayscaleModeEnabled)
+    composeTestRule.onNodeWithTag("setting_grayscale_mode").performClick()
+    composeTestRule.waitForIdle()
+    assertTrue(vm.settings.value.grayscaleModeEnabled)
+
+    // 4. Verify One-handed mode switch row exists and toggles
+    composeTestRule.onNodeWithTag("setting_one_handed_mode").performScrollTo().assertIsDisplayed()
+    assertFalse(vm.settings.value.oneHandedModeEnabled)
+    composeTestRule.onNodeWithTag("setting_one_handed_mode").performClick()
+    composeTestRule.waitForIdle()
+    assertTrue(vm.settings.value.oneHandedModeEnabled)
+
+    // Close Settings and return to browser screen
+    composeTestRule.onNodeWithTag("settings_back_button").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("settings_back_button").performClick()
+    composeTestRule.waitForIdle()
+
+    // 5. In browser screen, verify One-handed mode reachability banner is displayed
+    composeTestRule.onNodeWithTag("one_handed_restore_banner").assertIsDisplayed()
+
+    // Tap restore banner to expand back to full screen
+    composeTestRule.onNodeWithTag("one_handed_restore_banner").performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify floating quick toggle button appears when full screen
+    composeTestRule.onNodeWithTag("one_handed_quick_toggle").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("one_handed_quick_toggle").performClick()
+    composeTestRule.waitForIdle()
+
+    // Verify one-handed mode is re-activated
+    composeTestRule.onNodeWithTag("one_handed_restore_banner").assertIsDisplayed()
+
+    // Clean up
+    composeTestRule.runOnUiThread {
+      vm.updateSettings {
+        it.copy(oneHandedModeEnabled = false, grayscaleModeEnabled = false)
+      }
     }
     composeTestRule.waitForIdle()
   }

@@ -221,8 +221,15 @@ fun BrowserScreen(
     }
   }
 
+  var isOneHandedActive by rememberSaveable { mutableStateOf(false) }
+
+  LaunchedEffect(settings.oneHandedModeEnabled) {
+    isOneHandedActive = settings.oneHandedModeEnabled
+  }
+
   BackHandler(
-    enabled = showIntro ||
+    enabled = (settings.oneHandedModeEnabled && isOneHandedActive) ||
+      showIntro ||
       fullscreenView != null ||
       isBrowserFullscreen ||
       pageSource != null ||
@@ -233,7 +240,9 @@ fun BrowserScreen(
       activeTab.errorState != null ||
       activeTab.canGoBack
   ) {
-    if (showIntro) {
+    if (settings.oneHandedModeEnabled && isOneHandedActive) {
+      isOneHandedActive = false
+    } else if (showIntro) {
       viewModel.dismissIntro()
     } else if (fullscreenView != null) {
       viewModel.exitFullscreen()
@@ -395,8 +404,75 @@ fun BrowserScreen(
               }
             }
 
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-              when {
+            BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
+              val fullHeight = maxHeight
+              val isOneHanded = settings.oneHandedModeEnabled && isOneHandedActive
+
+              val animatedOffsetFraction by animateFloatAsState(
+                targetValue = if (isOneHanded) 0.38f else 0f,
+                animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+                label = "one_handed_offset"
+              )
+
+              if (isOneHanded || animatedOffsetFraction > 0.01f) {
+                Box(
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .height(fullHeight * animatedOffsetFraction)
+                    .background(
+                      if (isDarkTheme) Color(0xFF070A12).copy(alpha = 0.92f)
+                      else Color(0xFFE2E8F0).copy(alpha = 0.92f)
+                    )
+                    .clickable { isOneHandedActive = false }
+                    .testTag("one_handed_backdrop"),
+                  contentAlignment = Alignment.Center
+                ) {
+                  Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = if (isDarkTheme) Color(0xFF1E293B) else Color.White,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                    shadowElevation = 2.dp,
+                    modifier = Modifier
+                      .clickable { isOneHandedActive = false }
+                      .testTag("one_handed_restore_banner")
+                  ) {
+                    Row(
+                      modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                      verticalAlignment = Alignment.CenterVertically
+                    ) {
+                      Icon(
+                        imageVector = FeatherIcons.Fullscreen,
+                        contentDescription = "Full Screen",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                      )
+                      Spacer(modifier = Modifier.width(6.dp))
+                      Text(
+                        text = "One-Handed Mode · Tap to expand",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                      )
+                    }
+                  }
+                }
+              }
+
+              val contentAlignment = when (settings.oneHandedHandPreference) {
+                com.example.model.OneHandedPreference.LEFT -> Alignment.BottomStart
+                com.example.model.OneHandedPreference.RIGHT -> Alignment.BottomEnd
+                com.example.model.OneHandedPreference.CENTER -> Alignment.BottomCenter
+              }
+              val contentWidthFraction = if (isOneHanded && settings.oneHandedHandPreference != com.example.model.OneHandedPreference.CENTER) 0.93f else 1.0f
+
+              Box(
+                modifier = Modifier
+                  .fillMaxWidth(contentWidthFraction)
+                  .fillMaxHeight(1f - animatedOffsetFraction)
+                  .align(contentAlignment)
+                  .clip(if (isOneHanded) RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp) else RoundedCornerShape(0.dp))
+              ) {
+                when {
                 activeTab.httpWarning != null -> {
                   HttpWarningOverlay(
                     warning = activeTab.httpWarning,
@@ -455,6 +531,13 @@ fun BrowserScreen(
                                 )
                               )
                               targetWebView.requestLayout()
+                              if (settings.grayscaleModeEnabled) {
+                                val cm = android.graphics.ColorMatrix().apply { setSaturation(0f) }
+                                val grayPaint = android.graphics.Paint().apply {
+                                  colorFilter = android.graphics.ColorMatrixColorFilter(cm)
+                                }
+                                targetWebView.setLayerType(View.LAYER_TYPE_HARDWARE, grayPaint)
+                              }
                             }
                           }
                         },
@@ -497,6 +580,15 @@ fun BrowserScreen(
                               )
                             } catch (_: Throwable) {
                             }
+                          }
+                          if (settings.grayscaleModeEnabled) {
+                            val cm = android.graphics.ColorMatrix().apply { setSaturation(0f) }
+                            val grayPaint = android.graphics.Paint().apply {
+                              colorFilter = android.graphics.ColorMatrixColorFilter(cm)
+                            }
+                            targetWebView.setLayerType(View.LAYER_TYPE_HARDWARE, grayPaint)
+                          } else {
+                            targetWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
                           }
                           targetWebView.setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
                             if (isImeVisible) {
@@ -640,6 +732,30 @@ fun BrowserScreen(
                       color = Color.White
                     )
                   }
+                }
+              }
+            }
+
+            if (settings.oneHandedModeEnabled && !isOneHandedActive) {
+              Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                shadowElevation = 4.dp,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
+                modifier = Modifier
+                  .align(if (settings.oneHandedHandPreference == com.example.model.OneHandedPreference.LEFT) Alignment.BottomStart else Alignment.BottomEnd)
+                  .padding(14.dp)
+                  .size(42.dp)
+                  .clickable { isOneHandedActive = true }
+                  .testTag("one_handed_quick_toggle")
+              ) {
+                Box(contentAlignment = Alignment.Center) {
+                  Icon(
+                    imageVector = FeatherIcons.OneHand,
+                    contentDescription = "One-Handed Mode",
+                    modifier = Modifier.size(20.dp)
+                  )
                 }
               }
             }

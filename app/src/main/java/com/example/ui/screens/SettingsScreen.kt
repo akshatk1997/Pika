@@ -89,6 +89,7 @@ import com.example.BuildConfig
 import com.example.R
 import com.example.model.AppUpdateInfo
 import com.example.model.ClearDataOptions
+import com.example.model.OneHandedPreference
 import com.example.model.ScreenFilterType
 import com.example.model.SearchEngine
 import com.example.model.SettingsState
@@ -297,63 +298,6 @@ fun SettingsScreen(
                     )
                   }
                 }
-              }
-            }
-          }
-
-          // Brand & Version Summary Header Card
-          Card(
-            shape = RoundedCornerShape(18.dp),
-            border = BorderStroke(0.9.dp, FeatherSecureGreen.copy(alpha = 0.35f)),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            modifier = Modifier
-              .widthIn(max = 720.dp)
-              .fillMaxWidth()
-              .clip(RoundedCornerShape(18.dp))
-              .clickable { activeFolder = SettingsFolder.ABOUT }
-          ) {
-            Row(
-              modifier = Modifier.padding(14.dp),
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = Color(0xFF050810),
-                border = BorderStroke(0.8.dp, Color(0xFF38BDF8).copy(alpha = 0.35f)),
-                modifier = Modifier.size(44.dp)
-              ) {
-                Box(contentAlignment = Alignment.Center) {
-                  Image(
-                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                    contentDescription = "Kio Launcher Icon",
-                    modifier = Modifier.size(40.dp)
-                  )
-                }
-              }
-              Spacer(modifier = Modifier.width(12.dp))
-              Column(modifier = Modifier.weight(1f)) {
-                Text(
-                  text = stringResource(R.string.app_name),
-                  style = MaterialTheme.typography.titleMedium,
-                  fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                  text = "Version ${BuildConfig.VERSION_NAME}",
-                  style = MaterialTheme.typography.labelSmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-              }
-              Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = FeatherSecureGreen.copy(alpha = 0.14f)
-              ) {
-                Text(
-                  text = if (settings.trackerBlockingEnabled) "Shield Active" else "Standard",
-                  style = MaterialTheme.typography.labelSmall,
-                  fontWeight = FontWeight.Medium,
-                  color = FeatherSecureGreen,
-                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                )
               }
             }
           }
@@ -613,6 +557,39 @@ fun SettingsScreen(
               tag = "setting_night_web",
               onCheckedChange = { v -> onUpdateSettings { it.copy(nightWebMode = v) } }
             )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            SettingSwitchRow(
+              title = "Grayscale mode (Black & White)",
+              subtitle = "Shifts entire browser screen and web content to pure black and white",
+              checked = settings.grayscaleModeEnabled,
+              tag = "setting_grayscale_mode",
+              onCheckedChange = { v -> onUpdateSettings { it.copy(grayscaleModeEnabled = v) } }
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+            SettingSwitchRow(
+              title = "One-handed mode",
+              subtitle = "Lowers screen viewport for effortless single-thumb surfing",
+              checked = settings.oneHandedModeEnabled,
+              tag = "setting_one_handed_mode",
+              onCheckedChange = { v -> onUpdateSettings { it.copy(oneHandedModeEnabled = v) } }
+            )
+            if (settings.oneHandedModeEnabled) {
+              Spacer(modifier = Modifier.height(6.dp))
+              Text("Hand alignment", style = MaterialTheme.typography.bodyMedium)
+              Spacer(modifier = Modifier.height(4.dp))
+              FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+              ) {
+                OneHandedPreference.entries.forEach { pref ->
+                  FilterChip(
+                    selected = settings.oneHandedHandPreference == pref,
+                    onClick = { onUpdateSettings { it.copy(oneHandedHandPreference = pref) } },
+                    label = { Text(pref.label) }
+                  )
+                }
+              }
+            }
             HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SettingSwitchRow(
               title = "Clean mode (distraction-free)",

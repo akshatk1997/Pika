@@ -903,4 +903,56 @@ object FeatherIcons {
       }
     }.build()
   }
+
+  val OneHand: ImageVector by lazy {
+    ImageVector.Builder("OneHand", 24.dp, 24.dp, 24f, 24f).apply {
+      path(fill = SolidColor(Color.Black)) {
+        moveTo(17f, 1f)
+        lineTo(7f, 1f)
+        curveTo(5.9f, 1f, 5f, 1.9f, 5f, 3f)
+        verticalLineTo(21f)
+        curveTo(5f, 22.1f, 5.9f, 23f, 7f, 23f)
+        horizontalLineTo(17f)
+        curveTo(18.1f, 23f, 19f, 22.1f, 19f, 21f)
+        verticalLineTo(3f)
+        curveTo(19f, 1.9f, 18.1f, 1f, 17f, 1f)
+        close()
+        moveTo(17f, 19f)
+        horizontalLineTo(7f)
+        verticalLineTo(5f)
+        horizontalLineTo(17f)
+        verticalLineTo(19f)
+        close()
+        moveTo(12f, 16f)
+        lineTo(8.5f, 12.5f)
+        lineTo(9.91f, 11.09f)
+        lineTo(11f, 12.17f)
+        verticalLineTo(8f)
+        horizontalLineTo(13f)
+        verticalLineTo(12.17f)
+        lineTo(14.09f, 11.09f)
+        lineTo(15.5f, 12.5f)
+        lineTo(12f, 16f)
+        close()
+      }
+    }.build()
+  }
+
+  val Grayscale: ImageVector by lazy {
+    ImageVector.Builder("Grayscale", 24.dp, 24.dp, 24f, 24f).apply {
+      path(fill = SolidColor(Color.Black)) {
+        moveTo(12f, 2f)
+        curveTo(6.48f, 2f, 2f, 6.48f, 2f, 12f)
+        curveTo(2f, 17.52f, 6.48f, 22f, 12f, 22f)
+        curveTo(17.52f, 22f, 22f, 17.52f, 22f, 12f)
+        curveTo(22f, 6.48f, 17.52f, 2f, 12f, 2f)
+        close()
+        moveTo(12f, 20f)
+        verticalLineTo(4f)
+        curveTo(16.41f, 4f, 20f, 7.59f, 20f, 12f)
+        curveTo(20f, 16.41f, 16.41f, 20f, 12f, 20f)
+        close()
+      }
+    }.build()
+  }
 }

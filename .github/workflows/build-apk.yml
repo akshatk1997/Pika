@@ -66,12 +66,12 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kio-v2.0.1.apk
+          cp "$APK_PATH" releases/Kio-v2.0.2.apk
           cat <<EOF > releases/latest.json
           {
-            "version": "2.0.1",
-            "downloadUrl": "https://github.com/akshatk1997/Pika/releases/download/v2.0.1/Kio-v2.0.1.apk",
-            "notes": "Kio Browser v2.0.1 release"
+            "version": "2.0.2",
+            "downloadUrl": "https://github.com/akshatk1997/Pika/releases/download/v2.0.2/Kio-v2.0.2.apk",
+            "notes": "Kio Browser v2.0.2 release with One-Handed Mode and Grayscale Mode"
           }
           EOF
           rm -f debug.keystore
@@ -80,25 +80,25 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kio-v2.0.1.apk releases/latest.json
+          git add releases/Kio-v2.0.2.apk releases/latest.json
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kio-v2.0.1.apk and latest.json (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kio-v2.0.2.apk and latest.json (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v2.0.1
+      - name: Create or update GitHub Release v2.0.2
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kio-v2.0.1.apk)
-          NOTES="Kio Browser v2.0.1 (Build 73) — Lock Symbol Address Bar & Pull-to-Refresh Gesture (< 2 MB).\n\n- **Collapsible Lock Symbol Address Bar:**\n  - Cleaned upper header bar on webpages into a unified bottom navigation bar.\n  - Center lock icon in toolbar reveals full omnibox (lock badge, copy URL, tracker shield counter, and instant search) on tap and collapses smoothly.\n- **Slide-Down Pull-to-Refresh Gesture:**\n  - Natural pull-down gesture on webpages with floating circular spinning refresh indicator and haptic snap feedback to reload.\n- **Quick Menu Reload Option:**\n  - Direct 1-tap reload in 3-dot quick menu for effortless one-handed control.\n- **Full Power-User & Privacy Suite Retained:**\n  - Retains Soul Browser Media Sniffer, Image Sniffer, Full-Page Scroll Screenshot, Screen Filter, Clean Mode, and instant cache navigation.\n- **Strict Constraint:** Release APK strictly under 2 MB (2,097,152 bytes)."
-          if gh release view v2.0.1 >/dev/null 2>&1; then
-            gh release upload v2.0.1 releases/Kio-v2.0.1.apk --clobber
-            gh release edit v2.0.1 --title "Kio v2.0.1 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kio-v2.0.2.apk)
+          NOTES="Kio Browser v2.0.2 (Build 74) — One-Handed Mode, Grayscale Mode & Clean Settings Header (< 2 MB).\n\n- **One-Handed Mode (Comfortable Single-Thumb Browsing):**\n  - Lowers the browsing viewport smoothly into the lower half of the screen, placing top controls and links right at thumb height.\n  - Shaded backdrop tap-to-expand with top banner, and floating one-handed quick toggle button for seamless thumb control.\n  - Hand Preference alignment options in Settings (Right Hand, Left Hand, Centered).\n- **Grayscale Mode (Pure Black & White):**\n  - Hardware-accelerated full-screen monochrome filter rendering all web content, images, videos, and browser UI in pure black and white.\n- **Clean Settings Header:**\n  - Removed redundant brand and version summary card from the settings header for an ultra-clean, minimal interface.\n- **Strict Constraint:** Release APK strictly under 2 MB (2,097,152 bytes)."
+          if gh release view v2.0.2 >/dev/null 2>&1; then
+            gh release upload v2.0.2 releases/Kio-v2.0.2.apk --clobber
+            gh release edit v2.0.2 --title "Kio v2.0.2 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v2.0.1 releases/Kio-v2.0.1.apk \
-              --title "Kio v2.0.1 (< 2 MB)" \
+            gh release create v2.0.2 releases/Kio-v2.0.2.apk \
+              --title "Kio v2.0.2 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

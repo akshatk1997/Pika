@@ -14,6 +14,14 @@ Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.0.1.apk`](
 
 ## Core Highlights (v2.0.1 — Build 73)
 
+- **One-Handed Mode (Comfortable Single-Thumb Browsing):**
+  - Lowers the browsing viewport smoothly into the lower half of the screen, placing top website controls, inputs, and navigation within easy reach of one thumb.
+  - Includes a tap-to-expand shaded top backdrop and a quick floating thumb button to easily toggle one-handed operation.
+  - Supports Hand Preference alignment (Right Hand, Left Hand, or Centered) in Settings.
+- **Grayscale Mode (Pure Black & White):**
+  - Full-screen hardware-accelerated monochrome filter converting the entire browser UI, web content, videos, and images into pure black and white for distraction-free reading, reduced eye fatigue, and OLED power conservation.
+- **Clean Settings Header:**
+  - Streamlined settings header by removing redundant brand cards and focusing directly on browser configuration and instant update alerts.
 - **Automatic In-Settings Release Update Detection & Instant Downloader:**
   - Automatically queries official releases on opening Settings.
   - When a new version is released, a prominent update banner automatically appears at the top of Settings.

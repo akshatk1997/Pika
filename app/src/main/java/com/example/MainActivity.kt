@@ -214,6 +214,28 @@ class MainActivity : ComponentActivity() {
         }
       }
 
+      DisposableEffect(settings.grayscaleModeEnabled) {
+        val window = this@MainActivity.window
+        try {
+          if (settings.grayscaleModeEnabled) {
+            val cm = android.graphics.ColorMatrix().apply { setSaturation(0f) }
+            val paint = android.graphics.Paint().apply {
+              colorFilter = android.graphics.ColorMatrixColorFilter(cm)
+            }
+            window.decorView.setLayerType(View.LAYER_TYPE_HARDWARE, paint)
+          } else {
+            window.decorView.setLayerType(View.LAYER_TYPE_NONE, null)
+          }
+        } catch (_: Throwable) {
+        }
+        onDispose {
+          try {
+            window.decorView.setLayerType(View.LAYER_TYPE_NONE, null)
+          } catch (_: Throwable) {
+          }
+        }
+      }
+
       val composeSystemDark = isSystemInDarkTheme()
       val systemDark = configSystemDark.value ?: composeSystemDark
       LaunchedEffect(systemDark) {
