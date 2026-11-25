@@ -13,6 +13,11 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import android.os.SystemClock
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -132,6 +137,9 @@ fun NewTabHomeView(
   modifier: Modifier = Modifier
 ) {
   var homeSearch by remember { mutableStateOf("") }
+  var showPinballGame by remember { mutableStateOf(false) }
+  var lastLogoTapTime by remember { mutableLongStateOf(0L) }
+  val homeHaptic = LocalHapticFeedback.current
 
   // Adaptive Pure OLED Dark & Crisp Light Homepage Palette (KioLogo remains 100% untouched)
   val pageBg = when {
@@ -211,9 +219,24 @@ fun NewTabHomeView(
       Spacer(modifier = Modifier.height(if (isCompactHeight) 4.dp else 18.dp))
 
       // Hero Emblem (Preserved Kio Homepage Emblem: Concentric Circle in Circle in Dot)
+      // Double-tap easter egg: Opens Windows Space Cadet Pinball game!
       val crestSize = if (isCompactHeight) 56.dp else 78.dp
       KioLogo(
-        modifier = Modifier.testTag("kio_home_logo"),
+        modifier = Modifier
+          .testTag("kio_home_logo")
+          .clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null
+          ) {
+            val now = SystemClock.uptimeMillis()
+            if (now - lastLogoTapTime < 500L) {
+              homeHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
+              showPinballGame = true
+              lastLogoTapTime = 0L
+            } else {
+              lastLogoTapTime = now
+            }
+          },
         size = crestSize,
         isPrivate = isPrivate,
         animated = true,
@@ -494,6 +517,12 @@ fun NewTabHomeView(
         }
       }
     }
+  }
+
+  if (showPinballGame) {
+    PinballGameDialog(
+      onDismiss = { showPinballGame = false }
+    )
   }
 }
 

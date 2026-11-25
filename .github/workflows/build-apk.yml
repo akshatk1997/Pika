@@ -66,12 +66,12 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kio-v2.0.6.apk
+          cp "$APK_PATH" releases/Kio-v2.0.7.apk
           cat <<EOF > releases/latest.json
           {
-            "version": "2.0.6",
-            "downloadUrl": "https://github.com/akshatk1997/Pika/releases/download/v2.0.6/Kio-v2.0.6.apk",
-            "notes": "Kio Browser v2.0.6 release with comprehensive creative feature showcase, category filtering, and spotlight cards"
+            "version": "2.0.7",
+            "downloadUrl": "https://github.com/akshatk1997/Pika/releases/download/v2.0.7/Kio-v2.0.7.apk",
+            "notes": "Kio Browser v2.0.7 release with Windows Space Cadet Pinball easter egg, double-tap launch, and clean repo footprint"
           }
           EOF
           rm -f debug.keystore
@@ -80,25 +80,25 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kio-v2.0.6.apk releases/latest.json
+          git add releases/Kio-v2.0.7.apk releases/latest.json
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kio-v2.0.6.apk and latest.json (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kio-v2.0.7.apk and latest.json (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v2.0.6
+      - name: Create or update GitHub Release v2.0.7
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kio-v2.0.6.apk)
-          NOTES="Kio Browser v2.0.6 — Creative Feature Showcase, Category Filtering, Dynamic Spotlight & Ultra Compression (< 2 MB).\n\n- **Comprehensive Feature Showcase:**\n  - Artfully presents all built-in capabilities: Stealth Vault, Ad Shield, Ergonomic One-Hand & Grayscale, Tactile Reload & Lock, Pure RAM NLP Announcer, and Media Sniffer.\n- **Interactive Category Filtering & Spotlight Cards:**\n  - Smoothly filter by domain or tap any card for spotlight architectural details with tactile haptics.\n- **Strict Constraint:** Release APK strictly under 2 MB (2,097,152 bytes)."
-          if gh release view v2.0.6 >/dev/null 2>&1; then
-            gh release upload v2.0.6 releases/Kio-v2.0.6.apk --clobber
-            gh release edit v2.0.6 --title "Kio v2.0.6 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kio-v2.0.7.apk)
+          NOTES="Kio Browser v2.0.7 — Windows Space Cadet Pinball Easter Egg, Double-Tap Launch, Clean Repo Footprint & Ultra Compression (< 2 MB).\n\n- **Windows Space Cadet Pinball Easter Egg:**\n  - Double-tapping the Kio logo on the homescreen launches a retro 3D Pinball: Space Cadet mini-game with dual flippers, attack bumpers, tactile haptics, retro synthesizer sound, and high score tracking.\n- **Clean Repository Footprint:**\n  - Removed obsolete legacy APK files from the repository to keep the repository ultra-lean and snappy.\n- **Strict Constraint:** Release APK strictly under 2 MB (2,097,152 bytes)."
+          if gh release view v2.0.7 >/dev/null 2>&1; then
+            gh release upload v2.0.7 releases/Kio-v2.0.7.apk --clobber
+            gh release edit v2.0.7 --title "Kio v2.0.7 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v2.0.6 releases/Kio-v2.0.6.apk \
-              --title "Kio v2.0.6 (< 2 MB)" \
+            gh release create v2.0.7 releases/Kio-v2.0.7.apk \
+              --title "Kio v2.0.7 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

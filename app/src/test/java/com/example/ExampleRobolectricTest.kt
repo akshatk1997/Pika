@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kio", appName)
-    assertEquals("2.0.6", BuildConfig.VERSION_NAME)
-    assertEquals(78, BuildConfig.VERSION_CODE)
+    assertEquals("2.0.7", BuildConfig.VERSION_NAME)
+    assertEquals(79, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -942,8 +942,8 @@ class ExampleRobolectricTest {
     // Simulate new update available detection
     composeTestRule.runOnUiThread {
       vm.availableUpdate.value = com.example.model.AppUpdateInfo(
-        versionName = "2.0.7",
-        downloadUrl = "https://github.com/akshatk1997/Pika/releases/download/v2.0.7/Kio-v2.0.7.apk",
+        versionName = "2.0.8",
+        downloadUrl = "https://github.com/akshatk1997/Pika/releases/download/v2.0.8/Kio-v2.0.8.apk",
         releaseNotes = "New speed optimizations"
       )
     }
@@ -952,7 +952,7 @@ class ExampleRobolectricTest {
     // Verify update banner card appears at the top of Settings
     composeTestRule.onNodeWithTag("settings_update_available_card").assertIsDisplayed()
     composeTestRule.onNodeWithText("New Update Available!").assertIsDisplayed()
-    composeTestRule.onNodeWithText("v2.0.7").assertIsDisplayed()
+    composeTestRule.onNodeWithText("v2.0.8").assertIsDisplayed()
 
     // Click on Update button to trigger automatic download
     composeTestRule.onNodeWithTag("settings_download_update_button").performClick()
@@ -960,7 +960,7 @@ class ExampleRobolectricTest {
 
     // Verify download was enqueued in downloads list
     val downloads = vm.downloads.value
-    assertTrue(downloads.any { it.fileName.contains("Kio-v2.0.7.apk") })
+    assertTrue(downloads.any { it.fileName.contains("Kio-v2.0.8.apk") })
 
     // Clean up
     composeTestRule.runOnUiThread {
@@ -1073,5 +1073,43 @@ class ExampleRobolectricTest {
     }
     composeTestRule.waitForIdle()
     assertFalse(vm.showIntro.value)
+  }
+
+  @Test
+  fun windowsSpaceCadetPinballEasterEggWorksOnDoubleTap() {
+    val vm = composeTestRule.activity.viewModel
+    composeTestRule.waitForIdle()
+    composeTestRule.runOnUiThread {
+      vm.dismissIntro()
+      vm.openNewTab(isPrivate = false)
+    }
+    composeTestRule.waitForIdle()
+
+    // 1. Verify Home Logo is displayed on start page
+    composeTestRule.onNodeWithTag("kio_home_logo").assertIsDisplayed()
+
+    // 2. Perform double tap on logo
+    composeTestRule.onNodeWithTag("kio_home_logo").performClick()
+    composeTestRule.onNodeWithTag("kio_home_logo").performClick()
+    composeTestRule.waitForIdle()
+
+    // 3. Verify Space Cadet Pinball appears
+    composeTestRule.onNodeWithTag("pinball_game_dialog").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Space Cadet Pinball").assertIsDisplayed()
+    composeTestRule.onNodeWithText("SCORE").assertIsDisplayed()
+    composeTestRule.onNodeWithText("BALLS").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("pinball_left_flipper").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("pinball_right_flipper").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("pinball_launch_button").assertIsDisplayed()
+
+    // 4. Tap launch button
+    composeTestRule.onNodeWithTag("pinball_launch_button").performClick()
+    composeTestRule.waitForIdle()
+
+    // 5. Close pinball game dialog
+    composeTestRule.onNodeWithTag("pinball_close_button").performClick()
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag("pinball_game_dialog").assertDoesNotExist()
   }
 }

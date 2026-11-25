@@ -8,15 +8,20 @@
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.0.6.apk`](releases/Kio-v2.0.6.apk) and published in GitHub Releases (`v2.0.6`).
+Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.0.7.apk`](releases/Kio-v2.0.7.apk) and published in GitHub Releases (`v2.0.7`).
 
 ---
 
-## Core Highlights (v2.0.6)
+## Core Highlights (v2.0.7)
 
+- **Windows Space Cadet Pinball Easter Egg:**
+  - Double-tapping the Kio logo on the homescreen launches a retro 3D Pinball: Space Cadet arcade table built entirely with zero-footprint native Compose Canvas rendering.
+  - Features dual responsive flippers, 3 neon attack bumpers, side slingshots, launch plunger, real-time ball physics, retro synthesizer audio bleeps, and classic LCD score tracking.
 - **Comprehensive Creative Feature Showcase:**
   - Distinctive display presentation combining all browser capabilities: Stealth Privacy Vault, Integrated Ad & Video Shield, Ergonomic One-Handed & Grayscale Modes, Tactile Reload & Omnibox Lock, Pure On-Device NLP Announcer, and Smart Media Sniffer.
   - Interactive category filtering chips (`All Features`, `Privacy & Shield`, `Gestures & Flow`, `AI & Utilities`) and tap-to-expand architectural spotlight badges with tactile feedback.
+- **Clean Repository Footprint:**
+  - Cleaned up obsolete legacy APK files from the repository to maximize space efficiency and performance.
 - **Clean & Minimalist About Settings:**
   - Removed redundant engine & system info and build numbers from About Kio for a cleaner, polished presentation.
 - **Refined 3-Dot Quick Menu:**
