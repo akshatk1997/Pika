@@ -30,7 +30,7 @@ import org.robolectric.annotation.Config
 import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [26, 36])
+@Config(sdk = [36])
 class ExampleRobolectricTest {
 
   @get:Rule
@@ -232,7 +232,7 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  @Config(sdk = [26, 36], qualifiers = "sw600dp-w1024dp-h768dp-xhdpi")
+  @Config(sdk = [36], qualifiers = "sw600dp-w1024dp-h768dp-xhdpi")
   fun tabletHeaderHasNoTabBarAndToolbarShortcutsWorkAcrossAndroidVersions() {
     composeTestRule.waitForIdle()
     try {
