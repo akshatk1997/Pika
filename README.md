@@ -8,15 +8,15 @@
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.0.8.apk`](releases/Kio-v2.0.8.apk) and published in GitHub Releases (`v2.0.8`).
+Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.0.9.apk`](releases/Kio-v2.0.9.apk) and published in GitHub Releases (`v2.0.9`).
 
 ---
 
-## Core Highlights (v2.0.8)
+## Core Highlights (v2.0.9)
 
-- **Kio Candy Crush Match-3 Game Easter Egg:**
-  - Double-tapping the Kio logo on the homescreen launches a delightful match-3 Candy Crush game built natively with zero-asset Compose vector graphics.
-  - Features 6 vibrant candy types (Cherry Swirl, Lemon Drop, Green Mint, Grape Jelly, Orange Fizz, Cyan Bubble), special Rainbow Color Bombs, cascading chain combos, move limit, sweet synthesizer audio chimes, star progression, and haptics.
+- **Streamlined & Space-Optimized Foundation (v2.0.9):**
+  - Streamlined codebase by removing temporary game easter eggs and pruning redundant assets, maximizing execution speed, snappiness, and memory efficiency while preserving 100% of core browser capabilities.
+  - Zero bloat, zero telemetry, and lean repository footprint.
 - **Comprehensive Creative Feature Showcase:**
   - Distinctive display presentation combining all browser capabilities: Stealth Privacy Vault, Integrated Ad & Video Shield, Ergonomic One-Handed & Grayscale Modes, Tactile Reload & Omnibox Lock, Pure On-Device NLP Announcer, and Smart Media Sniffer.
   - Interactive category filtering chips (`All Features`, `Privacy & Shield`, `Gestures & Flow`, `AI & Utilities`) and tap-to-expand architectural spotlight badges with tactile feedback.
