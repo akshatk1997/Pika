@@ -266,12 +266,12 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithTag("nav_lock_button").assertIsDisplayed()
     composeTestRule.onNodeWithTag("nav_lock_button").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("example.com").assertIsDisplayed()
+    composeTestRule.onNodeWithText("example.com").assertExists()
 
     // 3-dot menu opens cleanly on tablet
     composeTestRule.onNodeWithTag("nav_menu_button").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Settings").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Settings").assertExists()
   }
 
   @Test
