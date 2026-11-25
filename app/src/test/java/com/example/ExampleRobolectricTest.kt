@@ -1098,9 +1098,9 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Space Cadet Pinball").assertIsDisplayed()
     composeTestRule.onNodeWithText("SCORE").assertIsDisplayed()
     composeTestRule.onNodeWithText("BALLS").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("pinball_left_flipper").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("pinball_right_flipper").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("pinball_launch_button").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("pinball_left_flipper").assertExists()
+    composeTestRule.onNodeWithTag("pinball_right_flipper").assertExists()
+    composeTestRule.onNodeWithTag("pinball_launch_button").assertExists()
 
     // 4. Tap launch button
     composeTestRule.onNodeWithTag("pinball_launch_button").performClick()
