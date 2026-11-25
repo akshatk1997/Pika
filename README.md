@@ -8,14 +8,18 @@
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.0.9.apk`](releases/Kio-v2.0.9.apk) and published in GitHub Releases (`v2.0.9`).
+Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.1.0.apk`](releases/Kio-v2.1.0.apk) and published in GitHub Releases (`v2.1.0`).
 
 ---
 
-## Core Highlights (v2.0.9)
+## Core Highlights (v2.1.0)
 
-- **Streamlined & Space-Optimized Foundation (v2.0.9):**
-  - Streamlined codebase by removing temporary game easter eggs and pruning redundant assets, maximizing execution speed, snappiness, and memory efficiency while preserving 100% of core browser capabilities.
+- **Full Android Tablet Compatibility (Android 10+):**
+  - Unified A-to-Z feature parity across all Android devices: tablets (7", 10", 12"+), foldables, and smartphones alike.
+  - Ergonomically centered 5-button balanced toolbar with the collapsible lock-tap omnibox, tactile reload gesture, and full feature suite on all form factors.
+  - Declared full `<supports-screens>` compatibility covering `smallScreens`, `normalScreens`, `largeScreens`, and `xlargeScreens`.
+- **Streamlined & Space-Optimized Foundation:**
+  - Streamlined codebase by removing redundant tablet-specific duplicate code paths, maximizing execution speed, snappiness, and memory efficiency while preserving 100% of core browser capabilities.
   - Zero bloat, zero telemetry, and lean repository footprint.
 - **Comprehensive Creative Feature Showcase:**
   - Distinctive display presentation combining all browser capabilities: Stealth Privacy Vault, Integrated Ad & Video Shield, Ergonomic One-Handed & Grayscale Modes, Tactile Reload & Omnibox Lock, Pure On-Device NLP Announcer, and Smart Media Sniffer.

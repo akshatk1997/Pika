@@ -36,6 +36,15 @@
         </intent>
     </queries>
 
+    <!-- Full compatibility for all Android tablets, foldables, and Chromebooks (Android 10+) -->
+    <supports-screens
+        android:smallScreens="true"
+        android:normalScreens="true"
+        android:largeScreens="true"
+        android:xlargeScreens="true"
+        android:anyDensity="true"
+        android:resizeable="true" />
+
     <application
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"

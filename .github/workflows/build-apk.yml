@@ -66,12 +66,12 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kio-v2.0.9.apk
+          cp "$APK_PATH" releases/Kio-v2.1.0.apk
           cat <<EOF > releases/latest.json
           {
-            "version": "2.0.9",
-            "downloadUrl": "https://github.com/akshatk1997/Pika/releases/download/v2.0.9/Kio-v2.0.9.apk",
-            "notes": "Kio Browser v2.0.9 streamlined release with clean space, optimized speed & performance, zero bloat, and sub-2MB footprint"
+            "version": "2.1.0",
+            "downloadUrl": "https://github.com/akshatk1997/Pika/releases/download/v2.1.0/Kio-v2.1.0.apk",
+            "notes": "Kio Browser v2.1.0 full Android tablet compatibility (Android 10+) with unified A-to-Z mobile feature parity, responsive lock omnibox, and sub-2MB footprint"
           }
           EOF
           rm -f debug.keystore
@@ -80,25 +80,25 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kio-v2.0.9.apk releases/latest.json
+          git add releases/Kio-v2.1.0.apk releases/latest.json
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kio-v2.0.9.apk and latest.json (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kio-v2.1.0.apk and latest.json (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v2.0.9
+      - name: Create or update GitHub Release v2.1.0
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kio-v2.0.9.apk)
-          NOTES="Kio Browser v2.0.9 — Streamlined & Lightweight Release with Zero Bloat, Peak Speed & Performance, and Sub-2MB Footprint (< 2 MB).\n\n- **Streamlined Codebase & Space Optimization:**\n  - Removed temporary game easter egg and pruned redundant code and assets.\n  - Maintained 100% of core browser functions, privacy protections, ad-blocking, tactile gestures, reader, and media sniffer.\n  - Maximized performance, snappiness, and memory efficiency.\n- **Strict Constraint:** Release APK strictly under 2 MB (2,097,152 bytes)."
-          if gh release view v2.0.9 >/dev/null 2>&1; then
-            gh release upload v2.0.9 releases/Kio-v2.0.9.apk --clobber
-            gh release edit v2.0.9 --title "Kio v2.0.9 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kio-v2.1.0.apk)
+          NOTES="Kio Browser v2.1.0 — Full Android Tablet Compatibility (Android 10+) with A-to-Z Mobile Feature Parity & Ultra Compression (< 2 MB).\n\n- **Full Android Tablet Compatibility (Android 10+):**\n  - Unified A-to-Z feature parity across all Android devices: tablets, foldables, and smartphones alike.\n  - Responsive centered 5-button balanced toolbar with collapsible lock-tap omnibox, tactile reload gesture, and full feature set.\n  - Added explicit supports-screens declarations covering small, normal, large, and xlarge displays.\n- **Strict Constraint:** Release APK strictly under 2 MB (2,097,152 bytes)."
+          if gh release view v2.1.0 >/dev/null 2>&1; then
+            gh release upload v2.1.0 releases/Kio-v2.1.0.apk --clobber
+            gh release edit v2.1.0 --title "Kio v2.1.0 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v2.0.9 releases/Kio-v2.0.9.apk \
-              --title "Kio v2.0.9 (< 2 MB)" \
+            gh release create v2.1.0 releases/Kio-v2.1.0.apk \
+              --title "Kio v2.1.0 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

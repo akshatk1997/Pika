@@ -269,7 +269,6 @@ fun BrowserScreen(
         .fillMaxSize()
         .let { if (hasFullOverlay) it.clearAndSetSemantics {} else it }
     ) {
-      val isWideWidth = maxWidth >= 600.dp
       val isImeVisible = WindowInsets.isImeVisible
 
       Scaffold(
@@ -297,7 +296,7 @@ fun BrowserScreen(
               tabCount = tabs.size,
               isDarkTheme = isDarkTheme,
               settings = settings,
-              compactSingleRow = isWideWidth,
+              compactSingleRow = false,
               readClipboard = { viewModel.readClipboardText() },
               onNavigate = {
                 focusManager.clearFocus()
@@ -1781,7 +1780,7 @@ private fun BrowserToolbar(
   tabCount: Int,
   isDarkTheme: Boolean = true,
   settings: SettingsState,
-  compactSingleRow: Boolean,
+  compactSingleRow: Boolean = false,
   readClipboard: () -> String?,
   onNavigate: (String) -> Unit,
   onBack: () -> Unit,
@@ -2017,257 +2016,18 @@ private fun BrowserToolbar(
     modifier = modifier.fillMaxWidth()
   ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-      if (compactSingleRow) {
-        // Tablet, foldable & desktop-window single-row top toolbar
-        Row(
-          modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
-          verticalAlignment = Alignment.CenterVertically
+      Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center
+      ) {
+        Column(
+          modifier = Modifier
+            .widthIn(max = 760.dp)
+            .fillMaxWidth()
         ) {
           if (isHomePage) {
-            Surface(
-              shape = RoundedCornerShape(10.dp),
-              color = secTint.copy(alpha = 0.14f),
-              modifier = Modifier
-                .size(34.dp)
-                .clickable { onOpenSiteInfo() }
-                .testTag("security_badge_button")
-            ) {
-              Box(contentAlignment = Alignment.Center) {
-                Icon(
-                  imageVector = secIcon,
-                  contentDescription = secDesc,
-                  tint = secTint,
-                  modifier = Modifier.size(18.dp)
-                )
-              }
-            }
-            Spacer(modifier = Modifier.width(4.dp))
-          }
-          IconButton(
-            onClick = {
-              haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-              onBack()
-            },
-            enabled = activeTab.canGoBack || activeTab.httpWarning != null || activeTab.errorState != null,
-            modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_back_button")
-          ) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
-          }
-          IconButton(
-            onClick = {
-              haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-              onForward()
-            },
-            enabled = activeTab.canGoForward,
-            modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_forward_button")
-          ) {
-            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = stringResource(R.string.cd_forward))
-          }
-          IconButton(
-            onClick = {
-              haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-              onReloadOrStop()
-            },
-            enabled = activeTab.url.isNotBlank() || activeTab.errorState != null,
-            modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_reload_button")
-          ) {
-            Icon(
-              imageVector = if (activeTab.isLoading) Icons.Filled.Close else Icons.Filled.Refresh,
-              contentDescription = if (activeTab.isLoading) stringResource(R.string.cd_stop) else stringResource(R.string.cd_reload)
-            )
-          }
-          if (!isHomePage) {
-            Spacer(modifier = Modifier.width(6.dp))
-            omniboxPill(Modifier.weight(1f))
-            Spacer(modifier = Modifier.width(6.dp))
-          } else {
-            Spacer(modifier = Modifier.weight(1f))
-          }
-          IconButton(
-            onClick = onToggleDesktopMode,
-            modifier = Modifier.minimumInteractiveComponentSize().testTag("tablet_desktop_mode_button")
-          ) {
-            Icon(
-              imageVector = FeatherIcons.DesktopPc,
-              contentDescription = stringResource(R.string.action_desktop_site),
-              tint = if (activeTab.userAgentMode == UserAgentMode.DESKTOP) headerAccent else headerTextMuted
-            )
-          }
-          if (!isPrivate) {
-            IconButton(
-              onClick = onOpenBookmarks,
-              modifier = Modifier.minimumInteractiveComponentSize().testTag("tablet_bookmarks_button")
-            ) {
-              Icon(
-                imageVector = FeatherIcons.Bookmark,
-                contentDescription = stringResource(R.string.action_bookmarks),
-                tint = headerTextMuted
-              )
-            }
-          }
-          IconButton(
-            onClick = onOpenDownloads,
-            modifier = Modifier.minimumInteractiveComponentSize().testTag("tablet_downloads_button")
-          ) {
-            Icon(
-              imageVector = FeatherIcons.Download,
-              contentDescription = stringResource(R.string.action_downloads),
-              tint = headerTextMuted
-            )
-          }
-          IconButton(
-            onClick = {
-              haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-              onNewTab()
-            },
-            modifier = Modifier.minimumInteractiveComponentSize().testTag("tablet_new_tab_button")
-          ) {
-            Icon(
-              imageVector = Icons.Filled.Add,
-              contentDescription = stringResource(R.string.action_new_tab),
-              tint = headerTextMuted
-            )
-          }
-          Surface(
-            shape = RoundedCornerShape(12.dp),
-            border = BorderStroke(
-              1.5.dp,
-              if (isPrivate) privateAccent else headerTextPrimary.copy(alpha = 0.85f)
-            ),
-            color = tabBadgeBg,
-            modifier = Modifier
-              .minimumInteractiveComponentSize()
-              .clickable {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                onOpenTabs()
-              }
-              .testTag("nav_tabs_button")
-          ) {
-            Box(
-              contentAlignment = Alignment.Center,
-              modifier = Modifier.padding(horizontal = 11.dp, vertical = 5.dp)
-            ) {
-              Text(
-                text = tabCount.toString(),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = if (isPrivate) privateAccent else headerTextPrimary
-              )
-            }
-          }
-          IconButton(
-            onClick = {
-              haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-              onOpenQuickMenu()
-            },
-            modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_menu_button")
-          ) {
-            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.cd_menu))
-          }
-        }
-      } else {
-        if (isHomePage) {
-          Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            IconButton(
-              onClick = {
-                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                onBack()
-              },
-              enabled = activeTab.canGoBack || activeTab.httpWarning != null || activeTab.errorState != null,
-              modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_back_button")
-            ) {
-              Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
-            }
-            IconButton(
-              onClick = {
-                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                onForward()
-              },
-              enabled = activeTab.canGoForward,
-              modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_forward_button")
-            ) {
-              Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = stringResource(R.string.cd_forward))
-            }
-
-            Surface(
-              shape = RoundedCornerShape(12.dp),
-              color = secTint.copy(alpha = 0.14f),
-              border = BorderStroke(1.dp, secTint.copy(alpha = 0.35f)),
-              modifier = Modifier
-                .minimumInteractiveComponentSize()
-                .clickable {
-                  haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                  onOpenSiteInfo()
-                }
-                .testTag("security_badge_button")
-            ) {
-              Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
-                Icon(
-                  imageVector = secIcon,
-                  contentDescription = secDesc,
-                  tint = secTint,
-                  modifier = Modifier.size(20.dp)
-                )
-              }
-            }
-
-            Surface(
-              shape = RoundedCornerShape(12.dp),
-              border = BorderStroke(
-                1.5.dp,
-                if (isPrivate) privateAccent else headerTextPrimary.copy(alpha = 0.85f)
-              ),
-              color = tabBadgeBg,
-              modifier = Modifier
-                .minimumInteractiveComponentSize()
-                .clickable {
-                  haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                  onOpenTabs()
-                }
-                .testTag("nav_tabs_button")
-            ) {
-              Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.padding(horizontal = 11.dp, vertical = 5.dp)
-              ) {
-                Text(
-                  text = tabCount.toString(),
-                  style = MaterialTheme.typography.labelMedium,
-                  fontWeight = FontWeight.Bold,
-                  color = if (isPrivate) privateAccent else headerTextPrimary
-                )
-              }
-            }
-
-            IconButton(
-              onClick = {
-                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                onOpenQuickMenu()
-              },
-              modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_menu_button")
-            ) {
-              Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.cd_menu))
-            }
-          }
-        } else {
-          Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp)) {
-            AnimatedVisibility(
-              visible = isAddressBarExpanded || isFocused,
-              enter = expandVertically() + fadeIn(),
-              exit = shrinkVertically() + fadeOut()
-            ) {
-              Column {
-                omniboxPill(Modifier.fillMaxWidth())
-                Spacer(modifier = Modifier.height(6.dp))
-              }
-            }
-
             Row(
-              modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
+              modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp),
               horizontalArrangement = Arrangement.SpaceBetween,
               verticalAlignment = Alignment.CenterVertically
             ) {
@@ -2294,23 +2054,20 @@ private fun BrowserToolbar(
 
               Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = if (isAddressBarExpanded) headerAccent.copy(alpha = 0.22f) else secTint.copy(alpha = 0.14f),
-                border = BorderStroke(
-                  1.dp,
-                  if (isAddressBarExpanded) headerAccent.copy(alpha = 0.6f) else secTint.copy(alpha = 0.35f)
-                ),
+                color = secTint.copy(alpha = 0.14f),
+                border = BorderStroke(1.dp, secTint.copy(alpha = 0.35f)),
                 modifier = Modifier
                   .minimumInteractiveComponentSize()
                   .clickable {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    isAddressBarExpanded = !isAddressBarExpanded
+                    onOpenSiteInfo()
                   }
-                  .testTag("nav_lock_button")
+                  .testTag("security_badge_button")
               ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
                   Icon(
                     imageVector = secIcon,
-                    contentDescription = if (isAddressBarExpanded) "Hide address bar" else "Show address bar: $secDesc",
+                    contentDescription = secDesc,
                     tint = secTint,
                     modifier = Modifier.size(20.dp)
                   )
@@ -2353,6 +2110,109 @@ private fun BrowserToolbar(
                 modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_menu_button")
               ) {
                 Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.cd_menu))
+              }
+            }
+          } else {
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp)) {
+              AnimatedVisibility(
+                visible = isAddressBarExpanded || isFocused,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+              ) {
+                Column {
+                  omniboxPill(Modifier.fillMaxWidth())
+                  Spacer(modifier = Modifier.height(6.dp))
+                }
+              }
+
+              Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                IconButton(
+                  onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onBack()
+                  },
+                  enabled = activeTab.canGoBack || activeTab.httpWarning != null || activeTab.errorState != null,
+                  modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_back_button")
+                ) {
+                  Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
+                }
+                IconButton(
+                  onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onForward()
+                  },
+                  enabled = activeTab.canGoForward,
+                  modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_forward_button")
+                ) {
+                  Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = stringResource(R.string.cd_forward))
+                }
+
+                Surface(
+                  shape = RoundedCornerShape(12.dp),
+                  color = if (isAddressBarExpanded) headerAccent.copy(alpha = 0.22f) else secTint.copy(alpha = 0.14f),
+                  border = BorderStroke(
+                    1.dp,
+                    if (isAddressBarExpanded) headerAccent.copy(alpha = 0.6f) else secTint.copy(alpha = 0.35f)
+                  ),
+                  modifier = Modifier
+                    .minimumInteractiveComponentSize()
+                    .clickable {
+                      haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                      isAddressBarExpanded = !isAddressBarExpanded
+                    }
+                    .testTag("nav_lock_button")
+                ) {
+                  Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+                    Icon(
+                      imageVector = secIcon,
+                      contentDescription = if (isAddressBarExpanded) "Hide address bar" else "Show address bar: $secDesc",
+                      tint = secTint,
+                      modifier = Modifier.size(20.dp)
+                    )
+                  }
+                }
+
+                Surface(
+                  shape = RoundedCornerShape(12.dp),
+                  border = BorderStroke(
+                    1.5.dp,
+                    if (isPrivate) privateAccent else headerTextPrimary.copy(alpha = 0.85f)
+                  ),
+                  color = tabBadgeBg,
+                  modifier = Modifier
+                    .minimumInteractiveComponentSize()
+                    .clickable {
+                      haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                      onOpenTabs()
+                    }
+                    .testTag("nav_tabs_button")
+                ) {
+                  Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.padding(horizontal = 11.dp, vertical = 5.dp)
+                  ) {
+                    Text(
+                      text = tabCount.toString(),
+                      style = MaterialTheme.typography.labelMedium,
+                      fontWeight = FontWeight.Bold,
+                      color = if (isPrivate) privateAccent else headerTextPrimary
+                    )
+                  }
+                }
+
+                IconButton(
+                  onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onOpenQuickMenu()
+                  },
+                  modifier = Modifier.minimumInteractiveComponentSize().testTag("nav_menu_button")
+                ) {
+                  Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.cd_menu))
+                }
               }
             }
           }

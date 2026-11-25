@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kio", appName)
-    assertEquals("2.0.9", BuildConfig.VERSION_NAME)
-    assertEquals(81, BuildConfig.VERSION_CODE)
+    assertEquals("2.1.0", BuildConfig.VERSION_NAME)
+    assertEquals(82, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -233,7 +233,7 @@ class ExampleRobolectricTest {
 
   @Test
   @Config(sdk = [36], qualifiers = "sw600dp-w1024dp-h768dp-xhdpi")
-  fun tabletHeaderHasNoTabBarAndToolbarShortcutsWorkAcrossAndroidVersions() {
+  fun tabletLayoutMatchesMobileWithFullFeatureParityAndLockOmnibox() {
     composeTestRule.waitForIdle()
     try {
       composeTestRule.onNodeWithTag("intro_get_started").performClick()
@@ -243,20 +243,35 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Kio").assertIsDisplayed()
     composeTestRule.onNodeWithTag("kio_home_logo").assertIsDisplayed()
 
-    // Header tab strip is removed from tablet devices
-    composeTestRule.onNodeWithTag("tablet_tab_new_button").assertDoesNotExist()
+    // Tablet layout shares exact unified 5-button mobile design
+    composeTestRule.onNodeWithTag("nav_back_button").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("nav_forward_button").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("security_badge_button").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("nav_tabs_button").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("nav_menu_button").assertIsDisplayed()
 
-    // Tablet layout renders clean single-row top toolbar with instant shortcuts
-    composeTestRule.onNodeWithTag("tablet_desktop_mode_button").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("tablet_bookmarks_button").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("tablet_downloads_button").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("tablet_extensions_button").assertDoesNotExist()
-    composeTestRule.onNodeWithTag("tablet_new_tab_button").assertIsDisplayed()
+    // Legacy cluttered tablet buttons are eliminated
+    composeTestRule.onNodeWithTag("tablet_desktop_mode_button").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("tablet_bookmarks_button").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("tablet_downloads_button").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("tablet_new_tab_button").assertDoesNotExist()
 
-    // Open a new tab directly from the toolbar '+' button
-    composeTestRule.onNodeWithTag("tablet_new_tab_button").performClick()
+    // Verify navigating to a page shows lock icon and toggles omnibox identically to mobile
+    val vm = composeTestRule.activity.viewModel
+    composeTestRule.runOnUiThread {
+      vm.navigateActiveTab("https://example.com")
+    }
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Search with DuckDuckGo").assertIsDisplayed()
+
+    composeTestRule.onNodeWithTag("nav_lock_button").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("nav_lock_button").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("example.com").assertIsDisplayed()
+
+    // 3-dot menu opens cleanly on tablet
+    composeTestRule.onNodeWithTag("nav_menu_button").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithText("Settings").assertIsDisplayed()
   }
 
   @Test
@@ -942,8 +957,8 @@ class ExampleRobolectricTest {
     // Simulate new update available detection
     composeTestRule.runOnUiThread {
       vm.availableUpdate.value = com.example.model.AppUpdateInfo(
-        versionName = "2.1.0",
-        downloadUrl = "https://github.com/akshatk1997/Pika/releases/download/v2.1.0/Kio-v2.1.0.apk",
+        versionName = "2.1.1",
+        downloadUrl = "https://github.com/akshatk1997/Pika/releases/download/v2.1.1/Kio-v2.1.1.apk",
         releaseNotes = "New speed optimizations"
       )
     }
@@ -952,7 +967,7 @@ class ExampleRobolectricTest {
     // Verify update banner card appears at the top of Settings
     composeTestRule.onNodeWithTag("settings_update_available_card").assertIsDisplayed()
     composeTestRule.onNodeWithText("New Update Available!").assertIsDisplayed()
-    composeTestRule.onNodeWithText("v2.1.0").assertIsDisplayed()
+    composeTestRule.onNodeWithText("v2.1.1").assertIsDisplayed()
 
     // Click on Update button to trigger automatic download
     composeTestRule.onNodeWithTag("settings_download_update_button").performClick()
@@ -960,7 +975,7 @@ class ExampleRobolectricTest {
 
     // Verify download was enqueued in downloads list
     val downloads = vm.downloads.value
-    assertTrue(downloads.any { it.fileName.contains("Kio-v2.1.0.apk") })
+    assertTrue(downloads.any { it.fileName.contains("Kio-v2.1.1.apk") })
 
     // Clean up
     composeTestRule.runOnUiThread {
