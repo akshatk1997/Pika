@@ -8,12 +8,17 @@
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.1.0.apk`](releases/Kio-v2.1.0.apk) and published in GitHub Releases (`v2.1.0`).
+Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.1.1.apk`](releases/Kio-v2.1.1.apk) and published in GitHub Releases (`v2.1.1`).
 
 ---
 
-## Core Highlights (v2.1.0)
+## Core Highlights (v2.1.1)
 
+- **Cosmic Stardust Ripple Logo & Brand Emblem (v2.1.1):**
+  - Brand emblem and Android launcher icon inspired by gravitational wave resonance and stardust pointillism.
+  - Features a central radiant star orb surrounded by expanding concentric crescent stardust ripple wavefronts.
+  - Monochromatic palette with deep space OLED black (`#000000`), diamond silver-white (`#FFFFFF` / `#E2E8F0`), and soft celestial bloom halo.
+  - Zero-allocation procedural canvas rendering for ultra-fluid 120Hz/60Hz touch responsiveness.
 - **Full Android Tablet Compatibility (Android 10+):**
   - Unified A-to-Z feature parity across all Android devices: tablets (7", 10", 12"+), foldables, and smartphones alike.
   - Ergonomically centered 5-button balanced toolbar with the collapsible lock-tap omnibox, tactile reload gesture, and full feature suite on all form factors.

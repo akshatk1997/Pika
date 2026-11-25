@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kio", appName)
-    assertEquals("2.1.0", BuildConfig.VERSION_NAME)
-    assertEquals(82, BuildConfig.VERSION_CODE)
+    assertEquals("2.1.1", BuildConfig.VERSION_NAME)
+    assertEquals(83, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -951,8 +951,8 @@ class ExampleRobolectricTest {
     // Simulate new update available detection
     composeTestRule.runOnUiThread {
       vm.availableUpdate.value = com.example.model.AppUpdateInfo(
-        versionName = "2.1.1",
-        downloadUrl = "https://github.com/akshatk1997/Pika/releases/download/v2.1.1/Kio-v2.1.1.apk",
+        versionName = "2.1.2",
+        downloadUrl = "https://github.com/akshatk1997/Pika/releases/download/v2.1.2/Kio-v2.1.2.apk",
         releaseNotes = "New speed optimizations"
       )
     }
@@ -961,7 +961,7 @@ class ExampleRobolectricTest {
     // Verify update banner card appears at the top of Settings
     composeTestRule.onNodeWithTag("settings_update_available_card").assertIsDisplayed()
     composeTestRule.onNodeWithText("New Update Available!").assertIsDisplayed()
-    composeTestRule.onNodeWithText("v2.1.1").assertIsDisplayed()
+    composeTestRule.onNodeWithText("v2.1.2").assertIsDisplayed()
 
     // Click on Update button to trigger automatic download
     composeTestRule.onNodeWithTag("settings_download_update_button").performClick()
@@ -969,7 +969,7 @@ class ExampleRobolectricTest {
 
     // Verify download was enqueued in downloads list
     val downloads = vm.downloads.value
-    assertTrue(downloads.any { it.fileName.contains("Kio-v2.1.1.apk") })
+    assertTrue(downloads.any { it.fileName.contains("Kio-v2.1.2.apk") })
 
     // Clean up
     composeTestRule.runOnUiThread {

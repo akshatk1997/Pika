@@ -3,31 +3,66 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Orbital right arc (r = 27) -->
+
+    <!-- Concentric Gravitational Wave Ripples: Tier 4 (Outer r=43) -->
     <path
-        android:pathData="M 46.17, 28.16 A 27,27 0 1,1 46.17, 79.84"
-        android:strokeWidth="4.4"
+        android:pathData="M 32.5,16.8 A 43,43 0 0,0 32.5,91.2"
+        android:strokeWidth="1.6"
         android:strokeLineCap="round"
-        android:strokeColor="#FFFFFFFF" />
-    <!-- Hidden K orbital meridian chord -->
+        android:strokeColor="#70FFFFFF" />
     <path
-        android:pathData="M 38.48, 31.86 C 36.18, 40.77 36.18, 67.23 38.48, 76.14"
-        android:strokeWidth="4.4"
+        android:pathData="M 75.5,16.8 A 43,43 0 0,1 75.5,91.2"
+        android:strokeWidth="1.6"
         android:strokeLineCap="round"
-        android:strokeColor="#FFFFFFFF" />
-    <!-- Hidden K orbital refraction rays -->
+        android:strokeColor="#70FFFFFF" />
+
+    <!-- Concentric Gravitational Wave Ripples: Tier 3 (Mid-Outer r=35) -->
     <path
-        android:pathData="M 38.88, 54.0 Q 51.98, 48.06 70.47, 32.67"
+        android:pathData="M 36.5,23.7 A 35,35 0 0,0 36.5,84.3"
+        android:strokeWidth="2.2"
+        android:strokeLineCap="round"
+        android:strokeColor="#A0FFFFFF" />
+    <path
+        android:pathData="M 71.5,23.7 A 35,35 0 0,1 71.5,84.3"
+        android:strokeWidth="2.2"
+        android:strokeLineCap="round"
+        android:strokeColor="#A0FFFFFF" />
+
+    <!-- Concentric Gravitational Wave Ripples: Tier 2 (Mid-Inner r=26) -->
+    <path
+        android:pathData="M 41.0,31.5 A 26,26 0 0,0 41.0,76.5"
+        android:strokeWidth="2.8"
+        android:strokeLineCap="round"
+        android:strokeColor="#D0FFFFFF" />
+    <path
+        android:pathData="M 67.0,31.5 A 26,26 0 0,1 67.0,76.5"
+        android:strokeWidth="2.8"
+        android:strokeLineCap="round"
+        android:strokeColor="#D0FFFFFF" />
+
+    <!-- Concentric Gravitational Wave Ripples: Tier 1 (Inner r=17) -->
+    <path
+        android:pathData="M 45.5,39.3 A 17,17 0 0,0 45.5,68.7"
         android:strokeWidth="3.2"
         android:strokeLineCap="round"
-        android:strokeColor="#B8FFFFFF" />
+        android:strokeColor="#FFFFFFFF" />
     <path
-        android:pathData="M 38.88, 54.0 Q 51.98, 59.94 70.47, 75.33"
+        android:pathData="M 62.5,39.3 A 17,17 0 0,1 62.5,68.7"
         android:strokeWidth="3.2"
         android:strokeLineCap="round"
-        android:strokeColor="#B8FFFFFF" />
-    <!-- Center solid core dot -->
+        android:strokeColor="#FFFFFFFF" />
+
+    <!-- Central Luminous Star Orb Core Sphere -->
     <path
-        android:pathData="M 54, 54 m -8.5, 0 a 8.5,8.5 0 1,0 17,0 a 8.5,8.5 0 1,0 -17,0"
+        android:pathData="M 54, 54 m -9.5, 0 a 9.5,9.5 0 1,0 19,0 a 9.5,9.5 0 1,0 -19,0"
         android:fillColor="#FFFFFFFF" />
+
+    <!-- Stardust Crest Dots -->
+    <path android:pathData="M 37,54 m -1.1,0 a 1.1,1.1 0 1,0 2.2,0 a 1.1,1.1 0 1,0 -2.2,0" android:fillColor="#FFFFFFFF" />
+    <path android:pathData="M 71,54 m -1.1,0 a 1.1,1.1 0 1,0 2.2,0 a 1.1,1.1 0 1,0 -2.2,0" android:fillColor="#FFFFFFFF" />
+    <path android:pathData="M 28,54 m -1.0,0 a 1.0,1.0 0 1,0 2.0,0 a 1.0,1.0 0 1,0 -2.0,0" android:fillColor="#FFFFFFFF" />
+    <path android:pathData="M 80,54 m -1.0,0 a 1.0,1.0 0 1,0 2.0,0 a 1.0,1.0 0 1,0 -2.0,0" android:fillColor="#FFFFFFFF" />
+    <path android:pathData="M 19,54 m -0.9,0 a 0.9,0.9 0 1,0 1.8,0 a 0.9,0.9 0 1,0 -1.8,0" android:fillColor="#E0FFFFFF" />
+    <path android:pathData="M 89,54 m -0.9,0 a 0.9,0.9 0 1,0 1.8,0 a 0.9,0.9 0 1,0 -1.8,0" android:fillColor="#E0FFFFFF" />
+
 </vector>

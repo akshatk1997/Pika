@@ -676,38 +676,64 @@ object FeatherIcons {
 
   val FeatherLogo: ImageVector by lazy {
     ImageVector.Builder("KioLogo", 24.dp, 24.dp, 24f, 24f).apply {
+      // Outer crescent wave (r = 9.5)
       path(
         stroke = SolidColor(Color.Black),
-        strokeLineWidth = 1.6f,
+        strokeLineWidth = 1.1f,
         strokeLineCap = StrokeCap.Round
       ) {
-        moveTo(12f, 2.5f)
-        curveTo(17.25f, 2.5f, 21.5f, 6.75f, 21.5f, 12f)
-        curveTo(21.5f, 17.25f, 17.25f, 21.5f, 12f, 21.5f)
-        curveTo(6.75f, 21.5f, 2.5f, 17.25f, 2.5f, 12f)
-        curveTo(2.5f, 6.75f, 6.75f, 2.5f, 12f, 2.5f)
-        close()
+        moveTo(7.25f, 3.77f)
+        arcTo(9.5f, 9.5f, 0f, false, false, 7.25f, 20.23f)
+      }
+      path(
+        stroke = SolidColor(Color.Black),
+        strokeLineWidth = 1.1f,
+        strokeLineCap = StrokeCap.Round
+      ) {
+        moveTo(16.75f, 3.77f)
+        arcTo(9.5f, 9.5f, 0f, false, true, 16.75f, 20.23f)
+      }
+      // Mid crescent wave (r = 6.8)
+      path(
+        stroke = SolidColor(Color.Black),
+        strokeLineWidth = 1.3f,
+        strokeLineCap = StrokeCap.Round
+      ) {
+        moveTo(8.6f, 6.1f)
+        arcTo(6.8f, 6.8f, 0f, false, false, 8.6f, 17.9f)
+      }
+      path(
+        stroke = SolidColor(Color.Black),
+        strokeLineWidth = 1.3f,
+        strokeLineCap = StrokeCap.Round
+      ) {
+        moveTo(15.4f, 6.1f)
+        arcTo(6.8f, 6.8f, 0f, false, true, 15.4f, 17.9f)
+      }
+      // Inner crescent wave (r = 4.4)
+      path(
+        stroke = SolidColor(Color.Black),
+        strokeLineWidth = 1.5f,
+        strokeLineCap = StrokeCap.Round
+      ) {
+        moveTo(9.8f, 8.2f)
+        arcTo(4.4f, 4.4f, 0f, false, false, 9.8f, 15.8f)
       }
       path(
         stroke = SolidColor(Color.Black),
         strokeLineWidth = 1.5f,
         strokeLineCap = StrokeCap.Round
       ) {
-        moveTo(12f, 6.5f)
-        curveTo(15.04f, 6.5f, 17.5f, 8.96f, 17.5f, 12f)
-        curveTo(17.5f, 15.04f, 15.04f, 17.5f, 12f, 17.5f)
-        curveTo(8.96f, 17.5f, 6.5f, 15.04f, 6.5f, 12f)
-        curveTo(6.5f, 8.96f, 8.96f, 6.5f, 12f, 6.5f)
-        close()
+        moveTo(14.2f, 8.2f)
+        arcTo(4.4f, 4.4f, 0f, false, true, 14.2f, 15.8f)
       }
-      path(
-        fill = SolidColor(Color.Black)
-      ) {
-        moveTo(12f, 9.8f)
-        curveTo(13.22f, 9.8f, 14.2f, 10.78f, 14.2f, 12f)
-        curveTo(14.2f, 13.22f, 13.22f, 14.2f, 12f, 14.2f)
-        curveTo(10.78f, 14.2f, 9.8f, 13.22f, 9.8f, 12f)
-        curveTo(9.8f, 10.78f, 10.78f, 9.8f, 12f, 9.8f)
+      // Central Star Orb Core
+      path(fill = SolidColor(Color.Black)) {
+        moveTo(12f, 9.6f)
+        curveTo(13.33f, 9.6f, 14.4f, 10.67f, 14.4f, 12f)
+        curveTo(14.4f, 13.33f, 13.33f, 14.4f, 12f, 14.4f)
+        curveTo(10.67f, 14.4f, 9.6f, 13.33f, 9.6f, 12f)
+        curveTo(9.6f, 10.67f, 10.67f, 9.6f, 12f, 9.6f)
         close()
       }
     }.build()
