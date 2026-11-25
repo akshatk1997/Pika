@@ -1076,38 +1076,7 @@ fun BrowserScreen(
           }
         }
 
-        // Quick Theme Row
         var showModesExpanded by remember { mutableStateOf(false) }
-        FlowRow(
-          horizontalArrangement = Arrangement.spacedBy(8.dp),
-          verticalArrangement = Arrangement.spacedBy(6.dp),
-          modifier = Modifier.fillMaxWidth()
-        ) {
-          FilterChip(
-            selected = isDarkTheme,
-            onClick = {
-              val nextDark = !isDarkTheme
-              viewModel.updateSettings {
-                it.copy(
-                  themeMode = if (nextDark) ThemeMode.DARK else ThemeMode.LIGHT,
-                  nightWebMode = nextDark
-                )
-              }
-            },
-            leadingIcon = {
-              Icon(
-                if (isDarkTheme) FeatherIcons.NightMoon else FeatherIcons.SunLight,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp)
-              )
-            },
-            label = { Text(if (isDarkTheme) "Dark mode" else "Light mode") }
-          )
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
-        Spacer(modifier = Modifier.height(12.dp))
 
         // Show Modes expander if toggled
         AnimatedVisibility(
@@ -1249,10 +1218,6 @@ fun BrowserScreen(
               showQuickSheet = false
               viewModel.openImageSniffer()
             },
-            QuickActionItem(FeatherIcons.CameraCapture, "Capture", hasUrl) {
-              showQuickSheet = false
-              onCaptureFullPageScreenshot()
-            },
             QuickActionItem(
               FeatherIcons.EyeFilter,
               "Screen Filter",
@@ -1326,10 +1291,6 @@ fun BrowserScreen(
               showQuickSheet = false
               viewModel.openImageSniffer()
             },
-            QuickActionItem(FeatherIcons.CameraCapture, "Capture", hasUrl) {
-              showQuickSheet = false
-              onCaptureFullPageScreenshot()
-            },
             QuickActionItem(
               FeatherIcons.EyeFilter,
               "Screen Filter",
@@ -1380,10 +1341,6 @@ fun BrowserScreen(
             QuickActionItem(Icons.Filled.Share, stringResource(R.string.action_share), hasUrl) {
               showQuickSheet = false
               viewModel.shareActiveUrl()
-            },
-            QuickActionItem(FeatherIcons.OpenInNew, stringResource(R.string.action_open_external), hasUrl) {
-              showQuickSheet = false
-              viewModel.openInSystemBrowser()
             },
             QuickActionItem(Icons.Filled.Star, stringResource(R.string.action_pin_home), hasUrl) {
               showQuickSheet = false

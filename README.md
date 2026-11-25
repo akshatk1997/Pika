@@ -8,18 +8,22 @@
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.0.4.apk`](releases/Kio-v2.0.4.apk) and published in GitHub Releases (`v2.0.4`).
+Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.0.5.apk`](releases/Kio-v2.0.5.apk) and published in GitHub Releases (`v2.0.5`).
 
 ---
 
-## Core Highlights (v2.0.4 — Build 76)
+## Core Highlights (v2.0.5)
 
+- **Clean & Minimalist About Settings:**
+  - Removed redundant engine & system info and build numbers from About Kio for a cleaner, polished presentation.
+- **Refined 3-Dot Quick Menu:**
+  - Removed dark mode bar, capture, and open-external options to provide a snappy, uncluttered 3-dot bottom sheet.
+- **Enhanced Compression & Optimization:**
+  - Full codebase and resource optimization ensuring lightning-fast performance while keeping the APK strictly under 2 MB.
 - **Typewriter Animated Cursive Script Intro:**
   - Distinctive cursive script typography header (*"One browser, every thing you are."*) dynamically types out letter by letter upon opening the browser with smooth hardware-accelerated timing.
-  - Streamlined presentation with uncluttered layout and glowing interactive start button.
 - **Intentional Press-Slide Down Reload Gesture:**
-  - Deliberate press and downward slide refreshes or reloads the web page with tactile haptic feedback.
-  - Standard casual scrolling and flicking through web content are 100% unaffected with zero accidental reloads.
+  - Deliberate press and downward slide refreshes or reloads the web page with tactile haptic feedback; standard casual scrolling remains completely unaffected.
 - **Hardware-Accelerated Rendering & Silk Smoothness:**
   - Priority rendering policy (`WebSettings.RenderPriority.HIGH`) and hardware-accelerated layer (`View.LAYER_TYPE_HARDWARE`) ensuring ultra-fluid 120Hz/60Hz touch responsiveness with zero stutter or lag.
 

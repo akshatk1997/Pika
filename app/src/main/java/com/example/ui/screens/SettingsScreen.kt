@@ -404,7 +404,7 @@ fun SettingsScreen(
                 icon = Icons.Filled.Info,
                 iconTint = FeatherSecureGreen,
                 title = SettingsFolder.ABOUT.title,
-                subtitle = "Kio v${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE}) · Engine & privacy policies",
+                subtitle = "Kio v${BuildConfig.VERSION_NAME} · Privacy & policies",
                 tag = "settings_folder_about",
                 onClick = { activeFolder = SettingsFolder.ABOUT }
               )
@@ -912,7 +912,7 @@ fun SettingsScreen(
           var feedbackTopic by remember { mutableStateOf("Bug Report") }
           var feedbackMessage by remember { mutableStateOf("") }
           val diagnosticsSummary = remember(systemWebViewInfo) {
-            "Kio v${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})\n" +
+            "Kio v${BuildConfig.VERSION_NAME}\n" +
               "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})\n" +
               "Device: ${Build.MANUFACTURER} ${Build.MODEL}\n" +
               "Engine: ${systemWebViewInfo ?: "Android System WebView"}"
@@ -1022,7 +1022,7 @@ fun SettingsScreen(
                 fontWeight = FontWeight.Bold
               )
               Text(
-                text = "Version ${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})",
+                text = "Version ${BuildConfig.VERSION_NAME}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
               )
@@ -1072,18 +1072,6 @@ fun SettingsScreen(
                 Text(if (availableUpdate != null) "Download" else "Check Now")
               }
             }
-          }
-
-          SettingsSectionCard("Engine & System Information", Modifier.widthIn(max = 720.dp)) {
-            AboutInfoRow("Version", "${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})")
-            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
-            AboutInfoRow("Rendering Engine", systemWebViewInfo ?: "Android System WebView")
-            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
-            AboutInfoRow("Android Platform", "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
-            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
-            AboutInfoRow("Settings Encryption", "Android Keystore AES-256-GCM")
-            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
-            AboutInfoRow("Telemetry & Analytics", "None (0% data collection)")
           }
 
           SettingsSectionCard("Policies & Licenses", Modifier.widthIn(max = 720.dp)) {
@@ -1237,29 +1225,6 @@ private fun FolderDivider() {
     modifier = Modifier.padding(start = 66.dp, end = 14.dp),
     color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
   )
-}
-
-@Composable
-private fun AboutInfoRow(label: String, value: String) {
-  Row(
-    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-    horizontalArrangement = Arrangement.SpaceBetween,
-    verticalAlignment = Alignment.CenterVertically
-  ) {
-    Text(
-      text = label,
-      style = MaterialTheme.typography.bodyMedium,
-      color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
-    Spacer(modifier = Modifier.width(12.dp))
-    Text(
-      text = value,
-      style = MaterialTheme.typography.bodyMedium,
-      fontWeight = FontWeight.Medium,
-      maxLines = 1,
-      overflow = TextOverflow.Ellipsis
-    )
-  }
 }
 
 @Composable

@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kio", appName)
-    assertEquals("2.0.4", BuildConfig.VERSION_NAME)
-    assertEquals(76, BuildConfig.VERSION_CODE)
+    assertEquals("2.0.5", BuildConfig.VERSION_NAME)
+    assertEquals(77, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -670,7 +670,9 @@ class ExampleRobolectricTest {
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("Bookmarks").assertIsDisplayed()
     composeTestRule.onNodeWithText("Share").assertIsDisplayed()
-    composeTestRule.onNodeWithText("Open externally").assertIsDisplayed()
+    composeTestRule.onNodeWithText("Open externally").assertDoesNotExist()
+    composeTestRule.onNodeWithText("Capture").assertDoesNotExist()
+    composeTestRule.onNodeWithText("Dark mode").assertDoesNotExist()
     composeTestRule.onNodeWithText("Add shortcut").assertIsDisplayed()
     composeTestRule.onNodeWithText("Burn session").assertDoesNotExist()
     composeTestRule.onNodeWithText("Shield audit").assertDoesNotExist()
@@ -940,8 +942,8 @@ class ExampleRobolectricTest {
     // Simulate new update available detection
     composeTestRule.runOnUiThread {
       vm.availableUpdate.value = com.example.model.AppUpdateInfo(
-        versionName = "2.0.5",
-        downloadUrl = "https://github.com/akshatk1997/Pika/releases/download/v2.0.5/Kio-v2.0.5.apk",
+        versionName = "2.0.6",
+        downloadUrl = "https://github.com/akshatk1997/Pika/releases/download/v2.0.6/Kio-v2.0.6.apk",
         releaseNotes = "New speed optimizations"
       )
     }
@@ -950,7 +952,7 @@ class ExampleRobolectricTest {
     // Verify update banner card appears at the top of Settings
     composeTestRule.onNodeWithTag("settings_update_available_card").assertIsDisplayed()
     composeTestRule.onNodeWithText("New Update Available!").assertIsDisplayed()
-    composeTestRule.onNodeWithText("v2.0.5").assertIsDisplayed()
+    composeTestRule.onNodeWithText("v2.0.6").assertIsDisplayed()
 
     // Click on Update button to trigger automatic download
     composeTestRule.onNodeWithTag("settings_download_update_button").performClick()
@@ -958,7 +960,7 @@ class ExampleRobolectricTest {
 
     // Verify download was enqueued in downloads list
     val downloads = vm.downloads.value
-    assertTrue(downloads.any { it.fileName.contains("Kio-v2.0.5.apk") })
+    assertTrue(downloads.any { it.fileName.contains("Kio-v2.0.6.apk") })
 
     // Clean up
     composeTestRule.runOnUiThread {
@@ -981,6 +983,9 @@ class ExampleRobolectricTest {
     // 1. Verify Kio Browser brand & version summary card is removed from settings header
     composeTestRule.onNodeWithText("General & Search").assertIsDisplayed()
     composeTestRule.onNodeWithText("Version ${com.example.BuildConfig.VERSION_NAME}").assertDoesNotExist()
+    composeTestRule.onNodeWithText("Engine & System Information").assertDoesNotExist()
+    composeTestRule.onNodeWithText("Build 76").assertDoesNotExist()
+    composeTestRule.onNodeWithText("Build 77").assertDoesNotExist()
 
     // 2. Open Appearance & Display folder
     composeTestRule.onNodeWithTag("settings_folder_appearance").performClick()
