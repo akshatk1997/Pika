@@ -137,7 +137,7 @@ fun NewTabHomeView(
   modifier: Modifier = Modifier
 ) {
   var homeSearch by remember { mutableStateOf("") }
-  var showPinballGame by remember { mutableStateOf(false) }
+  var showCandyCrushGame by remember { mutableStateOf(false) }
   var lastLogoTapTime by remember { mutableLongStateOf(0L) }
   val homeHaptic = LocalHapticFeedback.current
 
@@ -219,7 +219,7 @@ fun NewTabHomeView(
       Spacer(modifier = Modifier.height(if (isCompactHeight) 4.dp else 18.dp))
 
       // Hero Emblem (Preserved Kio Homepage Emblem: Concentric Circle in Circle in Dot)
-      // Double-tap easter egg: Opens Windows Space Cadet Pinball game!
+      // Double-tap easter egg: Opens Kio Candy Crush match-3 game!
       val crestSize = if (isCompactHeight) 56.dp else 78.dp
       KioLogo(
         modifier = Modifier
@@ -231,7 +231,7 @@ fun NewTabHomeView(
             val now = SystemClock.uptimeMillis()
             if (now - lastLogoTapTime < 500L) {
               homeHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
-              showPinballGame = true
+              showCandyCrushGame = true
               lastLogoTapTime = 0L
             } else {
               lastLogoTapTime = now
@@ -519,9 +519,9 @@ fun NewTabHomeView(
     }
   }
 
-  if (showPinballGame) {
-    PinballGameDialog(
-      onDismiss = { showPinballGame = false }
+  if (showCandyCrushGame) {
+    CandyCrushDialog(
+      onDismiss = { showCandyCrushGame = false }
     )
   }
 }
