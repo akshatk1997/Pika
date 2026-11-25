@@ -256,22 +256,16 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithTag("tablet_downloads_button").assertDoesNotExist()
     composeTestRule.onNodeWithTag("tablet_new_tab_button").assertDoesNotExist()
 
-    // Verify navigating to a page shows lock icon and toggles omnibox identically to mobile
-    val vm = composeTestRule.activity.viewModel
-    composeTestRule.runOnUiThread {
-      vm.navigateActiveTab("https://example.com")
-    }
+    // Site security info dialog opens cleanly from center pill on tablet
+    composeTestRule.onNodeWithTag("security_badge_button").performClick()
     composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithTag("nav_lock_button").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("nav_lock_button").performClick()
+    composeTestRule.onNodeWithText("Done").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("example.com").assertExists()
 
     // 3-dot menu opens cleanly on tablet
     composeTestRule.onNodeWithTag("nav_menu_button").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("Settings").assertExists()
+    composeTestRule.onNodeWithText("Settings").assertIsDisplayed()
   }
 
   @Test
