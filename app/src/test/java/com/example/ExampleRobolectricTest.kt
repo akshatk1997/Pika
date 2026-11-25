@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kio", appName)
-    assertEquals("2.0.5", BuildConfig.VERSION_NAME)
-    assertEquals(77, BuildConfig.VERSION_CODE)
+    assertEquals("2.0.6", BuildConfig.VERSION_NAME)
+    assertEquals(78, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -942,8 +942,8 @@ class ExampleRobolectricTest {
     // Simulate new update available detection
     composeTestRule.runOnUiThread {
       vm.availableUpdate.value = com.example.model.AppUpdateInfo(
-        versionName = "2.0.6",
-        downloadUrl = "https://github.com/akshatk1997/Pika/releases/download/v2.0.6/Kio-v2.0.6.apk",
+        versionName = "2.0.7",
+        downloadUrl = "https://github.com/akshatk1997/Pika/releases/download/v2.0.7/Kio-v2.0.7.apk",
         releaseNotes = "New speed optimizations"
       )
     }
@@ -952,7 +952,7 @@ class ExampleRobolectricTest {
     // Verify update banner card appears at the top of Settings
     composeTestRule.onNodeWithTag("settings_update_available_card").assertIsDisplayed()
     composeTestRule.onNodeWithText("New Update Available!").assertIsDisplayed()
-    composeTestRule.onNodeWithText("v2.0.6").assertIsDisplayed()
+    composeTestRule.onNodeWithText("v2.0.7").assertIsDisplayed()
 
     // Click on Update button to trigger automatic download
     composeTestRule.onNodeWithTag("settings_download_update_button").performClick()
@@ -960,7 +960,7 @@ class ExampleRobolectricTest {
 
     // Verify download was enqueued in downloads list
     val downloads = vm.downloads.value
-    assertTrue(downloads.any { it.fileName.contains("Kio-v2.0.6.apk") })
+    assertTrue(downloads.any { it.fileName.contains("Kio-v2.0.7.apk") })
 
     // Clean up
     composeTestRule.runOnUiThread {
@@ -1056,9 +1056,17 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithText("Stealth Privacy & Zero Leaks").assertExists()
     composeTestRule.onNodeWithText("Integrated Ad & Video Shield").assertExists()
     composeTestRule.onNodeWithText("One-Handed & Grayscale Modes").assertExists()
+    composeTestRule.onNodeWithText("Tactile Reload & Omnibox Lock").assertExists()
     composeTestRule.onNodeWithText("Pure On-Device NLP Announcer").assertExists()
+    composeTestRule.onNodeWithText("Media Sniffer & Instant Updates").assertExists()
 
-    // 4. Verify Start Browsing button is present and dismisses intro
+    // 4. Verify Creative Category Chips exist
+    composeTestRule.onNodeWithText("All Features").assertExists()
+    composeTestRule.onNodeWithText("Privacy & Shield").assertExists()
+    composeTestRule.onNodeWithText("Gestures & Flow").assertExists()
+    composeTestRule.onNodeWithText("AI & Utilities").assertExists()
+
+    // 5. Verify Start Browsing button is present and dismisses intro
     composeTestRule.onNodeWithTag("intro_get_started", useUnmergedTree = true).assertExists()
     composeTestRule.runOnUiThread {
       vm.dismissIntro()

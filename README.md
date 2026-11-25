@@ -8,18 +8,19 @@
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.0.5.apk`](releases/Kio-v2.0.5.apk) and published in GitHub Releases (`v2.0.5`).
+Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.0.6.apk`](releases/Kio-v2.0.6.apk) and published in GitHub Releases (`v2.0.6`).
 
 ---
 
-## Core Highlights (v2.0.5)
+## Core Highlights (v2.0.6)
 
+- **Comprehensive Creative Feature Showcase:**
+  - Distinctive display presentation combining all browser capabilities: Stealth Privacy Vault, Integrated Ad & Video Shield, Ergonomic One-Handed & Grayscale Modes, Tactile Reload & Omnibox Lock, Pure On-Device NLP Announcer, and Smart Media Sniffer.
+  - Interactive category filtering chips (`All Features`, `Privacy & Shield`, `Gestures & Flow`, `AI & Utilities`) and tap-to-expand architectural spotlight badges with tactile feedback.
 - **Clean & Minimalist About Settings:**
   - Removed redundant engine & system info and build numbers from About Kio for a cleaner, polished presentation.
 - **Refined 3-Dot Quick Menu:**
   - Removed dark mode bar, capture, and open-external options to provide a snappy, uncluttered 3-dot bottom sheet.
-- **Enhanced Compression & Optimization:**
-  - Full codebase and resource optimization ensuring lightning-fast performance while keeping the APK strictly under 2 MB.
 - **Typewriter Animated Cursive Script Intro:**
   - Distinctive cursive script typography header (*"One browser, every thing you are."*) dynamically types out letter by letter upon opening the browser with smooth hardware-accelerated timing.
 - **Intentional Press-Slide Down Reload Gesture:**
