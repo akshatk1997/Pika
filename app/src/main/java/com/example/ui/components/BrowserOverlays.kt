@@ -1065,7 +1065,7 @@ fun MediaDownloaderDialog(
   onClose: () -> Unit
 ) {
   var selectedTab by remember(mediaList.size, images.size) {
-    mutableIntStateOf(if (mediaList.isNotEmpty() || images.isEmpty()) 0 else 1)
+    mutableStateOf(if (mediaList.isNotEmpty() || images.isEmpty()) 0 else 1)
   }
   var selectedImageUrls by remember(images) { mutableStateOf(images.toSet()) }
 
@@ -1102,20 +1102,60 @@ fun MediaDownloaderDialog(
           modifier = Modifier.fillMaxWidth(),
           horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-          FilterChip(
-            selected = selectedTab == 0,
-            onClick = { selectedTab = 0 },
-            leadingIcon = { Icon(FeatherIcons.Video, contentDescription = null, modifier = Modifier.size(16.dp)) },
-            label = { Text("Streams (${mediaList.size})") },
-            modifier = Modifier.weight(1f)
-          )
-          FilterChip(
-            selected = selectedTab == 1,
-            onClick = { selectedTab = 1 },
-            leadingIcon = { Icon(FeatherIcons.ImageBox, contentDescription = null, modifier = Modifier.size(16.dp)) },
-            label = { Text("Images (${images.size})") },
-            modifier = Modifier.weight(1f)
-          )
+          Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = if (selectedTab == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            modifier = Modifier
+              .weight(1f)
+              .clickable { selectedTab = 0 }
+          ) {
+            Row(
+              modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.Center
+            ) {
+              Icon(
+                FeatherIcons.Video,
+                contentDescription = null,
+                tint = if (selectedTab == 0) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(15.dp)
+              )
+              Spacer(modifier = Modifier.width(6.dp))
+              Text(
+                "Streams (${mediaList.size})",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
+                color = if (selectedTab == 0) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+              )
+            }
+          }
+          Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = if (selectedTab == 1) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            modifier = Modifier
+              .weight(1f)
+              .clickable { selectedTab = 1 }
+          ) {
+            Row(
+              modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.Center
+            ) {
+              Icon(
+                FeatherIcons.ImageBox,
+                contentDescription = null,
+                tint = if (selectedTab == 1) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(15.dp)
+              )
+              Spacer(modifier = Modifier.width(6.dp))
+              Text(
+                "Images (${images.size})",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
+                color = if (selectedTab == 1) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+              )
+            }
+          }
         }
       }
     },
