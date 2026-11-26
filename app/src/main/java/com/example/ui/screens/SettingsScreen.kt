@@ -437,6 +437,7 @@ fun SettingsScreen(
         }
 
         SettingsFolder.GENERAL -> {
+          SettingsCategoryHeader("Basics", Modifier.widthIn(max = 720.dp))
           SettingsSectionCard("Search Engine", Modifier.widthIn(max = 720.dp)) {
             SearchEngine.entries.forEach { engine ->
               Row(
@@ -536,6 +537,7 @@ fun SettingsScreen(
         }
 
         SettingsFolder.APPEARANCE -> {
+          SettingsCategoryHeader("Display & Accessibility", Modifier.widthIn(max = 720.dp))
           SettingsSectionCard("Appearance & Display", Modifier.widthIn(max = 720.dp)) {
             Text("Theme", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(6.dp))
@@ -655,6 +657,7 @@ fun SettingsScreen(
         }
 
         SettingsFolder.PRIVACY -> {
+          SettingsCategoryHeader("Privacy & Security", Modifier.widthIn(max = 720.dp))
           SettingsSectionCard("Shield & Tracking Protection", Modifier.widthIn(max = 720.dp)) {
             SettingSwitchRow(
               title = "HTTPS-Only mode",
@@ -784,6 +787,7 @@ fun SettingsScreen(
         }
 
         SettingsFolder.DATA_SAVER -> {
+          SettingsCategoryHeader("Advanced", Modifier.widthIn(max = 720.dp))
           SettingsSectionCard("Data Saver & Bandwidth", Modifier.widthIn(max = 720.dp)) {
             SettingSwitchRow(
               title = "Data saver mode",
@@ -1360,4 +1364,20 @@ private fun SettingSwitchRow(
       modifier = Modifier.testTag(tag)
     )
   }
+}
+
+@Composable
+private fun SettingsCategoryHeader(
+  title: String,
+  modifier: Modifier = Modifier
+) {
+  Text(
+    text = title,
+    style = MaterialTheme.typography.labelLarge,
+    fontWeight = FontWeight.SemiBold,
+    color = MaterialTheme.colorScheme.primary,
+    modifier = modifier
+      .fillMaxWidth()
+      .padding(horizontal = 4.dp, vertical = 4.dp)
+  )
 }
