@@ -72,12 +72,12 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kio-v2.1.4.apk
+          cp "$APK_PATH" releases/Kio-v2.1.5.apk
           cat <<EOF > releases/latest.json
           {
-            "version": "2.1.4",
-            "downloadUrl": "https://github.com/akshatk1997/Pika/releases/download/v2.1.4/Kio-v2.1.4.apk",
-            "notes": "Kio Browser v2.1.4 with aesthetic materialistic stardust logo, omnibox bookmark star, unified Media downloader hub, Clean Mode in settings, and ultra-lean sub-2MB footprint"
+            "version": "2.1.5",
+            "downloadUrl": "https://github.com/akshatk1997/Pika/releases/download/v2.1.5/Kio-v2.1.5.apk",
+            "notes": "• Minimalist Premium Logo: Redesigned blending Chrome precision rings, Firefox sweeping crescent motion, and Kio's obsidian cosmic theme.\n• Update Changelog UI: Detailed 'What's New' release notes now display automatically when a new update is available.\n• Video Streaming & Performance: Hardware-accelerated 120Hz/60Hz playback and sub-2MB footprint."
           }
           EOF
           rm -f debug.keystore
@@ -86,25 +86,25 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kio-v2.1.4.apk releases/latest.json keystore/kio-release.jks
+          git add releases/Kio-v2.1.5.apk releases/latest.json keystore/kio-release.jks
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kio-v2.1.4.apk and latest.json (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kio-v2.1.5.apk and latest.json (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v2.1.4
+      - name: Create or update GitHub Release v2.1.5
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kio-v2.1.4.apk)
-          NOTES="Kio Browser v2.1.4 — Aesthetic Materialistic Logo, Omnibox Bookmark Star & Unified Media Hub (< 2 MB).\n\n- **Aesthetic Materialistic Logo:**\n  - Sculpted 3D celestial sphere with specular highlight, dual-layer ambient diffusion wavefront arcs, obsidian depth gradient, and metallic chamfered border brush while maintaining zero-allocation procedural canvas.\n- **Omnibox Bookmark Star:**\n  - One-tap star icon button directly inside the address bar to instantly add or remove the current website from bookmarks with tactile haptic feedback.\n- **Unified Media Downloader Hub:**\n  - Merged Images and Media into a single streamlined 'Media' hub offering both sniffed audio/video streams and page images with multi-select download.\n- **Clean Overflow Menu:**\n  - Full-screen mode toggle removed completely.\n  - 'Add shortcut' removed from 3-dot menu.\n  - 'Clean Mode' moved into Settings under browsing preferences.\n- **Permanent Keystore & Sub-2MB Size:**\n  - Uses permanent release signing keys for direct seamless APK update compatibility.\n  - Release APK strictly under 2 MB (2,097,152 bytes)."
-          if gh release view v2.1.4 >/dev/null 2>&1; then
-            gh release upload v2.1.4 releases/Kio-v2.1.4.apk --clobber
-            gh release edit v2.1.4 --title "Kio v2.1.4 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kio-v2.1.5.apk)
+          NOTES="Kio Browser v2.1.5 — Minimalist Premium Logo, Update Changelog UI & Sub-2MB Performance (< 2 MB).\n\n- **Minimalist Premium Logo:**\n  - Redesigned blending Chrome-inspired precision orbital segments, Firefox-inspired dynamic sweeping crescent, and Kio's deep-space obsidian theme.\n- **Update Changelog Details:**\n  - Displays detailed 'What's New' release notes directly inside Settings whenever a new update is available.\n- **Strict Constraint:** Release APK strictly under 2 MB (2,097,152 bytes)."
+          if gh release view v2.1.5 >/dev/null 2>&1; then
+            gh release upload v2.1.5 releases/Kio-v2.1.5.apk --clobber
+            gh release edit v2.1.5 --title "Kio v2.1.5 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v2.1.4 releases/Kio-v2.1.4.apk \
-              --title "Kio v2.1.4 (< 2 MB)" \
+            gh release create v2.1.5 releases/Kio-v2.1.5.apk \
+              --title "Kio v2.1.5 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

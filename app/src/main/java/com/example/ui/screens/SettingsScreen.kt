@@ -270,6 +270,29 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = if (resolvedDark) Color(0xFFBAE6FD) else Color(0xFF0284C7)
                   )
+                  if (availableUpdate.releaseNotes.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Surface(
+                      shape = RoundedCornerShape(10.dp),
+                      color = if (resolvedDark) Color(0xFF082F49).copy(alpha = 0.7f) else Color.White.copy(alpha = 0.7f),
+                      modifier = Modifier.fillMaxWidth()
+                    ) {
+                      Column(modifier = Modifier.padding(8.dp)) {
+                        Text(
+                          text = "What's New:",
+                          style = MaterialTheme.typography.labelSmall,
+                          fontWeight = FontWeight.Bold,
+                          color = if (resolvedDark) Color(0xFF7DD3FC) else Color(0xFF0369A1)
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                          text = availableUpdate.releaseNotes,
+                          style = MaterialTheme.typography.bodySmall,
+                          color = if (resolvedDark) Color(0xFFE0F2FE) else Color(0xFF0C4A6E)
+                        )
+                      }
+                    }
+                  }
                 }
                 Surface(
                   shape = RoundedCornerShape(12.dp),
@@ -1070,6 +1093,29 @@ fun SettingsScreen(
                 shape = RoundedCornerShape(10.dp)
               ) {
                 Text(if (availableUpdate != null) "Download" else "Check Now")
+              }
+            }
+            if (availableUpdate != null && availableUpdate.releaseNotes.isNotBlank()) {
+              Spacer(modifier = Modifier.height(6.dp))
+              Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.fillMaxWidth()
+              ) {
+                Column(modifier = Modifier.padding(10.dp)) {
+                  Text(
+                    text = "What's New in v${availableUpdate.versionName}",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                  )
+                  Spacer(modifier = Modifier.height(4.dp))
+                  Text(
+                    text = availableUpdate.releaseNotes,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                  )
+                }
               }
             }
           }

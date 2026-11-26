@@ -232,127 +232,102 @@ fun KioLogo(
       val centerOffset = Offset(w / 2f, h / 2f)
       val minDim = min(w, h)
 
-      val coreRadius = minDim * 0.138f
-      val rippleRadii = floatArrayOf(
-        minDim * 0.21f,
-        minDim * 0.29f,
-        minDim * 0.37f,
-        minDim * 0.45f
-      )
+      val coreRadius = minDim * 0.165f
+      val innerOrbitalRadius = minDim * 0.275f
+      val outerRingRadius = minDim * 0.395f
 
-      // 1. Ambient Cosmic Bloom Halo (Refined Material Glow)
+      // 1. Ambient Cosmic Bloom Halo
       drawCircle(
         brush = Brush.radialGradient(
           colors = listOf(
-            particlePrimaryColor.copy(alpha = 0.32f * glowAlpha),
-            particleSecondaryColor.copy(alpha = 0.10f * glowAlpha),
+            particlePrimaryColor.copy(alpha = 0.28f * glowAlpha),
+            particleSecondaryColor.copy(alpha = 0.08f * glowAlpha),
             Color.Transparent
           ),
           center = centerOffset,
-          radius = minDim * 0.52f
+          radius = minDim * 0.50f
         ),
-        radius = minDim * 0.52f,
+        radius = minDim * 0.50f,
         center = centerOffset
       )
 
-      // 2. Concentric Symmetrical Gravitational Crescent Wavefront Arcs (Dual-Layer Material Sheen)
-      val strokeWidths = floatArrayOf(
-        minDim * 0.032f,
-        minDim * 0.026f,
-        minDim * 0.020f,
-        minDim * 0.016f
-      )
+      // 2. Chrome-Inspired Precision Tri-Segment Outer Orbital Ring
+      val outerRectTopLeft = Offset(centerOffset.x - outerRingRadius, centerOffset.y - outerRingRadius)
+      val outerRectSize = Size(outerRingRadius * 2f, outerRingRadius * 2f)
+      val outerStroke = minDim * 0.042f
+      val baseAngleOffset = wavePhase * 12f
 
-      for (i in rippleRadii.indices) {
-        val r = rippleRadii[i] + (wavePhase * 0.008f * minDim * (i + 1))
-        val stroke = strokeWidths[i]
-        val arcRectTopLeft = Offset(centerOffset.x - r, centerOffset.y - r)
-        val arcRectSize = Size(r * 2f, r * 2f)
-
-        // Diffusion shadow under arc for tactile elevation
-        val diffusionBrush = Brush.linearGradient(
+      for (seg in 0 until 3) {
+        val segStart = -30f + seg * 120f + baseAngleOffset
+        val segBrush = Brush.linearGradient(
           colors = listOf(
-            Color.Transparent,
-            particlePrimaryColor.copy(alpha = 0.20f * glowAlpha),
-            Color.Transparent
+            particlePrimaryColor.copy(alpha = 0.85f * glowAlpha),
+            starCoreMidColor.copy(alpha = 0.45f * glowAlpha),
+            starCoreShadowColor.copy(alpha = 0.18f * glowAlpha)
           ),
-          start = Offset(centerOffset.x, centerOffset.y - r * 0.866f),
-          end = Offset(centerOffset.x, centerOffset.y + r * 0.866f)
+          start = Offset(centerOffset.x - outerRingRadius, centerOffset.y - outerRingRadius),
+          end = Offset(centerOffset.x + outerRingRadius, centerOffset.y + outerRingRadius)
         )
         drawArc(
-          brush = diffusionBrush,
-          startAngle = 120f,
-          sweepAngle = 120f,
+          brush = segBrush,
+          startAngle = segStart,
+          sweepAngle = 92f,
           useCenter = false,
-          topLeft = arcRectTopLeft,
-          size = arcRectSize,
-          style = Stroke(width = stroke * 1.6f, cap = StrokeCap.Round)
-        )
-        drawArc(
-          brush = diffusionBrush,
-          startAngle = -60f,
-          sweepAngle = 120f,
-          useCenter = false,
-          topLeft = arcRectTopLeft,
-          size = arcRectSize,
-          style = Stroke(width = stroke * 1.6f, cap = StrokeCap.Round)
-        )
-
-        // Equator-focused gradient brush: brightest at horizontal center, fading towards tips
-        val arcBrush = Brush.linearGradient(
-          colors = listOf(
-            Color.Transparent,
-            particlePrimaryColor.copy(alpha = (0.55f + (3 - i) * 0.15f) * glowAlpha),
-            Color.Transparent
-          ),
-          start = Offset(centerOffset.x, centerOffset.y - r * 0.866f),
-          end = Offset(centerOffset.x, centerOffset.y + r * 0.866f)
-        )
-
-        // Left crescent wave
-        drawArc(
-          brush = arcBrush,
-          startAngle = 120f,
-          sweepAngle = 120f,
-          useCenter = false,
-          topLeft = arcRectTopLeft,
-          size = arcRectSize,
-          style = Stroke(width = stroke, cap = StrokeCap.Round)
-        )
-
-        // Right crescent wave
-        drawArc(
-          brush = arcBrush,
-          startAngle = -60f,
-          sweepAngle = 120f,
-          useCenter = false,
-          topLeft = arcRectTopLeft,
-          size = arcRectSize,
-          style = Stroke(width = stroke, cap = StrokeCap.Round)
+          topLeft = outerRectTopLeft,
+          size = outerRectSize,
+          style = Stroke(width = outerStroke, cap = StrokeCap.Round)
         )
       }
 
-      // 3. Stardust Pointillism Matrix (Dense particles radiating along ripples and core)
-      val particles = STARDUST_PARTICLES
-      for (p in particles) {
-        val (px, py) = if (p.isCore) {
-          centerOffset.x + p.nx * minDim * pulseScale to centerOffset.y + p.ny * minDim * pulseScale
-        } else {
-          centerOffset.x + p.nx * minDim to centerOffset.y + p.ny * minDim
-        }
+      // 3. Firefox-Inspired Dynamic Sweeping Crescent Arc around Core
+      val innerRectTopLeft = Offset(centerOffset.x - innerOrbitalRadius, centerOffset.y - innerOrbitalRadius)
+      val innerRectSize = Size(innerOrbitalRadius * 2f, innerOrbitalRadius * 2f)
+      val crescentStroke = minDim * 0.056f
 
-        val dynamicTwinkle = (0.65f + 0.35f * sin((twinkle * p.twinkleSpeed * Math.PI).toFloat())).coerceIn(0.2f, 1f)
-        val particleAlpha = (p.baseAlpha * dynamicTwinkle).coerceIn(0.08f, 1.0f)
-        val particleRadius = p.sizeRatio * minDim * (if (p.isCore) pulseScale else 1f)
+      drawArc(
+        color = particlePrimaryColor.copy(alpha = 0.16f * glowAlpha),
+        startAngle = 200f - baseAngleOffset,
+        sweepAngle = 225f,
+        useCenter = false,
+        topLeft = innerRectTopLeft,
+        size = innerRectSize,
+        style = Stroke(width = crescentStroke * 1.55f, cap = StrokeCap.Round)
+      )
 
+      drawArc(
+        brush = Brush.sweepGradient(
+          colors = listOf(
+            Color.Transparent,
+            starCoreShadowColor.copy(alpha = 0.35f * glowAlpha),
+            starCoreMidColor.copy(alpha = 0.85f * glowAlpha),
+            particlePrimaryColor.copy(alpha = 0.98f * glowAlpha),
+            Color.Transparent
+          ),
+          center = centerOffset
+        ),
+        startAngle = 200f - baseAngleOffset,
+        sweepAngle = 225f,
+        useCenter = false,
+        topLeft = innerRectTopLeft,
+        size = innerRectSize,
+        style = Stroke(width = crescentStroke, cap = StrokeCap.Round)
+      )
+
+      // 4. Minimalist Cosmic Stardust Motes
+      for (i in STARDUST_PARTICLES.indices) {
+        if (i % 10 != 0) continue
+        val p = STARDUST_PARTICLES[i]
+        val px = centerOffset.x + p.nx * minDim * 0.44f
+        val py = centerOffset.y + p.ny * minDim * 0.44f
+        val dotAlpha = (p.baseAlpha * 0.65f * (0.65f + 0.35f * twinkle)).coerceIn(0.08f, 0.85f)
         drawCircle(
-          color = (if (p.isCore) particlePrimaryColor else particleSecondaryColor).copy(alpha = particleAlpha),
-          radius = particleRadius,
+          color = particlePrimaryColor.copy(alpha = dotAlpha),
+          radius = p.sizeRatio * minDim * 0.85f,
           center = Offset(px, py)
         )
       }
 
-      // 4. Central Radiant Star Orb (Sculpted 3D Material Celestial Sphere)
+      // 5. Central Sculpted 3D Celestial Sphere Core
       scale(scale = pulseScale, pivot = centerOffset) {
         // Outer core radial glow
         drawCircle(
