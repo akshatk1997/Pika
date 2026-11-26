@@ -607,7 +607,8 @@ fun BrowserScreen(
                             }
                           }
                           targetWebView.setOnTouchListener { v, event ->
-                            val isAtTop = v.scrollY <= 0 || !v.canScrollVertically(-1)
+                            val isFullscreen = fullscreenView != null || isBrowserFullscreen
+                            val isAtTop = !isFullscreen && (v.scrollY <= 0 || !v.canScrollVertically(-1))
                             if (isAtTop) {
                               when (event.actionMasked) {
                                 MotionEvent.ACTION_DOWN -> {
@@ -626,13 +627,13 @@ fun BrowserScreen(
                                   val dy = event.y - pullStartY.floatValue
                                   val dx = kotlin.math.abs(event.x - pullStartX.floatValue)
 
-                                  // Only activate reload when user deliberately presses (>= 130ms) and slides down, not on normal rapid scrolling
-                                  if (!isPressSlideEngaged && pressDuration >= 130L && dy > slopPx * 0.75f && dy > dx * 1.4f) {
+                                  // Only activate reload when user deliberately presses (>= 150ms) and slides down vertically, not on rapid scrolling or video interaction
+                                  if (!isPressSlideEngaged && pressDuration >= 150L && dy > slopPx * 1.2f && dy > dx * 1.8f) {
                                     isPressSlideEngaged = true
                                     pullHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                   }
 
-                                  if (isPressSlideEngaged && dy > slopPx && dy > dx * 1.25f && pullStartY.floatValue > 0f) {
+                                  if (isPressSlideEngaged && dy > slopPx && dy > dx * 1.5f && pullStartY.floatValue > 0f) {
                                     val newProgress = ((dy - slopPx) / triggerPx).coerceIn(0f, 1f)
                                     if (newProgress >= 0.85f && pullProgress < 0.85f) {
                                       pullHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -644,23 +645,28 @@ fun BrowserScreen(
                                   }
                                 }
                                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                                  if (isPressSlideEngaged && pullProgress >= 0.85f) {
-                                    pullHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    viewModel.reloadOrStop()
-                                  }
+                                  val wasEngaged = isPressSlideEngaged
+                                  val progress = pullProgress
                                   pullProgress = 0f
                                   isPressSlideEngaged = false
                                   pullStartX.floatValue = 0f
                                   pullStartY.floatValue = 0f
+                                  if (wasEngaged && progress >= 0.85f) {
+                                    pullHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    viewModel.reloadOrStop()
+                                    return@setOnTouchListener true
+                                  }
                                 }
                               }
                             } else {
-                              pullProgress = 0f
-                              isPressSlideEngaged = false
-                              pullStartX.floatValue = 0f
-                              pullStartY.floatValue = 0f
+                              if (pullProgress > 0f || isPressSlideEngaged) {
+                                pullProgress = 0f
+                                isPressSlideEngaged = false
+                                pullStartX.floatValue = 0f
+                                pullStartY.floatValue = 0f
+                              }
                             }
-                            false
+                            isPressSlideEngaged
                           }
                         },
                         onRelease = { container ->

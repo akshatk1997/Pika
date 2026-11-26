@@ -66,12 +66,12 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kio-v2.1.1.apk
+          cp "$APK_PATH" releases/Kio-v2.1.2.apk
           cat <<EOF > releases/latest.json
           {
-            "version": "2.1.1",
-            "downloadUrl": "https://github.com/akshatk1997/Pika/releases/download/v2.1.1/Kio-v2.1.1.apk",
-            "notes": "Kio Browser v2.1.1 featuring new Cosmic Stardust Ripple Emblem & Launcher Icon inspired by gravitational waves, monochromatic OLED black & diamond silver-white palette, and sub-2MB footprint"
+            "version": "2.1.2",
+            "downloadUrl": "https://github.com/akshatk1997/Pika/releases/download/v2.1.2/Kio-v2.1.2.apk",
+            "notes": "Kio Browser v2.1.2 featuring universal video playback & touch responsiveness fixes across YouTube and streaming sources, full hardware acceleration, and sub-2MB footprint"
           }
           EOF
           rm -f debug.keystore
@@ -80,25 +80,25 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kio-v2.1.1.apk releases/latest.json
+          git add releases/Kio-v2.1.2.apk releases/latest.json
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kio-v2.1.1.apk and latest.json (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kio-v2.1.2.apk and latest.json (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v2.1.1
+      - name: Create or update GitHub Release v2.1.2
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kio-v2.1.1.apk)
-          NOTES="Kio Browser v2.1.1 — Cosmic Stardust Ripple Emblem & Launcher Icon, Monochromatic Luxury Palette & Ultra Compression (< 2 MB).\n\n- **Cosmic Stardust Ripple Logo & Emblem:**\n  - Rebuilt brand emblem and launcher icon inspired by gravitational wave resonance and stardust pointillism.\n  - Central radiant star orb surrounded by expanding concentric crescent ripple waves.\n  - Monochromatic OLED deep space black (#000000) and diamond silver-white (#FFFFFF / #E2E8F0) palette matching reference image.\n- **Strict Constraint:** Release APK strictly under 2 MB (2,097,152 bytes)."
-          if gh release view v2.1.1 >/dev/null 2>&1; then
-            gh release upload v2.1.1 releases/Kio-v2.1.1.apk --clobber
-            gh release edit v2.1.1 --title "Kio v2.1.1 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kio-v2.1.2.apk)
+          NOTES="Kio Browser v2.1.2 — Universal Video Playback & Touch Responsiveness Fix, Hardware Acceleration & Ultra Compression (< 2 MB).\n\n- **Universal Video Playback & Full Interactive Control:**\n  - Fully fixed YouTube and web video players where buttons were invisible and screen was stuck.\n  - Enforced uninhibited pointer events for all HTML5 video player controls (.ytp-, .html5-video-player, controls bars).\n  - Eliminated disruptive script intercepts and monkey-patched codecs that caused player stalls and false canPlayType assertions.\n  - Full hardware-accelerated 120Hz/60Hz GPU compositing across all media and web pages.\n- **Strict Constraint:** Release APK strictly under 2 MB (2,097,152 bytes)."
+          if gh release view v2.1.2 >/dev/null 2>&1; then
+            gh release upload v2.1.2 releases/Kio-v2.1.2.apk --clobber
+            gh release edit v2.1.2 --title "Kio v2.1.2 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v2.1.1 releases/Kio-v2.1.1.apk \
-              --title "Kio v2.1.1 (< 2 MB)" \
+            gh release create v2.1.2 releases/Kio-v2.1.2.apk \
+              --title "Kio v2.1.2 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

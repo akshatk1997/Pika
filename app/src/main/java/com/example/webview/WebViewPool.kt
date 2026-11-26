@@ -1388,20 +1388,16 @@ class WebViewPool(
               '.ytp-ad-message-container',
               '.ytp-ad-action-interstitial',
               '.ytp-ad-player-overlay-flyout-cta',
-              '.adsbygoogle',
+              'div.adsbygoogle',
               '[id^="google_ads_"]',
               '[id^="div-gpt-ad"]',
               '[class*="sponsored-post"]',
               '.taboola-ad',
               '.outbrain-ad',
               '.trc_related_container',
-              '.mgid-ad',
-              '.ad-container',
-              '.ad-div',
-              '.ad-banner',
-              '.advertisement',
-              '.advertisement-container'
-            ].join(',') + '{display:none!important;visibility:hidden!important;height:0!important;min-height:0!important;opacity:0!important;pointer-events:none!important;}';
+              '.mgid-ad'
+            ].join(',') + '{display:none!important;visibility:hidden!important;height:0!important;min-height:0!important;opacity:0!important;pointer-events:none!important;}\n' +
+            '.html5-video-player, [class*="video-player"], [class*="vjs-"], [class*="jw-"], [class*="plyr"], video { display:block!important; visibility:visible!important; opacity:1!important; }';
             (document.head || document.documentElement).appendChild(s);
           }
         } catch(e) {}
@@ -1411,14 +1407,15 @@ class WebViewPool(
             var isYouTube = /youtube\.com|youtu\.be/.test(window.location.hostname);
             if (!isYouTube) return;
             var player = document.querySelector('#movie_player') || document.querySelector('.html5-video-player');
-            var isAdActive = Boolean(player && (player.classList.contains('ad-showing') || player.classList.contains('ad-interrupting')));
+            if (!player) return;
+            var isAdActive = Boolean(player.classList.contains('ad-showing') || player.classList.contains('ad-interrupting'));
 
             if (isAdActive) {
               if (typeof player.skipAd === 'function') {
                 try { player.skipAd(); } catch(e) {}
               }
 
-              var skipButtons = document.querySelectorAll(
+              var skipButtons = player.querySelectorAll(
                 '.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, button.ytp-ad-skip-button, .ytp-ad-overlay-close-button, .videoAdUiSkipButton, [class*="skip-button"], [class*="ad-skip"]'
               );
               for (var j = 0; j < skipButtons.length; j++) {
@@ -1427,34 +1424,18 @@ class WebViewPool(
                 }
               }
 
-              // Fast-forward ad safely: 16x playback rate and mute without corrupting video duration or buffer
               var videos = player.querySelectorAll('video');
               for (var i = 0; i < videos.length; i++) {
                 var v = videos[i];
-                if (!v.muted) {
-                  v.__kio_ad_muted = true;
-                  v.muted = true;
-                }
-                v.playbackRate = 16.0;
-              }
-            } else if (player) {
-              // Ensure normal content video playback rate is 1.0 and restore audio
-              var contentVideos = player.querySelectorAll('video');
-              for (var k = 0; k < contentVideos.length; k++) {
-                var cv = contentVideos[k];
-                if (cv.playbackRate > 2.0) {
-                  cv.playbackRate = 1.0;
-                }
-                if (cv.__kio_ad_muted) {
-                  cv.muted = false;
-                  delete cv.__kio_ad_muted;
+                if (isFinite(v.duration) && v.duration > 0 && v.currentTime < v.duration) {
+                  try { v.currentTime = v.duration; } catch(err) {}
                 }
               }
             }
           } catch(e) {}
         }
 
-        setInterval(skipStreamingAds, 300);
+        setInterval(skipStreamingAds, 800);
 
         if (window.MutationObserver) {
           var observer = new MutationObserver(function() {
@@ -1640,11 +1621,11 @@ class WebViewPool(
   }
 
   /**
-   * Injects universal HTML5 video enhancement engine:
-   * - Enforces playsinline, webkit-playsinline, and x5-playsinline on all HTML5 video elements.
-   * - Safely catches unhandled HTMLMediaElement.play() Promise rejections (falling back to muted preview when needed).
-   * - Dynamically patches newly mounted video players (React, Vue, Video.js, JWPlayer, Hls.js) via MutationObserver.
-   * - Bypasses transparent clickjack / invisible ad overlays placed over video players on streaming sites.
+   * Injects universal HTML5 video enhancement & control protection engine:
+   * - Enforces playsinline and webkit-playsinline on all HTML5 video elements.
+   * - Guarantees video player control overlays (.ytp-, .html5-video-player, controls bars) are always interactive and visible.
+   * - Protects legitimate iframe fullscreen, autoplay, and encrypted-media permissions.
+   * - Blocks intrusive window.open popup/popunder redirections without intercepting player clicks.
    */
   fun applyVideoCompatibilityEngine(webView: WebView) {
     if (!settingsProvider().javascriptEnabled || destroyedViews.contains(webView)) return
@@ -1653,113 +1634,35 @@ class WebViewPool(
         if (window.__kio_video_engine_installed) return;
         window.__kio_video_engine_installed = true;
 
-        // 1. Comprehensive canPlayType polyfill across all media element prototypes
+        // 1. Ensure HTML5 video player controls and interactive surfaces are ALWAYS visible & clickable
         try {
-          var patchCanPlay = function(proto) {
-            if (!proto || !proto.canPlayType) return;
-            var orig = proto.canPlayType;
-            proto.canPlayType = function(type) {
-              if (!type) return '';
-              var t = String(type).toLowerCase();
-              if (t.indexOf('application/x-mpegurl') !== -1 ||
-                  t.indexOf('application/vnd.apple.mpegurl') !== -1 ||
-                  t.indexOf('audio/x-mpegurl') !== -1 ||
-                  t.indexOf('audio/mpegurl') !== -1 ||
-                  t.indexOf('video/mp2t') !== -1 ||
-                  t.indexOf('application/dash+xml') !== -1) {
-                return 'maybe';
-              }
-              var res = orig.apply(this, arguments);
-              if (!res && (t.indexOf('mp4') !== -1 || t.indexOf('webm') !== -1 || t.indexOf('hls') !== -1 || t.indexOf('m3u8') !== -1 || t.indexOf('ogg') !== -1 || t.indexOf('mkv') !== -1)) {
-                return 'maybe';
-              }
-              return res;
-            };
-          };
-          patchCanPlay(HTMLMediaElement.prototype);
-          if (window.HTMLVideoElement && HTMLVideoElement.prototype) patchCanPlay(HTMLVideoElement.prototype);
-          if (window.HTMLAudioElement && HTMLAudioElement.prototype) patchCanPlay(HTMLAudioElement.prototype);
-        } catch(e) {}
-
-        // 2. MediaSource.isTypeSupported polyfill for adaptive streaming codecs
-        try {
-          if (window.MediaSource && MediaSource.isTypeSupported) {
-            var origIsTypeSupported = MediaSource.isTypeSupported;
-            MediaSource.isTypeSupported = function(type) {
-              if (!type) return false;
-              var res = origIsTypeSupported.apply(this, arguments);
-              if (res) return true;
-              var t = String(type).toLowerCase();
-              if (t.indexOf('avc1') !== -1 || t.indexOf('mp4a') !== -1 || t.indexOf('video/mp4') !== -1 || t.indexOf('video/webm') !== -1 || t.indexOf('vp9') !== -1 || t.indexOf('vp8') !== -1 || t.indexOf('opus') !== -1) {
-                return true;
-              }
-              return res;
-            };
+          var styleId = 'kio-video-compat-style';
+          if (!document.getElementById(styleId)) {
+            var s = document.createElement('style');
+            s.id = styleId;
+            s.textContent = [
+              'video { -webkit-transform: translateZ(0); transform: translateZ(0); }',
+              '.html5-video-player, .html5-video-player * { pointer-events: auto !important; }',
+              '.ytp-chrome-bottom, .ytp-chrome-top, .ytp-player-content, .ytp-touch-feedback, .ytp-cued-thumbnail-overlay { pointer-events: auto !important; }',
+              '.ytp-play-button, .ytp-prev-button, .ytp-next-button, .ytp-mute-button, .ytp-volume-panel, .ytp-time-display, .ytp-settings-button, .ytp-fullscreen-button { pointer-events: auto !important; visibility: visible !important; }',
+              '.vjs-control-bar, .jw-controls, .plyr__controls, [class*="video-controls"] { pointer-events: auto !important; visibility: visible !important; opacity: 1 !important; }',
+              '[class*="player"] button, [class*="player"] [role="button"], [class*="player"] input[type="range"] { pointer-events: auto !important; cursor: pointer !important; }'
+            ].join('\n');
+            (document.head || document.documentElement).appendChild(s);
           }
         } catch(e) {}
 
-        // 3. Patch video elements (inline playback, source resolution, and CORS error recovery)
+        // 2. Enforce playsinline on video elements so videos play smoothly within page layout
         function patchVideo(video) {
           if (!video) return;
           try {
             if (!video.hasAttribute('playsinline')) video.setAttribute('playsinline', '');
             if (!video.hasAttribute('webkit-playsinline')) video.setAttribute('webkit-playsinline', '');
             if (!video.hasAttribute('x5-playsinline')) video.setAttribute('x5-playsinline', '');
-
-            // If video has child <source> elements but no active src, populate src directly
-            if (!video.src && video.querySelector) {
-              var s = video.querySelector('source[src]');
-              if (s && s.src) {
-                video.src = s.src;
-                try { video.load(); } catch(err) {}
-              }
-            }
-
-            // Remove any failing crossorigin attribute on error and retry fallback sources
-            if (!video.__kio_error_bound) {
-              video.__kio_error_bound = true;
-              video.addEventListener('error', function() {
-                try {
-                  if (video.hasAttribute('crossorigin')) {
-                    video.removeAttribute('crossorigin');
-                    try { video.load(); video.play(); } catch(err) {}
-                    return;
-                  }
-                  var allSources = video.querySelectorAll ? video.querySelectorAll('source[src]') : [];
-                  for (var i = 0; i < allSources.length; i++) {
-                    var candidate = allSources[i].src;
-                    if (candidate && candidate !== video.src) {
-                      video.src = candidate;
-                      try { video.load(); video.play(); } catch(err) {}
-                      break;
-                    }
-                  }
-                } catch(err) {}
-              }, true);
-            }
           } catch(e) {}
         }
 
-        // 4. Universal play() wrapper catching autoplay restrictions
-        try {
-          var origPlay = HTMLMediaElement.prototype.play;
-          HTMLMediaElement.prototype.play = function() {
-            var self = this;
-            patchVideo(self);
-            var res = origPlay.apply(self, arguments);
-            if (res && typeof res.catch === 'function') {
-              res.catch(function(err) {
-                if (err && err.name === 'NotAllowedError' && !self.muted) {
-                  self.muted = true;
-                  try { origPlay.apply(self, arguments); } catch(e) {}
-                }
-              });
-            }
-            return res;
-          };
-        } catch(e) {}
-
-        // 5. Ensure all iframes permit fullscreen, autoplay, and encrypted media (EME/Widevine DRM)
+        // 3. Ensure all iframes permit fullscreen, autoplay, and encrypted media (EME/Widevine DRM)
         function patchIframes() {
           try {
             var iframes = document.querySelectorAll('iframe');
@@ -1772,6 +1675,7 @@ class WebViewPool(
               if (updated.indexOf('autoplay') === -1) updated += '; autoplay *';
               if (updated.indexOf('fullscreen') === -1) updated += '; fullscreen *';
               if (updated.indexOf('encrypted-media') === -1) updated += '; encrypted-media *';
+              if (updated.indexOf('picture-in-picture') === -1) updated += '; picture-in-picture *';
               if (updated !== allow) f.setAttribute('allow', updated.replace(/^;\s*/, ''));
             }
           } catch(e) {}
@@ -1796,19 +1700,20 @@ class WebViewPool(
                 if (node.nodeType === 1) {
                   if (node.tagName === 'VIDEO') patchVideo(node);
                   else if (node.tagName === 'IFRAME') patchIframes();
-                  else if (node.querySelectorAll) {
-                    var subVids = node.querySelectorAll('video');
-                    for (var k = 0; k < subVids.length; k++) patchVideo(subVids[k]);
-                    if (node.querySelector('iframe')) patchIframes();
+                  else if (node.querySelector) {
+                    var v = node.querySelector('video');
+                    if (v) patchVideo(v);
+                    var f = node.querySelector('iframe');
+                    if (f) patchIframes();
                   }
                 }
               }
             }
           });
-          obs.observe(document.documentElement || document.body, { childList: true, subtree: true });
+          obs.observe(document.documentElement || document.body, { childList: true });
         }
 
-        // 6. Intercept and drop window.open calls to ad popunder and syndicate networks
+        // 4. Intercept window.open calls targeting known popunder networks without touching user clicks
         function isAdPopUrl(raw) {
           if (!raw) return false;
           var u = String(raw).toLowerCase();
@@ -1825,77 +1730,6 @@ class WebViewPool(
             return origOpen.apply(this, arguments);
           };
         } catch(e) {}
-
-        // 7. Neutralize transparent clickjacking overlays & ad links hovering over video players
-        document.addEventListener('click', function(e) {
-          try {
-            var target = e.target;
-            if (!target) return;
-
-            var anchor = target.closest ? target.closest('a') : null;
-            if (anchor && anchor.href && isAdPopUrl(anchor.href)) {
-              e.preventDefault();
-              e.stopPropagation();
-              e.stopImmediatePropagation();
-              var vids = document.querySelectorAll('video');
-              for (var i = 0; i < vids.length; i++) {
-                if (vids[i].paused) try { vids[i].play(); } catch(err) {}
-              }
-              return;
-            }
-
-            if (target.tagName === 'VIDEO') return;
-            var style = window.getComputedStyle(target);
-            var isCover = (style.position === 'absolute' || style.position === 'fixed') &&
-                          (parseFloat(style.opacity) < 0.05 || (style.backgroundColor && style.backgroundColor.indexOf('rgba(0, 0, 0, 0)') !== -1)) &&
-                          target.offsetWidth >= 200 && target.offsetHeight >= 150;
-            if (isCover) {
-              var parent = target.parentElement;
-              var under = (parent && parent.querySelector('video')) ||
-                          (target.closest && target.closest('[class*="player"], [id*="player"]') ? target.closest('[class*="player"], [id*="player"]').querySelector('video') : null) ||
-                          document.querySelector('video');
-              if (under) {
-                target.style.pointerEvents = 'none';
-                try { under.play(); } catch(err) {}
-              }
-            }
-          } catch(e) {}
-        }, true);
-
-        // 8. Auto-recover HTML5 video player errors (Flowplayer, JW Player, Video.js)
-        function recoverHtml5VideoErrors() {
-          try {
-            var errorContainers = document.querySelectorAll('.fp-message, .flowplayer.is-error, .jw-error, .vjs-error-display, [class*="error-message"], [class*="player-error"]');
-            for (var i = 0; i < errorContainers.length; i++) {
-              var c = errorContainers[i];
-              var text = (c.innerText || c.textContent || '').toLowerCase();
-              if (text.indexOf('video file not found') !== -1 || text.indexOf('html5') !== -1 || text.indexOf('could not be played') !== -1 || text.indexOf('no compatible source') !== -1) {
-                var root = c.closest ? (c.closest('.flowplayer') || c.closest('.jwplayer') || c.closest('.video-js') || c.parentElement) : c.parentElement;
-                if (root) {
-                  root.classList.remove('is-error');
-                  if (c.classList.contains('fp-message') || c.classList.contains('vjs-error-display')) {
-                    c.style.display = 'none';
-                  }
-                  var vid = root.querySelector('video');
-                  if (vid) {
-                    if (vid.hasAttribute('crossorigin')) vid.removeAttribute('crossorigin');
-                    var srcEl = root.querySelector('source[src]');
-                    if (srcEl && srcEl.src && srcEl.src !== vid.src) {
-                      vid.src = srcEl.src;
-                    }
-                    try {
-                      vid.load();
-                      var p = vid.play();
-                      if (p && p.catch) p.catch(function() {});
-                    } catch(err) {}
-                  }
-                }
-              }
-            }
-          } catch(e) {}
-        }
-
-        setInterval(recoverHtml5VideoErrors, 1000);
       })();
     """.trimIndent()
     try {

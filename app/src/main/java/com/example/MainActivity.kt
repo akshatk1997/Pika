@@ -108,10 +108,6 @@ class MainActivity : ComponentActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    try {
-      WebView.enableSlowWholeDocumentDraw()
-    } catch (_: Throwable) {
-    }
     enableEdgeToEdge()
     val initialSysDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
     viewModel.onSystemThemeChanged(initialSysDark)

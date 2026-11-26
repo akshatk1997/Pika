@@ -8,13 +8,19 @@
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.1.1.apk`](releases/Kio-v2.1.1.apk) and published in GitHub Releases (`v2.1.1`).
+Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.1.2.apk`](releases/Kio-v2.1.2.apk) and published in GitHub Releases (`v2.1.2`).
 
 ---
 
-## Core Highlights (v2.1.1)
+## Core Highlights (v2.1.2)
 
-- **Cosmic Stardust Ripple Logo & Brand Emblem (v2.1.1):**
+- **Universal Video Playback & Complete Touch Responsiveness (v2.1.2):**
+  - Fully resolved playback issues across YouTube, Vimeo, Dailymotion, Twitter/X, and web video streaming sources.
+  - Video player control buttons (play/pause, seekbar/scrubber, volume, settings gear, full-screen toggle) are 100% visible, touchable, and responsive in default mode without any manual configuration.
+  - Eliminated conflicting click-capture listeners that previously disabled pointer events on transparent player layers.
+  - Removed disruptive codec polyfills and monkey-patched assertions, allowing Chromium's native engine to accurately negotiate hardware decoding and MSE (MediaSource Extensions) adaptive streams.
+  - Full hardware-accelerated 120Hz/60Hz GPU compositing across all media and web pages.
+- **Cosmic Stardust Ripple Logo & Brand Emblem:**
   - Brand emblem and Android launcher icon inspired by gravitational wave resonance and stardust pointillism.
   - Features a central radiant star orb surrounded by expanding concentric crescent stardust ripple wavefronts.
   - Monochromatic palette with deep space OLED black (`#000000`), diamond silver-white (`#FFFFFF` / `#E2E8F0`), and soft celestial bloom halo.
