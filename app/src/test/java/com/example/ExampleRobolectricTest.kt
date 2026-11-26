@@ -474,7 +474,7 @@ class ExampleRobolectricTest {
 
     assertNull(vm.fullscreenView.value)
     composeTestRule.runOnUiThread {
-      vm.enterFullscreen(dummyView, dummyCallback)
+      vm.setCustomFullscreen(dummyView, dummyCallback)
     }
     composeTestRule.waitForIdle()
 
