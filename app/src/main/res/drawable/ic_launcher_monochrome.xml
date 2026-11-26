@@ -4,65 +4,32 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Concentric Gravitational Wave Ripples: Tier 4 (Outer r=43) -->
+    <!-- Chrome-Inspired Precision Tri-Segment Outer Orbital Ring (r=27) -->
     <path
-        android:pathData="M 32.5,16.8 A 43,43 0 0,0 32.5,91.2"
-        android:strokeWidth="1.6"
-        android:strokeLineCap="round"
-        android:strokeColor="#70FFFFFF" />
-    <path
-        android:pathData="M 75.5,16.8 A 43,43 0 0,1 75.5,91.2"
-        android:strokeWidth="1.6"
-        android:strokeLineCap="round"
-        android:strokeColor="#70FFFFFF" />
-
-    <!-- Concentric Gravitational Wave Ripples: Tier 3 (Mid-Outer r=35) -->
-    <path
-        android:pathData="M 36.5,23.7 A 35,35 0 0,0 36.5,84.3"
-        android:strokeWidth="2.2"
-        android:strokeLineCap="round"
-        android:strokeColor="#A0FFFFFF" />
-    <path
-        android:pathData="M 71.5,23.7 A 35,35 0 0,1 71.5,84.3"
-        android:strokeWidth="2.2"
-        android:strokeLineCap="round"
-        android:strokeColor="#A0FFFFFF" />
-
-    <!-- Concentric Gravitational Wave Ripples: Tier 2 (Mid-Inner r=26) -->
-    <path
-        android:pathData="M 41.0,31.5 A 26,26 0 0,0 41.0,76.5"
-        android:strokeWidth="2.8"
-        android:strokeLineCap="round"
-        android:strokeColor="#D0FFFFFF" />
-    <path
-        android:pathData="M 67.0,31.5 A 26,26 0 0,1 67.0,76.5"
-        android:strokeWidth="2.8"
-        android:strokeLineCap="round"
-        android:strokeColor="#D0FFFFFF" />
-
-    <!-- Concentric Gravitational Wave Ripples: Tier 1 (Inner r=17) -->
-    <path
-        android:pathData="M 45.5,39.3 A 17,17 0 0,0 45.5,68.7"
+        android:pathData="M 77.38,40.5 A 27,27 0 0,1 66.68,77.84"
         android:strokeWidth="3.2"
-        android:strokeLineCap="round"
-        android:strokeColor="#FFFFFFFF" />
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round" />
     <path
-        android:pathData="M 62.5,39.3 A 17,17 0 0,1 62.5,68.7"
+        android:pathData="M 54.0,81.0 A 27,27 0 0,1 27.02,53.06"
         android:strokeWidth="3.2"
-        android:strokeLineCap="round"
-        android:strokeColor="#FFFFFFFF" />
-
-    <!-- Central Luminous Star Orb Core Sphere -->
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round" />
     <path
-        android:pathData="M 54, 54 m -9.5, 0 a 9.5,9.5 0 1,0 19,0 a 9.5,9.5 0 1,0 -19,0"
-        android:fillColor="#FFFFFFFF" />
+        android:pathData="M 30.62,40.5 A 27,27 0 0,1 68.31,31.10"
+        android:strokeWidth="3.2"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round" />
 
-    <!-- Stardust Crest Dots -->
-    <path android:pathData="M 37,54 m -1.1,0 a 1.1,1.1 0 1,0 2.2,0 a 1.1,1.1 0 1,0 -2.2,0" android:fillColor="#FFFFFFFF" />
-    <path android:pathData="M 71,54 m -1.1,0 a 1.1,1.1 0 1,0 2.2,0 a 1.1,1.1 0 1,0 -2.2,0" android:fillColor="#FFFFFFFF" />
-    <path android:pathData="M 28,54 m -1.0,0 a 1.0,1.0 0 1,0 2.0,0 a 1.0,1.0 0 1,0 -2.0,0" android:fillColor="#FFFFFFFF" />
-    <path android:pathData="M 80,54 m -1.0,0 a 1.0,1.0 0 1,0 2.0,0 a 1.0,1.0 0 1,0 -2.0,0" android:fillColor="#FFFFFFFF" />
-    <path android:pathData="M 19,54 m -0.9,0 a 0.9,0.9 0 1,0 1.8,0 a 0.9,0.9 0 1,0 -1.8,0" android:fillColor="#E0FFFFFF" />
-    <path android:pathData="M 89,54 m -0.9,0 a 0.9,0.9 0 1,0 1.8,0 a 0.9,0.9 0 1,0 -1.8,0" android:fillColor="#E0FFFFFF" />
+    <!-- Firefox-Inspired Dynamic Sweeping Crescent Arc (r=18.5) -->
+    <path
+        android:pathData="M 36.62,47.67 A 18.5,18.5 0 1,1 61.82,70.77"
+        android:strokeWidth="3.8"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round" />
 
+    <!-- Central Celestial Sphere Core (r=11.5) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 54,54 m -11.5,0 a 11.5,11.5 0 1,0 23,0 a 11.5,11.5 0 1,0 -23,0" />
 </vector>
