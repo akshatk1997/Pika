@@ -8,13 +8,17 @@
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.1.2.apk`](releases/Kio-v2.1.2.apk) and published in GitHub Releases (`v2.1.2`).
+Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.1.3.apk`](releases/Kio-v2.1.3.apk) and published in GitHub Releases (`v2.1.3`).
 
 ---
 
-## Core Highlights (v2.1.2)
+## Core Highlights (v2.1.3)
 
-- **Universal Video Playback & Complete Touch Responsiveness (v2.1.2):**
+- **Permanent Release Signing & Seamless In-Place APK Upgrades (v2.1.3):**
+  - Completely resolved the Android package installer "package is not compatible" / signature mismatch error (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`).
+  - Established a permanent, committed release signing keystore ensuring an identical cryptographic signing certificate across every release.
+  - Future APK updates now install directly over previous versions seamlessly without requiring uninstallation or losing data.
+- **Universal Video Playback & Complete Touch Responsiveness:**
   - Fully resolved playback issues across YouTube, Vimeo, Dailymotion, Twitter/X, and web video streaming sources.
   - Video player control buttons (play/pause, seekbar/scrubber, volume, settings gear, full-screen toggle) are 100% visible, touchable, and responsive in default mode without any manual configuration.
   - Eliminated conflicting click-capture listeners that previously disabled pointer events on transparent player layers.

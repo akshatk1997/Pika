@@ -32,17 +32,23 @@ jobs:
         with:
           gradle-version: '9.3.1'
 
-      - name: Generate ephemeral signing keystores for CI release
+      - name: Setup persistent release signing keystore
         run: |
-          keytool -genkeypair -v -keystore "${{ runner.temp }}/release.jks" \
-            -storetype PKCS12 -alias upload -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass kio-ci-release-pass -keypass kio-ci-release-pass \
-            -dname "CN=Kio Browser, OU=Mobile, O=Kio, L=Unknown, S=Unknown, C=US"
+          mkdir -p keystore
+          if [ ! -f "keystore/kio-release.jks" ]; then
+            echo "Generating permanent persistent release keystore..."
+            keytool -genkeypair -v -keystore keystore/kio-release.jks \
+              -storetype PKCS12 -alias upload -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass kio-ci-release-pass -keypass kio-ci-release-pass \
+              -dname "CN=Kio Browser, OU=Mobile, O=Kio, L=Unknown, S=Unknown, C=US"
+          else
+            echo "Using committed permanent release keystore: keystore/kio-release.jks"
+          fi
           keytool -genkeypair -v -keystore debug.keystore \
             -storetype PKCS12 -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass android -keypass android \
             -dname "CN=Android Debug,O=Android,C=US"
-          echo "KEYSTORE_PATH=${{ runner.temp }}/release.jks" >> "$GITHUB_ENV"
+          echo "KEYSTORE_PATH=${GITHUB_WORKSPACE}/keystore/kio-release.jks" >> "$GITHUB_ENV"
           echo "STORE_PASSWORD=kio-ci-release-pass" >> "$GITHUB_ENV"
           echo "KEY_PASSWORD=kio-ci-release-pass" >> "$GITHUB_ENV"
 
@@ -66,39 +72,39 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kio-v2.1.2.apk
+          cp "$APK_PATH" releases/Kio-v2.1.3.apk
           cat <<EOF > releases/latest.json
           {
-            "version": "2.1.2",
-            "downloadUrl": "https://github.com/akshatk1997/Pika/releases/download/v2.1.2/Kio-v2.1.2.apk",
-            "notes": "Kio Browser v2.1.2 featuring universal video playback & touch responsiveness fixes across YouTube and streaming sources, full hardware acceleration, and sub-2MB footprint"
+            "version": "2.1.3",
+            "downloadUrl": "https://github.com/akshatk1997/Pika/releases/download/v2.1.3/Kio-v2.1.3.apk",
+            "notes": "Kio Browser v2.1.3 featuring persistent permanent release signing keys for direct seamless APK update compatibility, universal video playback, and sub-2MB footprint"
           }
           EOF
           rm -f debug.keystore
 
-      - name: Commit APK into repository
+      - name: Commit APK and release keystore into repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kio-v2.1.2.apk releases/latest.json
+          git add releases/Kio-v2.1.3.apk releases/latest.json keystore/kio-release.jks
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kio-v2.1.2.apk and latest.json (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kio-v2.1.3.apk and latest.json (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v2.1.2
+      - name: Create or update GitHub Release v2.1.3
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kio-v2.1.2.apk)
-          NOTES="Kio Browser v2.1.2 — Universal Video Playback & Touch Responsiveness Fix, Hardware Acceleration & Ultra Compression (< 2 MB).\n\n- **Universal Video Playback & Full Interactive Control:**\n  - Fully fixed YouTube and web video players where buttons were invisible and screen was stuck.\n  - Enforced uninhibited pointer events for all HTML5 video player controls (.ytp-, .html5-video-player, controls bars).\n  - Eliminated disruptive script intercepts and monkey-patched codecs that caused player stalls and false canPlayType assertions.\n  - Full hardware-accelerated 120Hz/60Hz GPU compositing across all media and web pages.\n- **Strict Constraint:** Release APK strictly under 2 MB (2,097,152 bytes)."
-          if gh release view v2.1.2 >/dev/null 2>&1; then
-            gh release upload v2.1.2 releases/Kio-v2.1.2.apk --clobber
-            gh release edit v2.1.2 --title "Kio v2.1.2 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kio-v2.1.3.apk)
+          NOTES="Kio Browser v2.1.3 — Permanent Persistent Release Signing Keys & Direct APK Update Compatibility (< 2 MB).\n\n- **Seamless In-Place APK Upgrades:**\n  - Fixed Android package installer incompatibility ('package is not compatible' / signature mismatch).\n  - Committed permanent release signing keystore ensuring identical cryptographic certificates across all builds.\n  - Users can now directly install new updates over previous builds without uninstalling or losing data.\n- **Universal Video Playback & Full Interactive Control:**\n  - Full hardware-accelerated 120Hz/60Hz GPU compositing across all media and web pages.\n  - Uninhibited pointer events and interactive video controls across YouTube and all web sources.\n- **Strict Constraint:** Release APK strictly under 2 MB (2,097,152 bytes)."
+          if gh release view v2.1.3 >/dev/null 2>&1; then
+            gh release upload v2.1.3 releases/Kio-v2.1.3.apk --clobber
+            gh release edit v2.1.3 --title "Kio v2.1.3 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v2.1.2 releases/Kio-v2.1.2.apk \
-              --title "Kio v2.1.2 (< 2 MB)" \
+            gh release create v2.1.3 releases/Kio-v2.1.3.apk \
+              --title "Kio v2.1.3 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

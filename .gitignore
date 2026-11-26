@@ -18,4 +18,5 @@ local.properties
 debug.keystore
 *.keystore
 *.jks
+!keystore/kio-release.jks
 .antigravity/

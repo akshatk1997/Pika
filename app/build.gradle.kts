@@ -16,8 +16,8 @@ android {
     applicationId = "com.aistudio.featherbrowser.fwkmpz"
     minSdk = 26
     targetSdk = 36
-    versionCode = 84
-    versionName = "2.1.2"
+    versionCode = 85
+    versionName = "2.1.3"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -30,11 +30,11 @@ android {
   // and updating Android apps in AI Studio.
   signingConfigs {
     create("release") {
-      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
+      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/keystore/kio-release.jks"
       storeFile = file(keystorePath)
-      storePassword = System.getenv("STORE_PASSWORD")
+      storePassword = System.getenv("STORE_PASSWORD") ?: "kio-ci-release-pass"
       keyAlias = "upload"
-      keyPassword = System.getenv("KEY_PASSWORD")
+      keyPassword = System.getenv("KEY_PASSWORD") ?: "kio-ci-release-pass"
     }
     create("debugConfig") {
       storeFile = file("${rootDir}/debug.keystore")
@@ -51,11 +51,9 @@ android {
       isShrinkResources = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       // Do not remove or modify this signingConfig assignment. It is necessary for Android apps in
-      // AI Studio. Falls back to the default debug keystore only on standalone clones without env secrets.
-      val releaseKeystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
-      val hasReleaseSigning = file(releaseKeystorePath).exists() &&
-        !System.getenv("STORE_PASSWORD").isNullOrBlank() &&
-        !System.getenv("KEY_PASSWORD").isNullOrBlank()
+      // AI Studio. Uses persistent repository release keystore so package updates install seamlessly.
+      val releaseKeystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/keystore/kio-release.jks"
+      val hasReleaseSigning = file(releaseKeystorePath).exists()
       signingConfig = if (hasReleaseSigning) {
         signingConfigs.getByName("release")
       } else {
