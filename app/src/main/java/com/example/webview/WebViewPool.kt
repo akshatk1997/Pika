@@ -1424,11 +1424,27 @@ class WebViewPool(
                 }
               }
 
+              // Fast-forward ad safely: 16x playback rate and mute without corrupting video duration or buffer
               var videos = player.querySelectorAll('video');
               for (var i = 0; i < videos.length; i++) {
                 var v = videos[i];
-                if (isFinite(v.duration) && v.duration > 0 && v.currentTime < v.duration) {
-                  try { v.currentTime = v.duration; } catch(err) {}
+                if (!v.muted) {
+                  v.__kio_ad_muted = true;
+                  v.muted = true;
+                }
+                v.playbackRate = 16.0;
+              }
+            } else if (player) {
+              // Ensure normal content video playback rate is 1.0 and restore audio
+              var contentVideos = player.querySelectorAll('video');
+              for (var k = 0; k < contentVideos.length; k++) {
+                var cv = contentVideos[k];
+                if (cv.playbackRate > 2.0) {
+                  cv.playbackRate = 1.0;
+                }
+                if (cv.__kio_ad_muted) {
+                  cv.muted = false;
+                  delete cv.__kio_ad_muted;
                 }
               }
             }
