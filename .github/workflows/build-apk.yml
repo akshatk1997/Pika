@@ -72,12 +72,12 @@ jobs:
             exit 1
           fi
           mkdir -p releases
-          cp "$APK_PATH" releases/Kio-v2.1.3.apk
+          cp "$APK_PATH" releases/Kio-v2.1.4.apk
           cat <<EOF > releases/latest.json
           {
-            "version": "2.1.3",
-            "downloadUrl": "https://github.com/akshatk1997/Pika/releases/download/v2.1.3/Kio-v2.1.3.apk",
-            "notes": "Kio Browser v2.1.3 featuring persistent permanent release signing keys for direct seamless APK update compatibility, universal video playback, and sub-2MB footprint"
+            "version": "2.1.4",
+            "downloadUrl": "https://github.com/akshatk1997/Pika/releases/download/v2.1.4/Kio-v2.1.4.apk",
+            "notes": "Kio Browser v2.1.4 with aesthetic materialistic stardust logo, omnibox bookmark star, unified Media downloader hub, Clean Mode in settings, and ultra-lean sub-2MB footprint"
           }
           EOF
           rm -f debug.keystore
@@ -86,25 +86,25 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases/Kio-v2.1.3.apk releases/latest.json keystore/kio-release.jks
+          git add releases/Kio-v2.1.4.apk releases/latest.json keystore/kio-release.jks
           if ! git diff --cached --quiet; then
-            git commit -m "Add signed release APK Kio-v2.1.3.apk and latest.json (< 2 MB) [skip ci]"
+            git commit -m "Add signed release APK Kio-v2.1.4.apk and latest.json (< 2 MB) [skip ci]"
             git push origin HEAD:main
           else
             echo "APK unchanged, skipping commit."
           fi
 
-      - name: Create or update GitHub Release v2.1.3
+      - name: Create or update GitHub Release v2.1.4
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          SIZE_BYTES=$(stat -c%s releases/Kio-v2.1.3.apk)
-          NOTES="Kio Browser v2.1.3 — Permanent Persistent Release Signing Keys & Direct APK Update Compatibility (< 2 MB).\n\n- **Seamless In-Place APK Upgrades:**\n  - Fixed Android package installer incompatibility ('package is not compatible' / signature mismatch).\n  - Committed permanent release signing keystore ensuring identical cryptographic certificates across all builds.\n  - Users can now directly install new updates over previous builds without uninstalling or losing data.\n- **Universal Video Playback & Full Interactive Control:**\n  - Full hardware-accelerated 120Hz/60Hz GPU compositing across all media and web pages.\n  - Uninhibited pointer events and interactive video controls across YouTube and all web sources.\n- **Strict Constraint:** Release APK strictly under 2 MB (2,097,152 bytes)."
-          if gh release view v2.1.3 >/dev/null 2>&1; then
-            gh release upload v2.1.3 releases/Kio-v2.1.3.apk --clobber
-            gh release edit v2.1.3 --title "Kio v2.1.3 (< 2 MB)" --notes "$(printf "$NOTES")"
+          SIZE_BYTES=$(stat -c%s releases/Kio-v2.1.4.apk)
+          NOTES="Kio Browser v2.1.4 — Aesthetic Materialistic Logo, Omnibox Bookmark Star & Unified Media Hub (< 2 MB).\n\n- **Aesthetic Materialistic Logo:**\n  - Sculpted 3D celestial sphere with specular highlight, dual-layer ambient diffusion wavefront arcs, obsidian depth gradient, and metallic chamfered border brush while maintaining zero-allocation procedural canvas.\n- **Omnibox Bookmark Star:**\n  - One-tap star icon button directly inside the address bar to instantly add or remove the current website from bookmarks with tactile haptic feedback.\n- **Unified Media Downloader Hub:**\n  - Merged Images and Media into a single streamlined 'Media' hub offering both sniffed audio/video streams and page images with multi-select download.\n- **Clean Overflow Menu:**\n  - Full-screen mode toggle removed completely.\n  - 'Add shortcut' removed from 3-dot menu.\n  - 'Clean Mode' moved into Settings under browsing preferences.\n- **Permanent Keystore & Sub-2MB Size:**\n  - Uses permanent release signing keys for direct seamless APK update compatibility.\n  - Release APK strictly under 2 MB (2,097,152 bytes)."
+          if gh release view v2.1.4 >/dev/null 2>&1; then
+            gh release upload v2.1.4 releases/Kio-v2.1.4.apk --clobber
+            gh release edit v2.1.4 --title "Kio v2.1.4 (< 2 MB)" --notes "$(printf "$NOTES")"
           else
-            gh release create v2.1.3 releases/Kio-v2.1.3.apk \
-              --title "Kio v2.1.3 (< 2 MB)" \
+            gh release create v2.1.4 releases/Kio-v2.1.4.apk \
+              --title "Kio v2.1.4 (< 2 MB)" \
               --notes "$(printf "$NOTES")"
           fi

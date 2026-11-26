@@ -176,28 +176,47 @@ fun KioLogo(
   val twinkle = if (runAnimation) rawTwinkle.value else 0.8f
   val wavePhase = if (runAnimation) rawWavePhase.value else 0.5f
 
-  // Monochromatic Deep Space Palette (exact reference image palette)
-  val baseContainerColor = if (isPrivate) Color(0xFF09070F) else Color(0xFF000000)
-  val borderColor = if (isPrivate) Color(0xFFF3E8FF).copy(alpha = 0.22f) else Color(0xFFFFFFFF).copy(alpha = 0.16f)
-  val shadowGlowColor = if (isPrivate) Color(0xFFE9D5FF).copy(alpha = 0.32f) else Color(0xFFFFFFFF).copy(alpha = 0.28f)
+  // Materialistic Deep Space Obsidian Palette with tactile depth
+  val baseContainerBrush = if (isPrivate) {
+    Brush.radialGradient(
+      colors = listOf(Color(0xFF180F2A), Color(0xFF0D0618), Color(0xFF000000)),
+      radius = Float.POSITIVE_INFINITY
+    )
+  } else {
+    Brush.radialGradient(
+      colors = listOf(Color(0xFF161A26), Color(0xFF0A0C13), Color(0xFF000000)),
+      radius = Float.POSITIVE_INFINITY
+    )
+  }
+  val borderBrush = Brush.linearGradient(
+    colors = if (isPrivate) {
+      listOf(Color(0xFFF3E8FF).copy(alpha = 0.45f), Color(0xFF7E22CE).copy(alpha = 0.18f), Color.White.copy(alpha = 0.06f))
+    } else {
+      listOf(Color.White.copy(alpha = 0.42f), Color(0xFF94A3B8).copy(alpha = 0.16f), Color.White.copy(alpha = 0.08f))
+    },
+    start = Offset.Zero,
+    end = Offset.Infinite
+  )
+  val shadowGlowColor = if (isPrivate) Color(0xFFE9D5FF).copy(alpha = 0.35f) else Color(0xFFFFFFFF).copy(alpha = 0.30f)
 
   val particlePrimaryColor = Color(0xFFFFFFFF)
   val particleSecondaryColor = if (isPrivate) Color(0xFFF3E8FF) else Color(0xFFF1F5F9)
   val starCoreColor = Color(0xFFFFFFFF)
-  val starCoreRimColor = if (isPrivate) Color(0xFFE9D5FF) else Color(0xFFCBD5E1)
+  val starCoreMidColor = if (isPrivate) Color(0xFFE9D5FF) else Color(0xFFE2E8F0)
+  val starCoreShadowColor = if (isPrivate) Color(0xFF7E22CE) else Color(0xFF64748B)
 
   Box(
     modifier = modifier
       .size(size)
       .shadow(
-        elevation = 12.dp,
+        elevation = 14.dp,
         shape = CircleShape,
         ambientColor = shadowGlowColor,
         spotColor = shadowGlowColor
       )
       .clip(CircleShape)
-      .background(baseContainerColor)
-      .border(1.2.dp, borderColor, CircleShape)
+      .background(baseContainerBrush)
+      .border(1.2.dp, borderBrush, CircleShape)
       .then(
         if (contentDescription != null) {
           Modifier.semantics { this.contentDescription = contentDescription }
@@ -213,7 +232,7 @@ fun KioLogo(
       val centerOffset = Offset(w / 2f, h / 2f)
       val minDim = min(w, h)
 
-      val coreRadius = minDim * 0.135f
+      val coreRadius = minDim * 0.138f
       val rippleRadii = floatArrayOf(
         minDim * 0.21f,
         minDim * 0.29f,
@@ -221,27 +240,27 @@ fun KioLogo(
         minDim * 0.45f
       )
 
-      // 1. Ambient Cosmic Bloom Halo
+      // 1. Ambient Cosmic Bloom Halo (Refined Material Glow)
       drawCircle(
         brush = Brush.radialGradient(
           colors = listOf(
-            particlePrimaryColor.copy(alpha = 0.28f * glowAlpha),
-            particleSecondaryColor.copy(alpha = 0.08f * glowAlpha),
+            particlePrimaryColor.copy(alpha = 0.32f * glowAlpha),
+            particleSecondaryColor.copy(alpha = 0.10f * glowAlpha),
             Color.Transparent
           ),
           center = centerOffset,
-          radius = minDim * 0.50f
+          radius = minDim * 0.52f
         ),
-        radius = minDim * 0.50f,
+        radius = minDim * 0.52f,
         center = centerOffset
       )
 
-      // 2. Concentric Symmetrical Gravitational Crescent Wavefront Arcs
+      // 2. Concentric Symmetrical Gravitational Crescent Wavefront Arcs (Dual-Layer Material Sheen)
       val strokeWidths = floatArrayOf(
-        minDim * 0.030f,
-        minDim * 0.024f,
-        minDim * 0.019f,
-        minDim * 0.015f
+        minDim * 0.032f,
+        minDim * 0.026f,
+        minDim * 0.020f,
+        minDim * 0.016f
       )
 
       for (i in rippleRadii.indices) {
@@ -250,11 +269,40 @@ fun KioLogo(
         val arcRectTopLeft = Offset(centerOffset.x - r, centerOffset.y - r)
         val arcRectSize = Size(r * 2f, r * 2f)
 
+        // Diffusion shadow under arc for tactile elevation
+        val diffusionBrush = Brush.linearGradient(
+          colors = listOf(
+            Color.Transparent,
+            particlePrimaryColor.copy(alpha = 0.20f * glowAlpha),
+            Color.Transparent
+          ),
+          start = Offset(centerOffset.x, centerOffset.y - r * 0.866f),
+          end = Offset(centerOffset.x, centerOffset.y + r * 0.866f)
+        )
+        drawArc(
+          brush = diffusionBrush,
+          startAngle = 120f,
+          sweepAngle = 120f,
+          useCenter = false,
+          topLeft = arcRectTopLeft,
+          size = arcRectSize,
+          style = Stroke(width = stroke * 1.6f, cap = StrokeCap.Round)
+        )
+        drawArc(
+          brush = diffusionBrush,
+          startAngle = -60f,
+          sweepAngle = 120f,
+          useCenter = false,
+          topLeft = arcRectTopLeft,
+          size = arcRectSize,
+          style = Stroke(width = stroke * 1.6f, cap = StrokeCap.Round)
+        )
+
         // Equator-focused gradient brush: brightest at horizontal center, fading towards tips
         val arcBrush = Brush.linearGradient(
           colors = listOf(
             Color.Transparent,
-            particlePrimaryColor.copy(alpha = (0.50f + (3 - i) * 0.15f) * glowAlpha),
+            particlePrimaryColor.copy(alpha = (0.55f + (3 - i) * 0.15f) * glowAlpha),
             Color.Transparent
           ),
           start = Offset(centerOffset.x, centerOffset.y - r * 0.866f),
@@ -304,36 +352,43 @@ fun KioLogo(
         )
       }
 
-      // 4. Central Radiant Star Orb (Luminous celestial sphere)
+      // 4. Central Radiant Star Orb (Sculpted 3D Material Celestial Sphere)
       scale(scale = pulseScale, pivot = centerOffset) {
         // Outer core radial glow
         drawCircle(
           brush = Brush.radialGradient(
             colors = listOf(
-              starCoreRimColor.copy(alpha = 0.55f * glowAlpha),
-              particlePrimaryColor.copy(alpha = 0.18f * glowAlpha),
+              starCoreMidColor.copy(alpha = 0.60f * glowAlpha),
+              particlePrimaryColor.copy(alpha = 0.22f * glowAlpha),
               Color.Transparent
             ),
             center = centerOffset,
-            radius = coreRadius * 1.9f
+            radius = coreRadius * 2.0f
           ),
-          radius = coreRadius * 1.9f,
+          radius = coreRadius * 2.0f,
           center = centerOffset
         )
 
-        // Core celestial sphere gradient
+        // 3D Material spherical gradient with specular highlight from top-left
         drawCircle(
           brush = Brush.radialGradient(
             colors = listOf(
               starCoreColor,
-              particleSecondaryColor,
-              starCoreRimColor.copy(alpha = 0.85f)
+              starCoreMidColor,
+              starCoreShadowColor.copy(alpha = 0.90f)
             ),
-            center = centerOffset - Offset(coreRadius * 0.25f, coreRadius * 0.25f),
-            radius = coreRadius
+            center = centerOffset - Offset(coreRadius * 0.32f, coreRadius * 0.32f),
+            radius = coreRadius * 1.15f
           ),
           radius = coreRadius,
           center = centerOffset
+        )
+
+        // Specular glint hotspot
+        drawCircle(
+          color = Color.White.copy(alpha = 0.75f * glowAlpha),
+          radius = coreRadius * 0.28f,
+          center = centerOffset - Offset(coreRadius * 0.30f, coreRadius * 0.30f)
         )
       }
     }

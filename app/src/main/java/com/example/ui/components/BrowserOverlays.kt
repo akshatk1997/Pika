@@ -1057,107 +1057,218 @@ fun PageSourceOverlay(
 @Composable
 fun MediaDownloaderDialog(
   mediaList: List<DetectedMedia>,
+  images: List<String> = emptyList(),
   onDownload: (DetectedMedia) -> Unit,
   onCopyUrl: (String) -> Unit,
   onPlayExternal: (DetectedMedia) -> Unit,
+  onDownloadImages: (List<String>) -> Unit = {},
   onClose: () -> Unit
 ) {
+  var selectedTab by remember(mediaList.size, images.size) {
+    mutableIntStateOf(if (mediaList.isNotEmpty() || images.isEmpty()) 0 else 1)
+  }
+  var selectedImageUrls by remember(images) { mutableStateOf(images.toSet()) }
+
+  val totalCount = mediaList.size + images.size
+
   AlertDialog(
     onDismissRequest = onClose,
     title = {
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(FeatherIcons.Video, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
-        Spacer(modifier = Modifier.width(8.dp))
-        Text("Media Downloader (${mediaList.size})", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+      Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(FeatherIcons.Video, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Media ($totalCount)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+          }
+          if (selectedTab == 1 && images.isNotEmpty()) {
+            val allSelected = selectedImageUrls.size == images.size
+            TextButton(
+              onClick = {
+                selectedImageUrls = if (allSelected) emptySet() else images.toSet()
+              },
+              contentPadding = PaddingValues(horizontal = 6.dp)
+            ) {
+              Text(if (allSelected) "Deselect" else "Select All", style = MaterialTheme.typography.labelSmall)
+            }
+          }
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+          FilterChip(
+            selected = selectedTab == 0,
+            onClick = { selectedTab = 0 },
+            leadingIcon = { Icon(FeatherIcons.Video, contentDescription = null, modifier = Modifier.size(16.dp)) },
+            label = { Text("Streams (${mediaList.size})") },
+            modifier = Modifier.weight(1f)
+          )
+          FilterChip(
+            selected = selectedTab == 1,
+            onClick = { selectedTab = 1 },
+            leadingIcon = { Icon(FeatherIcons.ImageBox, contentDescription = null, modifier = Modifier.size(16.dp)) },
+            label = { Text("Images (${images.size})") },
+            modifier = Modifier.weight(1f)
+          )
+        }
       }
     },
     text = {
-      if (mediaList.isEmpty()) {
-        Column(
-          modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp),
-          horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-          Text(
-            "No media streams detected yet on this page.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-          )
-          Spacer(modifier = Modifier.height(6.dp))
-          Text(
-            "Play video or audio on the webpage to automatically sniff downloadable streams.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
-          )
-        }
-      } else {
-        LazyColumn(
-          modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
-          verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          items(mediaList) { item ->
-            Card(
-              shape = RoundedCornerShape(12.dp),
-              colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)),
-              modifier = Modifier.fillMaxWidth()
-            ) {
-              Column(modifier = Modifier.padding(10.dp)) {
-                Row(
-                  modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.SpaceBetween,
-                  verticalAlignment = Alignment.CenterVertically
-                ) {
-                  Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+      if (selectedTab == 0) {
+        if (mediaList.isEmpty()) {
+          Column(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+          ) {
+            Text(
+              "No media streams detected yet on this page.",
+              style = MaterialTheme.typography.bodyMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+              "Play video or audio on the webpage to automatically sniff downloadable streams.",
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+            )
+          }
+        } else {
+          LazyColumn(
+            modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+          ) {
+            items(mediaList) { item ->
+              Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)),
+                modifier = Modifier.fillMaxWidth()
+              ) {
+                Column(modifier = Modifier.padding(10.dp)) {
+                  Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                   ) {
+                    Surface(
+                      shape = RoundedCornerShape(6.dp),
+                      color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+                    ) {
+                      Text(
+                        text = item.formatLabel,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                      )
+                    }
                     Text(
-                      text = item.formatLabel,
+                      text = UrlValidator.extractHost(item.url),
                       style = MaterialTheme.typography.labelSmall,
-                      fontWeight = FontWeight.Bold,
-                      color = MaterialTheme.colorScheme.primary,
-                      modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                      color = MaterialTheme.colorScheme.onSurfaceVariant,
+                      maxLines = 1,
+                      overflow = TextOverflow.Ellipsis
                     )
                   }
+                  Spacer(modifier = Modifier.height(4.dp))
                   Text(
-                    text = UrlValidator.extractHost(item.url),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
+                    text = item.title.ifEmpty { item.url },
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                   )
+                  Spacer(modifier = Modifier.height(8.dp))
+                  Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                  ) {
+                    TextButton(
+                      onClick = { onCopyUrl(item.url) },
+                      contentPadding = PaddingValues(horizontal = 8.dp)
+                    ) {
+                      Text("Copy", style = MaterialTheme.typography.labelMedium)
+                    }
+                    TextButton(
+                      onClick = { onPlayExternal(item) },
+                      contentPadding = PaddingValues(horizontal = 8.dp)
+                    ) {
+                      Text("Play", style = MaterialTheme.typography.labelMedium)
+                    }
+                    Button(
+                      onClick = { onDownload(item) },
+                      contentPadding = PaddingValues(horizontal = 12.dp),
+                      modifier = Modifier.height(34.dp)
+                    ) {
+                      Text("Download", style = MaterialTheme.typography.labelMedium)
+                    }
+                  }
                 }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                  text = item.title.ifEmpty { item.url },
-                  style = MaterialTheme.typography.bodySmall,
-                  fontWeight = FontWeight.Medium,
-                  maxLines = 2,
-                  overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+              }
+            }
+          }
+        }
+      } else {
+        if (images.isEmpty()) {
+          Column(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+          ) {
+            Text(
+              "No images detected on this page.",
+              style = MaterialTheme.typography.bodyMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+          }
+        } else {
+          LazyColumn(
+            modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+          ) {
+            itemsIndexed(images) { index, url ->
+              val isChecked = selectedImageUrls.contains(url)
+              Card(
+                shape = RoundedCornerShape(10.dp),
+                colors = CardDefaults.cardColors(
+                  containerColor = if (isChecked) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                  else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                ),
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .clickable {
+                    selectedImageUrls = if (isChecked) selectedImageUrls - url else selectedImageUrls + url
+                  }
+              ) {
                 Row(
-                  modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.End,
+                  modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
                   verticalAlignment = Alignment.CenterVertically
                 ) {
-                  TextButton(
-                    onClick = { onCopyUrl(item.url) },
-                    contentPadding = PaddingValues(horizontal = 8.dp)
-                  ) {
-                    Text("Copy", style = MaterialTheme.typography.labelMedium)
-                  }
-                  TextButton(
-                    onClick = { onPlayExternal(item) },
-                    contentPadding = PaddingValues(horizontal = 8.dp)
-                  ) {
-                    Text("Play", style = MaterialTheme.typography.labelMedium)
-                  }
-                  Button(
-                    onClick = { onDownload(item) },
-                    contentPadding = PaddingValues(horizontal = 12.dp),
-                    modifier = Modifier.height(34.dp)
-                  ) {
-                    Text("Download", style = MaterialTheme.typography.labelMedium)
+                  Checkbox(
+                    checked = isChecked,
+                    onCheckedChange = { checked ->
+                      selectedImageUrls = if (checked) selectedImageUrls + url else selectedImageUrls - url
+                    }
+                  )
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                      text = "Image #${index + 1} · ${UrlValidator.extractHost(url)}",
+                      style = MaterialTheme.typography.labelMedium,
+                      fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                      text = url,
+                      style = MaterialTheme.typography.labelSmall,
+                      color = MaterialTheme.colorScheme.onSurfaceVariant,
+                      maxLines = 1,
+                      overflow = TextOverflow.Ellipsis
+                    )
                   }
                 }
               }
@@ -1167,8 +1278,22 @@ fun MediaDownloaderDialog(
       }
     },
     confirmButton = {
-      TextButton(onClick = onClose) {
-        Text("Done")
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        if (selectedTab == 1 && selectedImageUrls.isNotEmpty()) {
+          Button(
+            onClick = {
+              onDownloadImages(selectedImageUrls.toList())
+            },
+            contentPadding = PaddingValues(horizontal = 12.dp),
+            modifier = Modifier.height(34.dp)
+          ) {
+            Text("Download (${selectedImageUrls.size})", style = MaterialTheme.typography.labelMedium)
+          }
+          Spacer(modifier = Modifier.width(8.dp))
+        }
+        TextButton(onClick = onClose) {
+          Text("Done")
+        }
       }
     }
   )

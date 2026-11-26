@@ -244,8 +244,7 @@ class MainActivity : ComponentActivity() {
       }
       val useDarkStatusBar = darkTheme
       val fullscreenView by viewModel.fullscreenView.collectAsStateWithLifecycle()
-      val isBrowserFullscreen by viewModel.isBrowserFullscreen.collectAsStateWithLifecycle()
-      val isImmersiveFullscreen = fullscreenView != null || isBrowserFullscreen
+      val isImmersiveFullscreen = fullscreenView != null
 
       DisposableEffect(darkTheme, useDarkStatusBar, isImmersiveFullscreen, isPrivateActive) {
         val window = this@MainActivity.window
@@ -404,7 +403,7 @@ class MainActivity : ComponentActivity() {
   override fun onWindowFocusChanged(hasFocus: Boolean) {
     super.onWindowFocusChanged(hasFocus)
     if (hasFocus) {
-      val isImmersive = viewModel.fullscreenView.value != null || viewModel.isBrowserFullscreen.value
+      val isImmersive = viewModel.fullscreenView.value != null
       if (isImmersive) {
         try {
           val insetsController = WindowCompat.getInsetsController(window, window.decorView)

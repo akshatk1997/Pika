@@ -1232,18 +1232,20 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
   }
 
-  fun openImageSniffer() {
+  fun openUnifiedMedia() {
     val tab = activeTab()
-    if (tab.url.isBlank() || tab.url == "about:blank") {
-      showToast("Open a webpage first")
-      return
-    }
-    webViewPool.extractPageImages(tab.id) { images ->
-      runOnMain {
-        _extractedImages.value = images
-        setOverlay(ActiveOverlay.IMAGE_SNIFFER)
+    if (tab.url.isNotBlank() && tab.url != "about:blank") {
+      webViewPool.extractPageImages(tab.id) { images ->
+        runOnMain {
+          _extractedImages.value = images
+        }
       }
     }
+    setOverlay(ActiveOverlay.MEDIA_DOWNLOADER)
+  }
+
+  fun openImageSniffer() {
+    openUnifiedMedia()
   }
 
   fun downloadMedia(media: DetectedMedia) {

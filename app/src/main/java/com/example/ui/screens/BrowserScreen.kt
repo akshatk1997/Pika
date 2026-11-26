@@ -177,7 +177,6 @@ fun BrowserScreen(
   val readerSegments by viewModel.readerSegments.collectAsStateWithLifecycle()
   val narratorState by viewModel.narratorState.collectAsStateWithLifecycle()
   val pageSource by viewModel.pageSource.collectAsStateWithLifecycle()
-  val isBrowserFullscreen by viewModel.isBrowserFullscreen.collectAsStateWithLifecycle()
   val pendingDownload by viewModel.pendingDownloadConsent.collectAsStateWithLifecycle()
   val externalLinkPrompt by viewModel.externalLinkPrompt.collectAsStateWithLifecycle()
   val permissionPrompt by viewModel.permissionPrompt.collectAsStateWithLifecycle()
@@ -228,11 +227,15 @@ fun BrowserScreen(
     isOneHandedActive = settings.oneHandedModeEnabled
   }
 
+  val isBookmarked = remember(bookmarks, activeTab.url, activeTab.isPrivate) {
+    !activeTab.isPrivate && activeTab.url.isNotBlank() && activeTab.url != "about:blank" &&
+      bookmarks.any { it.url.equals(activeTab.url, ignoreCase = true) }
+  }
+
   BackHandler(
     enabled = (settings.oneHandedModeEnabled && isOneHandedActive) ||
       showIntro ||
       fullscreenView != null ||
-      isBrowserFullscreen ||
       pageSource != null ||
       readerArticle != null ||
       findState.isVisible ||
@@ -277,17 +280,17 @@ fun BrowserScreen(
           activeTab.isPrivate -> Color(0xFFF6F3FF)
           else -> Color(0xFFF8FAFC)
         },
-        contentWindowInsets = if (isBrowserFullscreen) WindowInsets(0, 0, 0, 0) else WindowInsets.statusBars
+        contentWindowInsets = WindowInsets.statusBars
       ) { innerPadding ->
         Column(
           modifier = Modifier
             .fillMaxSize()
             .padding(innerPadding)
-            .let { if (isBrowserFullscreen) it else it.navigationBarsPadding() }
+            .navigationBarsPadding()
             .imePadding()
         ) {
           AnimatedVisibility(
-            visible = !isBrowserFullscreen && (isNavBarVisible || isImeVisible || activeTab.url.isBlank() || activeTab.url == "about:blank" || activeTab.isLoading),
+            visible = isNavBarVisible || isImeVisible || activeTab.url.isBlank() || activeTab.url == "about:blank" || activeTab.isLoading,
             enter = expandVertically() + fadeIn(),
             exit = shrinkVertically() + fadeOut()
           ) {
@@ -297,6 +300,8 @@ fun BrowserScreen(
               isDarkTheme = isDarkTheme,
               settings = settings,
               compactSingleRow = false,
+              isBookmarked = isBookmarked,
+              onToggleBookmark = { viewModel.toggleCurrentBookmark() },
               readClipboard = { viewModel.readClipboardText() },
               onNavigate = {
                 focusManager.clearFocus()
@@ -607,7 +612,7 @@ fun BrowserScreen(
                             }
                           }
                           targetWebView.setOnTouchListener { v, event ->
-                            val isFullscreen = fullscreenView != null || isBrowserFullscreen
+                            val isFullscreen = fullscreenView != null
                             val isAtTop = !isFullscreen && (v.scrollY <= 0 || !v.canScrollVertically(-1))
                             if (isAtTop) {
                               when (event.actionMasked) {
@@ -722,38 +727,6 @@ fun BrowserScreen(
                     .background(Color(settings.screenFilterType.colorHex).copy(alpha = settings.screenFilterOpacity))
                 )
               }
-
-              if (isBrowserFullscreen) {
-                Surface(
-                  shape = RoundedCornerShape(16.dp),
-                  color = Color.Black.copy(alpha = 0.65f),
-                  border = BorderStroke(0.6.dp, Color.White.copy(alpha = 0.35f)),
-                  contentColor = Color.White,
-                  shadowElevation = 4.dp,
-                  modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(10.dp)
-                    .clickable { viewModel.exitBrowserFullscreen() }
-                ) {
-                  Row(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                  ) {
-                    Icon(
-                      Icons.Filled.Close,
-                      contentDescription = "Exit",
-                      modifier = Modifier.size(13.dp),
-                      tint = Color.White
-                    )
-                    Spacer(modifier = Modifier.width(3.dp))
-                    Text(
-                      "Exit",
-                      style = MaterialTheme.typography.labelSmall,
-                      color = Color.White
-                    )
-                  }
-                }
-              }
             }
           }
 
@@ -818,7 +791,7 @@ fun BrowserScreen(
                 }
               }
               onDispose {
-                if (window != null && viewModel.fullscreenView.value == null && !viewModel.isBrowserFullscreen.value) {
+                if (window != null && viewModel.fullscreenView.value == null) {
                   try {
                     val insetsController = androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
                     insetsController.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
@@ -997,9 +970,11 @@ fun BrowserScreen(
           activeOverlay == ActiveOverlay.MEDIA_DOWNLOADER -> {
             MediaDownloaderDialog(
               mediaList = detectedMediaList,
+              images = extractedImages,
               onDownload = { viewModel.downloadMedia(it) },
               onCopyUrl = { viewModel.copyTextToClipboard(it, "Media URL copied") },
               onPlayExternal = onPlayMediaExternal,
+              onDownloadImages = { viewModel.downloadImages(it) },
               onClose = { viewModel.setOverlay(ActiveOverlay.NONE) }
             )
           }
@@ -1131,18 +1106,10 @@ fun BrowserScreen(
           }
         }
 
-        // 4-Column Crisp Grid Actions: Private Mode excludes Bookmarks/History/Share/External/Shortcut
+        // 4-Column Crisp Grid Actions: Private Mode excludes Bookmarks/History/Share/External
         // and provides exclusive Private-Mode-Only Safety Tools instead.
         val gridActions = if (isPrivate) {
           listOf(
-            QuickActionItem(
-              FeatherIcons.Fullscreen,
-              if (isBrowserFullscreen) stringResource(R.string.action_exit_fullscreen) else stringResource(R.string.action_fullscreen),
-              true
-            ) {
-              showQuickSheet = false
-              viewModel.toggleBrowserFullscreen()
-            },
             QuickActionItem(FeatherIcons.PrivateMask, stringResource(R.string.action_new_private_tab), true) {
               showQuickSheet = false
               viewModel.openNewTab(isPrivate = true)
@@ -1212,16 +1179,12 @@ fun BrowserScreen(
             },
             QuickActionItem(
               FeatherIcons.Video,
-              if (detectedMediaList.isNotEmpty()) "Media (${detectedMediaList.size})" else "Media",
+              if (detectedMediaList.isNotEmpty() || extractedImages.isNotEmpty()) "Media (${detectedMediaList.size + extractedImages.size})" else "Media",
               hasUrl,
-              accentTint = if (detectedMediaList.isNotEmpty()) MaterialTheme.colorScheme.primary else null
+              accentTint = if (detectedMediaList.isNotEmpty() || extractedImages.isNotEmpty()) MaterialTheme.colorScheme.primary else null
             ) {
               showQuickSheet = false
-              viewModel.setOverlay(ActiveOverlay.MEDIA_DOWNLOADER)
-            },
-            QuickActionItem(FeatherIcons.ImageBox, "Images", hasUrl) {
-              showQuickSheet = false
-              viewModel.openImageSniffer()
+              viewModel.openUnifiedMedia()
             },
             QuickActionItem(
               FeatherIcons.EyeFilter,
@@ -1232,14 +1195,6 @@ fun BrowserScreen(
               showQuickSheet = false
               viewModel.setOverlay(ActiveOverlay.SCREEN_FILTER_SETTINGS)
             },
-            QuickActionItem(
-              FeatherIcons.BroomWipe,
-              "Clean Mode",
-              true,
-              accentTint = if (settings.cleanModeEnabled) FeatherSecureGreen else null
-            ) {
-              viewModel.toggleCleanMode()
-            },
             QuickActionItem(Icons.Filled.Settings, stringResource(R.string.action_settings), true) {
               showQuickSheet = false
               viewModel.setOverlay(ActiveOverlay.SETTINGS)
@@ -1247,14 +1202,6 @@ fun BrowserScreen(
           )
         } else {
           listOf(
-            QuickActionItem(
-              FeatherIcons.Fullscreen,
-              if (isBrowserFullscreen) stringResource(R.string.action_exit_fullscreen) else stringResource(R.string.action_fullscreen),
-              true
-            ) {
-              showQuickSheet = false
-              viewModel.toggleBrowserFullscreen()
-            },
             QuickActionItem(FeatherIcons.PrivateMask, stringResource(R.string.action_new_private_tab), true) {
               showQuickSheet = false
               viewModel.openNewTab(isPrivate = true)
@@ -1285,16 +1232,12 @@ fun BrowserScreen(
             },
             QuickActionItem(
               FeatherIcons.Video,
-              if (detectedMediaList.isNotEmpty()) "Media (${detectedMediaList.size})" else "Media",
+              if (detectedMediaList.isNotEmpty() || extractedImages.isNotEmpty()) "Media (${detectedMediaList.size + extractedImages.size})" else "Media",
               hasUrl,
-              accentTint = if (detectedMediaList.isNotEmpty()) MaterialTheme.colorScheme.primary else null
+              accentTint = if (detectedMediaList.isNotEmpty() || extractedImages.isNotEmpty()) MaterialTheme.colorScheme.primary else null
             ) {
               showQuickSheet = false
-              viewModel.setOverlay(ActiveOverlay.MEDIA_DOWNLOADER)
-            },
-            QuickActionItem(FeatherIcons.ImageBox, "Images", hasUrl) {
-              showQuickSheet = false
-              viewModel.openImageSniffer()
+              viewModel.openUnifiedMedia()
             },
             QuickActionItem(
               FeatherIcons.EyeFilter,
@@ -1304,14 +1247,6 @@ fun BrowserScreen(
             ) {
               showQuickSheet = false
               viewModel.setOverlay(ActiveOverlay.SCREEN_FILTER_SETTINGS)
-            },
-            QuickActionItem(
-              FeatherIcons.BroomWipe,
-              "Clean Mode",
-              true,
-              accentTint = if (settings.cleanModeEnabled) FeatherSecureGreen else null
-            ) {
-              viewModel.toggleCleanMode()
             },
             QuickActionItem(
               FeatherIcons.Announcer,
@@ -1346,10 +1281,6 @@ fun BrowserScreen(
             QuickActionItem(Icons.Filled.Share, stringResource(R.string.action_share), hasUrl) {
               showQuickSheet = false
               viewModel.shareActiveUrl()
-            },
-            QuickActionItem(Icons.Filled.Star, stringResource(R.string.action_pin_home), hasUrl) {
-              showQuickSheet = false
-              onPinHomeShortcut(activeTab.url, activeTab.title)
             },
             QuickActionItem(Icons.Filled.Settings, stringResource(R.string.action_settings), true) {
               showQuickSheet = false
@@ -1787,6 +1718,8 @@ private fun BrowserToolbar(
   isDarkTheme: Boolean = true,
   settings: SettingsState,
   compactSingleRow: Boolean = false,
+  isBookmarked: Boolean = false,
+  onToggleBookmark: () -> Unit = {},
   readClipboard: () -> String?,
   onNavigate: (String) -> Unit,
   onBack: () -> Unit,
@@ -1973,6 +1906,22 @@ private fun BrowserToolbar(
             modifier = Modifier.minimumInteractiveComponentSize().testTag("address_copy_button")
           ) {
             Icon(FeatherIcons.Copy, contentDescription = stringResource(R.string.cd_copy_url), tint = headerTextMuted, modifier = Modifier.size(17.dp))
+          }
+        }
+        if (!isPrivate && activeTab.url.isNotBlank() && activeTab.url != "about:blank") {
+          IconButton(
+            onClick = {
+              haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+              onToggleBookmark()
+            },
+            modifier = Modifier.minimumInteractiveComponentSize().testTag("address_bookmark_star_button")
+          ) {
+            Icon(
+              imageVector = if (isBookmarked) Icons.Filled.Star else FeatherIcons.StarOutline,
+              contentDescription = if (isBookmarked) "Remove bookmark" else "Add to bookmarks",
+              tint = if (isBookmarked) Color(0xFFFFB300) else headerTextMuted,
+              modifier = Modifier.size(19.dp)
+            )
           }
         }
         if (settings.noImageMode) {

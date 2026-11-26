@@ -594,8 +594,8 @@ fun SettingsScreen(
             }
             HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             SettingSwitchRow(
-              title = "Clean mode (distraction-free)",
-              subtitle = "Hides cookie walls, popups, and sticky banner overlays",
+              title = "Clean Mode",
+              subtitle = "Distraction-free browsing: automatically hides cookie walls, popups, and sticky banner overlays",
               checked = settings.cleanModeEnabled,
               tag = "setting_clean_mode",
               onCheckedChange = { v -> onUpdateSettings { it.copy(cleanModeEnabled = v) } }

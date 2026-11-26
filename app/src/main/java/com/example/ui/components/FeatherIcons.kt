@@ -94,6 +94,29 @@ object FeatherIcons {
     }.build()
   }
 
+  val StarOutline: ImageVector by lazy {
+    ImageVector.Builder("StarOutline", 24.dp, 24.dp, 24f, 24f).apply {
+      path(
+        stroke = SolidColor(Color.Black),
+        strokeLineWidth = 1.8f,
+        strokeLineCap = StrokeCap.Round,
+        strokeLineJoin = StrokeJoin.Round
+      ) {
+        moveTo(12f, 2.5f)
+        lineTo(15.09f, 8.76f)
+        lineTo(22f, 9.77f)
+        lineTo(17f, 14.64f)
+        lineTo(18.18f, 21.55f)
+        lineTo(12f, 18.3f)
+        lineTo(5.82f, 21.55f)
+        lineTo(7f, 14.64f)
+        lineTo(2f, 9.77f)
+        lineTo(8.91f, 8.76f)
+        close()
+      }
+    }.build()
+  }
+
   val History: ImageVector by lazy {
     ImageVector.Builder("History", 24.dp, 24.dp, 24f, 24f).apply {
       path(fill = SolidColor(Color.Black)) {

@@ -41,8 +41,8 @@ class ExampleRobolectricTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
     assertEquals("Kio", appName)
-    assertEquals("2.1.3", BuildConfig.VERSION_NAME)
-    assertEquals(85, BuildConfig.VERSION_CODE)
+    assertEquals("2.1.4", BuildConfig.VERSION_NAME)
+    assertEquals(86, BuildConfig.VERSION_CODE)
   }
 
   @Test
@@ -462,27 +462,32 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun browserFullscreenModeHidesSystemBarsAndRestoresCleanly() {
+  fun videoFullscreenModeTogglesSystemBarsAndRestoresCleanly() {
     val activity = composeTestRule.activity
     val vm = activity.viewModel
     composeTestRule.waitForIdle()
 
-    assertFalse(vm.isBrowserFullscreen.value)
+    val dummyView = android.view.View(activity)
+    val dummyCallback = object : android.webkit.WebChromeClient.CustomViewCallback {
+      override fun onCustomViewHidden() {}
+    }
+
+    assertNull(vm.fullscreenView.value)
     composeTestRule.runOnUiThread {
-      vm.toggleBrowserFullscreen()
+      vm.enterFullscreen(dummyView, dummyCallback)
     }
     composeTestRule.waitForIdle()
 
-    assertTrue(vm.isBrowserFullscreen.value)
+    assertNotNull(vm.fullscreenView.value)
     val fsFlags = activity.window.attributes.flags
     assertTrue((fsFlags and WindowManager.LayoutParams.FLAG_FULLSCREEN) != 0)
 
     composeTestRule.runOnUiThread {
-      vm.exitBrowserFullscreen()
+      vm.exitFullscreen()
     }
     composeTestRule.waitForIdle()
 
-    assertFalse(vm.isBrowserFullscreen.value)
+    assertNull(vm.fullscreenView.value)
     val restoredFlags = activity.window.attributes.flags
     assertFalse((restoredFlags and WindowManager.LayoutParams.FLAG_FULLSCREEN) != 0)
   }

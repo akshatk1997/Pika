@@ -1,6 +1,6 @@
 # Kio
 
-**Kio** is a lightning-fast, privacy-hardened Android web browser built around the operating system's maintained **Android System WebView** (`android.webkit.WebView`) — featuring **Hardware-Accelerated 120Hz/60Hz Rendering**, a **Pure On-Device NLP Content Announcer / Reader Mode (zero data copy or save)**, **True Edge-to-Edge Full Screen Mode**, **Real Website Logos**, and a **signed R8-minified release APK strictly under 2 MB**.
+**Kio** is a lightning-fast, privacy-hardened Android web browser built around the operating system's maintained **Android System WebView** (`android.webkit.WebView`) — featuring **Hardware-Accelerated 120Hz/60Hz Rendering**, a **Pure On-Device NLP Content Announcer / Reader Mode (zero data copy or save)**, **Unified Media Hub**, **Real Website Logos**, and a **signed R8-minified release APK strictly under 2 MB**.
 
 > **Engine Statement:** Kio delegates web rendering, TLS/HTTP transport, and sandboxing to the OS-maintained **Android System WebView**, maximizing hardware-accelerated responsiveness, privacy shields, and on-device NLP narration without bundling a 150 MB Chromium binary.
 
@@ -8,21 +8,29 @@
 
 ## Download APK
 
-Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.1.3.apk`](releases/Kio-v2.1.3.apk) and published in GitHub Releases (`v2.1.3`).
+Pre-built signed release APK (< 2 MB) is tracked at [`releases/Kio-v2.1.4.apk`](releases/Kio-v2.1.4.apk) and published in GitHub Releases (`v2.1.4`).
 
 ---
 
-## Core Highlights (v2.1.3)
+## Core Highlights (v2.1.4)
 
-- **Permanent Release Signing & Seamless In-Place APK Upgrades (v2.1.3):**
+- **Aesthetic Materialistic Stardust Logo (v2.1.4):**
+  - Sculpted 3D celestial sphere with specular glint hotspot, dual-layer ambient diffusion wavefront arcs, obsidian depth gradient, and metallic chamfered border brush while maintaining zero-allocation procedural canvas rendering.
+- **Omnibox Bookmark Star (v2.1.4):**
+  - Instant one-tap bookmarking directly inside the website address/search pill: dynamic gold star (`#FFB300`) when bookmarked, crisp outline star when not bookmarked, with tactile haptic feedback.
+- **Unified Media Downloader Hub (v2.1.4):**
+  - Merged Images and Media into a single streamlined "Media" dialog in the 3-dot overflow menu, providing tabbed access to detected video/audio streams and sniffed page images.
+- **Clean 3-Dot Overflow Menu (v2.1.4):**
+  - Browser-wide full-screen toggle mode and floating exit surface removed completely.
+  - "Add shortcut" removed from the 3-dot menu.
+  - "Clean Mode" moved into Settings under browsing preferences.
+- **Permanent Release Signing & Seamless In-Place APK Upgrades:**
   - Completely resolved the Android package installer "package is not compatible" / signature mismatch error (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`).
   - Established a permanent, committed release signing keystore ensuring an identical cryptographic signing certificate across every release.
   - Future APK updates now install directly over previous versions seamlessly without requiring uninstallation or losing data.
 - **Universal Video Playback & Complete Touch Responsiveness:**
   - Fully resolved playback issues across YouTube, Vimeo, Dailymotion, Twitter/X, and web video streaming sources.
   - Video player control buttons (play/pause, seekbar/scrubber, volume, settings gear, full-screen toggle) are 100% visible, touchable, and responsive in default mode without any manual configuration.
-  - Eliminated conflicting click-capture listeners that previously disabled pointer events on transparent player layers.
-  - Removed disruptive codec polyfills and monkey-patched assertions, allowing Chromium's native engine to accurately negotiate hardware decoding and MSE (MediaSource Extensions) adaptive streams.
   - Full hardware-accelerated 120Hz/60Hz GPU compositing across all media and web pages.
 - **Cosmic Stardust Ripple Logo & Brand Emblem:**
   - Brand emblem and Android launcher icon inspired by gravitational wave resonance and stardust pointillism.
