@@ -684,6 +684,11 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         handleMediaControlAction(action)
       }
     }
+    MediaPlaybackService.seekListener = { posMs ->
+      runOnMain {
+        seekActiveMedia(posMs)
+      }
+    }
 
     viewModelScope.launch {
       while (true) {
@@ -1607,6 +1612,31 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     )
   }
 
+  fun seekActiveMedia(posMs: Long) {
+    val tab = activeTab()
+    val webView = webViewPool.getLiveWebView(tab.id) ?: return
+    if (!_settings.value.javascriptEnabled) return
+    val sec = (posMs.coerceAtLeast(0L) / 1000.0)
+    val js = """
+      (function() {
+        var player = document.querySelector('#movie_player') || document.querySelector('.html5-video-player');
+        if (player && typeof player.seekTo === 'function') {
+          player.seekTo($sec, true);
+        }
+        var media = document.querySelectorAll('video, audio');
+        for (var i = 0; i < media.length; i++) {
+          if (isFinite(media[i].duration) && media[i].duration > 0) {
+            media[i].currentTime = Math.min(media[i].duration, Math.max(0, $sec));
+          }
+        }
+      })();
+    """.trimIndent()
+    try {
+      webView.evaluateJavascript(js, null)
+    } catch (_: Throwable) {
+    }
+  }
+
   fun handleMediaControlAction(action: String) {
     val tab = activeTab()
     val webView = webViewPool.getLiveWebView(tab.id) ?: return
@@ -1749,14 +1779,37 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
               if (og) artUrl = og.getAttribute('content') || '';
             }
           } catch(e) {}
+          var durMs = 0;
+          var posMs = 0;
+          try {
+            if (player && typeof player.getDuration === 'function' && typeof player.getCurrentTime === 'function') {
+              var d = player.getDuration();
+              var p = player.getCurrentTime();
+              if (isFinite(d) && d > 0) durMs = Math.round(d * 1000);
+              if (isFinite(p) && p >= 0) posMs = Math.round(p * 1000);
+            }
+            if (durMs <= 0) {
+              for (var k = 0; k < media.length; k++) {
+                var md = media[k].duration;
+                var mp = media[k].currentTime;
+                if (isFinite(md) && md > 0) {
+                  durMs = Math.round(md * 1000);
+                  posMs = isFinite(mp) && mp >= 0 ? Math.round(mp * 1000) : 0;
+                  break;
+                }
+              }
+            }
+          } catch(e) {}
           return JSON.stringify({
             playing: playing,
             count: media.length + (player ? 1 : 0),
             title: docTitle,
-            artwork: artUrl
+            artwork: artUrl,
+            durationMs: durMs,
+            positionMs: posMs
           });
         } catch(e) {
-          return JSON.stringify({ playing: false, count: 0, title: '', artwork: '' });
+          return JSON.stringify({ playing: false, count: 0, title: '', artwork: '', durationMs: 0, positionMs: 0 });
         }
       })()
     """.trimIndent()
@@ -1774,6 +1827,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
           val mediaCount = unquoted.optInt("count", 0)
           val docTitle = unquoted.optString("title", "")
           val artUrl = unquoted.optString("artwork", "")
+          val durMs = unquoted.optLong("durationMs", 0L)
+          val posMs = unquoted.optLong("positionMs", 0L)
 
           if (isPlaying || (forceStart && mediaCount > 0)) {
             val pageTitle = docTitle.ifBlank { tab.title }.ifBlank { "Web Stream" }
@@ -1783,7 +1838,9 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
               title = pageTitle,
               domain = host,
               isPlaying = isPlaying,
-              artworkUrl = artUrl
+              artworkUrl = artUrl,
+              durationMs = durMs,
+              positionMs = posMs
             )
           } else if (mediaCount == 0 && MediaPlaybackService.isServiceRunning) {
             MediaPlaybackService.stop(appContext)

@@ -40,6 +40,8 @@ class MediaPlaybackService : Service() {
     const val EXTRA_DOMAIN = "extra_domain"
     const val EXTRA_IS_PLAYING = "extra_is_playing"
     const val EXTRA_ARTWORK_URL = "extra_artwork_url"
+    const val EXTRA_DURATION_MS = "extra_duration_ms"
+    const val EXTRA_POSITION_MS = "extra_position_ms"
 
     @Volatile
     var isServiceRunning: Boolean = false
@@ -48,12 +50,17 @@ class MediaPlaybackService : Service() {
     @Volatile
     var mediaControlListener: ((String) -> Unit)? = null
 
+    @Volatile
+    var seekListener: ((Long) -> Unit)? = null
+
     fun start(
       context: Context,
       title: String,
       domain: String,
       isPlaying: Boolean,
-      artworkUrl: String = ""
+      artworkUrl: String = "",
+      durationMs: Long = 0L,
+      positionMs: Long = 0L
     ) {
       val intent = Intent(context, MediaPlaybackService::class.java).apply {
         action = ACTION_UPDATE_STATE
@@ -62,6 +69,10 @@ class MediaPlaybackService : Service() {
         putExtra(EXTRA_IS_PLAYING, isPlaying)
         if (artworkUrl.isNotBlank()) {
           putExtra(EXTRA_ARTWORK_URL, artworkUrl)
+        }
+        if (durationMs > 0L) {
+          putExtra(EXTRA_DURATION_MS, durationMs)
+          putExtra(EXTRA_POSITION_MS, positionMs.coerceAtLeast(0L))
         }
       }
       try {
@@ -89,6 +100,8 @@ class MediaPlaybackService : Service() {
   private var currentTitle: String = "Web Stream"
   private var currentDomain: String = "Streaming"
   private var isPlaying: Boolean = true
+  private var durationMs: Long = 0L
+  private var positionMs: Long = 0L
   private var lastArtworkUrl: String = ""
   private var currentArtwork: Bitmap? = null
   private var mediaSession: MediaSession? = null
@@ -133,6 +146,11 @@ class MediaPlaybackService : Service() {
           override fun onSkipToNext() {
             mediaControlListener?.invoke(ACTION_NEXT)
           }
+          override fun onSeekTo(pos: Long) {
+            positionMs = pos.coerceAtLeast(0L)
+            seekListener?.invoke(positionMs)
+            updateMediaSessionState()
+          }
           override fun onStop() {
             isPlaying = false
             mediaControlListener?.invoke(ACTION_STOP)
@@ -156,16 +174,21 @@ class MediaPlaybackService : Service() {
         PlaybackState.ACTION_PLAY_PAUSE or
         PlaybackState.ACTION_SKIP_TO_PREVIOUS or
         PlaybackState.ACTION_SKIP_TO_NEXT or
+        PlaybackState.ACTION_SEEK_TO or
         PlaybackState.ACTION_STOP
+      val pos = if (durationMs > 0L) positionMs else PlaybackState.PLAYBACK_POSITION_UNKNOWN
       session.setPlaybackState(
         PlaybackState.Builder()
           .setActions(actions)
-          .setState(state, PlaybackState.PLAYBACK_POSITION_UNKNOWN, if (isPlaying) 1.0f else 0f)
+          .setState(state, pos, if (isPlaying) 1.0f else 0f)
           .build()
       )
       val metaBuilder = MediaMetadata.Builder()
         .putString(MediaMetadata.METADATA_KEY_TITLE, currentTitle)
         .putString(MediaMetadata.METADATA_KEY_ARTIST, currentDomain)
+      if (durationMs > 0L) {
+        metaBuilder.putLong(MediaMetadata.METADATA_KEY_DURATION, durationMs)
+      }
       currentArtwork?.let { bmp ->
         metaBuilder.putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, bmp)
         metaBuilder.putBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON, bmp)
@@ -188,6 +211,12 @@ class MediaPlaybackService : Service() {
       }
       if (intent.hasExtra(EXTRA_IS_PLAYING)) {
         isPlaying = intent.getBooleanExtra(EXTRA_IS_PLAYING, isPlaying)
+      }
+      if (intent.hasExtra(EXTRA_DURATION_MS)) {
+        durationMs = intent.getLongExtra(EXTRA_DURATION_MS, durationMs).coerceAtLeast(0L)
+      }
+      if (intent.hasExtra(EXTRA_POSITION_MS)) {
+        positionMs = intent.getLongExtra(EXTRA_POSITION_MS, positionMs).coerceAtLeast(0L)
       }
       if (intent.hasExtra(EXTRA_ARTWORK_URL)) {
         val artUrl = intent.getStringExtra(EXTRA_ARTWORK_URL).orEmpty()
