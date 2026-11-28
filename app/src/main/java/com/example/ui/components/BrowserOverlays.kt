@@ -228,47 +228,11 @@ fun NewTabHomeView(
 
       Spacer(modifier = Modifier.height(14.dp))
 
-      val titleTransition = rememberInfiniteTransition(label = "kio_title_anim")
-      val titleShimmerShift by titleTransition.animateFloat(
-        initialValue = -120f,
-        targetValue = 320f,
-        animationSpec = infiniteRepeatable(
-          animation = tween(durationMillis = 3200, easing = FastOutSlowInEasing),
-          repeatMode = RepeatMode.Restart
-        ),
-        label = "kio_title_shimmer"
-      )
-      val titlePulse by titleTransition.animateFloat(
-        initialValue = 1.0f,
-        targetValue = 1.035f,
-        animationSpec = infiniteRepeatable(
-          animation = tween(durationMillis = 2200, easing = FastOutSlowInEasing),
-          repeatMode = RepeatMode.Reverse
-        ),
-        label = "kio_title_pulse"
-      )
-      val titleBrush = Brush.linearGradient(
-        colors = listOf(
-          titleColor.copy(alpha = 0.78f),
-          if (isPrivate) Color(0xFFE9D5FF) else Color(0xFF7DD3FC),
-          Color.White,
-          titleColor.copy(alpha = 0.78f)
-        ),
-        start = Offset(titleShimmerShift, 0f),
-        end = Offset(titleShimmerShift + 140f, 40f)
-      )
-
       Text(
         text = if (isPrivate) stringResource(R.string.tabs_private) else stringResource(R.string.app_name),
-        style = MaterialTheme.typography.headlineMedium.copy(
-          brush = titleBrush,
-          letterSpacing = (0.6f + (titlePulse - 1.0f) * 24f).sp
-        ),
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.graphicsLayer {
-          scaleX = titlePulse
-          scaleY = titlePulse
-        }
+        style = MaterialTheme.typography.headlineMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = titleColor
       )
 
       if (isPrivate) {
