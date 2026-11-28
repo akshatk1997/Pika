@@ -1544,6 +1544,10 @@ fun BrowserScreen(
             viewModel.dismissLinkContext()
             viewModel.openNewTab(isPrivate = activeTab.isPrivate, initialUrl = target.url, switchToNewTab = true)
           }
+          ContextActionRow("Open in new tab in group") {
+            viewModel.dismissLinkContext()
+            viewModel.openNewTabInGroup(isPrivate = activeTab.isPrivate, initialUrl = target.url, switchToNewTab = false)
+          }
           ContextActionRow("Open in background tab") {
             viewModel.dismissLinkContext()
             viewModel.openNewTab(isPrivate = activeTab.isPrivate, initialUrl = target.url, switchToNewTab = false)

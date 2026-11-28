@@ -1637,6 +1637,26 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
   }
 
+  fun openNewTabInGroup(
+    isPrivate: Boolean,
+    initialUrl: String = "",
+    switchToNewTab: Boolean = false
+  ) {
+    val current = activeTab()
+    val assignedGroupId = current.groupId ?: "grp_${current.id.take(6)}"
+    if (current.groupId == null) {
+      _tabs.update { list ->
+        list.map { if (it.id == current.id) it.copy(groupId = assignedGroupId) else it }
+      }
+    }
+    openNewTab(isPrivate = isPrivate, initialUrl = initialUrl, switchToNewTab = switchToNewTab)
+    _tabs.update { list ->
+      val lastId = list.lastOrNull()?.id
+      list.map { if (it.id == lastId) it.copy(groupId = assignedGroupId) else it }
+    }
+    showToast("Opened in tab group")
+  }
+
   fun handleMediaControlAction(action: String) {
     val tab = activeTab()
     val webView = webViewPool.getLiveWebView(tab.id) ?: return

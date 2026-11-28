@@ -92,7 +92,8 @@ data class TabInfo(
   val errorState: PageError? = null,
   val httpWarning: HttpWarningState? = null,
   val faviconInitial: String = "",
-  val lastActiveAt: Long = System.currentTimeMillis()
+  val lastActiveAt: Long = System.currentTimeMillis(),
+  val groupId: String? = null
 ) {
   val isDesktopMode: Boolean get() = userAgentMode == UserAgentMode.DESKTOP
 }
