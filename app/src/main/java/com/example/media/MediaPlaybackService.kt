@@ -139,6 +139,15 @@ class MediaPlaybackService : Service() {
     return START_NOT_STICKY
   }
 
+  override fun onTaskRemoved(rootIntent: Intent?) {
+    isPlaying = false
+    isServiceRunning = false
+    mediaControlListener?.invoke(ACTION_STOP)
+    stopForegroundCompat()
+    stopSelf()
+    super.onTaskRemoved(rootIntent)
+  }
+
   override fun onDestroy() {
     isServiceRunning = false
     try {
