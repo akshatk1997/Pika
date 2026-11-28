@@ -798,10 +798,10 @@ fun BrowserScreen(
                     ) {
                       SiteFavicon(
                         url = gTab.url,
-                        title = gTab.title,
-                        size = 22.dp,
+                        fallbackInitial = gTab.faviconInitial.ifEmpty { gTab.title.take(1) },
+                        accentColor = MaterialTheme.colorScheme.primary,
                         isPrivate = gTab.isPrivate,
-                        isDarkTheme = isDarkTheme
+                        size = 22.dp
                       )
                     }
                   }
