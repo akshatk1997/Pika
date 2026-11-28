@@ -730,6 +730,93 @@ fun BrowserScreen(
             }
           }
 
+          val groupTabs = remember(tabs, activeTab.groupId) {
+            val gid = activeTab.groupId
+            if (gid == null) emptyList() else tabs.filter { it.groupId == gid }
+          }
+          if (groupTabs.size > 1) {
+            Surface(
+              color = if (isDarkTheme) Color(0xFF11131A) else Color(0xFFF1F5F9),
+              tonalElevation = 2.dp,
+              modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .testTag("tab_group_bottom_strip")
+            ) {
+              Row(
+                modifier = Modifier
+                  .fillMaxSize()
+                  .padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                IconButton(
+                  onClick = { viewModel.openNewTabInGroup(isPrivate = activeTab.isPrivate, initialUrl = "", switchToNewTab = true) },
+                  modifier = Modifier.size(34.dp)
+                ) {
+                  Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = "New tab in group",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
+                  )
+                }
+                Spacer(modifier = Modifier.width(6.dp))
+                Row(
+                  modifier = Modifier
+                    .weight(1f)
+                    .horizontalScroll(rememberScrollState()),
+                  horizontalArrangement = Arrangement.spacedBy(8.dp),
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  groupTabs.forEach { gTab ->
+                    val isCurrent = gTab.id == activeTab.id
+                    Box(
+                      modifier = Modifier
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .background(
+                          if (isCurrent) MaterialTheme.colorScheme.primaryContainer
+                          else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f)
+                        )
+                        .border(
+                          width = if (isCurrent) 2.dp else 0.8.dp,
+                          color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                          shape = CircleShape
+                        )
+                        .clickable {
+                          if (isCurrent) {
+                            viewModel.closeTab(gTab.id)
+                          } else {
+                            viewModel.switchToTab(gTab.id)
+                          }
+                        },
+                      contentAlignment = Alignment.Center
+                    ) {
+                      SiteFavicon(
+                        url = gTab.url,
+                        title = gTab.title,
+                        size = 22.dp,
+                        isPrivate = gTab.isPrivate,
+                        isDarkTheme = isDarkTheme
+                      )
+                    }
+                  }
+                }
+                IconButton(
+                  onClick = { viewModel.setOverlay(ActiveOverlay.TABS) },
+                  modifier = Modifier.size(34.dp)
+                ) {
+                  Icon(
+                    imageVector = Icons.Filled.KeyboardArrowUp,
+                    contentDescription = "View all tabs",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
+                  )
+                }
+              }
+            }
+          }
+
           if (settings.oneHandedModeEnabled && !isOneHandedActive) {
               Surface(
                 shape = CircleShape,
