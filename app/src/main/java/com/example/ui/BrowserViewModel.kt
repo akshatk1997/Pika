@@ -1734,13 +1734,29 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
           if (!docTitle) {
             docTitle = document.title || '';
           }
+          var artUrl = '';
+          try {
+            var ms = navigator.mediaSession && navigator.mediaSession.metadata;
+            if (ms && ms.artwork && ms.artwork.length > 0) {
+              artUrl = ms.artwork[ms.artwork.length - 1].src || ms.artwork[0].src || '';
+            }
+            if (!artUrl) {
+              var v = document.querySelector('video[poster]');
+              if (v) artUrl = v.getAttribute('poster') || '';
+            }
+            if (!artUrl) {
+              var og = document.querySelector('meta[property="og:image"]');
+              if (og) artUrl = og.getAttribute('content') || '';
+            }
+          } catch(e) {}
           return JSON.stringify({
             playing: playing,
             count: media.length + (player ? 1 : 0),
-            title: docTitle
+            title: docTitle,
+            artwork: artUrl
           });
         } catch(e) {
-          return JSON.stringify({ playing: false, count: 0, title: '' });
+          return JSON.stringify({ playing: false, count: 0, title: '', artwork: '' });
         }
       })()
     """.trimIndent()
@@ -1757,6 +1773,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
           val isPlaying = unquoted.optBoolean("playing", false)
           val mediaCount = unquoted.optInt("count", 0)
           val docTitle = unquoted.optString("title", "")
+          val artUrl = unquoted.optString("artwork", "")
 
           if (isPlaying || (forceStart && mediaCount > 0)) {
             val pageTitle = docTitle.ifBlank { tab.title }.ifBlank { "Web Stream" }
@@ -1765,7 +1782,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
               context = appContext,
               title = pageTitle,
               domain = host,
-              isPlaying = isPlaying
+              isPlaying = isPlaying,
+              artworkUrl = artUrl
             )
           } else if (mediaCount == 0 && MediaPlaybackService.isServiceRunning) {
             MediaPlaybackService.stop(appContext)

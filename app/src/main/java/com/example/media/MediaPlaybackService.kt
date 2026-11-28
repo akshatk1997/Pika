@@ -8,12 +8,18 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.media.MediaMetadata
+import android.media.session.MediaSession
+import android.media.session.PlaybackState
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
-import androidx.core.app.NotificationCompat
 import com.example.MainActivity
 import com.example.R
+import java.net.HttpURLConnection
+import java.net.URL
 
 class MediaPlaybackService : Service() {
 
@@ -33,6 +39,7 @@ class MediaPlaybackService : Service() {
     const val EXTRA_TITLE = "extra_title"
     const val EXTRA_DOMAIN = "extra_domain"
     const val EXTRA_IS_PLAYING = "extra_is_playing"
+    const val EXTRA_ARTWORK_URL = "extra_artwork_url"
 
     @Volatile
     var isServiceRunning: Boolean = false
@@ -41,12 +48,21 @@ class MediaPlaybackService : Service() {
     @Volatile
     var mediaControlListener: ((String) -> Unit)? = null
 
-    fun start(context: Context, title: String, domain: String, isPlaying: Boolean) {
+    fun start(
+      context: Context,
+      title: String,
+      domain: String,
+      isPlaying: Boolean,
+      artworkUrl: String = ""
+    ) {
       val intent = Intent(context, MediaPlaybackService::class.java).apply {
         action = ACTION_UPDATE_STATE
         putExtra(EXTRA_TITLE, title)
         putExtra(EXTRA_DOMAIN, domain)
         putExtra(EXTRA_IS_PLAYING, isPlaying)
+        if (artworkUrl.isNotBlank()) {
+          putExtra(EXTRA_ARTWORK_URL, artworkUrl)
+        }
       }
       try {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -73,6 +89,9 @@ class MediaPlaybackService : Service() {
   private var currentTitle: String = "Web Stream"
   private var currentDomain: String = "Streaming"
   private var isPlaying: Boolean = true
+  private var lastArtworkUrl: String = ""
+  private var currentArtwork: Bitmap? = null
+  private var mediaSession: MediaSession? = null
   private var wakeLock: PowerManager.WakeLock? = null
 
   override fun onBind(intent: Intent?): IBinder? = null
@@ -86,9 +105,74 @@ class MediaPlaybackService : Service() {
       wakeLock?.acquire(4 * 60 * 60 * 1000L)
     } catch (_: Throwable) {
     }
+    initMediaSession()
     createNotificationChannel()
     val initialNotification = buildNotification()
     startForegroundCompat(initialNotification)
+  }
+
+  private fun initMediaSession() {
+    try {
+      mediaSession = MediaSession(this, "KioMediaSession").apply {
+        setCallback(object : MediaSession.Callback() {
+          override fun onPlay() {
+            isPlaying = true
+            mediaControlListener?.invoke(ACTION_PLAY)
+            updateMediaSessionState()
+            updateNotification()
+          }
+          override fun onPause() {
+            isPlaying = false
+            mediaControlListener?.invoke(ACTION_PAUSE)
+            updateMediaSessionState()
+            updateNotification()
+          }
+          override fun onSkipToPrevious() {
+            mediaControlListener?.invoke(ACTION_PREV)
+          }
+          override fun onSkipToNext() {
+            mediaControlListener?.invoke(ACTION_NEXT)
+          }
+          override fun onStop() {
+            isPlaying = false
+            mediaControlListener?.invoke(ACTION_STOP)
+            stopForegroundCompat()
+            stopSelf()
+          }
+        })
+        isActive = true
+      }
+      updateMediaSessionState()
+    } catch (_: Throwable) {
+    }
+  }
+
+  private fun updateMediaSessionState() {
+    val session = mediaSession ?: return
+    try {
+      val state = if (isPlaying) PlaybackState.STATE_PLAYING else PlaybackState.STATE_PAUSED
+      val actions = PlaybackState.ACTION_PLAY or
+        PlaybackState.ACTION_PAUSE or
+        PlaybackState.ACTION_PLAY_PAUSE or
+        PlaybackState.ACTION_SKIP_TO_PREVIOUS or
+        PlaybackState.ACTION_SKIP_TO_NEXT or
+        PlaybackState.ACTION_STOP
+      session.setPlaybackState(
+        PlaybackState.Builder()
+          .setActions(actions)
+          .setState(state, PlaybackState.PLAYBACK_POSITION_UNKNOWN, if (isPlaying) 1.0f else 0f)
+          .build()
+      )
+      val metaBuilder = MediaMetadata.Builder()
+        .putString(MediaMetadata.METADATA_KEY_TITLE, currentTitle)
+        .putString(MediaMetadata.METADATA_KEY_ARTIST, currentDomain)
+      currentArtwork?.let { bmp ->
+        metaBuilder.putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, bmp)
+        metaBuilder.putBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON, bmp)
+      }
+      session.setMetadata(metaBuilder.build())
+    } catch (_: Throwable) {
+    }
   }
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -105,7 +189,15 @@ class MediaPlaybackService : Service() {
       if (intent.hasExtra(EXTRA_IS_PLAYING)) {
         isPlaying = intent.getBooleanExtra(EXTRA_IS_PLAYING, isPlaying)
       }
+      if (intent.hasExtra(EXTRA_ARTWORK_URL)) {
+        val artUrl = intent.getStringExtra(EXTRA_ARTWORK_URL).orEmpty()
+        if (artUrl.isNotBlank() && artUrl != lastArtworkUrl) {
+          lastArtworkUrl = artUrl
+          fetchArtworkAsync(artUrl)
+        }
+      }
     }
+    updateMediaSessionState()
 
     when (action) {
       ACTION_PLAY -> {
@@ -150,6 +242,12 @@ class MediaPlaybackService : Service() {
 
   override fun onDestroy() {
     isServiceRunning = false
+    try {
+      mediaSession?.isActive = false
+      mediaSession?.release()
+      mediaSession = null
+    } catch (_: Throwable) {
+    }
     try {
       wakeLock?.let {
         if (it.isHeld) it.release()
@@ -206,22 +304,70 @@ class MediaPlaybackService : Service() {
 
     val playPauseIcon = if (isPlaying) R.drawable.ic_media_pause else R.drawable.ic_media_play
     val playPauseText = if (isPlaying) "Pause" else "Play"
-    val subtitle = if (isPlaying) "$currentDomain • Playing" else "$currentDomain • Paused"
+    val subtitle = if (isPlaying) currentDomain else "$currentDomain • Paused"
 
-    return NotificationCompat.Builder(this, CHANNEL_ID)
+    val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      Notification.Builder(this, CHANNEL_ID)
+    } else {
+      @Suppress("DEPRECATION")
+      Notification.Builder(this)
+    }
+
+    builder
       .setSmallIcon(R.drawable.ic_notification)
       .setContentTitle(currentTitle)
       .setContentText(subtitle)
       .setContentIntent(contentPendingIntent)
       .setOngoing(isPlaying)
       .setOnlyAlertOnce(true)
-      .setSilent(true)
-      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-      .addAction(R.drawable.ic_media_prev, "-10s", prevIntent)
-      .addAction(playPauseIcon, playPauseText, playPauseIntent)
-      .addAction(R.drawable.ic_media_next, "+10s", nextIntent)
-      .addAction(R.drawable.ic_media_stop, "Stop", stopIntent)
-      .build()
+      .setVisibility(Notification.VISIBILITY_PUBLIC)
+      .addAction(Notification.Action.Builder(R.drawable.ic_media_prev, "Previous", prevIntent).build())
+      .addAction(Notification.Action.Builder(playPauseIcon, playPauseText, playPauseIntent).build())
+      .addAction(Notification.Action.Builder(R.drawable.ic_media_next, "Next", nextIntent).build())
+      .addAction(Notification.Action.Builder(R.drawable.ic_media_stop, "Close", stopIntent).build())
+
+    currentArtwork?.let { builder.setLargeIcon(it) }
+    mediaSession?.let { session ->
+      builder.style = Notification.MediaStyle()
+        .setMediaSession(session.sessionToken)
+        .setShowActionsInCompactView(0, 1, 2)
+    }
+
+    return builder.build()
+  }
+
+  private fun fetchArtworkAsync(urlString: String) {
+    Thread {
+      try {
+        val url = URL(urlString)
+        val conn = (url.openConnection() as HttpURLConnection).apply {
+          connectTimeout = 4000
+          readTimeout = 4000
+          requestMethod = "GET"
+          setRequestProperty("User-Agent", "Kio-Browser")
+        }
+        try {
+          if (conn.responseCode in 200..299) {
+            val raw = conn.inputStream.use { BitmapFactory.decodeStream(it) }
+            if (raw != null) {
+              val maxDim = 512
+              val scaled = if (raw.width > maxDim || raw.height > maxDim) {
+                val scale = maxDim.toFloat() / maxOf(raw.width, raw.height)
+                Bitmap.createScaledBitmap(raw, (raw.width * scale).toInt(), (raw.height * scale).toInt(), true)
+              } else {
+                raw
+              }
+              currentArtwork = scaled
+              updateMediaSessionState()
+              updateNotification()
+            }
+          }
+        } finally {
+          conn.disconnect()
+        }
+      } catch (_: Throwable) {
+      }
+    }.start()
   }
 
   private fun updateNotification() {
