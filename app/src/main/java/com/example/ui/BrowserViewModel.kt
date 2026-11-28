@@ -692,7 +692,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     viewModelScope.launch {
       while (true) {
-        delay(2500)
+        delay(if (MediaPlaybackService.isServiceRunning) 1500L else 2500L)
         if (_settings.value.backgroundPlayEnabled) {
           val tab = activeTab()
           if (tab.url.isNotBlank() && tab.url != "about:blank") {

@@ -231,18 +231,26 @@ class MediaPlaybackService : Service() {
     when (action) {
       ACTION_PLAY -> {
         isPlaying = true
+        updateMediaSessionState()
         updateNotification()
         mediaControlListener?.invoke(ACTION_PLAY)
       }
       ACTION_PAUSE -> {
         isPlaying = false
+        updateMediaSessionState()
         updateNotification()
         mediaControlListener?.invoke(ACTION_PAUSE)
       }
       ACTION_PREV -> {
+        positionMs = (positionMs - 10_000L).coerceAtLeast(0L)
+        updateMediaSessionState()
+        updateNotification()
         mediaControlListener?.invoke(ACTION_PREV)
       }
       ACTION_NEXT -> {
+        positionMs = if (durationMs > 0L) (positionMs + 10_000L).coerceAtMost(durationMs) else positionMs + 10_000L
+        updateMediaSessionState()
+        updateNotification()
         mediaControlListener?.invoke(ACTION_NEXT)
       }
       ACTION_STOP -> {
